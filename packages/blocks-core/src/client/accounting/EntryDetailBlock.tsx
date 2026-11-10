@@ -1,25 +1,20 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
-import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
+import { useState, type ReactNode } from "react"
+import { SlotView, useAsideHead, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
-import {
-    Button,
-    Cluster,
-    Form,
-    Heading,
-    IconButton,
-    PinnedActionBar,
-    Stack,
-    SurfaceCard,
-    Text,
-    Timeline,
-} from "@starci/grammar/common"
+import { Button, Cluster, Form, Heading, IconButton, Stack, Sublabel, SurfaceCard, Text } from "@starci/grammar/common"
 import type { accountingEntryDetailBlock } from "../../blocks/accounting/entry-detail.block"
-import { adjustTargetOf, entryRecord, entryTitleOf, stagesOf, stateKeyOf } from "../../rules/accounting/entry-stages"
-import type { EntryRecord } from "../../rules/accounting/entry-stages"
+import {
+    adjustTargetOf,
+    entryRecord,
+    entryTitleOf,
+    stagesOf,
+    stateKeyOf,
+    type EntryRecord,
+} from "../../rules/accounting/entry-stages"
+import { moneyOf, orderCodeIn } from "../../rules/accounting/book-view"
+import { SOURCE_ADJUSTMENT, SOURCE_INVOICE, SOURCE_TRANSACTION } from "../../rules/accounting/posting"
 import { parsedSlot } from "../../slots/slots"
-import { FormFieldView } from "../composites/FormFieldView"
-import type { FormFieldData } from "../composites/FormFieldView"
+import { FormFieldView, type FormFieldData } from "../composites/FormFieldView"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import { useFormValues } from "../composites/useFormValues"
 import type { RenderOf } from "../render-props"
@@ -37,6 +32,39 @@ const PLACEHOLDER: EntryRecord = {
     sourceEntity: "",
     sourceId: "",
     lineage: [],
+}
+
+/** What the head of an entry is given. */
+interface EntryHeadProps {
+    readonly title: string
+    readonly kind: string
+    readonly closeLabel: string
+    readonly isLoading: boolean
+    readonly onClose: () => void
+}
+
+/** The head of an entry: the aside pane draws it sticky when it can, else it is one row of the block, the name over its kind with a small close control. */
+const EntryHead = (props: EntryHeadProps): ReactNode => {
+    const isHosted = useAsideHead({
+        title: props.title,
+        description: props.kind,
+        onClose: props.onClose,
+        closeLabel: props.closeLabel,
+    })
+    if (isHosted) return null
+    return (
+        <Cluster gap="row" wrap={false} justify="between" align="start">
+            <Stack gap="inline">
+                <Heading level={3} isLoading={props.isLoading}>
+                    {props.title}
+                </Heading>
+                <Text size="sm" tone="muted">
+                    {props.kind}
+                </Text>
+            </Stack>
+            <IconButton intent="dismiss" size="sm" label={props.closeLabel} onPress={props.onClose} />
+        </Cluster>
+    )
 }
 
 /** What the correction form is given. */
@@ -103,16 +131,24 @@ const AdjustForm = (props: AdjustFormProps): ReactNode => {
     )
 }
 
-/** What the lineage of an entry is given. */
-interface LineageSectionProps {
-    readonly entry: EntryRecord
-    readonly isLoading: boolean
+/** The words for the entity an entry comes from. */
+const sourceWordOf = (entity: string, words: ReturnType<typeof useBlockWords>): string => {
+    if (entity === SOURCE_TRANSACTION) return words({ key: "detail_source_transaction" })
+    if (entity === SOURCE_INVOICE) return words({ key: "detail_source_invoice" })
+    if (entity === SOURCE_ADJUSTMENT) return words({ key: "detail_source_adjustment" })
+    return entity
 }
 
-/** Where the entry came from: the order, the invoice, the payment and the correction, each done or still to come. */
-const LineageSection = (props: LineageSectionProps): ReactNode => {
+/** What the facts of an entry are given. */
+interface EntryFactsProps {
+    readonly entry: EntryRecord
+}
+
+/** The facts of an entry in two groups: the amount (how much, from where, which order, the original text) and the history (each stage the money passed, with its state and day). */
+const EntryFacts = (props: EntryFactsProps): ReactNode => {
     const words = useBlockWords()
-    const stages = stagesOf(props.entry.lineage, {
+    const { entry } = props
+    const stages = stagesOf(entry.lineage, {
         names: {
             order: words({ key: "stage_order" }),
             invoice: words({ key: "stage_invoice" }),
@@ -125,21 +161,39 @@ const LineageSection = (props: LineageSectionProps): ReactNode => {
             return key === undefined ? undefined : words({ key })
         },
     })
-    return (
-        <Stack gap="row">
-            <Heading level={3}>{words({ key: "lineage" })}</Heading>
-            <Timeline
-                label={words({ key: "lineage" })}
-                isLoading={props.isLoading}
-                items={stages.map((stage) => ({
-                    id: stage.id,
-                    title: stage.title,
-                    state: stage.isDone ? "affirmative" : "pending",
-                    description: stage.note,
-                }))}
-            />
-        </Stack>
-    )
+    const order = stages.find((stage) => stage.id !== "payment" && stage.isDone && stage.title.length > 0)
+    const money = [
+        ...(entry.amountVnd === undefined
+            ? []
+            : [{ id: "amount", key: words({ key: "detail_amount" }), value: moneyOf(entry.amountVnd) }]),
+        { id: "source", key: words({ key: "detail_source" }), value: sourceWordOf(entry.sourceEntity, words) },
+        { id: "order", key: words({ key: "detail_order" }), value: order?.title ?? words({ key: "detail_none" }) },
+        ...(entry.note === undefined || entry.note === null || entry.note === ""
+            ? []
+            : [{ id: "note", key: words({ key: "detail_note" }), value: entry.note }]),
+    ]
+    const history = stages
+        .filter((stage) => stage.isDone)
+        .map((stage) => ({ id: stage.id, key: stage.title, value: stage.note }))
+    const groups = [
+        { id: "money", title: words({ key: "detail_group_money" }), items: money },
+        { id: "history", title: words({ key: "detail_group_history" }), items: history },
+    ]
+    return groups
+        .filter((group) => group.items.length > 0)
+        .map((group) => (
+            <Stack key={group.id} gap="row">
+                <Sublabel>{group.title}</Sublabel>
+                <SurfaceCard
+                    kind="list"
+                    layout="keyValue"
+                    ariaLabel={group.title}
+                    isLoading={false}
+                    items={group.items.map((item) => ({ id: item.id, title: item.key, value: item.value }))}
+                    empty={null}
+                />
+            </Stack>
+        ))
 }
 
 /** Asks for the ledger line of a payment again and says how it went; the read decides whether the control is offered at all. */
@@ -163,7 +217,7 @@ export const EntryDetailBlock = (props: RenderOf<typeof accountingEntryDetailBlo
     const words = useBlockWords()
     const sendRepost = useRepostSender(props.slots.repost)
     const labels = useSlotLabels(props.props.idle)
-    const [isAdjusting, setAdjusting] = useState(false)
+    const [isAdjusting, setIsAdjusting] = useState(false)
     const read = props.slots.record
     const adjust = props.slots.adjust
     const repost = props.slots.repost
@@ -177,60 +231,41 @@ export const EntryDetailBlock = (props: RenderOf<typeof accountingEntryDetailBlo
                 const canAdjust = adjust.isAllowed && adjustTargetOf(entry) !== null && !isLoading
                 const canRepost = repost.isAllowed && entry.canRepostLedger === true && !isLoading
                 return (
-                    <>
-                        <SurfaceCard ariaLabel={words(props.props.label)} isLoading={isLoading}>
-                            <Stack gap="section">
-                                <Cluster gap="row" wrap={false} justify="between" align="start">
-                                    <Stack gap="inline">
-                                        <Heading level={2} isLoading={isLoading}>
-                                            {entryTitleOf(entry)}
-                                        </Heading>
-                                        <Text size="sm" tone="muted">
-                                            {words(props.props.kind)}
-                                        </Text>
-                                    </Stack>
-                                    <IconButton
-                                        intent="dismiss"
-                                        label={words({ key: "detailClose" })}
-                                        onPress={() =>
-                                            props.params.setMany({
-                                                [props.props.closeParam]: null,
-                                                [props.props.paneParam]: "list",
-                                            })
-                                        }
-                                    />
-                                </Cluster>
-                                <LineageSection entry={entry} isLoading={isLoading} />
-                                <Stack gap="row">
-                                    <Heading level={3}>{words({ key: "adjust_title" })}</Heading>
-                                    <Text size="sm" tone="muted">
-                                        {words({ key: "adjust_body" })}
-                                    </Text>
-                                </Stack>
-                                {canAdjust && isAdjusting ? (
-                                    <AdjustForm entry={entry} adjust={adjust} onDone={() => setAdjusting(false)} />
-                                ) : null}
-                            </Stack>
-                        </SurfaceCard>
-                        {(canAdjust && !isAdjusting) || canRepost ? (
-                            <PinnedActionBar label={words(props.props.label)} visibility="always">
-                                {canRepost ? (
-                                    <Button
-                                        intent="alternative"
-                                        isPending={repost.isRunning}
-                                        onPress={() => sendRepost(entry.sourceId)}
-                                    >
-                                        {words({ key: "repost_open" })}
-                                    </Button>
-                                ) : null}
-                                {canAdjust && !isAdjusting ? (
-                                    <Button intent="commit" onPress={() => setAdjusting(true)}>
-                                        {words({ key: "adjust_open" })}
-                                    </Button>
-                                ) : null}
-                            </PinnedActionBar>
+                    <Stack gap="section">
+                        <EntryHead
+                            title={orderCodeIn(entryTitleOf(entry)) || entryTitleOf(entry)}
+                            kind={words(props.props.kind)}
+                            closeLabel={words({ key: "detailClose" })}
+                            isLoading={isLoading}
+                            onClose={() =>
+                                props.params.setMany({
+                                    [props.props.closeParam]: null,
+                                    [props.props.paneParam]: "list",
+                                })
+                            }
+                        />
+                        <EntryFacts entry={entry} />
+                        {canAdjust && isAdjusting ? (
+                            <AdjustForm entry={entry} adjust={adjust} onDone={() => setIsAdjusting(false)} />
                         ) : null}
-                    </>
+                        <Cluster gap="inline" justify="start">
+                            {canAdjust && !isAdjusting ? (
+                                <Button intent="neutral" size="sm" onPress={() => setIsAdjusting(true)}>
+                                    {words({ key: "adjust_open" })}
+                                </Button>
+                            ) : null}
+                            {canRepost ? (
+                                <Button
+                                    intent="neutral"
+                                    size="sm"
+                                    isPending={repost.isRunning}
+                                    onPress={() => sendRepost(entry.sourceId)}
+                                >
+                                    {words({ key: "repost_open" })}
+                                </Button>
+                            ) : null}
+                        </Cluster>
+                    </Stack>
                 )
             }}
         />

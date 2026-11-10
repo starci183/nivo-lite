@@ -6,6 +6,7 @@ import { InjectQueueTimeout } from "@modules/platform/queue"
 import type { QueueTimeout } from "@modules/platform/queue"
 import { PROBE_BUDGET_MS } from "./agent-schedules.policy"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
+import { AccountingCloseProbeService } from "./probes/accounting-close-probe.service"
 import { InvoicesDueProbeService } from "./probes/invoices-due-probe.service"
 import { MoneyInProbeService } from "./probes/money-in-probe.service"
 import { NewDocumentsProbeService } from "./probes/new-documents-probe.service"
@@ -30,8 +31,9 @@ export class AgentProbesService {
         invoicesDue: InvoicesDueProbeService,
         newDocuments: NewDocumentsProbeService,
         moneyIn: MoneyInProbeService,
+        accountingClose: AccountingCloseProbeService,
     ) {
-        const known: ReadonlyArray<AgentProbe> = [tasksDue, invoicesDue, newDocuments, moneyIn]
+        const known: ReadonlyArray<AgentProbe> = [tasksDue, invoicesDue, newDocuments, moneyIn, accountingClose]
         this.probes = new Map(known.map((probe) => [probe.key, probe]))
     }
 

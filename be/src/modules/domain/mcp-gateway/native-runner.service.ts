@@ -3,7 +3,7 @@ import { InjectQueueTimeout } from "@modules/platform/queue"
 import type { QueueTimeout } from "@modules/platform/queue"
 import { refusalOf } from "./connector-call.policy"
 import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
-import type { GatewayCaller, GatewayJson, NativeAdapter } from "./mcp-gateway.contracts"
+import type { GatewayCaller, GatewayJson, NativeAdapter, NativeCaller } from "./mcp-gateway.contracts"
 
 /** What running a native adapter came to without failing: its answer, or its refusal of an expected case. */
 export interface NativeRun {
@@ -57,7 +57,13 @@ export class NativeRunnerService {
         tool: string,
         args: GatewayJson,
     ): Promise<NativeRun> {
-        const who = { agentId: caller.agentId, conversationId: caller.conversationId }
+        const who: NativeCaller = {
+            agentId: caller.agentId,
+            conversationId: caller.conversationId,
+            ...(caller.opKey === undefined ? {} : { opKey: caller.opKey }),
+            ...(caller.run === undefined ? {} : { run: caller.run }),
+            ...(caller.graphStep === true ? { graphStep: true as const } : {}),
+        }
         try {
             return { kind: "ok", value: await adapter.invoke(caller.workspaceId, tool, args, who) }
         } catch (cause) {

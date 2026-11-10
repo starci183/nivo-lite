@@ -1,4 +1,4 @@
-import { Badge, Button, DropdownMenu, Icon, IconButton, IconTile } from "@starci/grammar/common"
+import { Badge, Button, DropdownMenu, IconButton, IconTile } from "@starci/grammar/common"
 import type { DossierFindingsPane } from "@/components/composites/DossierFindingBoard"
 import { PaneHead } from "@/components/composites/PaneHead"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -49,7 +49,6 @@ const HeadActions = (props: HeadActionsProps) => {
                     intent="alternative"
                     size="sm"
                     isPending={frame.isReviewPending}
-                    startContent={<Icon source={nivoIconSource("retry", "leading")} usage="leading" />}
                     onPress={props.onReview}
                 >
                     {frame.reviewLabel}

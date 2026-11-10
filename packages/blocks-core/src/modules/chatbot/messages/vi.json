@@ -70,5 +70,8 @@
   "customers_section": "Khách đang xử lý",
   "unanswered_section": "Chưa trả lời được",
   "tab_rules": "Quy tắc",
-  "action_save_settings": "Lưu quy tắc"
+  "action_save_settings": "Lưu quy tắc",
+  "col_customer": "Khách",
+  "col_status": "Trạng thái",
+  "col_channel": "Kênh"
 }

@@ -95,7 +95,7 @@ describe("AiService chat", () => {
         const { client, runner } = await build(true)
         runner.chat.mockResolvedValue(
             reply("  hello  ", {
-                usageMetadata: { input_tokens: 12, output_tokens: 5, total_tokens: 17 },
+                usageMetadata: { input_tokens: 12, output_tokens: 5, total_tokens: 17, input_token_details: { cache_read: 8 } },
                 responseMetadata: { model_name: MODEL, usage: { cost: 0.0002 } },
                 retrieved: 2,
             }),
@@ -105,10 +105,36 @@ describe("AiService chat", () => {
             text: "hello",
             parsed: null,
             model: MODEL,
-            usage: { promptTokens: 12, completionTokens: 5, totalTokens: 17, costUsd: 0.0002 },
+            usage: { promptTokens: 12, completionTokens: 5, totalTokens: 17, costUsd: 0.0002, cachedTokens: 8 },
             retrieved: 2,
         })
         expect(runner.chat.mock.calls[0]?.[0]).toMatchObject({ messages: ASK.messages, json: false, timeoutMs: 1000 })
+    })
+
+    it("prompt cache: logs what a call's cache hit depends on (upstream, cached tokens, a digest of the opening system text), never the prompt", async () => {
+        const { client, runner, logger } = await build(true)
+        runner.chat.mockResolvedValue(
+            reply("ok", {
+                provider: "DeepInfra",
+                usageMetadata: { input_tokens: 50, output_tokens: 5, total_tokens: 55, input_token_details: { cache_read: 40 } },
+            }),
+        )
+        const head = { role: "system" as const, content: "CRAFT AND TOOLS" }
+
+        await client.chat({ ...ASK, messages: [head, { role: "user", content: "first thread" }] })
+        await client.chat({ ...ASK, messages: [head, { role: "user", content: "another thread" }] })
+
+        const [first, second] = logger.info.mock.calls.filter(([event]) => event === "ai.chat.answered")
+        expect(first?.[1]).toMatchObject({
+            provider: "DeepInfra",
+            prompt: 50,
+            cached: 40,
+            messages: 2,
+            headChars: 15,
+        })
+        expect(second?.[1]).toMatchObject({ headDigest: first?.[1]?.headDigest, openingDigest: first?.[1]?.openingDigest })
+        expect(JSON.stringify(logger.info.mock.calls)).not.toContain("thread")
+        expect(JSON.stringify(logger.info.mock.calls)).not.toContain("CRAFT")
     })
 
     it("returns the structured output when the chain parsed one, and none when it did not", async () => {
@@ -131,9 +157,24 @@ describe("AiService chat", () => {
             expect.objectContaining({
                 text: "ab",
                 model: "work",
-                usage: { promptTokens: 3, completionTokens: 1, totalTokens: 4, costUsd: null },
+                usage: { promptTokens: 3, completionTokens: 1, totalTokens: 4, costUsd: null, cachedTokens: null },
             }),
         )
+    })
+
+    it.each([
+        ["OpenRouter's prompt_tokens_details", { prompt_tokens_details: { cached_tokens: 40 } }],
+        ["DeepSeek's prompt_cache_hit_tokens", { prompt_cache_hit_tokens: 40 }],
+    ])("prompt cache: reads the cached prompt tokens from the raw usage (%s)", async (_name, usage) => {
+        const { client, runner } = await build(true)
+        runner.chat.mockResolvedValue(
+            reply("ok", {
+                usageMetadata: { input_tokens: 50, output_tokens: 5, total_tokens: 55 },
+                responseMetadata: { usage },
+            }),
+        )
+
+        await expect(client.chat(ASK)).resolves.toMatchObject({ usage: { promptTokens: 50, cachedTokens: 40 } })
     })
 
     it("answers null and logs when the answer is empty", async () => {

@@ -6,7 +6,7 @@ import type { ZodType } from "zod"
 import { MAX_BODY, MAX_ID } from "../../bounds"
 import { boundedRecord } from "../../json.schema"
 
-/** Where a run stands: `waiting` holds a durable wait, `parked` waits for a build or a person to resume it, `dead` was given to a person. */
+/** Where a run stands: `waiting` holds a durable wait, `parked` waits for a build or a person to resume it, `dead` was given to a person, `cancelled` was stopped by an owner or manager. */
 export const RUN_STATUSES: readonly [string, ...Array<string>] = [
     "running",
     "waiting",
@@ -16,6 +16,7 @@ export const RUN_STATUSES: readonly [string, ...Array<string>] = [
     "dead",
     "compensating",
     "compensated",
+    "cancelled",
 ]
 
 /** A bounded JSON object: the trigger a run keeps, or the error it stopped with. */
@@ -43,6 +44,8 @@ type RunFields = {
     readonly stepSeq: FieldDef<"int", false>
     readonly startedAt: FieldDef<"timestamptz", false>
     readonly endedAt: FieldDef<"timestamptz", true>
+    readonly cancelledAt: FieldDef<"timestamptz", true>
+    readonly cancelledBy: FieldDef<"text", true>
 }
 
 const runFields: RunFields = {
@@ -67,6 +70,8 @@ const runFields: RunFields = {
     stepSeq: field.int({ default: { literal: 0 } }),
     startedAt: field.timestamptz({ default: "now" }),
     endedAt: field.timestamptz({ nullable: true }),
+    cancelledAt: field.timestamptz({ nullable: true }),
+    cancelledBy: field.text({ maxLength: MAX_ID, nullable: true }),
 }
 
 /**

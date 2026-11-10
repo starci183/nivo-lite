@@ -54,6 +54,20 @@ describe("AgentTasksService.alive", () => {
     })
 })
 
+describe("AgentTasksService.byId", () => {
+    it("answers the task with its key and title, or null when there is none", async () => {
+        const { service, em } = await build(
+            mockEntityManager({ findOne: [AgentTaskEntity, agentTaskRowOf({ dedupeKey: "care:payment-reminder:o1" })] }),
+        )
+
+        await expect(service.byId("task-1")).resolves.toMatchObject({ id: "task-1", dedupeKey: "care:payment-reminder:o1" })
+        expect(em.findOne).toHaveBeenCalledWith(AgentTaskEntity, { where: { id: "task-1" } })
+
+        const none = await build(mockEntityManager({ findOne: [AgentTaskEntity, null] }))
+        await expect(none.service.byId("ghost")).resolves.toBeNull()
+    })
+})
+
 describe("AgentTasksService.apply, opening a task", () => {
     it("opens a task under its key, so the same proposal applied twice is one task", async () => {
         const { service, em } = await build(mockEntityManager({ upsert: [AgentTaskEntity, {}] }))

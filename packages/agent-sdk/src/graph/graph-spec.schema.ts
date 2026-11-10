@@ -5,9 +5,18 @@ import type { JsonSchema } from "../schema/schema.types"
 import { entriesAtMost } from "../schema/entries"
 import { jsonValue } from "../schema/json-value.schema"
 import { burstIsSound } from "./graph-burst"
+import {
+    workflowContractSchema,
+    workflowEntrySchema,
+    workflowOutcomesSchema,
+    workflowTriggersSchema,
+} from "./workflow-contract"
 import type { GraphSpec } from "./graph-spec.types"
 
 const key = keyText.regex(/^[a-z][a-z0-9-]*$/)
+
+/** A wait as a graph view shows it: a whole number of minutes, hours or days ("30m", "2h", "1d"). */
+const waitDuration = keyText.regex(/^\d{1,4}[dhm]$/)
 
 const right = z.strictObject({
     kind: keyText.min(1),
@@ -37,6 +46,15 @@ const node = z.strictObject({
     input: z.record(keyText, binding).refine(entriesAtMost(200)).optional(),
     next: key.optional(),
     routes: z.record(keyText, key).refine(entriesAtMost(50)).optional(),
+    blocking: z.boolean().optional(),
+    group: key.optional(),
+    wait: z
+        .strictObject({
+            kind: z.enum(["reply", "payment", "other"]),
+            timeout: waitDuration.optional(),
+            reminder: waitDuration.optional(),
+        })
+        .optional(),
 })
 
 const source = z.enum(["channel", "chats-group", "agent", "system-event", "schedule"])
@@ -55,6 +73,10 @@ const burst = z
 export const graphSpecSchema: z.ZodType<GraphSpec> = z.strictObject({
     schema: z.literal("nivo/agent-graph@1"),
     moduleKey: keyText.regex(/^[a-z][a-z0-9_]{1,23}$/),
+    contract: workflowContractSchema.optional(),
+    triggers: workflowTriggersSchema.optional(),
+    outcomes: workflowOutcomesSchema.optional(),
+    entry: workflowEntrySchema.optional(),
     trigger: z.strictObject({
         kind: z.literal("tag"),
         sources: z.array(source).min(1).max(5),

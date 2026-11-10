@@ -93,13 +93,31 @@ export const boundConnectionsOf = (
 
 const rank = (agent: BoundAgent): number => INBOUND_MODULES.indexOf(agent.module)
 
+/** The first agent of each module, in the order given (oldest first): one role, many agents, but one answers a channel per role. */
+const firstOfEachModule = (bound: ReadonlyArray<BoundAgent>): ReadonlyArray<BoundAgent> =>
+    bound.filter((agent, index) => bound.findIndex((other) => other.module === agent.module) === index)
+
 /** Splits the bound inbound agents into the front door and the agents it hands over to (one per other module). */
 export const splitRoute = (bound: ReadonlyArray<BoundAgent>): InboundRoute => {
-    const sorted = bound.filter((agent) => rank(agent) >= 0).sort((a, b) => rank(a) - rank(b))
+    const sorted = firstOfEachModule(bound.filter((agent) => rank(agent) >= 0)).toSorted((a, b) => rank(a) - rank(b))
     const front = sorted[0] ?? null
     return { front, handovers: front === null ? [] : sorted.filter((agent) => agent.module !== front.module) }
 }
 
-/** The agents a conversation's own agent can hand over to: the bound ones of another module. */
+/** The agents a conversation's own agent can hand over to: the bound ones of another module, one per module. */
 export const handoversFrom = (bound: ReadonlyArray<BoundAgent>, module: string): ReadonlyArray<BoundAgent> =>
-    bound.filter((agent) => agent.module !== module)
+    firstOfEachModule(bound.filter((agent) => agent.module !== module))
+
+const LEVELS: ReadonlyArray<Access> = ["read", "ask", "auto"]
+
+/** The most a manager may grant on their own: asking first. Acting alone is the owner's to give. */
+const MANAGER_CEILING: Access = "ask"
+
+/**
+ * Whether a manager's grant widens an agent's access past what the owner allows: the level asked is above both the managers' ceiling
+ * and the level the grant already has (a manager may leave an owner-given level as it is, or lower it, never raise it).
+ */
+export const exceedsManagerCeiling = (requested: Access, existing: string | null): boolean => {
+    const allowed = Math.max(LEVELS.indexOf(MANAGER_CEILING), existing === null ? 0 : LEVELS.indexOf(accessOf(existing)))
+    return LEVELS.indexOf(requested) > allowed
+}

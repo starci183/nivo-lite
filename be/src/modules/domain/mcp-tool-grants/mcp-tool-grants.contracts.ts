@@ -50,3 +50,47 @@ export interface McpWorkspaceGrantView extends McpToolGrantView {
     /** The agent name. */
     readonly agent_name: string
 }
+
+/** How an agent uses an ability it holds: by itself, or after a person approves each use. */
+export type AbilityMode = "auto" | "ask"
+
+/** The abilities ticked on one attachment, by ability id; an ability with no key is not held. */
+export type AbilityTicks = Readonly<Record<string, AbilityMode>>
+
+/** One attachment: an agent of a workspace attached to one provider, with the abilities ticked. */
+export interface ProviderAttachmentRecord {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The agent; it must be one of the workspace. */
+    readonly agentId: string
+    /** The provider. */
+    readonly provider: string
+    /** The abilities ticked. */
+    readonly abilities: AbilityTicks
+}
+
+/** One ability a person ticks, unticks or changes the mode of, on an attachment that exists. */
+export interface AbilityTickChange {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The provider. */
+    readonly provider: string
+    /** The ability id. */
+    readonly ability: string
+    /** The mode it is held in, or null to untick it. */
+    readonly mode: AbilityMode | null
+    /** The person who set it. */
+    readonly updatedBy: string
+}
+
+/** One attachment as the gateway reads it. */
+export interface ProviderAttachmentView {
+    /** The agent. */
+    readonly agentId: string
+    /** The provider. */
+    readonly provider: string
+    /** The abilities ticked. */
+    readonly abilities: AbilityTicks
+}

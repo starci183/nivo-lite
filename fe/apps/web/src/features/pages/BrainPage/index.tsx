@@ -1,10 +1,10 @@
 import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getLocale, getTranslations } from "next-intl/server"
-import { brainPartOf, brainTabOf, legacyBrainHrefOf } from "@/modules/brain"
+import { brainTabOf, legacyBrainHrefOf } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
-import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
-import type { BrainTab } from "@/modules/routes"
+import { CONSOLE_ROUTES, brainStripTabOf, workspaceHref } from "@/modules/routes"
+import type { BrainStripTab, BrainTab } from "@/modules/routes"
 import { BrainPageBase } from "./component"
 import type { BrainPageBaseProps } from "./component"
 
@@ -14,11 +14,14 @@ export const brainMetadata = async (): Promise<Metadata> => {
     return { title: t("title") }
 }
 
-/** What the page reads from the address: the tab, the fact being written, a fact to give a new value, a question to answer, the dossier, the finding, the draft, the node on the map and the public document forms. */
+/** What the page reads from the address: the tab and the view inside it, the fact being written, a fact to give a new value, a question to answer, the dossier, the finding, the draft, the node on the map and the public document forms. */
 interface BrainPageProps {
     /** The workspace of the address. */
     readonly workspaceId: string
     readonly tab: string | undefined
+    readonly view: string | undefined
+    /** Every parameter of the address, kept when an old address is forwarded. */
+    readonly params: Readonly<Record<string, string | undefined>>
     readonly fact: string | undefined
     readonly edit: string | undefined
     readonly answer: string | undefined
@@ -38,6 +41,14 @@ type SecondBrainTranslate = Awaited<ReturnType<typeof getTranslations<"secondBra
 /** The words and links of the page that do not depend on its data or its address. */
 type Copy = Pick<BrainPageBaseProps["props"], "header">
 
+/** The supporting line under the heading of each tab of the strip. */
+const INTRO_KEY: Readonly<Record<BrainStripTab, "intro" | "introKnowledge" | "introPublic" | "introAsk">> = {
+    todo: "intro",
+    knowledge: "introKnowledge",
+    public: "introPublic",
+    ask: "introAsk",
+}
+
 /** The words of the page that do not depend on its data. */
 const copyOf = (t: Translate, brain: SecondBrainTranslate, tab: BrainTab, workspaceId?: string): Copy => ({
     header: {
@@ -55,7 +66,7 @@ const copyOf = (t: Translate, brain: SecondBrainTranslate, tab: BrainTab, worksp
             ],
         },
         title: t("title"),
-        description: brain(brainPartOf(tab) === "public" ? "introPublic" : "intro"),
+        description: brain(INTRO_KEY[brainStripTabOf(tab)]),
     },
 })
 
@@ -67,7 +78,7 @@ const composeOf = (value: string | undefined): "pick" | "write" | undefined => {
 
 /** The Second Brain page shell: translates and lays out the page; the connected blocks read their data through GraphQL. */
 export const BrainPage = async (props: BrainPageProps): Promise<ReactElement> => {
-    const legacy = legacyBrainHrefOf(props)
+    const legacy = legacyBrainHrefOf({ tab: props.tab, view: props.view, answer: props.answer, params: props.params })
     if (legacy !== null)
         navigation.redirect({
             href: workspaceHref(props.workspaceId, legacy),

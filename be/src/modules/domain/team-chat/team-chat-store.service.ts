@@ -9,7 +9,7 @@ import type { Ids } from "@modules/platform/ids"
 import { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity, ChatRoomPinEntity } from "./persistence/entities"
 import { MEMBERS_MAX, ROOMS_MAX } from "./team-chat.contracts"
 import type { ChatMemberRef, MessageRef, RoomRole, RoomUnread } from "./team-chat.contracts"
-import { isUniqueViolation } from "./team-chat.policy"
+import { isUniqueViolation, purposeColumnsOf } from "./team-chat.policy"
 import type { ThreadPosition } from "./team-chat.policy"
 import type {
     CardKind,
@@ -127,6 +127,7 @@ export class TeamChatStoreService {
                     kind: room.kind,
                     name: room.name,
                     directKey: room.directKey,
+                    ...purposeColumnsOf(room.kind, room.purpose),
                     createdBy: room.createdBy,
                 })
                 const creator: ChatMemberRef = { memberKind: "user", memberId: room.createdBy }
@@ -212,6 +213,22 @@ export class TeamChatStoreService {
         return this.entityManager.findOne(ChatRoomMessageEntity, { where: { id: messageId, roomId, workspaceId } })
     }
 
+    /** The line an agent wrote under a key, or null. */
+    agentLine(workspaceId: string, clientId: string): Promise<OptionalMessage> {
+        return this.entityManager.findOne(ChatRoomMessageEntity, {
+            where: { workspaceId, clientId, authorKind: "agent" },
+        })
+    }
+
+    /** What people replied to a message, oldest first. */
+    repliesTo(workspaceId: string, messageId: string): Promise<Array<ChatRoomMessageEntity>> {
+        return this.entityManager.find(ChatRoomMessageEntity, {
+            where: { workspaceId, replyTo: messageId, authorKind: "user" },
+            order: { createdAt: "ASC" },
+            take: 20,
+        })
+    }
+
     /** The message this author already sent under this client id, or null when there is none or no client id. */
     sentBefore(workspaceId: string, roomId: string, authorId: string, clientId: OptionalId): Promise<OptionalMessage> {
         return clientId === null
@@ -240,10 +257,11 @@ export class TeamChatStoreService {
                 authorId: text.authorId,
                 body: text.body,
                 kind: "text",
-                ref: null,
+                ref: text.ref ?? null,
                 mentions: text.mentions,
                 attachments: text.attachments,
                 clientId: text.clientId,
+                replyTo: text.replyTo ?? null,
             })
             return await this.entityManager.findOneOrFail(ChatRoomMessageEntity, { where: { id } })
         } catch (cause) {
@@ -408,12 +426,33 @@ export class TeamChatStoreService {
                 authorId: line.authorAgentId,
                 body: line.body,
                 kind: line.authorAgentId === null ? "system" : "text",
+                ref:
+                    line.agentMessage === undefined || line.agentMessage === null
+                        ? null
+                        : { agent_message: line.agentMessage },
                 clientId: line.key,
             })
             .orIgnore()
             .returning("id")
             .execute()
         return returnedIdRows(inserted.raw)[0]?.id ?? null
+    }
+
+    /**
+     * Rewrites the words and the structured content of the lines an agent wrote under these client ids (one card posted to several rooms),
+     * keeping each line, its id and its client id, so a person's reply to it still names the same key. Answers how many lines changed.
+     */
+    async updateAgentLines(
+        workspaceId: string,
+        clientIds: ReadonlyArray<string>,
+        content: { readonly body: string; readonly agentMessage: string },
+    ): Promise<number> {
+        const updated = await this.entityManager.update(
+            ChatRoomMessageEntity,
+            { workspaceId, clientId: In([...clientIds]), authorKind: "agent" },
+            { body: content.body, ref: { agent_message: content.agentMessage } },
+        )
+        return updated.affected ?? 0
     }
 
     /** The message an agent already wrote under a key in a room; null when there is none. */

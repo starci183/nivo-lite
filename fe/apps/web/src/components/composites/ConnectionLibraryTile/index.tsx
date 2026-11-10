@@ -1,4 +1,4 @@
-import { Alert, Badge, Stack, SurfaceCard } from "@starci/grammar/common"
+import { Alert, SurfaceCard } from "@starci/grammar/common"
 import type { BadgeData, ItemAction } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { LibraryCard } from "@/modules/types"
@@ -8,7 +8,6 @@ interface LibraryTileLabels {
     readonly want: string
     readonly wanted: string
     readonly connect: string
-    readonly add: string
     readonly view: string
     readonly openPage: string
 }
@@ -25,17 +24,18 @@ interface ConnectionLibraryTileProps {
 const commandLabelOf = (props: ConnectionLibraryTileProps): string => {
     if (!props.card.canConnect) return props.labels.view
     if (props.card.connected === 0) return props.labels.connect
-    return props.labels.add
+    return props.card.addLabel
 }
 
-const badgeOf = (card: LibraryCard): BadgeData | undefined => {
-    if (card.tag !== null) return card.tag
+/** The tile's one badge: its status in the shared vocabulary (its early-access tag reads in the byline); a planned connector shows none. */
+const badgesOf = (card: LibraryCard): readonly [BadgeData] | undefined => {
     if (card.isSoon) return undefined
-    return {
+    const status: BadgeData = {
         label: card.status.label,
         tone: card.status.tone === "muted" ? "neutral" : card.status.tone,
         isDot: card.status.isDot,
     }
+    return [status]
 }
 
 const actionOf = (props: ConnectionLibraryTileProps): ItemAction => {
@@ -48,6 +48,7 @@ const actionOf = (props: ConnectionLibraryTileProps): ItemAction => {
             isDisabled: card.want.isDone,
             press: () => props.onWant(card.id),
         }
+    if (card.lifeAction !== undefined) return { label: card.lifeAction.label, href: card.lifeAction.href }
     if (card.pageHref !== undefined) return { label: labels.openPage, href: card.pageHref }
     return {
         label: commandLabelOf(props),
@@ -59,13 +60,13 @@ const actionOf = (props: ConnectionLibraryTileProps): ItemAction => {
 /** Preserves the native peer tile, guide target, status feedback and one truthful command or destination. */
 export const ConnectionLibraryTile = (props: ConnectionLibraryTileProps) => {
     const { card } = props
-    const badge = badgeOf(card)
-    const hasFooter = card.want.note !== undefined || (card.tag !== null && !card.isSoon)
+    const badges = badgesOf(card)
     return (
-        <div {...(card.guide === undefined ? {} : { "data-guide": `connections.${card.guide}` })}>
+        <div {...(card.guide === undefined ? {} : { "data-guide-id": `connections.${card.guide}` })}>
             <SurfaceCard
                 kind="tile"
                 name={card.name}
+                byline={card.byline}
                 mark={
                     card.logo === undefined
                         ? { icon: nivoIconSource(card.glyph, "leading") }
@@ -73,29 +74,10 @@ export const ConnectionLibraryTile = (props: ConnectionLibraryTileProps) => {
                 }
                 height="fill"
                 isLoading={props.isLoading}
-                description={`${card.audienceLine} · ${card.blurb}`}
-                {...(badge === undefined ? {} : { badge })}
+                description={card.blurb}
+                {...(badges === undefined ? { badges: undefined } : { badges })}
                 {...(card.isSoon ? { state: "unavailable" } : {})}
-                {...(!hasFooter
-                    ? {}
-                    : {
-                          footer: (
-                              <Stack gap="inline">
-                                  {card.tag !== null && !card.isSoon ? (
-                                      <Badge
-                                          tone={card.status.tone === "muted" ? "neutral" : card.status.tone}
-                                          isDot={card.status.isDot}
-                                          isLoading={props.isLoading}
-                                      >
-                                          {card.status.label}
-                                      </Badge>
-                                  ) : null}
-                                  {card.want.note === undefined ? null : (
-                                      <Alert tone="informative" title={card.want.note} />
-                                  )}
-                              </Stack>
-                          ),
-                      })}
+                {...(card.want.note === undefined ? {} : { note: <Alert tone="informative" title={card.want.note} /> })}
                 action={actionOf(props)}
             />
         </div>

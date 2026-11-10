@@ -1,5 +1,6 @@
 "use client"
 
+import { useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useAskKnowledge } from "@/hooks/knowledge"
 import type { AgentLens } from "@/modules/brain"
@@ -34,7 +35,8 @@ export const useBrainAsk = (input: BrainAskInput): BrainAskView => {
     const header = useBrainPageHeader("agents", input.heading)
     const { lenses, slot, reload } = useAgentLenses()
     const agents = lenses === undefined ? NO_AGENTS : lenses.filter((lens) => lens.kind === "agent")
-    const ask = useAskKnowledge(agents)
+    const preselected = useSearchParams().get("agent") ?? undefined
+    const ask = useAskKnowledge(agents, undefined, preselected)
     const agentsSlot = mapSlot(slot, () => agents.map((lens) => askAgentOptionOf(t, lens)))
     const sees = mapSlot(slot, (all) => askSeesOf(all, ask.agent, brain))
     const audienceOptions = [
@@ -64,7 +66,7 @@ export const useBrainAsk = (input: BrainAskInput): BrainAskView => {
                 seesTable: brain("viewTitle"),
                 seesLane: brain("viewLane"),
                 seesOpen: brain("viewOpen"),
-                seesHint: p("seesHint"),
+                seesHint: ask.agent === undefined ? p("seesHint") : p("seesCaption", { agent: ask.agent.name ?? "" }),
                 closeAside: tp("closeAside"),
             },
             grid: askGridOf(),
@@ -79,7 +81,6 @@ export const useBrainAsk = (input: BrainAskInput): BrainAskView => {
             error: ask.error ?? undefined,
             sees,
             seesLabels: labels(brain("viewEmpty")),
-            seesLine: ask.agent === undefined ? "" : p("seesLine", { agent: ask.agent.name ?? "" }),
             isWaiting: isWaitingOf(slot),
         },
         on: {

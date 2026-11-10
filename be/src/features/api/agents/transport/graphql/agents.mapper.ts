@@ -1,4 +1,4 @@
-import type { BoundConnection } from "@modules/domain/agent-connections"
+import type { BoundConnection, ConnectionGrant } from "@modules/domain/agent-connections"
 import type { AgentPage } from "@modules/domain/agent-profile"
 import type { GenerationRequested, GenerationStatus } from "@modules/domain/ai-generations"
 import type { AgentDashboardData, AgentSummary, EngineStatus } from "@modules/domain/agents"
@@ -22,6 +22,7 @@ import type { AgentAckType } from "./dto/agent-ack.type"
 import type { AgentPageType } from "./dto/agent-page.type"
 import type { SetAgentOwnershipInput } from "./dto/set-agent-ownership.input"
 import type { AgentConnectionType } from "./dto/agent-connection.type"
+import type { ConnectionAgentGrantType } from "./dto/connection-agent-grant.type"
 import type { AgentDashboardInput } from "./dto/agent-dashboard.input"
 import type { AgentDashboardType } from "./dto/agent-dashboard.type"
 import type { AgentEngineStatusType } from "./dto/agent-engine-status.type"
@@ -74,6 +75,10 @@ export const toListAgentConnectionsRequest = (
 /** Maps the connections granted to an agent to the GraphQL type. */
 export const toAgentConnectionsType = (connections: ReadonlyArray<BoundConnection>): Array<AgentConnectionType> =>
     connections.map((connection) => ({ ...connection }))
+
+/** Maps the agents granted each connection to the GraphQL type. */
+export const toConnectionGrantsType = (grants: ReadonlyArray<ConnectionGrant>): Array<ConnectionAgentGrantType> =>
+    grants.map((grant) => ({ ...grant }))
 
 /** Maps the new agent of the GraphQL input, with the workspace it names, to the command request. */
 export const toCreateAgentRequest = (workspaceId: string, input: CreateAgentInput): CreateAgentRequest => ({

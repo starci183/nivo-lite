@@ -1,87 +1,237 @@
 {
-  "schema": "nivo/agent-graph@1",
-  "moduleKey": "sales",
-  "trigger": {
-    "kind": "tag",
-    "sources": ["channel", "chats-group", "agent", "system-event", "schedule"],
-    "burst": { "agent": { "window": "0s" }, "system-event": { "window": "0s" } }
-  },
-  "grant": {
-    "rights": [
-      { "kind": "catalogue-item", "access": "read", "scope": "workspace", "fields": ["id", "name", "priceVnd", "active"] },
-      { "kind": "order", "access": "read", "scope": "turn", "fields": ["id", "orderNo", "amountVnd", "status", "items"] },
-      { "kind": "order", "access": "write", "scope": "turn", "fields": ["leadId", "items", "amountVnd", "status"] },
-      { "kind": "message", "access": "write", "scope": "turn", "fields": ["body"] },
-      { "kind": "payment-account", "access": "read", "scope": "workspace", "fields": ["bankName", "bankCode", "accountNumber", "accountHolder"] }
+    "schema": "nivo/agent-graph@1",
+    "moduleKey": "sales",
+    "contract": {
+        "inputs": [
+            {
+                "name": "conversationId",
+                "type": "string",
+                "required": true
+            },
+            {
+                "name": "text",
+                "type": "string",
+                "required": true
+            },
+            {
+                "name": "channel",
+                "type": "string",
+                "required": false
+            },
+            {
+                "name": "leadId",
+                "type": "string",
+                "required": false
+            }
+        ]
+    },
+    "triggers": [
+        {
+            "key": "call",
+            "source": {
+                "kind": "workflow",
+                "connectionId": null
+            }
+        }
     ],
-    "tools": ["payment.instruction"],
-    "effects": ["order.record", "order.confirm", "channel.send", "payment.rematch", "work-item.raise"]
-  },
-  "nodes": [
-    {
-      "key": "record",
-      "kind": "output",
-      "step": "sales.order-from-chat",
-      "input": {
-        "leadId": { "$ref": "trigger.leadId" },
-        "items": { "$ref": "trigger.context.items" },
-        "address": { "$ref": "trigger.context.address" },
-        "note": null
-      },
-      "next": "complete"
+    "outcomes": [
+        {
+            "key": "won",
+            "label": "Chốt mua",
+            "outputs": [
+                {
+                    "name": "orderId",
+                    "type": "string"
+                }
+            ]
+        }
+    ],
+    "entry": {
+        "openTo": "any",
+        "holdsConversation": true
     },
-    {
-      "key": "complete",
-      "kind": "condition",
-      "step": "order.complete",
-      "input": { "items": { "$ref": "record.items" }, "address": { "$ref": "trigger.context.address" } },
-      "routes": { "missing": "ask-missing", "complete": "needs-approval" }
+    "trigger": {
+        "kind": "tag",
+        "sources": [
+            "agent"
+        ],
+        "burst": {
+            "agent": {
+                "window": "0s"
+            }
+        }
     },
-    {
-      "key": "ask-missing",
-      "kind": "output",
-      "step": "order.ask-missing",
-      "input": {
-        "conversationId": { "$ref": "trigger.conversationId" },
-        "missing": { "$ref": "complete.missing" },
-        "locale": "vi"
-      }
+    "grant": {
+        "rights": [
+            {
+                "kind": "catalogue-item",
+                "access": "read",
+                "scope": "workspace",
+                "fields": [
+                    "id",
+                    "name",
+                    "priceVnd",
+                    "active",
+                    "imageUrl"
+                ]
+            },
+            {
+                "kind": "message",
+                "access": "read",
+                "scope": "turn",
+                "fields": [
+                    "role",
+                    "text",
+                    "sentAt"
+                ]
+            },
+            {
+                "kind": "message",
+                "access": "write",
+                "scope": "turn",
+                "fields": [
+                    "body"
+                ]
+            },
+            {
+                "kind": "sales-lead",
+                "access": "write",
+                "scope": "turn",
+                "fields": [
+                    "contactName",
+                    "phone",
+                    "channel",
+                    "stage"
+                ]
+            },
+            {
+                "kind": "order",
+                "access": "write",
+                "scope": "turn",
+                "fields": [
+                    "leadId",
+                    "items",
+                    "amountVnd",
+                    "status"
+                ]
+            }
+        ],
+        "tools": [
+            "brain.search"
+        ],
+        "effects": [
+            "customer.message.send",
+            "lead.ensure",
+            "lead.stage.update",
+            "order.create",
+            "order.confirm",
+            "payment.qr.create",
+            "customer.care.schedule",
+            "team.message.post"
+        ]
     },
-    {
-      "key": "needs-approval",
-      "kind": "condition",
-      "step": "order.needs-approval",
-      "params": { "thresholdVnd": 5000000 },
-      "input": { "amountVnd": { "$ref": "complete.amountVnd" } },
-      "routes": { "approve-self": "confirm", "awaiting-owner": "raise-approval" }
-    },
-    {
-      "key": "confirm",
-      "kind": "output",
-      "step": "order.confirm",
-      "input": { "orderId": { "$ref": "record.orderId" } },
-      "next": "request-payment"
-    },
-    {
-      "key": "request-payment",
-      "kind": "output",
-      "step": "payment.request",
-      "input": {
-        "orderId": { "$ref": "record.orderId" },
-        "conversationId": { "$ref": "trigger.conversationId" },
-        "locale": "vi"
-      }
-    },
-    {
-      "key": "raise-approval",
-      "kind": "output",
-      "step": "core.raise-work-item",
-      "params": { "action": "confirm_order", "title": "Xác nhận đơn vượt hạn mức của bạn" },
-      "input": {
-        "payload": { "orderId": { "$ref": "record.orderId" } },
-        "amountVnd": { "$ref": "complete.amountVnd" },
-        "claimId": null
-      }
-    }
-  ]
+    "nodes": [
+        {
+            "key": "consult",
+            "kind": "execute",
+            "step": "sales.consult-turn",
+            "params": {
+                "conversationId": {
+                    "$ref": "trigger.conversationId"
+                },
+                "text": {
+                    "$ref": "trigger.text"
+                },
+                "channel": {
+                    "$ref": "trigger.channel",
+                    "default": null
+                },
+                "leadId": {
+                    "$ref": "trigger.leadId",
+                    "default": null
+                },
+                "locale": "vi",
+                "address": {
+                    "$ref": "lead.address",
+                    "default": null
+                }
+            },
+            "routes": {
+                "ready": "create-order"
+            }
+        },
+        {
+            "key": "create-order",
+            "kind": "output",
+            "step": "sales.create-order",
+            "params": {
+                "conversationId": {
+                    "$ref": "trigger.conversationId"
+                },
+                "leadId": {
+                    "$ref": "steps.consult.output.leadId"
+                },
+                "items": {
+                    "$ref": "steps.consult.output.items"
+                },
+                "address": {
+                    "$ref": "steps.consult.output.address"
+                },
+                "recipientName": {
+                    "$ref": "steps.consult.output.recipientName",
+                    "default": null
+                },
+                "recipientPhone": {
+                    "$ref": "steps.consult.output.recipientPhone"
+                },
+                "deliveryAt": {
+                    "$ref": "steps.consult.output.deliveryAt"
+                }
+            },
+            "next": "send-qr"
+        },
+        {
+            "key": "send-qr",
+            "kind": "output",
+            "step": "payment.request",
+            "params": {
+                "orderId": {
+                    "$ref": "steps.create-order.output.orderId"
+                },
+                "conversationId": {
+                    "$ref": "trigger.conversationId"
+                },
+                "locale": "vi"
+            },
+            "next": "notify-order"
+        },
+        {
+            "key": "notify-order",
+            "kind": "output",
+            "step": "sales.order-notice",
+            "params": {
+                "orderId": {
+                    "$ref": "steps.create-order.output.orderId"
+                },
+                "leadId": {
+                    "$ref": "steps.consult.output.leadId"
+                },
+                "locale": "vi"
+            },
+            "next": "won"
+        },
+        {
+            "key": "won",
+            "kind": "output",
+            "step": "core.outcome",
+            "params": {
+                "outcome": "won",
+                "outputs": {
+                    "orderId": {
+                        "$ref": "steps.create-order.output.orderId"
+                    }
+                }
+            }
+        }
+    ]
 }

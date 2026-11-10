@@ -32,6 +32,8 @@ export interface AgentGraphHeadView {
     /** Empty when the draft may be published; otherwise why it may not. */
     readonly publishBlocked: string
     readonly isPublishing: boolean
+    /** "Version N is running" when there is nothing to publish; otherwise empty and the publish command shows. */
+    readonly runningLabel: string
 }
 
 /** The graph itself: its name for assistive technology, the cards, the edges and the selected card. */
@@ -43,6 +45,15 @@ export interface AgentGraphCanvasView {
     /** The title of each band, over its column. */
     readonly headers: ReadonlyArray<{ readonly label: string; readonly at: number }>
     readonly selectedId: string
+    /** The key under the graph: the role colours and the marks of a wait, the current step and the path taken. */
+    readonly legend: ReadonlyArray<AgentGraphLegendItem>
+}
+
+/** One entry of the key under the graph: a word and the tone it paints. */
+export interface AgentGraphLegendItem {
+    readonly id: string
+    readonly label: string
+    readonly tone: AgentGraphMark
 }
 
 /** One answer of the seven, in the shape that draws it. */
@@ -270,6 +281,8 @@ export interface AgentGraphVersionView {
     readonly byLine: string
     readonly restoreLabel: string
     readonly canRestore: boolean
+    /** The version that runs now (the draft is never it). */
+    readonly isActive: boolean
 }
 
 /** Whether the graph decides or only records, and who may switch it. */
@@ -285,6 +298,8 @@ export interface AgentGraphModeView {
 export interface AgentGraphVersionsView {
     readonly title: string
     readonly hint: string
+    /** "Version 2 · in use": the one chip every surface shows for the version that runs; empty before the first one. */
+    readonly activeChip: string
     readonly items: ReadonlyArray<AgentGraphVersionView>
 }
 

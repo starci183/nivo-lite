@@ -12,7 +12,7 @@ const PROVIDERS = [SepayFeedPollerService, SepayBankTransactionsService, SepayPa
 @Module({})
 /**
  * Everything SePay-specific that core asks a provider for, registered under the capability names: the poller that reads its
- * transactions back, the transaction list and the payment instruction its MCP tools (`bank.transactions`, `payment.instruction`) answer with,
+ * transactions back, the transaction list its MCP tool (`bank.transactions`) answers with, the payment instruction the QR effect draws,
  * and, in the app that receives it, the workspace-feed webhook.
  */
 export class SepayProviderModule extends ConfigurableModuleClass {

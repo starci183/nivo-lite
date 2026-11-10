@@ -42,9 +42,16 @@ const orderMatches = (columns: ReadonlyArray<IndexColumn>, order: OrderBy): bool
     order.every(([field, direction], index) => columnIs(columns[index], field, direction === "desc")) ||
     order.every(([field, direction], index) => columnIs(columns[index], field, direction === "asc"))
 
+/**
+ * Whether the rows a read pins all satisfy a partial index's predicate: only a `notNull` of a field the read pins by equality to a
+ * value (an equality to a literal is never null), so the partial index holds every row the read can find.
+ */
+export const predicateHolds = (predicate: FilterExpr | undefined, equality: ReadonlyArray<string>): boolean =>
+    predicate === undefined || (predicate.op === "notNull" && equality.includes(predicate.field))
+
 /** Whether an index serves (equality fields in any order, then the order) as a prefix of its parts, after the implicit workspace. */
 const servesPrefix = (index: IndexDef, equality: ReadonlyArray<string>, order: OrderBy): boolean => {
-    if (index.where !== undefined || (index.using !== undefined && index.using !== "btree")) {
+    if (!predicateHolds(index.where, equality) || (index.using !== undefined && index.using !== "btree")) {
         return false
     }
     const columns = index.on.map(columnOf)
@@ -56,10 +63,17 @@ const servesPrefix = (index: IndexDef, equality: ReadonlyArray<string>, order: O
     )
 }
 
-/** The index behind a declared unique constraint: its fields, then the id. A partial unique constraint stands for no index (its predicate may not hold). */
+/**
+ * The index behind a declared unique constraint: its fields, then the id, with the constraint's predicate when it is partial (it then
+ * serves only a read whose pins make the predicate hold, see `predicateHolds`).
+ */
 const uniqueIndexOf = (constraint: ConstraintDef): IndexDef | null =>
-    constraint.kind === "unique" && constraint.where === undefined
-        ? { name: constraint.name, on: [...constraint.on, "id"] }
+    constraint.kind === "unique"
+        ? {
+              name: constraint.name,
+              on: [...constraint.on, "id"],
+              ...(constraint.where === undefined ? {} : { where: constraint.where }),
+          }
         : null
 
 /** The indexes an entity is served by: the declared ones, and the unique index behind each unconditional unique constraint. */

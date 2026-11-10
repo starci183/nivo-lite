@@ -16,7 +16,10 @@ import { breakerAfter, breakerGate, CLOSED } from "./circuit-breaker.policy"
 import { failureCodeOf, isTimeout, roleIn, usable, toolVisibleTo } from "./connector-call.policy"
 import { isTainted, withTaint } from "./taint.policy"
 import { grantOf, nativeConnectorOf, remoteConnectorOf } from "./connector-row.mapper"
-import { judgeGrant } from "./grant.policy"
+import { grantOfCall, judgeGrant } from "./grant.policy"
+import { isAbilityTool, isChannelBound } from "./provider-abilities.policy"
+import type { AbilityVerdict } from "./provider-abilities.policy"
+import { ProviderAbilitiesService } from "./provider-abilities.service"
 import { gatewayArgumentsSchema } from "./gateway-tools.schema"
 import { withReplayKey } from "./idempotency-key.policy"
 import { InjectDataRightsGate, InjectMcpGatewayOptions, InjectNativeAdapters } from "./mcp-gateway.decorators"
@@ -38,6 +41,7 @@ import type {
     GatewayCallResult,
     GatewayJson,
     GatewayToolSpec,
+    GrantVerdict,
     NativeAdapter,
     OptionalDescribedTool,
     RoleReadiness,
@@ -87,6 +91,17 @@ interface AuditLine {
 
 /** What the receipt of arguments refused by the generic bound records: the refused tree is unbounded, so it is never serialized. */
 const UNRECORDED_ARGUMENTS: GatewayJson = {}
+
+/** The grant verdict of an ability that let the call through or asks a person (a refusal is answered before). */
+const grantOfAbility = (ability: Exclude<AbilityVerdict, { readonly kind: "refuse" }>): GrantVerdict =>
+    ability.kind === "approval" ? { kind: "approval", reason: "ask_mode" } : { kind: "allow" }
+
+/** The kind of the answer a ledgered tool gives when it refused the call (a fact, never a failure). */
+const REFUSED_KIND = "refused"
+
+/** The reason of a ledgered tool's refusal answer, for the audit line; null for any other answer. */
+const refusalCodeOf = (spec: GatewayToolSpec, value: GatewayJson): string | null =>
+    spec.ledgered === true && value.kind === REFUSED_KIND && typeof value.id === "string" ? value.id : null
 
 /** The answer of a call that stops before any connector is reached. */
 const failure = (code: "invalid_name" | "unknown_tool" | "connector_disabled", detail: string): GatewayCallResult => ({
@@ -138,6 +153,7 @@ export class McpGatewayService {
         private readonly nativeRunner: NativeRunnerService,
         @Optional() @InjectToolGraphGate() private readonly toolGraph: ToolGraphGate | null = null,
         @Optional() @InjectDataRightsGate() private readonly dataRights: DataRightsGate | null = null,
+        @Optional() private readonly abilities?: ProviderAbilitiesService,
     ) {}
 
     /** The connectors of a workspace: every native one, and the remote ones it registered. */
@@ -192,9 +208,37 @@ export class McpGatewayService {
         return (await this.grants.listOfAgent(workspaceId, agentId)).map(grantOf)
     }
 
-    /** The agents of a workspace holding any of the tools (full names or `connector.*`) in a mode other than never, oldest grant first. */
-    agentsGranted(workspaceId: string, tools: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
-        return this.grants.agentsGranted(workspaceId, tools)
+    /**
+     * The agents of a workspace that may call any of the tools (full names or `connector.*`): those holding a ticked ability that has
+     * one, then those holding a grant row of one in a mode other than never, oldest grant first.
+     */
+    async agentsGranted(workspaceId: string, tools: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
+        const [holding, granted] = await Promise.all([
+            this.abilities?.agentsHolding(workspaceId, tools) ?? [],
+            this.grants.agentsGranted(workspaceId, tools),
+        ])
+        return [...new Set([...holding, ...granted])]
+    }
+
+    /**
+     * The grants a caller's discovery reads: its grant rows, where a tool that is a provider right is decided by the caller's ticked
+     * abilities alone (a row on such a tool is dropped, a held one is added in its tick's mode). The engine's own caller keeps its rows.
+     */
+    private async discoveryOf(caller: GatewayCaller): Promise<{
+        readonly grants: ReadonlyArray<ToolGrant>
+        readonly listed: (name: string) => boolean
+    }> {
+        const rows = await this.grantsOf(caller.workspaceId, caller.agentId)
+        if (this.abilities === undefined || caller.engine === true) return { grants: rows, listed: () => true }
+        const held = await this.abilities.heldTools(caller.workspaceId, caller.agentId)
+        const names = new Set(held.map((entry) => entry.tool))
+        return {
+            grants: [
+                ...rows.filter((row) => !isAbilityTool(row.tool) || isChannelBound(row.tool)),
+                ...held.map((entry): ToolGrant => ({ ...entry, limitVnd: null, constraints: [] })),
+            ],
+            listed: (name) => !isAbilityTool(name) || isChannelBound(name) || names.has(name),
+        }
     }
 
     /**
@@ -202,15 +246,18 @@ export class McpGatewayService {
      * agent never loads every schema of every connector.
      */
     async search(caller: GatewayCaller, query: string, limit: number): Promise<ReadonlyArray<DiscoveredTool>> {
-        const [connectors, grants] = await Promise.all([
+        const [connectors, { grants, listed }] = await Promise.all([
             this.connectorsOf(caller.workspaceId),
-            this.grantsOf(caller.workspaceId, caller.agentId),
+            this.discoveryOf(caller),
         ])
         const active = connectors.filter((connector) => connector.status !== "disabled")
         const manifests = active.map((connector) => ({
             ...connector.manifest,
             tools: connector.manifest.tools.filter(
-                (spec) => usable(connector, spec.name) && toolVisibleTo(caller, spec),
+                (spec) =>
+                    usable(connector, spec.name) &&
+                    toolVisibleTo(caller, spec) &&
+                    listed(fullNameOf(connector.manifest.key, spec.name)),
             ),
         }))
         return searchTools(manifests, grants, query, limit)
@@ -218,13 +265,13 @@ export class McpGatewayService {
 
     /** One usable granted tool in full (schema and limits); null when it does not exist, is not approved or not granted. */
     async describe(caller: GatewayCaller, name: string): Promise<OptionalDescribedTool> {
-        const [resolved, grants] = await Promise.all([
+        const [resolved, { grants, listed }] = await Promise.all([
             this.resolve(caller.workspaceId, name),
-            this.grantsOf(caller.workspaceId, caller.agentId),
+            this.discoveryOf(caller),
         ])
-        const grant = grantFor(grants, name)
         if ("ok" in resolved || !usable(resolved.connector, resolved.spec.name)) return null
-        if (!toolVisibleTo(caller, resolved.spec)) return null
+        if (!toolVisibleTo(caller, resolved.spec) || !listed(resolved.name)) return null
+        const grant = grantOfCall(grantFor(grants, name), resolved.spec, caller, name)
         if (grant === null || grant.mode === "never") return null
         const { spec } = resolved
         return {
@@ -266,8 +313,12 @@ export class McpGatewayService {
             })
             return { ok: false, code: "schema_unapproved", detail: name }
         }
-        const grant = grantFor(await this.grantsOf(caller.workspaceId, caller.agentId), name)
-        const verdict = judgeGrant(grant, sent, caller.approvedBy !== undefined, resolved.spec.scope !== "read")
+        const ability = await this.abilityOf(caller, resolved)
+        if (ability !== null && ability.kind === "refuse") {
+            await this.audit(caller, resolved, sent, { outcome: "refused", code: ability.reason, summary: "", started })
+            return { ok: false, code: "not_granted", detail: ability.reason }
+        }
+        const verdict = ability === null ? await this.grantVerdictOf(caller, resolved, sent) : grantOfAbility(ability)
         if (verdict.kind === "refuse") {
             await this.audit(caller, resolved, sent, { outcome: "refused", code: "not_granted", summary: "", started })
             return { ok: false, code: "not_granted", detail: name }
@@ -314,6 +365,23 @@ export class McpGatewayService {
         )
     }
 
+    /**
+     * What the calling agent's attachments decide about a tool that is a provider right, or null when they do not judge the call: a
+     * tool of no ability (the tool grants judge it as before), a channel-bound tool (its executor asks once it knows the conversation's
+     * channel), or the engine's own caller (a module's declared job is code, not an agent: the workspace connection alone decides).
+     */
+    private async abilityOf(caller: GatewayCaller, resolved: Resolved): Promise<AbilityVerdict | null> {
+        if (this.abilities === undefined || caller.engine === true) return null
+        return this.abilities.judge(caller.workspaceId, caller.agentId, resolved.name, caller.approvedBy !== undefined)
+    }
+
+    /** The verdict of the tool grants on a call no ability judges: the owner's row, the step's allow-list, the defaults; default deny. */
+    private async grantVerdictOf(caller: GatewayCaller, resolved: Resolved, sent: GatewayJson): Promise<GrantVerdict> {
+        const row = grantFor(await this.grantsOf(caller.workspaceId, caller.agentId), resolved.name)
+        const grant = grantOfCall(row, resolved.spec, caller, resolved.name)
+        return judgeGrant(grant, sent, caller.approvedBy !== undefined, resolved.spec.scope !== "read")
+    }
+
     /** What the agent's data rights decide about a native read: every other call, and an agent no enforced graph governs, passes untouched. */
     private async reachOf(caller: GatewayCaller, resolved: Resolved): Promise<DataRightVerdict> {
         const gate = this.dataRights
@@ -326,6 +394,7 @@ export class McpGatewayService {
     private mustAsk(caller: GatewayCaller, resolved: Resolved): boolean {
         return (
             resolved.spec.scope !== "read" &&
+            resolved.spec.taintExempt !== true &&
             caller.approvedBy === undefined &&
             isTainted(this.tainted, caller, this.clock.now().getTime())
         )
@@ -373,7 +442,7 @@ export class McpGatewayService {
         }
         const breakerKey = `${caller.workspaceId}:${resolved.connector.manifest.key}`
         const gate = breakerGate(this.breakerOf(breakerKey), started)
-        if (resolved.spec.scope === "read" || !gate.allowed) {
+        if (resolved.spec.scope === "read" || resolved.spec.ledgered === true || !gate.allowed) {
             return this.execute(caller, resolved, args.forwarded, started, right)
         }
         const key = createHash("sha256")
@@ -430,7 +499,13 @@ export class McpGatewayService {
             await this.audit(caller, resolved, args, { outcome: "error", code: "tool_error", summary, started })
             return { ok: false, code: "tool_error", detail: summary }
         }
-        await this.audit(caller, resolved, args, { outcome: "ok", code: null, summary, started })
+        const refused = refusalCodeOf(resolved.spec, shown)
+        await this.audit(caller, resolved, args, {
+            outcome: refused === null ? "ok" : "refused",
+            code: refused,
+            summary,
+            started,
+        })
         if (resolved.spec.taints === true) this.tainted = withTaint(this.tainted, caller, this.clock.now().getTime())
         return { ok: true, value: shown, summary }
     }

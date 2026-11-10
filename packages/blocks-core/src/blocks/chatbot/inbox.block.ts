@@ -48,5 +48,6 @@ export const inboxBlock: BlockDefinition<typeof props, typeof slots> = defineBlo
     props,
     slots,
     params: ["searchParam", "statusParam", "periodParam", "selectParam"],
+    layout: "panes",
     children: { max: 1, accepts: ["chatbot.approval-card"] },
 })

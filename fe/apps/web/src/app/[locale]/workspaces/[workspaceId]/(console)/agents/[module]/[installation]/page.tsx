@@ -1,18 +1,15 @@
 import type { ReactElement } from "react"
-import { AgentSetupPage } from "@/features/pages/AgentSetupPage"
+import { AgentLandingPage } from "@/features/pages/AgentLandingPage"
 
-/** The document title of the setup tab. */
-export { agentSetupMetadata as generateMetadata } from "@/features/pages/AgentSetupPage"
+/** The document title of the landing. */
+export { agentLandingMetadata as generateMetadata } from "@/features/pages/AgentLandingPage"
 
 type PageProps = { readonly params: Promise<{ module: string; installation: string }> }
 
-/** OpenClaw writes the text of the setup chat, so this screen may wait longer than the platform default. */
-export const maxDuration = 60
-
-/** The setup slot of one agent instance: its private setup chat with NIVO. */
+/** The landing of one agent instance: it opens Setup for an agent that is not set up and the workbench otherwise. */
 const Page = async (props: PageProps): Promise<ReactElement> => {
     const { module, installation } = await props.params
-    return <AgentSetupPage module={module} installationId={installation} />
+    return <AgentLandingPage module={module} installationId={installation} />
 }
 
 export default Page

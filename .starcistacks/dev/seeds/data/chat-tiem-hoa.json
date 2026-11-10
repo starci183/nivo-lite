@@ -1,0 +1,255 @@
+{
+  "schema": "nivo/chat-seed@1",
+  "rooms": [
+    {
+      "id": "5eed0c4a-0000-4000-8000-000000000001",
+      "name": "Cả tiệm",
+      "purpose": "common",
+      "members": [
+        {
+          "role": "owner"
+        },
+        {
+          "role": "staff"
+        },
+        {
+          "agent": "chatbot"
+        },
+        {
+          "agent": "sales"
+        },
+        {
+          "agent": "accounting"
+        }
+      ],
+      "messages": [
+        {
+          "key": "ca-1",
+          "from": {
+            "role": "owner"
+          },
+          "day": "yesterday",
+          "time": "08:30",
+          "body": "Chào cả nhà, hôm nay tiệm mở cửa như thường nhé. Nhớ kiểm lại hoa tươi trước 9 giờ."
+        },
+        {
+          "key": "ca-2",
+          "from": {
+            "role": "staff"
+          },
+          "day": "yesterday",
+          "time": "08:42",
+          "body": "Dạ, em kiểm rồi ạ. Hồng đỏ còn nhiều, cúc họa mi còn ít, chắc bán hết trong sáng nay."
+        },
+        {
+          "key": "ca-3",
+          "from": {
+            "agent": "sales"
+          },
+          "day": "yesterday",
+          "time": "16:05",
+          "body": "Em chốt xong 3 đơn chiều nay. Đơn lớn nhất là Hộp hoa tulip 4.000 ₫, khách đã chuyển khoản."
+        },
+        {
+          "key": "ca-4",
+          "from": {
+            "agent": "accounting"
+          },
+          "day": "yesterday",
+          "time": "17:30",
+          "body": "Em đã đối chiếu thu chi hôm qua, khớp với sổ. Doanh thu cả ngày 12.500 ₫."
+        },
+        {
+          "key": "ca-5",
+          "from": {
+            "role": "owner"
+          },
+          "day": "today",
+          "time": "08:15",
+          "body": "Cảm ơn hai bạn. Hôm nay nhớ gói thêm thiệp nhỏ 1.200 ₫ cho khách đặt Giỏ hoa nhỏ nhé."
+        },
+        {
+          "key": "ca-6",
+          "from": {
+            "agent": "sales"
+          },
+          "day": "today",
+          "time": "09:10",
+          "body": "Đơn mới DH-20261109-0101 · Hoa hồng mini × 1 · 2.000 ₫ · đã gửi QR",
+          "agentMessage": {
+            "kind": "order.summary",
+            "intent": "notify",
+            "title": "Đơn mới DH-20261109-0101",
+            "summary": "Đơn mới DH-20261109-0101 · Hoa hồng mini × 1 · 2.000 ₫ · đã gửi QR",
+            "payload": {
+              "orderNo": "DH-20261109-0101",
+              "lines": [
+                {
+                  "name": "Hoa hồng mini",
+                  "qty": 1
+                }
+              ],
+              "amountText": "2.000 ₫",
+              "customer": "Chị Lan",
+              "address": "Nhận tại tiệm"
+            },
+            "work": {
+              "label": "DH-20261109-0101",
+              "href": "/agents/sales/workbench"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "5eed0c4a-0000-4000-8000-000000000002",
+      "name": "Bán hàng",
+      "purpose": "module",
+      "module": "sales",
+      "members": [
+        {
+          "role": "owner"
+        },
+        {
+          "agent": "sales",
+          "mayPost": true
+        }
+      ],
+      "messages": [
+        {
+          "key": "bh-1",
+          "from": {
+            "role": "owner"
+          },
+          "day": "yesterday",
+          "time": "09:00",
+          "body": "Sales ơi, hôm nay có chương trình gì cho khách quen không?"
+        },
+        {
+          "key": "bh-2",
+          "from": {
+            "agent": "sales"
+          },
+          "day": "yesterday",
+          "time": "09:04",
+          "body": "Dạ, em đề xuất tặng thiệp nhỏ 1.200 ₫ cho đơn từ 4.000 ₫ trở lên. Anh thấy sao?"
+        },
+        {
+          "key": "bh-3",
+          "from": {
+            "role": "owner"
+          },
+          "day": "yesterday",
+          "time": "09:10",
+          "body": "Được, cứ làm vậy. Giảm giá tối đa vẫn 10% thôi nhé."
+        },
+        {
+          "key": "bh-4",
+          "from": {
+            "agent": "sales"
+          },
+          "day": "today",
+          "time": "08:50",
+          "body": "Em soạn tin trả lời khách muốn đổi sang Bó hoa hồng mini 5.000 ₫, anh duyệt giúp em.",
+          "agentMessage": {
+            "kind": "message.text",
+            "intent": "approve",
+            "state": "waiting",
+            "title": "Trả lời khách hỏi đổi sang hoa hồng mini",
+            "summary": "Em soạn tin trả lời khách muốn đổi sang Bó hoa hồng mini 5.000 ₫, anh duyệt giúp em.",
+            "to": "Anh",
+            "level": "Cần chủ tiệm duyệt",
+            "payload": {
+              "text": "Dạ chào chị, Bó hoa hồng mini giá 5.000 ₫ rất hợp ngân sách ạ. Tiệm giao trong ngày, chị cho em xin địa chỉ nhé."
+            },
+            "outbound": {
+              "to": "Chị Lan",
+              "via": {
+                "provider": "zalo",
+                "label": "Zalo của tiệm"
+              }
+            },
+            "why": [
+              {
+                "source": "rule",
+                "label": "Tin gửi khách cần chủ tiệm duyệt",
+                "quote": ""
+              }
+            ]
+          }
+        },
+        {
+          "key": "bh-5",
+          "from": {
+            "role": "owner"
+          },
+          "day": "today",
+          "time": "09:20",
+          "body": "Ổn, em gửi đi nhé."
+        }
+      ]
+    },
+    {
+      "id": "5eed0c4a-0000-4000-8000-000000000003",
+      "name": "Sổ sách",
+      "purpose": "module",
+      "module": "accounting",
+      "members": [
+        {
+          "role": "owner"
+        },
+        {
+          "agent": "accounting",
+          "mayPost": true
+        }
+      ],
+      "messages": [
+        {
+          "key": "ss-1",
+          "from": {
+            "agent": "accounting"
+          },
+          "day": "yesterday",
+          "time": "18:00",
+          "body": "Em chốt sổ hôm qua: thu 12.500 ₫ gồm 8.300 ₫ chuyển khoản và 4.200 ₫ tiền mặt. Chi nhập hoa 5.000 ₫."
+        },
+        {
+          "key": "ss-2",
+          "from": {
+            "role": "owner"
+          },
+          "day": "yesterday",
+          "time": "18:10",
+          "body": "Ok em. Còn công nợ nào chưa thu không?"
+        },
+        {
+          "key": "ss-3",
+          "from": {
+            "agent": "accounting"
+          },
+          "day": "yesterday",
+          "time": "18:12",
+          "body": "Dạ còn một khoản 5.000 ₫ của khách đặt Bó hoa hồng mini, khách hẹn thanh toán sáng nay."
+        },
+        {
+          "key": "ss-4",
+          "from": {
+            "agent": "accounting"
+          },
+          "day": "today",
+          "time": "08:40",
+          "body": "Khoản 5.000 ₫ đã về tài khoản lúc 8 giờ 35. Em đã đối chiếu xong."
+        },
+        {
+          "key": "ss-5",
+          "from": {
+            "role": "owner"
+          },
+          "day": "today",
+          "time": "08:45",
+          "body": "Tốt, cảm ơn em. Cuối ngày gửi anh bảng thu chi nhé."
+        }
+      ]
+    }
+  ]
+}

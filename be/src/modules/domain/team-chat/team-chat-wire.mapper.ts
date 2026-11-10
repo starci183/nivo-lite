@@ -30,6 +30,7 @@ import type {
     ApprovalState,
     ChatUpload,
     ChatMemberRef,
+    GroupPurpose,
     MessagePage,
     MessageView,
     RoomUnread,
@@ -55,6 +56,13 @@ const REFUSALS: Record<TeamChatErrorCode, string> = {
     [TeamChatErrorCode.FileTooLarge]: "file_too_large",
     [TeamChatErrorCode.FileTypeNotAllowed]: "file_type_not_allowed",
     [TeamChatErrorCode.StorageUnavailable]: "storage_unavailable",
+    [TeamChatErrorCode.InvalidAgentMessage]: "invalid_agent_message",
+    [TeamChatErrorCode.AgentMessageNotPosted]: "agent_message_not_posted",
+    [TeamChatErrorCode.PurposeInvalid]: "purpose_invalid",
+    [TeamChatErrorCode.PurposeTaken]: "purpose_taken",
+    [TeamChatErrorCode.PostRightNeedsSeat]: "post_right_needs_seat",
+    [TeamChatErrorCode.ReactionInvalid]: "reaction_invalid",
+    [TeamChatErrorCode.ReactionRateLimited]: "reaction_rate_limited",
 }
 
 /** An instant as ISO text, the way this schema carries every instant. */
@@ -91,6 +99,10 @@ export const messageWireOf = (view: MessageView): MessageWire => ({
     attachments: view.attachments,
     report: view.runId === null || view.authorId === null ? null : { runId: view.runId, agentId: view.authorId },
     approval: view.approval === null ? null : approvalWireOf(view.approval),
+    agentMessage: view.agentMessage,
+    reactions: view.reactions,
+    replyTo: view.replyTo,
+    forwardedFrom: view.forwardedFrom,
 })
 
 /** A room of the domain as the wire shows it. */
@@ -161,12 +173,19 @@ export const messagesRequestOf = (workspaceId: string, input: MessagesWireInput)
     pinnedOnly: input.pinnedOnly === true,
 })
 
+/** The purpose of a group as an input names it; a module room without a module stays invalid for the domain to refuse. */
+export const purposeOf = (purpose: string, module: string | null): GroupPurpose =>
+    purpose === "module"
+        ? { purpose: "module", module: module ?? "" }
+        : { purpose: purpose === "common" ? "common" : "group" }
+
 /** The request of a new room. */
 export const createRoomRequestOf = (workspaceId: string, input: CreateRoomWireInput): CreateRoomWireRequest => ({
     workspaceId,
     kind: input.kind === "direct" ? "direct" : "group",
     name: input.name,
     members: input.members.map(memberRefOf),
+    ...(input.purpose == null ? {} : { purpose: purposeOf(input.purpose, input.purposeModule ?? null) }),
 })
 
 /** The request that adds or removes a member of a room. */
@@ -185,6 +204,7 @@ export const sendRequestOf = (workspaceId: string, input: SendWireInput): SendWi
     mentions: (input.mentions ?? []).map(memberRefOf),
     fileKeys: input.fileKeys ?? [],
     clientId: input.clientId,
+    replyTo: input.replyTo ?? null,
 })
 
 /** The request of a verdict on a decision. */

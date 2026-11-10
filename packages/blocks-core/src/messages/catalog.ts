@@ -28,6 +28,15 @@ const BOOKS: Readonly<Record<NodeLocale, Readonly<Record<MessageKey, string>>>> 
 /** The words of a key in one language. */
 export const messageOf = (locale: NodeLocale, key: MessageKey): string => BOOKS[locale][key]
 
+/** The English catalog read by any text, for a key that arrives as data (the title of an installed effect or tool). */
+const ENGLISH: Readonly<Record<string, string>> = en
+
+/**
+ * The words a model reads for a text key of this library (the title of an effect or a tool), in English like every step goal, or
+ * undefined when the catalog has no such key. A host hands it to the node runner so an agent is told what a tool does in words.
+ */
+export const modelWordsOf = (key: string): string | undefined => (Object.hasOwn(ENGLISH, key) ? ENGLISH[key] : undefined)
+
 /** The words of a key in both product languages. */
 export const bilingualOf = (key: MessageKey): BilingualText => ({ vi: messageOf("vi", key), en: messageOf("en", key) })
 
@@ -43,3 +52,9 @@ export const wordOf = (key: WordKey): string => words[key]
 
 /** The language data of a key whose words are a list, one entry per line. */
 export const wordListOf = (key: WordKey): ReadonlyArray<string> => words[key].split(LINE_BREAK)
+
+/** The words of a key known only by its name, derived by a convention such as `node<Id>Subtitle`; null when the catalog has none. */
+export const messageNamed = (locale: NodeLocale, name: string): string | null => {
+    const book: Readonly<Record<string, string>> = BOOKS[locale]
+    return book[name] ?? null
+}

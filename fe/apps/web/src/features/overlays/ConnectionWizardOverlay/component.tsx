@@ -182,6 +182,7 @@ export const ConnectionWizardOverlayBase = (props: ConnectionWizardOverlayBasePr
             onOpenChange={(isOpen) => {
                 if (!isOpen) onClose(true)
             }}
+            width="wide"
             title={wizard.title}
             closeLabel={wizard.closeLabel}
             placement="right"

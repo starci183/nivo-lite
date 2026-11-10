@@ -1,5 +1,14 @@
 import { Test } from "@nestjs/testing"
-import { graphNodeStepOf, localeOf, outputsOf, subjectOfLabel, tagSourceOf, triggerScopeOf } from "./graph-flow.policy"
+import type { GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
+import {
+    graphNodeStepOf,
+    localeOf,
+    nodeBlocks,
+    outputsOf,
+    subjectOfLabel,
+    tagSourceOf,
+    triggerScopeOf,
+} from "./graph-flow.policy"
 import type { FlowWake } from "./graph-flow.policy"
 
 /** The members of the subject under test. */
@@ -10,6 +19,7 @@ interface Subject {
     readonly graphNodeStepOf: typeof graphNodeStepOf
     readonly outputsOf: typeof outputsOf
     readonly subjectOfLabel: typeof subjectOfLabel
+    readonly nodeBlocks: typeof nodeBlocks
 }
 
 const SUBJECT = Symbol("graph-flow.policy")
@@ -20,7 +30,15 @@ const build = async (): Promise<Subject> => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: { tagSourceOf, triggerScopeOf, localeOf, graphNodeStepOf, outputsOf, subjectOfLabel },
+                useValue: {
+                    tagSourceOf,
+                    triggerScopeOf,
+                    localeOf,
+                    graphNodeStepOf,
+                    outputsOf,
+                    subjectOfLabel,
+                    nodeBlocks,
+                },
             },
         ],
     }).compile()
@@ -73,6 +91,7 @@ describe("triggerScopeOf", () => {
             locale: "en",
             subject: { kind: "order", id: "o-1" },
             context: { items: [{ name: "Lan" }] },
+            items: [{ name: "Lan" }],
             source: "agent",
             origin: "agent",
         })
@@ -127,5 +146,27 @@ describe("subjectOfLabel", () => {
         expect(policy.subjectOfLabel("x:")).toBeNull()
         expect(policy.subjectOfLabel(1)).toBeNull()
         expect(policy.triggerScopeOf(wake({ context: { subject: "a label" } })).subject).toBe("a label")
+    })
+})
+
+describe("nodeBlocks", () => {
+    const node = (blocking?: boolean): GraphSpecNode => ({
+        key: "notify",
+        kind: "output",
+        step: "sales.order-notice",
+        ...(blocking === undefined ? {} : { blocking }),
+    })
+
+    it("blocks by default, and lets a side node (`blocking: false`) be passed over", async () => {
+        const policy = await build()
+        expect(policy.nodeBlocks(node(), undefined)).toBe(true)
+        expect(policy.nodeBlocks(node(), true)).toBe(true)
+        expect(policy.nodeBlocks(node(), false)).toBe(false)
+    })
+
+    it("takes the graph node's own word over the definition's", async () => {
+        const policy = await build()
+        expect(policy.nodeBlocks(node(true), false)).toBe(true)
+        expect(policy.nodeBlocks(node(false), undefined)).toBe(false)
     })
 })

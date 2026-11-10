@@ -31,7 +31,12 @@ export class CatalogueSeedService {
         const items = readCatalogueItems(text)
         const workspaceId = await this.workspaceOf(workspaceName)
         await eachInOrder(items, async (item) => {
-            this.options.print(`catalogue ${item.sku} ${await this.inventory.ensureItem(workspaceId, item)}`)
+            const { image, ...fields } = item
+            const outcome = await this.inventory.ensureItem(workspaceId, {
+                ...fields,
+                ...(image === undefined ? {} : { image: { contentType: image.contentType, bytes: Buffer.from(image.base64, "base64") } }),
+            })
+            this.options.print(`catalogue ${item.sku} ${outcome}`)
         })
     }
 

@@ -1,3 +1,4 @@
+import type { LineFile, LineOrder } from "@nivo-lite/blocks-core/rules/chatbot"
 import type { AgentTurnFacts } from "@modules/domain/agents"
 
 /** The conversation a customer's channel message reached, as the intake reads it. */
@@ -151,6 +152,10 @@ export interface AgentLine {
     readonly human?: HumanAuthor | undefined
     /** The agent that sends it (the agent of the turn): kept on the stored line, so the conversation shows who spoke. */
     readonly sentBy?: string | undefined
+    /** The pictures and files the line carries (the album and the payment QR the customer received): stored with the line, so the thread shows them. */
+    readonly files?: ReadonlyArray<LineFile> | undefined
+    /** The order the line is about (a snapshot): stored with the line, so the thread draws the order card. */
+    readonly order?: LineOrder | undefined
 }
 
 /** When a message happened, if that is not when it was stored: the event's own time, and a tie-break for messages of the same millisecond. */

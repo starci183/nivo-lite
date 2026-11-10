@@ -32,6 +32,7 @@ export const useUsageCard = (workspaceId: string | undefined): UsageCardView => 
         office: t("modOffice"),
         knowledge: t("modKnowledge"),
         other: t("modOther"),
+        intent: t("modIntent"),
     }
     const data: UsageCardData = {
         title: t("usageTitle"),

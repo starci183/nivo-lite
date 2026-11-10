@@ -3,6 +3,7 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
 import { AgentWorkSettingsService } from "@modules/domain/agent-work"
 import type { AgentTurnPlan, AgentWorkState } from "@modules/domain/agent-work"
+import { AgentRunsService } from "@modules/domain/agent-runs"
 import { UsageGateService } from "@modules/domain/ai-usage-events"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
@@ -64,6 +65,7 @@ const build = async ({ configured = true, state: agentState = state(), cap = 200
         record: jest.fn(() => Promise.resolve()),
     })
     const logger = mock<Logger>()
+    const runs = mock<AgentRunsService>({ runIdOfWake: jest.fn(() => Promise.resolve("run-7")) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentTurnExecutorService,
@@ -72,9 +74,10 @@ const build = async ({ configured = true, state: agentState = state(), cap = 200
             { provide: LOGGER, useValue: logger },
             { provide: AgentWorkSettingsService, useValue: settings },
             { provide: UsageGateService, useValue: usage },
+            { provide: AgentRunsService, useValue: runs },
         ],
     }).compile()
-    return { executor: moduleRef.get(AgentTurnExecutorService), runner, settings, usage, logger }
+    return { executor: moduleRef.get(AgentTurnExecutorService), runner, settings, usage, logger, runs }
 }
 
 const signal = new AbortController().signal
@@ -117,6 +120,28 @@ describe("AgentTurnExecutorService > a turn that runs", () => {
             module: "accounting",
             usage: { prompt_tokens: 12, completion_tokens: 5, cached_tokens: 0, cost: 0.02, model: "p/m" },
             completionChars: 11,
+            runId: "run-7",
+        })
+    })
+
+    it("books the call to the run of the wake, and to none when the wake has no run or the lookup fails", async () => {
+        const { executor, usage, runs, logger } = await build()
+        const turn = agentTurnViewOf({ source: "tag", wakeId: "wake-9" })
+
+        await executor.run(turn, plan, signal)
+        expect(runs.runIdOfWake).toHaveBeenCalledWith("ws-1", "wake-9")
+        expect(usage.record).toHaveBeenLastCalledWith(expect.objectContaining({ runId: "run-7" }))
+
+        runs.runIdOfWake.mockResolvedValueOnce(null)
+        await executor.run(turn, plan, signal)
+        expect(usage.record.mock.lastCall?.[0]).not.toHaveProperty("runId")
+
+        runs.runIdOfWake.mockRejectedValueOnce(new Error("db down"))
+        await expect(executor.run(turn, plan, signal)).resolves.toMatchObject({ kind: "proposal" })
+        expect(usage.record.mock.lastCall?.[0]).not.toHaveProperty("runId")
+        expect(logger.error).toHaveBeenCalledWith(AgentTurnsLogEvent.RunLookupFailed, expect.any(Error), {
+            agentId: "agent-1",
+            wakeId: "wake-9",
         })
     })
 
@@ -151,6 +176,7 @@ describe("AgentTurnExecutorService > a turn that runs", () => {
             usage: null,
             completionChars: 0,
             promptChars: 9,
+            runId: "run-7",
         })
     })
 })
@@ -262,6 +288,7 @@ describe("AgentTurnExecutorService > plans carrying a picture", () => {
             module: "accounting",
             usage: { prompt_tokens: 12, completion_tokens: 5, cached_tokens: 0, cost: 0.02, model: "p/m" },
             completionChars: 11,
+            runId: "run-7",
         })
     })
 })

@@ -8,6 +8,7 @@ import type {
     KnowledgeLens,
     LensCounts,
     LensLanes,
+    LensOverview,
     OptionalId,
     OptionalOpenGaps,
 } from "@modules/domain/agents"
@@ -19,10 +20,13 @@ import { NivoKnowledgeService } from "@modules/domain/nivo-knowledge"
 import type { AgentNotesRequest } from "./agent-knowledge.contracts"
 import { KnowledgeRecallService } from "./knowledge-recall.service"
 import { CUSTOMER_MODULE, lanesOfView } from "./knowledge-lanes.policy"
+import { documentsOf, layersOf, ownFactsOf, waitingOf } from "./knowledge-overview.policy"
 import { audienceOfModule, viewOf } from "./knowledge-view.policy"
 
 /** The base-knowledge kinds an agent keeps as rules: authority and escalation (AGENTS.md) and tone (SOUL.md). */
 const RULE_KINDS: ReadonlySet<string> = new Set(["authority", "escalation", "tone"])
+/** The most documents the knowledge tab lists. */
+const DOCUMENT_LIMIT = 200
 /** The facts counted for a lens. */
 const COUNT_LIMIT = 500
 /** How many facts one question gets back. */
@@ -124,6 +128,11 @@ export class AgentKnowledgeLensService implements KnowledgeLens {
         }
     }
 
+    /** How many proposed facts wait for the owner inside the view of the module (and instance), through the same view policy. */
+    waitingFactsOf(workspaceId: string, module: string, installationId: OptionalId): Promise<number> {
+        return this.recall.waitingInView(viewOf({ workspaceId, module, installationId }))
+    }
+
     /**
      * Tries a question as an agent: the passages the view reads, then the confirmed facts of the same view (module, audience and
      * instance go through the one view policy). The search proves the membership and the module first; a blank question finds nothing.
@@ -153,6 +162,38 @@ export class AgentKnowledgeLensService implements KnowledgeLens {
         if (question === "") return passages
         const facts = await this.recall.factsMatching(viewOf(request), question, FACT_LIMIT)
         return [...facts.map((fact) => factRow(fact, request.module)), ...passages].slice(0, request.limit)
+    }
+
+    /**
+     * What the knowledge tab of an agent shows: every document and fact of the scope of its module and instance (read or not, so the owner
+     * sees what a customer-facing agent leaves out), counted by layer, with the lanes the view policy opens saying what is read.
+     */
+    async overviewFor(workspaceId: string, module: string, installationId: OptionalId): Promise<LensOverview> {
+        const scope = { workspaceId, module, installationId, audience: "internal" } as const
+        const [documents, facts] = await Promise.all([
+            this.sources.summariesFor(scope, DOCUMENT_LIMIT),
+            this.recall.factsToOverview(scope),
+        ])
+        const lanes = lanesOfView(module)
+        return {
+            module,
+            installationId,
+            audience: audienceOfModule(module),
+            waitingFacts: waitingOf(facts, lanes),
+            layers: layersOf(documents, facts, lanes),
+            documents: documentsOf(documents, facts, lanes),
+            ownFacts: ownFactsOf(facts),
+        }
+    }
+
+    /**
+     * The words of the first fact that waits for the owner in the scope of the module and instance (`subject · attribute`), or null when
+     * none waits: the fact an agent cannot act on until the owner approves it.
+     */
+    async waitingFactLabel(workspaceId: string, module: string, installationId: OptionalId): Promise<OptionalId> {
+        const scope = { workspaceId, module, installationId, audience: "internal" } as const
+        const waiting = (await this.recall.factsToOverview(scope)).find((fact) => fact.status !== "active")
+        return waiting === undefined ? null : `${waiting.subjectLabel} · ${waiting.attributeLabel}`
     }
 
     /** Which kinds of knowledge the view of the module reads, by the same policy that builds the view. */

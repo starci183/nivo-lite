@@ -1,6 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { runNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeHostPorts, NodeRun } from "@nivo-lite/agent-sdk/node"
+import type { ZodType } from "zod"
+import { guidedModelRequest, runNode } from "@nivo-lite/agent-sdk/node"
+import type { NodeHostPorts, NodeModelRequest, NodeRun } from "@nivo-lite/agent-sdk/node"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { eachInOrder, isRecord } from "@modules/platform/primitives"
@@ -55,6 +56,7 @@ export class GraphNodeHostService {
                 turn,
                 grant: input.grant,
                 effects: installed.effects,
+                words: (key) => this.registry.wordsOf(key),
                 tools: installed.tools,
                 key: input.key,
             },
@@ -90,6 +92,19 @@ export class GraphNodeHostService {
     private withSubject(turn: NodeTurn): Promise<NodeTurn> {
         if (turn.subject !== null) return Promise.resolve(turn)
         return this.firstSubject(turn, this.registry.subjectResolvers())
+    }
+
+    /**
+     * A structured answer of the model for the engine itself (the AI core's one decision on a step that could not complete), on the
+     * same metered path as a node's calls and parsed by the schema, under the policy of the turn's agent like every call of that agent
+     * (the agent's craft, its tool set and the shop's values go in front of the instructions, in the order every call of the agent
+     * has them, so the call shares their cached prefix). It reads and decides only: no port, effect or tool is reachable from
+     * it, so nothing it answers acts on the world.
+     */
+    async core<T>(turn: NodeTurn, ask: NodeModelRequest, schema: ZodType<T>): Promise<T> {
+        const scope: NodeModelScope = { workspaceId: turn.workspaceId, locale: turn.locale }
+        const { effects, tools } = this.registry.installed()
+        return schema.parse(await this.ai.nodeJson(scope, guidedModelRequest({ turn, effects, tools, words: (key) => this.registry.wordsOf(key) }, ask), schema))
     }
 
     /** The turn with the subject of the first resolver that knows one, asked one after the other; the turn as it was when none does. */

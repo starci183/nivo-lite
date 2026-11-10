@@ -13,6 +13,7 @@ import type { DeliveryRequest, RenewalNotification } from "./channels.contracts"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { ZaloDeliveryService } from "./zalo-delivery.service"
+import { ZaloPicturesService } from "./zalo-pictures.service"
 
 const NOW = Date.parse("2026-10-12T10:00:00.000Z")
 const HOUR = 3_600_000
@@ -102,6 +103,8 @@ const build = async (lastCustomerAt: number | null = INSIDE) => {
     const connections = mock<ConnectionsService>()
     connections.find.mockResolvedValue(zaloConnection())
     const logger = mock<Logger>()
+    const pictures = mock<ZaloPicturesService>()
+    pictures.send.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             ZaloDeliveryService,
@@ -111,9 +114,10 @@ const build = async (lastCustomerAt: number | null = INSIDE) => {
             { provide: ChatMessagesService, useValue: messages },
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ConnectionsService, useValue: connections },
+            { provide: ZaloPicturesService, useValue: pictures },
         ],
     }).compile()
-    return { service: moduleRef.get(ZaloDeliveryService), zalo, credentials, connections, logger }
+    return { service: moduleRef.get(ZaloDeliveryService), zalo, credentials, connections, logger, pictures }
 }
 
 describe("ZaloDeliveryService", () => {
@@ -454,5 +458,40 @@ describe("ZaloDeliveryService ZNS ambiguous receipts", () => {
         })
         expect(zalo.sendZns.mock.calls).toEqual([["access-1", znsMessage]])
         expect(zalo.sendCsText).not.toHaveBeenCalled()
+    })
+})
+
+const pics = [
+    { url: "https://api/1.jpg", caption: "Item 1" },
+    { url: "https://api/2.jpg", caption: "Item 2" },
+]
+
+describe("ZaloDeliveryService pictures", () => {
+    it("hands the pictures to the picture sender after the text, which sends each through the connection's token", async () => {
+        const { service, zalo, pictures } = await build()
+        const calls: Array<string> = []
+        zalo.sendCsText.mockImplementation(() => {
+            calls.push("text")
+            return Promise.resolve()
+        })
+        pictures.send.mockImplementation(async (_target, _images, sendOne) => {
+            calls.push("pictures")
+            await sendOne("https://api/1.jpg")
+        })
+
+        await expect(service.send(target, "user-1", { ...request, images: pics })).resolves.toEqual(byConsultation)
+
+        expect(calls).toEqual(["text", "pictures"])
+        expect(pictures.send).toHaveBeenCalledWith(target, pics, expect.any(Function))
+        expect(zalo.sendCsImage.mock.calls).toEqual([["access-1", "user-1", "https://api/1.jpg"]])
+    })
+
+    it("sends no pictures when the text itself is refused", async () => {
+        const { service, zalo, pictures } = await build()
+        zalo.sendCsText.mockRejectedValue(refusal(-201))
+
+        await service.send(target, "user-1", { ...request, images: pics })
+
+        expect(pictures.send).not.toHaveBeenCalled()
     })
 })

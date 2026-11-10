@@ -2,8 +2,10 @@
 
 import { useLocale } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
+import { useQueryAgentCatalogSwr } from "@/hooks/swr"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { slotOfReads } from "@/hooks/slot"
+import type { AgentCatalogEntry } from "@/modules/agentCatalog"
 import { MODULE_KEYS, MODULE_REGISTRY, pickCopy, pickCopyList } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import type { AgentLifecycle, SetupProgress } from "@/modules/installations"
@@ -41,15 +43,23 @@ export interface CatalogRole {
     readonly mascot: string
     /** Where the installed agent of this role opens; null when none is installed. */
     readonly openHref: string | null
+    /** The providers the role works through, as the provider ids the connections page knows; empty when it needs none. */
+    readonly providers: ReadonlyArray<string>
 }
 
 /** One installed agent as a person of the team. */
-interface InstalledAgent {
+export interface InstalledAgent {
     readonly id: string
+    /** The agent row of the instance, the key its grants and knowledge counts are read by; null before it has one. */
+    readonly agentId: string | null
+    readonly moduleKey: ModuleKey
+    readonly handle: string
     readonly name: string
     /** The seed of the generated avatar. */
     readonly seed: string
     readonly avatarUrl: string | null
+    /** The preset the owner chose; "initials" draws the initials. */
+    readonly avatarPreset: string | null
     readonly roleName: string
     readonly lifecycle: AgentLifecycle
     readonly tone: ReturnType<typeof agentLifecycleTone>
@@ -58,9 +68,34 @@ interface InstalledAgent {
     readonly channels: ReadonlyArray<string>
     /** The required setup gates confirmed, of all of them. */
     readonly setupProgress: SetupProgress
+    /** The connections granted to the agent and what it reads; undefined while the read has no answer for it. */
+    readonly catalog: AgentCatalogEntry | undefined
 }
 
 type ModuleCatalog = ReturnType<typeof useModuleCatalog>
+
+/** One role copy, or none while the catalogue loads. */
+type RoleCopy = ModuleCatalog["modules"][ModuleKey]
+
+/** A category of the catalogue, or none. */
+type RoleCategory = ModuleCatalog["categories"][number] | undefined
+
+/** The name, description, points and group of a role folded for matching, in both languages. */
+const searchTextOf = (copy: RoleCopy, category: RoleCategory): string =>
+    foldText(
+        [
+            copy?.name.vi ?? "",
+            copy?.name.en ?? "",
+            copy?.shortName.vi ?? "",
+            copy?.shortName.en ?? "",
+            copy?.description.vi ?? "",
+            copy?.description.en ?? "",
+            ...(copy?.points.vi ?? []),
+            ...(copy?.points.en ?? []),
+            category?.label.vi ?? "",
+            category?.label.en ?? "",
+        ].join(" "),
+    )
 
 /** The category filter entries in the reader language; blank labels while the catalogue loads so the filter keeps its shape. */
 const categoriesOf = (
@@ -89,6 +124,7 @@ export const useCatalogEntries = (): {
     const workspaceId = useWorkspaceId()
     const { read: installationsRead, installations, reload: reloadInstallations } = useInstallations()
     const catalog = useModuleCatalog()
+    const agentCatalog = useQueryAgentCatalogSwr()
     const channelsOf = useInstanceChannels()
     const roles = MODULE_KEYS.flatMap((key): ReadonlyArray<CatalogRole> => {
         const def = MODULE_REGISTRY[key]
@@ -108,26 +144,14 @@ export const useCatalogEntries = (): {
                         ? workspaceHref(workspaceId, agentListHref(key))
                         : null,
                 isEarly: def.status === "early",
-                searchText: foldText(
-                    [
-                        copy?.name.vi ?? "",
-                        copy?.name.en ?? "",
-                        copy?.shortName.vi ?? "",
-                        copy?.shortName.en ?? "",
-                        copy?.description.vi ?? "",
-                        copy?.description.en ?? "",
-                        ...(copy?.points.vi ?? []),
-                        ...(copy?.points.en ?? []),
-                        category?.label.vi ?? "",
-                        category?.label.en ?? "",
-                    ].join(" "),
-                ),
+                searchText: searchTextOf(copy, category),
                 name: copy === undefined ? "" : pickCopy(copy.name, locale),
                 description: copy === undefined ? "" : pickCopy(copy.description, locale),
                 points: copy === undefined ? [] : pickCopyList(copy.points, locale),
                 mascot: def.mascot,
                 openHref:
                     installation === undefined ? null : workspaceHref(workspaceId, agentHref(key, installation.id)),
+                providers: def.connectionProviders,
             },
         ]
     })
@@ -136,9 +160,13 @@ export const useCatalogEntries = (): {
         const lifecycle = agentLifecycleOf(installation)
         return {
             id: installation.id,
+            agentId: installation.agentId,
+            moduleKey: installation.moduleKey,
+            handle: installation.agentHandle,
             name: installationPersonName(installation),
             seed: installation.agentId ?? installation.id,
             avatarUrl: installation.agentAvatarUrl,
+            avatarPreset: installation.agentAvatarPreset,
             roleName: copy === undefined ? "" : pickCopy(copy.name, locale),
             lifecycle,
             tone: agentLifecycleTone(lifecycle),
@@ -148,10 +176,11 @@ export const useCatalogEntries = (): {
             ),
             channels: channelsOf(installation.agentId),
             setupProgress: installation.setupProgress,
+            catalog: agentCatalog.data?.find((entry) => entry.agentId === installation.agentId),
         }
     })
     const categories = categoriesOf(catalog, locale)
-    const slot = slotOfReads([installationsRead, catalog.read], () => true)
+    const slot = slotOfReads([installationsRead, catalog.read, agentCatalog], () => true)
     return {
         agents,
         roles,
@@ -160,6 +189,7 @@ export const useCatalogEntries = (): {
         reload: () => {
             reloadInstallations()
             catalog.reload()
+            void agentCatalog.mutate()
         },
     }
 }

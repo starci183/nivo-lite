@@ -1,4 +1,5 @@
-import { EmptyNotice, SurfaceCard, Text, type ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, Section, Text, type ListRowData } from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** A formatted payment or transfer-review row. */
 export interface BillingHistoryRow {
@@ -23,21 +24,15 @@ interface BillingHistoryListProps {
 
 /** Draws formatted payment history or transfer reviews with one row recipe. */
 export const BillingHistoryList = (props: BillingHistoryListProps) => (
-    <SurfaceCard
+    <Section
         kind="list"
-        label={props.props.title}
+        title={props.props.title}
         headingLevel={2}
         isLoading={props.props.isLoading === true}
-        empty={<EmptyNotice message={props.props.empty} />}
+        empty={<EmptyNotice message={props.props.empty} iconSource={nivoIconSource("history", "leading")} />}
         {...(props.props.description === undefined
             ? {}
-            : {
-                  footer: (
-                      <Text size="sm" tone="muted">
-                          {props.props.description}
-                      </Text>
-                  ),
-              })}
+            : { caption: props.props.description })}
         items={props.props.rows.map((row): ListRowData => ({
             id: row.id,
             title: row.title,

@@ -26,6 +26,21 @@ const query1: TypedDocumentNode<QueryMyWorkspacesResponse> = gql`
                 displayName
                 status
             }
+            lobby {
+                deletedAt
+                disabledAt
+                disabledByName
+                disabledByRole
+                disabledNote
+                lastOpenedAt
+                restoreBefore
+                memberCount
+                ownerCount
+                planCode
+                planNameEn
+                planNameVi
+                seatLimit
+            }
         }
     }
 `

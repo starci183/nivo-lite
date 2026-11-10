@@ -1,0 +1,276 @@
+{
+    "id": "sales.consult",
+    "moduleKey": "sales",
+    "primary": true,
+    "name": {
+        "vi": "Tư vấn bán hàng",
+        "en": "Sales consult"
+    },
+    "summary": {
+        "vi": "Tư vấn, tạo đơn và gửi QR thanh toán; địa chỉ lấy từ trí nhớ khách",
+        "en": "Consults, records the order and sends the payment QR; the address comes from the lead's memory"
+    },
+    "requires": [
+        {
+            "kind": "zalo",
+            "label": {
+                "vi": "Zalo OA hoặc Facebook",
+                "en": "Zalo OA or Facebook"
+            },
+            "why": {
+                "vi": "Nói chuyện với khách",
+                "en": "Talks with customers"
+            }
+        }
+    ],
+    "shops": 2310,
+    "versions": [
+        {
+            "version": 5,
+            "publishedAt": "2026-11-10T12:00:00.000Z",
+            "changes": [
+                {
+                    "vi": "Thuần nghiệp vụ: Tư vấn khách (chốt món, địa chỉ, số điện thoại người nhận và giờ giao; tra thông tin công khai của tiệm bằng công cụ tìm kiếm), Tạo đơn, Gửi QR thanh toán, Báo đội đơn mới, Chốt mua; duyệt đơn lớn nằm trong công cụ đơn hàng",
+                    "en": "Pure business steps: Consult (settles items, address, the recipient's phone and the delivery time; searches the shop's public knowledge through the search tool), Create the order, Send the payment QR, Tell the team, Won; big-order approval lives in the order tool"
+                }
+            ],
+            "graph": {
+                "schema": "nivo/agent-graph@1",
+                "moduleKey": "sales",
+                "contract": {
+                    "inputs": [
+                        {
+                            "name": "conversationId",
+                            "type": "string",
+                            "required": true
+                        },
+                        {
+                            "name": "text",
+                            "type": "string",
+                            "required": true
+                        },
+                        {
+                            "name": "channel",
+                            "type": "string",
+                            "required": false
+                        },
+                        {
+                            "name": "leadId",
+                            "type": "string",
+                            "required": false
+                        }
+                    ]
+                },
+                "triggers": [
+                    {
+                        "key": "call",
+                        "source": {
+                            "kind": "workflow",
+                            "connectionId": null
+                        }
+                    }
+                ],
+                "outcomes": [
+                    {
+                        "key": "won",
+                        "label": "Chốt mua",
+                        "outputs": [
+                            {
+                                "name": "orderId",
+                                "type": "string"
+                            }
+                        ]
+                    }
+                ],
+                "entry": {
+                    "openTo": "any",
+                    "holdsConversation": true
+                },
+                "trigger": {
+                    "kind": "tag",
+                    "sources": [
+                        "agent"
+                    ],
+                    "burst": {
+                        "agent": {
+                            "window": "0s"
+                        }
+                    }
+                },
+                "grant": {
+                    "rights": [
+                        {
+                            "kind": "catalogue-item",
+                            "access": "read",
+                            "scope": "workspace",
+                            "fields": [
+                                "id",
+                                "name",
+                                "priceVnd",
+                                "active",
+                                "imageUrl"
+                            ]
+                        },
+                        {
+                            "kind": "message",
+                            "access": "read",
+                            "scope": "turn",
+                            "fields": [
+                                "role",
+                                "text",
+                                "sentAt"
+                            ]
+                        },
+                        {
+                            "kind": "message",
+                            "access": "write",
+                            "scope": "turn",
+                            "fields": [
+                                "body"
+                            ]
+                        },
+                        {
+                            "kind": "sales-lead",
+                            "access": "write",
+                            "scope": "turn",
+                            "fields": [
+                                "contactName",
+                                "phone",
+                                "channel",
+                                "stage"
+                            ]
+                        },
+                        {
+                            "kind": "order",
+                            "access": "write",
+                            "scope": "turn",
+                            "fields": [
+                                "leadId",
+                                "items",
+                                "amountVnd",
+                                "status"
+                            ]
+                        }
+                    ],
+                    "tools": [
+                        "brain.search"
+                    ],
+                    "effects": [
+                        "customer.message.send",
+                        "lead.ensure",
+                        "lead.stage.update",
+                        "order.create",
+                        "order.confirm",
+                        "payment.qr.create",
+                        "customer.care.schedule",
+                        "team.message.post"
+                    ]
+                },
+                "nodes": [
+                    {
+                        "key": "consult",
+                        "kind": "execute",
+                        "step": "sales.consult-turn",
+                        "params": {
+                            "conversationId": {
+                                "$ref": "trigger.conversationId"
+                            },
+                            "text": {
+                                "$ref": "trigger.text"
+                            },
+                            "channel": {
+                                "$ref": "trigger.channel",
+                                "default": null
+                            },
+                            "leadId": {
+                                "$ref": "trigger.leadId",
+                                "default": null
+                            },
+                            "locale": "vi",
+                            "address": {
+                                "$ref": "lead.address",
+                                "default": null
+                            }
+                        },
+                        "routes": {
+                            "ready": "create-order"
+                        }
+                    },
+                    {
+                        "key": "create-order",
+                        "kind": "output",
+                        "step": "sales.create-order",
+                        "params": {
+                            "conversationId": {
+                                "$ref": "trigger.conversationId"
+                            },
+                            "leadId": {
+                                "$ref": "steps.consult.output.leadId"
+                            },
+                            "items": {
+                                "$ref": "steps.consult.output.items"
+                            },
+                            "address": {
+                                "$ref": "steps.consult.output.address"
+                            },
+                            "recipientName": {
+                                "$ref": "steps.consult.output.recipientName",
+                                "default": null
+                            },
+                            "recipientPhone": {
+                                "$ref": "steps.consult.output.recipientPhone"
+                            },
+                            "deliveryAt": {
+                                "$ref": "steps.consult.output.deliveryAt"
+                            }
+                        },
+                        "next": "send-qr"
+                    },
+                    {
+                        "key": "send-qr",
+                        "kind": "output",
+                        "step": "payment.request",
+                        "params": {
+                            "orderId": {
+                                "$ref": "steps.create-order.output.orderId"
+                            },
+                            "conversationId": {
+                                "$ref": "trigger.conversationId"
+                            },
+                            "locale": "vi"
+                        },
+                        "next": "notify-order"
+                    },
+                    {
+                        "key": "notify-order",
+                        "kind": "output",
+                        "step": "sales.order-notice",
+                        "params": {
+                            "orderId": {
+                                "$ref": "steps.create-order.output.orderId"
+                            },
+                            "leadId": {
+                                "$ref": "steps.consult.output.leadId"
+                            },
+                            "locale": "vi"
+                        },
+                        "next": "won"
+                    },
+                    {
+                        "key": "won",
+                        "kind": "output",
+                        "step": "core.outcome",
+                        "params": {
+                            "outcome": "won",
+                            "outputs": {
+                                "orderId": {
+                                    "$ref": "steps.create-order.output.orderId"
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

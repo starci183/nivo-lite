@@ -5,6 +5,7 @@ import type { SlotRead } from "@/hooks/slot"
 import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
+import { useWizardPhases } from "@/hooks/connection-wizard"
 import { providerKey } from "@/hooks/connection-providers"
 import { SMTP_STEPS, useSmtpView, useSmtpWizard } from "@/hooks/smtp-wizard"
 import { SmtpWizardBase } from "./component"
@@ -25,6 +26,7 @@ interface SmtpWizardProps {
 export const SmtpWizard = (props: SmtpWizardProps) => {
     const slotLabels = useSlotLabels()
     const tw = useTranslations("connectionWizard")
+    const phases = useWizardPhases("smtp")
     const tc = useTranslations("connections")
     const wizard = useSmtpWizard({
         ownerEmail: props.ownerEmail,
@@ -45,6 +47,7 @@ export const SmtpWizard = (props: SmtpWizardProps) => {
                 slotLabels: slotLabels(""),
                 title: tw("title", { provider: tc(providerKey("smtp", "title")) }),
                 stepLabel: tw("stepOf", { n: wizard.index + 1, total: SMTP_STEPS.length }),
+                phases,
                 steps: view.steps,
                 index: wizard.index,
                 step: wizard.step,

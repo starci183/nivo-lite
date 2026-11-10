@@ -8,9 +8,12 @@ export type OptionalStepJson = StepJson | undefined
 /** The active persisted wait of a work item, or null once no running step owns it. */
 export type OptionalRunWait = StepView | null
 
-/** Where a run stands. `waiting` holds a durable wait; `dead` was given to a person with the trigger intact. */
+/**
+ * Where a run stands. `waiting` holds a durable wait; `dead` was given to a person with the trigger intact; `cancelled` was stopped by an
+ * owner or manager, with what it had already sent left as it was.
+ */
 export type AgentRunStatus =
-    "running" | "waiting" | "parked" | "done" | "failed" | "dead" | "compensating" | "compensated"
+    "running" | "waiting" | "parked" | "done" | "failed" | "dead" | "compensating" | "compensated" | "cancelled"
 
 /** Where a step stands. */
 export type AgentStepStatus = "pending" | "running" | "done" | "failed" | "compensating" | "compensated"
@@ -155,13 +158,32 @@ export interface AgentStepHandler {
     refresh?(step: StepView): Promise<OptionalStepJson>
     /** Tells a person a run died at this step, with the trigger intact, and the customer the honest holding line. */
     deadLetter?(step: StepView, code: string): Promise<void>
+    /**
+     * A side step's way past a failure no other try cures (a node marked `blocking: false`: an owner notice, a report): the result the step
+     * is recorded with and the steps that follow. Null, or no method, when the step blocks the run.
+     */
+    passOver?(step: StepView, code: string): Promise<OptionalStepPassOver>
+    /** Tells a person that a side step failed and the run went on without it. */
+    sideFailed?(step: StepView, code: string): Promise<void>
 }
+
+/** How a run goes past a side step that failed: the step is recorded with `result` (which names the failure) and `next` is written. */
+export interface StepPassOver {
+    /** The result the step is kept with. */
+    readonly result: StepJson
+    /** The steps that follow, as a done step would write them. */
+    readonly next: ReadonlyArray<StepSpec>
+}
+
+/** A side step's way past its failure, or null when the step blocks the run. */
+export type OptionalStepPassOver = StepPassOver | null
 
 /** What failure policy decided for a run. */
 export type RunFailureRoute =
     | { readonly kind: "retry"; readonly afterMs: number }
     | { readonly kind: "compensate"; readonly stepKeys: ReadonlyArray<string> }
     | { readonly kind: "person"; readonly pivotKey: string | null }
+    | { readonly kind: "continue" }
 
 /** A persisted step's execution link, including its lifecycle after the active wait is cleared. */
 export interface StepLink {

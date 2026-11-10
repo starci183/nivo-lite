@@ -23,3 +23,12 @@ export interface BindingAgentsDirectory {
     /** Whether the workspace holds the agent; the row is read with a shared lock so it stays until the transaction ends. */
     holds(workspaceId: string, agentId: string, manager: EntityManager): Promise<boolean>
 }
+
+/**
+ * Who may manage an agent's channels besides the owner: the port the agents capability implements for the manager scope. A manager
+ * manages an agent in the rooms and roles the agent is open to (the same lists that say who may hand it work).
+ */
+export interface BindingManagers {
+    /** Whether the active member of the account is inside the rooms or roles the agent is open to; false for an unknown agent or member. */
+    canManage(workspaceId: string, userId: string, agentId: string): Promise<boolean>
+}

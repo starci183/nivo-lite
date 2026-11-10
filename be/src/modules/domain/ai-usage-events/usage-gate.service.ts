@@ -38,9 +38,11 @@ export class UsageGateService implements UsageGate {
                           completion_tokens: run.completion_tokens,
                           total_tokens: run.prompt_tokens + run.completion_tokens,
                           cost: run.cost,
+                          cached_tokens: run.cached_tokens,
                       },
             promptChars: entry.promptChars ?? 0,
             completionChars: entry.completionChars,
+            runId: entry.runId,
         })
     }
 }

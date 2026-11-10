@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { AgentRunsService } from "@modules/domain/agent-runs"
 import { AgentWorkSettingsService } from "@modules/domain/agent-work"
 import type { AgentTurnExecutor, AgentTurnPlan, AgentTurnRun, AgentTurnView } from "@modules/domain/agent-work"
 import { UsageGateService } from "@modules/domain/ai-usage-events"
@@ -29,6 +30,7 @@ export class AgentTurnExecutorService implements AgentTurnExecutor {
         @InjectLogger() private readonly logger: Logger,
         private readonly settings: AgentWorkSettingsService,
         private readonly usage: UsageGateService,
+        private readonly runs: AgentRunsService,
     ) {}
 
     /** Runs the plan, or answers why no turn could run. */
@@ -62,6 +64,7 @@ export class AgentTurnExecutorService implements AgentTurnExecutor {
             module: plan.module,
             usage: result.usage,
             completionChars: result.text.length,
+            ...(await this.runOf(turn)),
         })
         return {
             kind: "proposal",
@@ -77,7 +80,7 @@ export class AgentTurnExecutorService implements AgentTurnExecutor {
     }
 
     /** A run that threw may still have reached the model, so it is metered by what was sent, as an estimate. */
-    private meterFailure(turn: AgentTurnView, plan: AgentTurnPlan): Promise<void> {
+    private async meterFailure(turn: AgentTurnView, plan: AgentTurnPlan): Promise<void> {
         return this.usage.record({
             workspaceId: turn.workspaceId,
             kind: usageKindFor(turn.source),
@@ -85,7 +88,19 @@ export class AgentTurnExecutorService implements AgentTurnExecutor {
             usage: null,
             completionChars: 0,
             promptChars: plan.message.length,
+            ...(await this.runOf(turn)),
         })
+    }
+
+    /** The run of the turn's wake, so the credit the call spends is booked to it; none when the wake has no run or the lookup fails (metering never breaks a turn). */
+    private async runOf(turn: AgentTurnView): Promise<{ readonly runId?: string }> {
+        try {
+            const runId = await this.runs.runIdOfWake(turn.workspaceId, turn.wakeId)
+            return runId === null ? {} : { runId }
+        } catch (cause) {
+            this.logger.error(AgentTurnsLogEvent.RunLookupFailed, cause, { agentId: turn.agentId, wakeId: turn.wakeId })
+            return {}
+        }
     }
 
     /**

@@ -1,9 +1,17 @@
+import type { ReactElement } from "react"
 import { AuthorityPage } from "@/features/pages/AuthorityPage"
 
-/** The document title of this page. */
 export { authorityPageMetadata as generateMetadata } from "@/features/pages/AuthorityPage"
 
-/** The authority route ("Giao quyen"): the list of sections; a desktop opens the first, a phone shows the list. */
-const Page = () => <AuthorityPage />
+/** What the page receives from Next. */
+interface AuthorityRouteProps {
+    readonly params: Promise<{ readonly workspaceId: string }>
+}
+
+/** The authority page on its base address: a phone shows the list of sections. */
+const Page = async ({ params }: AuthorityRouteProps): Promise<ReactElement> => {
+    const { workspaceId } = await params
+    return <AuthorityPage workspaceId={workspaceId} />
+}
 
 export default Page

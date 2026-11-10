@@ -73,7 +73,7 @@ export class AgentWakeService {
             wake.source,
             wake.eventKey,
             tx,
-            burst?.windowMs ?? 0,
+            wake.delayMs ?? burst?.windowMs ?? 0,
         )
         this.logger.info(AgentWorkLogEvent.WakeWritten, { agentId: wake.agentId, source: wake.source, scopeKey })
         return id

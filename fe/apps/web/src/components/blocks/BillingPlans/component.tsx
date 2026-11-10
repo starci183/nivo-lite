@@ -1,4 +1,4 @@
-import { Button, Drawer } from "@starci/grammar/common"
+import { Link } from "@starci/grammar/common"
 import { PlanCatalog } from "@/components/composites/PlanCatalog"
 import type { PlanGroupView } from "@/modules/types"
 
@@ -13,8 +13,8 @@ export interface BillingPlansBaseProps {
         readonly notice?: string | undefined
         readonly storage?: string | undefined
         readonly groups: ReadonlyArray<PlanGroupView>
-        /** The catalogue opens in a drawer from its own command; absent, it is drawn in the page. */
-        readonly drawer?: { readonly triggerLabel: string; readonly closeLabel: string } | undefined
+        /** The catalogue lives on its own page, reached by this link; absent, it is drawn here. */
+        readonly link?: { readonly label: string; readonly href: string } | undefined
     }
     readonly on: {
         readonly setCycle: (value: string) => void
@@ -24,18 +24,13 @@ export interface BillingPlansBaseProps {
     }
 }
 
-/** Draws the plan catalogue from settled values, in the page or in a drawer a command opens. */
+/** Draws the plan catalogue from settled values here, or the link to the plan change page. */
 export const BillingPlansBase = (props: BillingPlansBaseProps) => {
-    const drawer = props.props.drawer
-    if (drawer === undefined) return <PlanCatalog props={props.props} on={props.on} />
+    const link = props.props.link
+    if (link === undefined) return <PlanCatalog props={props.props} on={props.on} />
     return (
-        <Drawer
-            title={props.props.title}
-            description={props.props.text}
-            closeLabel={drawer.closeLabel}
-            trigger={<Button intent="alternative">{drawer.triggerLabel}</Button>}
-        >
-            <PlanCatalog props={props.props} on={props.on} />
-        </Drawer>
+        <Link variant="head" href={link.href}>
+            {link.label}
+        </Link>
     )
 }

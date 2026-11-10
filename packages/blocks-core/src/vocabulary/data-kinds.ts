@@ -2,6 +2,7 @@ import { defineDataKind } from "@nivo-lite/agent-sdk/node"
 import type { DataKindDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
 import { MAX_BODY, MAX_ENTRIES, MAX_ID, MAX_LINE } from "../bounds"
+import { boundedRecord } from "../json.schema"
 
 const id = z.string().max(MAX_ID)
 const text = z.string().max(MAX_LINE)
@@ -29,7 +30,12 @@ export const orderKind: DataKindDefinition = defineDataKind({
         amountVnd: amount,
         status: text,
         note: nullableText,
+        recipientName: nullableText,
+        recipientPhone: nullableText,
+        deliveryAddress: nullableText,
+        deliveryAt: nullableText,
         confirmedAt: moment.nullable(),
+        shippedAt: moment.nullable(),
         createdAt: moment,
     }),
 })
@@ -48,6 +54,8 @@ export const salesLeadKind: DataKindDefinition = defineDataKind({
         phone: nullableText,
         email: nullableText,
         contextSummary: nullableText,
+        consultStage: nullableText,
+        consultFacts: boundedRecord.nullable(),
     }),
 })
 
@@ -55,7 +63,16 @@ export const salesLeadKind: DataKindDefinition = defineDataKind({
 export const catalogueItemKind: DataKindDefinition = defineDataKind({
     kind: "catalogue-item",
     title: { key: "dataKindCatalogueItem" },
-    fields: z.object({ id, sku: nullableText, name: text, unit: nullableText, priceVnd: amount, active: z.boolean() }),
+    fields: z.object({
+        id,
+        sku: nullableText,
+        name: text,
+        unit: nullableText,
+        priceVnd: amount,
+        active: z.boolean(),
+        imageUrl: nullableText,
+        imageType: nullableText,
+    }),
 })
 
 /** A credit or debit the bank feed saw. */
@@ -70,6 +87,8 @@ export const bankTransactionKind: DataKindDefinition = defineDataKind({
         occurredAt: moment,
         orderId: id.nullable(),
         status: text,
+        direction: text,
+        externalRef: nullableText,
     }),
 })
 
@@ -82,24 +101,11 @@ export const paymentClaimKind: DataKindDefinition = defineDataKind({
         leadId: id.nullable(),
         conversationId: id.nullable(),
         amountVnd: amount,
-        names: z.array(text).max(MAX_ENTRIES),
+        // As the claim record stores it (`{ values }`: a jsonb field holds no bare list); a plain list is read too.
+        names: z.union([z.object({ values: z.array(text).max(MAX_ENTRIES) }), z.array(text).max(MAX_ENTRIES)]),
         body: longText,
         claimedAt: moment,
         status: text,
-    }),
-})
-
-/** The account the workspace is paid into, as its bank feed connection holds it. */
-export const paymentAccountKind: DataKindDefinition = defineDataKind({
-    kind: "payment-account",
-    title: { key: "dataKindPaymentAccount" },
-    fields: z.object({
-        provider: text,
-        bankCode: text,
-        bankName: text,
-        accountNumber: text,
-        accountHolder: text,
-        connectionId: id,
     }),
 })
 
@@ -114,7 +120,17 @@ export const conversationKind: DataKindDefinition = defineDataKind({
 export const messageKind: DataKindDefinition = defineDataKind({
     kind: "message",
     title: { key: "dataKindMessage" },
-    fields: z.object({ id, conversationId: id, authorKind: text, body: longText, createdAt: moment }),
+    fields: z.object({
+        id,
+        conversationId: id,
+        authorKind: text,
+        body: longText,
+        createdAt: moment,
+        role: text,
+        text: longText,
+        sentAt: moment,
+        status: text,
+    }),
 })
 
 /** A document of the business brain; a customer turn reads only the public ones. */
@@ -124,6 +140,13 @@ export const knowledgeDocumentKind: DataKindDefinition = defineDataKind({
     fields: z.object({ id, title: text, body: longText, visibility: z.enum(["public", "internal"]) }),
 })
 
+/** The permission level the owner set for one action of the agent's module: `auto` runs alone, `ask` waits for a person, `never` does not run. */
+export const authorityRuleKind: DataKindDefinition = defineDataKind({
+    kind: "authority-rule",
+    title: { key: "dataKindAuthorityRule" },
+    fields: z.object({ id, action: text, mode: z.enum(["auto", "ask", "never"]) }),
+})
+
 /** Every data kind the core nodes may hold rights over; the back end registers a data port for each. */
 export const coreDataKinds: ReadonlyArray<DataKindDefinition> = [
     orderKind,
@@ -131,8 +154,8 @@ export const coreDataKinds: ReadonlyArray<DataKindDefinition> = [
     catalogueItemKind,
     bankTransactionKind,
     paymentClaimKind,
-    paymentAccountKind,
     conversationKind,
     messageKind,
     knowledgeDocumentKind,
+    authorityRuleKind,
 ]

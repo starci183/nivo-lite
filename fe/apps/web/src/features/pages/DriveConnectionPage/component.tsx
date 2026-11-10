@@ -1,36 +1,63 @@
-import { ConnectionHealthTiles } from "@/components/blocks/ConnectionHealthTiles"
-import { ConnectionPageHead } from "@/components/blocks/ConnectionPageHead"
-import { ConnectionPageNotices } from "@/components/blocks/ConnectionPageNotices"
-import { ConnectionPageRail } from "@/components/blocks/ConnectionPageRail"
+import { Grid, Stack } from "@starci/grammar/common"
+import type { ReactElement, ReactNode } from "react"
+import { ConnectionAgents } from "@/components/blocks/ConnectionAgents"
+import { DriveConnectionEvents } from "@/components/blocks/DriveConnectionEvents"
+import { DriveConnectionFacts } from "@/components/blocks/DriveConnectionFacts"
+import { DriveConnectionNotices } from "@/components/blocks/DriveConnectionNotices"
 import { DriveConnectionSteps } from "@/components/blocks/DriveConnectionSteps"
 import { DriveLedger } from "@/components/blocks/DriveLedger"
-import { ConnectionPaneFrame } from "@/components/frames/ConnectionPaneFrame"
 
-/** What the page owner supplies: the words of the panes. */
+/** The tab the address opens. */
+type DriveTab = "overview" | "events" | "agents" | "settings"
+
+/** What the page owner supplies: the tab the address opens. */
 export interface DriveConnectionPageBaseProps {
     readonly props: {
-        readonly gridLabel: string
-        readonly mainLabel: string
-        readonly rail: { readonly label: string; readonly closeLabel: string }
+        readonly tab: DriveTab
+    }
+}
+
+/** The regions of the open tab, top to bottom, under the notices. */
+const regionsOf = (tab: DriveTab): ReactNode => {
+    switch (tab) {
+        case "events":
+            return <DriveConnectionEvents />
+        case "agents":
+            return <ConnectionAgents provider="google_drive" />
+        case "settings":
+            return (
+                <>
+                    <DriveConnectionSteps />
+                    <DriveLedger />
+                </>
+            )
+        case "overview":
+            return (
+                <>
+                    <DriveConnectionFacts />
+                    <ConnectionAgents provider="google_drive" isHiddenWhenEmpty />
+                </>
+            )
     }
 }
 
 /**
- * Draws the page of the Google Drive grant of the workspace (no id: a workspace has one grant) inside the Connections frame: the head
- * band, the health tiles and the three steps (grant the read access, choose documents, find them in Second Brain) and the Google Sheets ledger; the progress of
- * the files being read stands in the rail beside it.
+ * Draws the body of the Google account page (the layout draws the band and the tabs): the first tab (Services) holds the setup phases
+ * while Drive is unfinished, the services list, the facts and the agents (when Drive has grants), with the files being read in the live
+ * rail beside them; Events holds
+ * the rail alone; Agents the agents; Settings the setup steps (grant the read access, choose folders and first sync, find them in
+ * Second Brain) and the Google Sheets ledger.
  */
-export const DriveConnectionPageBase = (props: DriveConnectionPageBaseProps) => (
-    <ConnectionPaneFrame
-        gridLabel={props.props.gridLabel}
-        mainLabel={props.props.mainLabel}
-        rail={props.props.rail}
-        head={<ConnectionPageHead kind="drive" />}
-        aside={<ConnectionPageRail />}
-    >
-        <ConnectionPageNotices kind="drive" />
-        <ConnectionHealthTiles kind="drive" />
-        <DriveConnectionSteps />
-        <DriveLedger />
-    </ConnectionPaneFrame>
-)
+export const DriveConnectionPageBase = (props: DriveConnectionPageBaseProps): ReactElement => {
+    const main = (
+        <Stack gap="region">
+            <DriveConnectionNotices />
+            {regionsOf(props.props.tab)}
+        </Stack>
+    )
+    return props.props.tab === "overview" ? (
+        <Grid kind="main-rail" railWidth="medium" align="start" primary={main} rail={<DriveConnectionEvents />} />
+    ) : (
+        main
+    )
+}

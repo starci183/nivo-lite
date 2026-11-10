@@ -1,3 +1,4 @@
+import type { GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import type { GraphNode, GraphNodeCard, GraphNodeStep, Say } from "../agent-graphs.contracts"
 
 /** The longest line under a title: more would break the row of a top-to-bottom layered graph. */
@@ -53,3 +54,38 @@ export const nodeCardOf = (node: GraphNode, approverName: string | null, say: Sa
     count: sourceWord(node, say),
     isPlaceholder: node.uses.some((use) => use.placeholder === true),
 })
+
+/** The step a flow node reads as on a card: its route, its effect or its end. */
+const flowStepOf = (node: GraphSpecNode): GraphNodeStep => {
+    if (node.step === "stop") return "stop"
+    if (node.kind === "trigger") return "tag"
+    if (node.kind === "condition") return "evaluate"
+    return node.kind === "execute" ? "call" : "write"
+}
+
+/** `diamond` for a route, `round` for a node that waits for someone, `rect` otherwise. */
+const flowShapeOf = (node: GraphSpecNode, step: GraphNodeStep): GraphNodeCard["shape"] => {
+    if (step === "evaluate") return "diamond"
+    return node.wait === undefined ? "rect" : "round"
+}
+
+/**
+ * A node of the graph's flow as grammar draws it: titled by its installed node (`title`), its id under it, the group (sub-flow) it
+ * belongs to and what it waits for, so the owner sees the consult, the care and the waits in the graph view.
+ */
+export const flowNodeCardOf = (node: GraphSpecNode, title: string | null): GraphNodeCard => {
+    const step = flowStepOf(node)
+    return {
+        id: node.key,
+        label: title ?? node.key,
+        description: clipped(node.step),
+        tone: TONE_OF_STEP[step],
+        kind: node.kind,
+        step,
+        shape: flowShapeOf(node, step),
+        count: "",
+        isPlaceholder: false,
+        ...(node.group === undefined ? {} : { group: node.group }),
+        ...(node.wait === undefined ? {} : { wait: { ...node.wait } }),
+    }
+}

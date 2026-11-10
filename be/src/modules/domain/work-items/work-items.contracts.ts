@@ -34,6 +34,8 @@ export interface WorkExecutionOptions {
     readonly forceAsk?: ReasonCode | undefined
     /** The tag right of the sender already let this work in: with no rule stored it runs under the action's catalogue default; a stored rule still decides. */
     readonly tagGrant?: boolean | undefined
+    /** The producer posts its own card in the team chat for this ask (the card of a stopped workflow): the engine says no line of its own. */
+    readonly ownCard?: boolean | undefined
 }
 
 /** What an agent proposes to do: the summary, an optional draft and the structured fields the gate and the performer read. */

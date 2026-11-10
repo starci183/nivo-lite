@@ -2,6 +2,7 @@ import { Page, Pane, PaneGrid } from "@starci/grammar/common"
 import { ChecklistImportDialog } from "@/components/composites/ChecklistImportDialog"
 import type { ChecklistImportDialogProps } from "@/components/composites/ChecklistImportDialog"
 import { brainHeaderTabs } from "@/components/composites/BrainHeaderActions"
+import { brainHeaderSubTabs } from "@/components/composites/BrainKnowledgeChips"
 import type { DossierFindingsPane, FindingAction } from "@/components/composites/DossierFindingBoard"
 import type { FindingDialogValues, FindingDialogView } from "@/components/composites/DossierFindingDialogs"
 import { DossierHeaderActions } from "@/components/composites/DossierHeaderActions"
@@ -15,12 +16,12 @@ import { DossierMainBody } from "@/components/frames/DossierMainBody"
 import { DossierMapDetail } from "@/components/frames/DossierMapDetail"
 import { DossierMapHead, DossierMapPane } from "@/components/frames/DossierMapPane"
 import type { MapView } from "@/components/frames/DossierMapPane"
-import { DossierNotice } from "@/components/frames/DossierNotice"
 import { DossierRemedyDrawer } from "@/components/frames/DossierRemedyDrawer"
 import type { DossierRemedyDrawerProps } from "@/components/frames/DossierRemedyDrawer"
 import { PaneBody } from "@/components/frames/PaneBody"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { BrainPageHeaderView } from "@/modules/types"
+import { DossierNotice } from "@/components/frames/DossierNotice"
 
 /** The words of the dossiers tab: those of its list, of the open dossier, and of its notices. */
 interface DossierCopy extends DossierMainCopy, DossierListCopy {
@@ -30,6 +31,7 @@ interface DossierCopy extends DossierMainCopy, DossierListCopy {
     readonly pickBody: string
     readonly emptyBody: string
     readonly emptyAction: string
+    readonly catalogBody: string
     readonly errorBody: string
     readonly closeAside: string
     readonly mapDescription: string
@@ -213,16 +215,16 @@ const AsideOf = (props: BrainDossiersBaseProps) => {
 }
 
 /**
- * Draws the dossiers tab (and its map view) as a panes page: the Second Brain header, then the list of dossiers by category with
- * the figures of the whole set, beside the open dossier with its findings and side pane, or the map. A phone shows the list, or the
- * open dossier or node with a way back. Every region draws its skeleton at the first read, together.
+ * Draws the dossiers chip (and its map view) as a panes page: the Second Brain header, the knowledge chips, then the dossiers by
+ * category with the figures of the whole set beside the open dossier with its findings and side pane, or the map. A phone shows the
+ * list, or the open dossier or node with a way back. Every region draws its skeleton at the first read, together.
  */
 export const BrainDossiersBase = (props: BrainDossiersBaseProps) => {
     const { copy, desk, map, checklist } = props.props
     const { on } = props
+    const { header } = props.props
     const grid = map === null || desk.isWhole ? desk.grid : map.grid
     const aside = map === null ? desk.aside : map.detail
-    const { header } = props.props
     const head = {
         ...header.heading,
         actions: (
@@ -233,6 +235,7 @@ export const BrainDossiersBase = (props: BrainDossiersBaseProps) => {
             />
         ),
         tabs: brainHeaderTabs({ tabs: header.tabs, onSelect: on.selectTab }),
+        ...brainHeaderSubTabs(header.chips),
     }
     return (
         <Page chrome="panes" header={head} measure="product">
@@ -245,14 +248,14 @@ export const BrainDossiersBase = (props: BrainDossiersBaseProps) => {
                 rows={grid.rows}
             >
                 {desk.isWhole ? (
-                    <Pane area="main" label={copy.detailLabel}>
+                    <Pane area="main" surface label={copy.detailLabel}>
                         <DossierNotice
                             list={desk.list}
-                            errorBody={copy.errorBody}
-                            emptyBody={copy.emptyBody}
+                            copy={copy}
+                            hasDocuments={desk.hasDocuments}
                             emptyIconSource={nivoIconSource("brain", "leading")}
-                            emptyAction={{ label: copy.emptyAction, onAction: on.openSources }}
-                            onRetry={on.retry}
+                            checklist={checklist}
+                            on={on}
                         />
                     </Pane>
                 ) : null}

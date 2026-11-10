@@ -23,6 +23,7 @@ const inviteOf = builder<InviteState>({
     staffId: null,
     acceptedAt: null,
     revokedAt: null,
+    declinedAt: null,
     expiresAt: "2026-10-20T00:00:00.000Z",
 })
 
@@ -74,6 +75,13 @@ describe("judgeInvite", () => {
 
         const invite = inviteOf({ revokedAt: "2026-10-11T00:00:00.000Z", acceptedAt: "2026-10-11T00:00:00.000Z" })
         expect(subject.judgeInvite(invite, "other@example.test", now)).toBeRefused(WorkspaceInvitesErrorCode.Revoked)
+    })
+
+    it("refuses an invitation the invited person declined", async () => {
+        const subject = await buildSubject()
+
+        const invite = inviteOf({ declinedAt: "2026-10-11T00:00:00.000Z" })
+        expect(subject.judgeInvite(invite, "an@example.test", now)).toBeRefused(WorkspaceInvitesErrorCode.Declined)
     })
 
     it("refuses an invitation that was already used", async () => {

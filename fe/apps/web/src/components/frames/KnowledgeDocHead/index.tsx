@@ -1,7 +1,7 @@
 import { AlertDialog, Badge, Button, Cluster, DropdownMenu, IconButton } from "@starci/grammar/common"
 import { KnowledgeDocMark } from "@/components/composites/KnowledgeDocMark"
 import { PaneHead } from "@/components/composites/PaneHead"
-import { Icon, nivoIconSource } from "@/components/leaves/Icon"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import type { DocHeadView } from "@/modules/types"
 import { WIDE_ONLY_CLASS_NAME } from "./classNames"
 
@@ -88,7 +88,6 @@ export const KnowledgeDocHead = (props: KnowledgeDocHeadProps) => {
                                 <Button
                                     intent="neutral"
                                     size="sm"
-                                    startContent={<Icon props={{ name: "retry", usage: "leading" }} />}
                                     isPending={head.reindex.isPending}
                                     isDisabled={head.reindex.isDisabled}
                                     onPress={props.onReindex}

@@ -6,9 +6,11 @@ import { InjectCommandBus } from "@modules/platform/cqrs"
 import type { Principal } from "@modules/platform/cqrs"
 import { RequestAgentAvatarUploadCommand } from "../../application/request-agent-avatar-upload.command"
 import { SetAgentAvatarCommand } from "../../application/set-agent-avatar.command"
+import { SetAgentAvatarPresetCommand } from "../../application/set-agent-avatar-preset.command"
 import {
     toAgentAvatarUploadType,
     toRequestAgentAvatarUploadRequest,
+    toSetAgentAvatarPresetRequest,
     toSetAgentAvatarRequest,
 } from "./agent-avatar.mapper"
 import { toAgentAckType } from "./agents.mapper"
@@ -16,6 +18,7 @@ import { AgentAckType } from "./dto/agent-ack.type"
 import { AgentAvatarUploadType } from "./dto/agent-avatar-upload.type"
 import { RequestAgentAvatarUploadInput } from "./dto/request-agent-avatar-upload.input"
 import { SetAgentAvatarInput } from "./dto/set-agent-avatar.input"
+import { SetAgentAvatarPresetInput } from "./dto/set-agent-avatar-preset.input"
 
 @Resolver()
 /** GraphQL doors of an agent picture: the upload address, then setting or removing it. Managers only. */
@@ -47,6 +50,19 @@ export class AgentAvatarResolver {
     ): Promise<AgentAckType> {
         await this.commandBus.execute(
             new SetAgentAvatarCommand({ request: toSetAgentAvatarRequest(workspaceId, input), principal }),
+        )
+        return toAgentAckType()
+    }
+
+    /** Dresses an agent in a preset picture (dropping any uploaded one); a null preset goes back to the default sprout. */
+    @Mutation(() => AgentAckType, { name: "setAgentAvatarPreset" })
+    async setAgentAvatarPreset(
+        @CurrentPrincipal() principal: Principal,
+        @WorkspaceId() workspaceId: string,
+        @Args("input") input: SetAgentAvatarPresetInput,
+    ): Promise<AgentAckType> {
+        await this.commandBus.execute(
+            new SetAgentAvatarPresetCommand({ request: toSetAgentAvatarPresetRequest(workspaceId, input), principal }),
         )
         return toAgentAckType()
     }

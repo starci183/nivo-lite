@@ -25,7 +25,7 @@ turns every granted key into one versioned Swarm secret (see the production READ
 | `OTP_PEPPER` | its sealed member (granted in `application-stacks.yaml`) | At least 32 characters; hashes loyalty one-time codes. |
 | `CHANNEL_TOKEN_KEY` | its sealed member (granted in `application-stacks.yaml`) | Encrypts stored channel tokens and the per-workspace credentials of remote MCP connectors. One random 32-byte key, set once and never overwritten or rotated: a different key leaves every sealed credential unreadable. |
 | `N8N_SIGNING_SECRET` | its sealed member (granted in `application-stacks.yaml`) | Must equal what the n8n workflows sign with. |
-| `HTTP_SECURITY_ALLOWED_ORIGINS` | `api-public.conf` | Comma-separated exact HTTPS origins of the console and the landing. |
+| `HTTP_SECURITY_ALLOWED_ORIGINS` | `api-public.conf` | Comma-separated exact HTTPS origins of the console, the platform admin and the landing. |
 | `SITE_URL` | `api-public.conf` | The public origin of the console (`https://app.nivo.vn`); the browser return pages are served there. |
 | `PUBLIC_SITE_URL` | `api-public.conf` | The public origin of the console, used in links the api sends. |
 | `PUBLIC_API_URL` | `api-public.conf` | The public origin of the api (`https://api.nivo.vn`), used in webhook and callback URLs and as the base of the agents' tool door (`<origin>/agent-tools`); it must be https (http only for a loopback host) or the api refuses to boot. |
@@ -155,7 +155,8 @@ Public by design, passed as image build arguments (`deploy.images.web.buildArgs`
 | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | The public origin of the app (`https://app.nivo.vn`) or, for the landing, of the landing (`https://nivo.vn`). |
 | `NEXT_PUBLIC_LANDING_URL` | The landing origin (`https://nivo.vn`). |
-| `NEXT_PUBLIC_APP_URL` | The console origin the landing links to (`https://app.nivo.vn`). |
+| `NEXT_PUBLIC_APP_URL` | The console origin the landing and the admin link to (`https://app.nivo.vn`). |
+| `NEXT_PUBLIC_ADMIN_URL` | The platform-admin origin (`https://admin.nivo.vn`): `/admin` of the console redirects there. The admin image takes `NEXT_PUBLIC_SITE_URL=https://admin.nivo.vn`, `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_APP_URL`. |
 | `NEXT_PUBLIC_API_URL` | The api origin (`https://api.nivo.vn`). |
 | `NEXT_PUBLIC_DEVELOPER_API_URL` | The api origin (`https://api.nivo.vn`). |
 

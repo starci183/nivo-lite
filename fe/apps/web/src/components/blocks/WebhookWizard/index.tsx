@@ -5,7 +5,7 @@ import type { SlotRead } from "@/hooks/slot"
 import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
-import { useCopyLabels } from "@/hooks/connection-wizard"
+import { useCopyLabels, useWizardPhases } from "@/hooks/connection-wizard"
 import { useWebhookWizard, WEBHOOK_EVENTS, WEBHOOK_STEPS } from "@/hooks/webhook-wizard"
 import type { WebhookEvent } from "@/hooks/webhook-wizard"
 import type { WebhookTestVerdict } from "@/modules/types"
@@ -24,6 +24,7 @@ export const WebhookWizard = (props: WebhookWizardProps) => {
     const slotLabels = useSlotLabels()
     const t = useTranslations("webhookWizard")
     const tw = useTranslations("connectionWizard")
+    const phases = useWizardPhases("webhook")
     const copy = useCopyLabels()
     const wizard = useWebhookWizard({
         defaultName: t("defaultName"),
@@ -50,6 +51,7 @@ export const WebhookWizard = (props: WebhookWizardProps) => {
                 slotLabels: slotLabels(""),
                 title: t("title"),
                 stepLabel: tw("stepOf", { n: wizard.index + 1, total: WEBHOOK_STEPS.length }),
+                phases,
                 steps: [t("stepAddress"), t("stepSecret"), t("stepTest"), t("stepDone")],
                 index: wizard.index,
                 step: wizard.step,

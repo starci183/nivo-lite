@@ -31,11 +31,3 @@ export const READ_LEADS: DataRight = {
     scope: "workspace",
     fields: ["id", "contactName"],
 }
-
-/** The conversation a customer wrote in, to answer them where they wrote. */
-export const READ_CONVERSATIONS: DataRight = {
-    kind: "conversation",
-    access: "read",
-    scope: "workspace",
-    fields: ["id", "leadId", "lastAt"],
-}

@@ -1,6 +1,9 @@
 import { z } from "zod"
 import type { GraphNodeApproval, GraphNodeStepInput } from "./policies/graph-flow.policy"
 
+/** The most elements a loop's list holds in a step (the node refuses more than its `max`). */
+const LOOP_ITEMS_MAX = 50
+
 /** The most effects, and entries of a trigger, a stored step is read with. */
 const MAX_ENTRIES = 500
 
@@ -86,6 +89,23 @@ export const stepInputSchema: z.ZodType<GraphNodeStepInput> = z.object({
         .record(z.string().max(200), triggerValueSchema)
         .refine((entries) => Object.keys(entries).length <= MAX_ENTRIES),
     approval: approvalSchema.optional(),
+    namespace: z.string().min(1).max(200).optional(),
+    workflowId: z.string().max(200).nullable().optional(),
+    item: z.object({ value: triggerValueSchema, index: z.number().int().min(0) }).optional(),
+    loop: z
+        .object({
+            nodeKey: z.string().min(1).max(200),
+            index: z.number().int().min(0),
+            items: z.array(triggerValueSchema).max(LOOP_ITEMS_MAX),
+        })
+        .optional(),
+    join: z
+        .object({
+            index: z.number().int().min(0),
+            output: triggerValueSchema,
+            error: z.object({ code: z.string().max(200), message: z.string().max(2000) }).nullable(),
+        })
+        .optional(),
 })
 
 /** The tool call a node asked a person to approve, as the approval item keeps it. */

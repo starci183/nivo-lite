@@ -7,6 +7,7 @@ import type { QueueTimeout } from "@modules/platform/queue"
 import { AgentProbesService } from "./agent-probes.service"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
 import { InvoicesDueProbeService } from "./probes/invoices-due-probe.service"
+import { AccountingCloseProbeService } from "./probes/accounting-close-probe.service"
 import { MoneyInProbeService } from "./probes/money-in-probe.service"
 import { NewDocumentsProbeService } from "./probes/new-documents-probe.service"
 import { TasksDueProbeService } from "./probes/tasks-due-probe.service"
@@ -37,6 +38,10 @@ const build = async (answer: Promise<ProbeAnswer> = Promise.resolve(FOUND)) => {
             { provide: InvoicesDueProbeService, useValue: invoicesDue },
             { provide: NewDocumentsProbeService, useValue: mock<NewDocumentsProbeService>({ key: "new_documents" }) },
             { provide: MoneyInProbeService, useValue: mock<MoneyInProbeService>({ key: "money_in" }) },
+            {
+                provide: AccountingCloseProbeService,
+                useValue: mock<AccountingCloseProbeService>({ key: "accounting_close" }),
+            },
         ],
     }).compile()
     return { service: container.get(AgentProbesService), invoicesDue, tasksDue, timeout, cancel, logger }

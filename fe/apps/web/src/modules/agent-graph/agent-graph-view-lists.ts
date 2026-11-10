@@ -90,6 +90,7 @@ export const versionsViewOf = (data: AgentGraphData, ctx: AgentGraphContext): Ag
                       byLine: t("draftByYou"),
                       restoreLabel: "",
                       canRestore: false,
+                      isActive: false,
                   },
               ]
     const saved = data.versions.map((version) => {
@@ -104,9 +105,15 @@ export const versionsViewOf = (data: AgentGraphData, ctx: AgentGraphContext): Ag
             byLine: version.byLine,
             restoreLabel: t("restore"),
             canRestore: ctx.canEdit && !version.isActive,
+            isActive: version.isActive,
         }
     })
-    return { title: t("versionsTitle"), hint: t("versionsHint"), items: [...draft, ...saved] }
+    return {
+        title: t("versionsTitle"),
+        hint: t("versionsHint"),
+        activeChip: data.activeVersion > 0 ? t("versionChip", { version: data.activeVersion }) : "",
+        items: [...draft, ...saved],
+    }
 }
 
 /** The switch beside the map: what the agent does today and what the other side would change, owner only. */

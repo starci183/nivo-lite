@@ -10,6 +10,8 @@ export interface FakeNodePortsOptions {
     readonly model?: ReadonlyArray<unknown> | undefined
     /** The tools' results, in call order. */
     readonly tools?: ReadonlyArray<unknown> | undefined
+    /** What each effect answers, by effect id, in call order (a refusal, a subject with facts); the made-up subject past the list. */
+    readonly answers?: Readonly<Record<string, ReadonlyArray<SubjectRef>>> | undefined
     /** The time the fake clock reports; the epoch when absent. */
     readonly now?: Date | undefined
 }
@@ -108,7 +110,9 @@ export const scriptedNodePorts = (options: FakeNodePortsOptions = {}): FakeNodeP
             },
             execute: (effect, payload, call): Promise<SubjectRef> => {
                 executed.push({ id: effect.id, payload, ...call })
-                return Promise.resolve({ kind: effect.id, id: `${effect.id}-${executed.length}` })
+                const asked = executed.filter((one) => one.id === effect.id).length
+                const scripted = options.answers?.[effect.id]?.[asked - 1]
+                return Promise.resolve(scripted ?? { kind: effect.id, id: `${effect.id}-${executed.length}` })
             },
             model: {
                 text: () => {

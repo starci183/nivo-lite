@@ -43,7 +43,7 @@ export const OnboardingChannelsBase = (props: OnboardingChannelsBaseProps) => {
                     <Button intent="neutral" href={view.backHref}>
                         {view.backLabel}
                     </Button>
-                    <Button intent="commit" href={view.nextHref}>
+                    <Button endArrow intent="commit" href={view.nextHref}>
                         {view.channels.some((channel) => channel.isConnected) ? view.continueLabel : view.laterLabel}
                     </Button>
                 </>

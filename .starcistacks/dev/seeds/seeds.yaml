@@ -28,7 +28,7 @@ entries:
     mode: upsert
     after: [nivo-workspace]
     schema: be/src/modules/domain/channel-provisioning/catalogue-seed.schema.json
-  # The demo shop "Tiệm hoa Nắng Mai" (a fictional business, no real address, phone or person) for the real flow F walk; four public documents (introduction and hours, products and prices, delivery, payment and returns) and two internal ones (order handling, replying and the discount limit) are kept as knowledge sources and indexed like any document.
+  # The demo shop "Tiệm hoa Nắng Mai" (a fictional business, no real address, phone or person) for the real flow F walk; five public documents (introduction and hours, the flowers on sale, products and prices, delivery, payment and returns) and two internal ones (order handling, replying and the discount limit) are kept as knowledge sources and indexed like any document.
   - id: brain-tiem-hoa
     kind: data
     path: data/brain-tiem-hoa.json
@@ -44,3 +44,25 @@ entries:
     mode: upsert
     after: [nivo-workspace]
     schema: be/src/modules/domain/channel-provisioning/records-seed.schema.json
+  # The team chat of the demo shop: three group rooms (the whole shop, sales, bookkeeping) with a few lines each, among them an order notice card and a reply waiting for the owner's approval. Rooms and lines keep stable ids, so a rerun adds nothing; people are found by role and agents by module.
+  - id: chat-tiem-hoa
+    kind: data
+    path: data/chat-tiem-hoa.json
+    target: [node, be/dist/apps/cli/src/main.js, seed-chat, --workspace, NIVO]
+    mode: upsert
+    after: [nivo-workspace, agent-graphs, test-accounts]
+    schema: be/src/modules/domain/channel-provisioning/chat-seed.schema.json
+  # The customers of the demo shop for the lead-centric inbox (Đầu vào): seven fictional people across Zalo, the website form, the website chat, Facebook and Telegram, one unmatched bank transfer, their draft, confirmed and paid orders, their inputs and the work the agents did or wait on. Fixed ids and dedupe keys: a rerun writes the same rows again.
+  - id: inbox-leads-tiem-hoa
+    kind: sql
+    path: sql/inbox-leads-tiem-hoa.sql
+    target: primary
+    mode: upsert
+    after: [nivo-workspace, agent-graphs, records-tiem-hoa]
+  # The demo Zalo conversation of the shop for the inbox (Hộp thư): the customer asks for pots, the shop answers with the album of three catalogue photos, the order card with the product photo, the payment QR image (qr.sepay.vn) and the paid confirmation. Stored records only (placeholder Zalo id, nothing is ever sent); fixed ids, a rerun writes the same rows again.
+  - id: chat-demo-zalo-tiem-hoa
+    kind: sql
+    path: sql/chat-demo-zalo-tiem-hoa.sql
+    target: primary
+    mode: upsert
+    after: [nivo-workspace, agent-graphs, catalogue, inbox-leads-tiem-hoa]

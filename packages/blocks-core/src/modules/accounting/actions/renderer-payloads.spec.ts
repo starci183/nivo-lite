@@ -63,7 +63,7 @@ describe("the payloads the renderers send", () => {
 
     it("finds the queues that declare choices, so this spec cannot pass by checking nothing", () => {
         expect(queues.map(({ queue }) => `${queue.module}:${queue.action}`)).toContain(
-            "accounting:accounting.resolve-unmatched-payment",
+            "accounting:accounting.decide-owner-item",
         )
     })
 

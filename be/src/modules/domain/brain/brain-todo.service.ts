@@ -6,7 +6,7 @@ import { PublicDocumentsService } from "@modules/domain/public-documents"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 
-/** Who sees the facts waiting and the customer questions; every member sees the findings. */
+/** Who sees the facts waiting, the customer questions and the proposals: the inbox is theirs; every member sees the findings. */
 const MANAGERS: ReadonlySet<WorkspaceRole> = new Set(["owner", "manager"])
 
 /** What needs the owner in the Second Brain, by kind and in all. */
@@ -19,14 +19,15 @@ export interface BrainTodo {
     readonly questions: number
     /** Answers NIVO found in the internal documents that wait for the owner to publish. */
     readonly proposals: number
-    /** The sum: the one number the rail and the to-do tab show. */
+    /** The inbox of the to-do tab: fact cards, open questions and proposals (findings stay with their dossiers). The one number the rail and the tab show. */
     readonly total: number
 }
 
 @Injectable()
 /**
- * The one number of what needs the owner: findings that wait, fact cards that wait, customer questions nobody answered and proposed public answers. It is four
- * counts, never the lists, so the console can ask for it on every page; the page that lists them still reads the lists.
+ * The one number of what needs the owner: fact cards that wait, customer questions nobody answered and proposed public answers (the
+ * inbox of the to-do tab). The findings are counted beside it for the dossiers, never in the total. It is counts, never the lists, so
+ * the console can ask for it on every page; the page that lists them still reads the lists.
  */
 export class BrainTodoService {
     constructor(
@@ -37,16 +38,16 @@ export class BrainTodoService {
         private readonly documents: PublicDocumentsService,
     ) {}
 
-    /** What needs the caller, as the caller may see it: a member who is not an owner or manager counts findings alone, as the page lists them. */
+    /** What needs the caller, as the caller may see it: a member who is not an owner or manager has no inbox (findings only). */
     async count(userId: string, workspaceId: string): Promise<BrainTodo> {
         const me = await this.members.require(userId, workspaceId)
         const findings = await this.findings.activeCount(workspaceId)
-        if (!MANAGERS.has(me.role)) return { findings, facts: 0, questions: 0, proposals: 0, total: findings }
+        if (!MANAGERS.has(me.role)) return { findings, facts: 0, questions: 0, proposals: 0, total: 0 }
         const [facts, questions, proposals] = await Promise.all([
             this.facts.waitingCards(workspaceId),
             this.gaps.countOpen(workspaceId),
             this.documents.countProposals(workspaceId),
         ])
-        return { findings, facts, questions, proposals, total: findings + facts + questions + proposals }
+        return { findings, facts, questions, proposals, total: facts + questions + proposals }
     }
 }

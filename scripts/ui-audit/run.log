@@ -1,0 +1,412 @@
+
+> nivo-ui-audit@0.1.0 audit
+> node run.mjs
+
+--- width 1440
+   2  chat @1440
+   3  overview @1440
+   6  inbox @1440
+   2  team @1440
+   2  permissions @1440
+   3  overview~hom-nay @1440
+   6  authority @1440
+   1  billing @1440
+   3  overview~30-ngay @1440
+   0  billing-plan @1440
+   3  overview~thang-nay @1440
+   2  account @1440
+   0  profile @1440
+   0  developers @1440
+   0  brain @1440
+   0  knowledge @1440
+   3  knowledge-nivo @1440
+   6  brain~kien-thuc @1440
+   0  knowledge~viec-can-lam73 @1440
+   0  knowledge-nivo~viec-can-lam73 @1440
+   3  brain~cong-khai @1440
+   0  knowledge~cong-khai @1440
+   3  knowledge-nivo~cong-khai @1440
+   1  brain~hoi-thu @1440
+   9  connections @1440
+   0  connections-google @1440
+   1  knowledge~hoi-thu @1440
+   1  knowledge-nivo~hoi-thu @1440
+   0  connections-drive @1440
+   0  connections-sepay @1440
+   0  connections-telegram @1440
+   0  connections-zalo @1440
+   2  agents @1440
+   0  agents-marketplace @1440
+   0  agents-templates @1440
+   1  agents-accounting @1440
+   1  agents-chatbot @1440
+   1  agents-sales @1440
+   3  agents-accounting~quy-trinh @1440
+   3  agents-sales~quy-trinh @1440
+   3  agents-chatbot~quy-trinh @1440
+   0  agent-accounting-workbench @1440
+   0  agent-accounting-work @1440
+   4  agent-accounting-work-view-runs @1440
+   2  agent-accounting-workbench~tong-quan-ky @1440
+   0  agent-accounting-work~luot-chay @1440
+   0  agent-accounting-work-view-runs~viec-dang-lam @1440
+   1  agent-accounting-chat @1440
+   2  agent-accounting-connections @1440
+   2  agent-accounting-workbench~chung-tu @1440
+   1  agent-accounting-performance @1440
+   3  agent-accounting-knowledge @1440
+   0  agent-accounting-workbench~so @1440
+   0  agent-accounting-settings @1440
+   1  agent-accounting-setup @1440
+   0  agent-accounting-setup-general @1440
+   3  agent-accounting-setup-workflows @1440
+   0  agent-chatbot-workbench @1440
+   3  agent-accounting-setup~quy-trinh @1440
+   0  agent-chatbot-work @1440
+   0  agent-chatbot-workbench~chua-tra-loi-duoc @1440
+   1  agent-accounting-setup-workflows~huong-dan @1440
+   4  agent-chatbot-work-view-runs @1440
+   4  agent-chatbot-work~luot-chay @1440
+   2  agent-chatbot-workbench~hop-thu @1440
+   1  agent-chatbot-chat @1440
+   0  agent-chatbot-work-view-runs~viec-dang-lam @1440
+   2  agent-chatbot-workbench~quy-tac @1440
+   2  agent-chatbot-connections @1440
+   3  agent-chatbot-knowledge @1440
+   1  agent-chatbot-performance @1440
+   0  agent-chatbot-settings @1440
+   0  agent-chatbot-setup-general @1440
+   1  agent-chatbot-setup @1440
+   3  agent-chatbot-setup-workflows @1440
+   0  agent-sales-workbench @1440
+   3  agent-chatbot-setup~quy-trinh @1440
+   4  agent-sales-workbench~tien-trinh-ban @1440
+   1  agent-chatbot-setup-workflows~huong-dan @1440
+   0  agent-sales-work @1440
+   4  agent-sales-work-view-runs @1440
+   3  agent-sales-workbench~don-hang @1440
+   4  agent-sales-work~luot-chay @1440
+   0  agent-sales-work-view-runs~viec-dang-lam @1440
+   4  agent-sales-workbench~quy-tac @1440
+   2  agent-sales-connections @1440
+   3  agent-sales-knowledge @1440
+   1  agent-sales-performance @1440
+   6  agent-sales-chat @1440
+   0  agent-sales-settings @1440
+   1  agent-sales-setup @1440
+   3  agent-sales-setup-workflows @1440
+   0  agent-sales-setup-general @1440
+   3  agent-sales-setup~quy-trinh @1440
+   1  agent-sales-setup-workflows~huong-dan @1440
+   6  brain-tab-knowledge-view-facts @1440
+   0  brain-tab-knowledge-view-documents @1440
+   0  brain-tab-knowledge-view-dossiers @1440
+   0  brain-tab-knowledge-view-facts~viec-can-lam73 @1440
+   0  brain-tab-knowledge-view-documents~viec-can-lam73 @1440
+   0  brain-tab-knowledge-view-dossiers~viec-can-lam73 @1440
+   3  brain-tab-knowledge-view-facts~cong-khai @1440
+   3  brain-tab-knowledge-view-documents~cong-khai @1440
+   3  brain-tab-knowledge-view-dossiers~cong-khai @1440
+   1  brain-tab-knowledge-view-facts~hoi-thu @1440
+   1  brain-tab-knowledge-view-documents~hoi-thu @1440
+   1  brain-tab-knowledge-view-dossiers~hoi-thu @1440
+  13  connections-tab-library @1440
+   0  connections-google-view-events @1440
+   0  connections-google-view-agents @1440
+   0  connections-google-view-settings @1440
+  17  connections-tab-library-group-chat @1440
+   0  brain-tab-knowledge-view-lessons @1440
+  18  connections-tab-library-group-money @1440
+  19  connections-tab-library-group-google @1440
+  17  connections-tab-library-group-data @1440
+  17  connections-tab-library-group-sales @1440
+  20  connections-tab-library-group-accounting @1440
+   0  brain-tab-knowledge-view-lessons~viec-can-lam73 @1440
+   3  brain-tab-knowledge-view-lessons~cong-khai @1440
+   1  brain-tab-knowledge-view-lessons~hoi-thu @1440
+--- width 390
+   2  overview @390
+   3  chat @390
+   3  inbox @390
+   0  authority @390
+   3  team @390
+   3  permissions @390
+   0  billing-plan @390
+   1  billing @390
+   1  profile @390
+   2  account @390
+   1  developers @390
+   2  brain @390
+   5  connections @390
+   2  knowledge @390
+   0  connections-google @390
+   6  knowledge-nivo @390
+   0  connections-drive @390
+   0  connections-sepay @390
+   0  connections-telegram @390
+   0  connections-zalo @390
+   3  agents @390
+   0  agents-marketplace @390
+   0  agents-templates @390
+   4  agents-accounting @390
+   3  agents-sales @390
+   3  agents-chatbot @390
+   2  agent-accounting-workbench @390
+   2  agent-accounting-work @390
+   8  agent-accounting-work-view-runs @390
+   4  agent-accounting-chat @390
+   1  agent-accounting-performance @390
+   2  agent-accounting-connections @390
+   2  agent-accounting-knowledge @390
+   3  agent-accounting-settings @390
+   3  agent-accounting-setup-general @390
+   4  agent-accounting-setup @390
+   5  agent-accounting-setup-workflows @390
+   4  agent-chatbot-workbench @390
+   2  agent-chatbot-work @390
+   8  agent-chatbot-work-view-runs @390
+   2  agent-chatbot-connections @390
+   1  agent-chatbot-performance @390
+   2  agent-chatbot-knowledge @390
+   5  agent-chatbot-settings @390
+   3  agent-chatbot-setup @390
+   5  agent-chatbot-chat @390
+   5  agent-chatbot-setup-general @390
+   5  agent-chatbot-setup-workflows @390
+   3  agent-sales-workbench @390
+   2  agent-sales-work @390
+   8  agent-sales-work-view-runs @390
+   2  agent-sales-connections @390
+   2  agent-sales-knowledge @390
+   1  agent-sales-performance @390
+   3  agent-sales-settings @390
+   3  agent-sales-setup @390
+   3  agent-sales-setup-general @390
+   7  agent-sales-chat @390
+   5  agent-sales-setup-workflows @390
+   6  brain-tab-knowledge-view-facts @390
+   2  brain-tab-knowledge-view-documents @390
+   2  brain-tab-knowledge-view-dossiers @390
+   5  connections-tab-library @390
+   0  connections-google-view-events @390
+   0  connections-google-view-agents @390
+   0  connections-google-view-settings @390
+  19  connections-tab-library-group-chat @390
+   2  brain-tab-knowledge-view-lessons @390
+  19  connections-tab-library-group-money @390
+  20  connections-tab-library-group-google @390
+  17  connections-tab-library-group-sales @390
+  16  connections-tab-library-group-data @390
+  21  connections-tab-library-group-accounting @390
+
+By rule
+  filled-icon                  231 findings on 85 pages
+  card-in-card                 190 findings on 10 pages
+  btn-sm-icon-only              64 findings on 51 pages
+  description-under-label       42 findings on 27 pages
+  font-size                     34 findings on 30 pages
+  aside-not-flush               16 findings on 8 pages
+  btn-sm-icon                    8 findings on 4 pages
+  multi-primary                  7 findings on 2 pages
+  raw-key                        5 findings on 3 pages
+  typed-arrow                    1 findings on 1 pages
+  hidden-under-band              1 findings on 1 pages
+
+Page x rule (legend: 1=font-size 2=filled-icon 3=card-in-card 4=description-under-label 5=hidden-under-band 6=aside-not-flush 7=raw-key 8=typed-arrow 9=btn-sm-icon 10=btn-sm-icon-only 11=multi-primary)
+page @width                                             1    2    3    4    5    6    7    8    9   10   11
+connections-tab-library-group-accounting @390           1    3   15    .    .    .    1    .    .    1    .
+connections-tab-library-group-accounting @1440          .    2   17    .    .    .    1    .    .    .    .
+connections-tab-library-group-google @390               1    3   15    .    .    .    .    .    .    1    .
+connections-tab-library-group-google @1440              .    2   17    .    .    .    .    .    .    .    .
+connections-tab-library-group-chat @390                 1    3   14    .    .    .    .    .    .    1    .
+connections-tab-library-group-money @390                1    3   14    .    .    .    .    .    .    1    .
+connections-tab-library-group-money @1440               .    2   16    .    .    .    .    .    .    .    .
+connections-tab-library-group-chat @1440                .    2   15    .    .    .    .    .    .    .    .
+connections-tab-library-group-data @1440                .    2   15    .    .    .    .    .    .    .    .
+connections-tab-library-group-sales @1440               .    2   15    .    .    .    .    .    .    .    .
+connections-tab-library-group-sales @390                1    3   12    .    .    .    .    .    .    1    .
+connections-tab-library-group-data @390                 1    3   11    .    .    .    .    .    .    1    .
+connections-tab-library @1440                           .    2   10    .    .    .    1    .    .    .    .
+connections @1440                                       .    4    .    .    .    .    .    .    .    .    5
+agent-accounting-work-view-runs @390                    1    5    .    1    .    .    .    .    .    1    .
+agent-chatbot-work-view-runs @390                       1    5    .    1    .    .    .    .    .    1    .
+agent-sales-work-view-runs @390                         1    5    .    1    .    .    .    .    .    1    .
+agent-sales-chat @390                                   1    1    .    .    1    .    .    .    1    3    .
+inbox @1440                                             .    4    .    .    .    .    .    .    .    .    2
+authority @1440                                         .    6    .    .    .    .    .    .    .    .    .
+brain~kien-thuc @1440                                   .    3    1    .    .    2    .    .    .    .    .
+agent-sales-chat @1440                                  .    .    .    .    .    .    .    .    1    5    .
+brain-tab-knowledge-view-facts @1440                    .    3    1    .    .    2    .    .    .    .    .
+knowledge-nivo @390                                     1    4    .    .    .    .    .    .    .    1    .
+brain-tab-knowledge-view-facts @390                     .    4    1    .    .    .    .    .    .    1    .
+connections @390                                        1    4    .    .    .    .    .    .    .    .    .
+agent-accounting-setup-workflows @390                   .    4    .    .    .    .    .    .    .    1    .
+agent-chatbot-settings @390                             3    1    .    .    .    .    .    .    .    1    .
+agent-chatbot-chat @390                                 1    1    .    .    .    .    .    .    .    3    .
+agent-chatbot-setup-general @390                        3    1    .    .    .    .    .    .    .    1    .
+agent-chatbot-setup-workflows @390                      .    4    .    .    .    .    .    .    .    1    .
+agent-sales-setup-workflows @390                        .    4    .    .    .    .    .    .    .    1    .
+connections-tab-library @390                            1    3    .    .    .    .    .    .    .    1    .
+agent-accounting-work-view-runs @1440                   .    3    .    1    .    .    .    .    .    .    .
+agent-chatbot-work-view-runs @1440                      .    3    .    1    .    .    .    .    .    .    .
+agent-chatbot-work~luot-chay @1440                      .    3    .    1    .    .    .    .    .    .    .
+agent-sales-workbench~tien-trinh-ban @1440              .    2    .    .    .    .    2    .    .    .    .
+agent-sales-work-view-runs @1440                        .    3    .    1    .    .    .    .    .    .    .
+agent-sales-work~luot-chay @1440                        .    3    .    1    .    .    .    .    .    .    .
+agent-sales-workbench~quy-tac @1440                     .    4    .    .    .    .    .    .    .    .    .
+agents-accounting @390                                  1    1    .    1    .    .    .    .    .    1    .
+agent-accounting-chat @390                              1    1    .    .    .    .    .    .    .    2    .
+agent-accounting-setup @390                             1    1    .    1    .    .    .    .    .    1    .
+agent-chatbot-workbench @390                            .    2    .    .    .    .    .    .    .    2    .
+overview @1440                                          .    .    .    2    .    .    .    .    .    1    .
+overview~hom-nay @1440                                  .    .    .    2    .    .    .    .    .    1    .
+overview~30-ngay @1440                                  .    .    .    2    .    .    .    .    .    1    .
+overview~thang-nay @1440                                .    .    .    2    .    .    .    .    .    1    .
+knowledge-nivo @1440                                    .    3    .    .    .    .    .    .    .    .    .
+brain~cong-khai @1440                                   .    2    .    1    .    .    .    .    .    .    .
+knowledge-nivo~cong-khai @1440                          .    2    .    1    .    .    .    .    .    .    .
+agents-accounting~quy-trinh @1440                       .    3    .    .    .    .    .    .    .    .    .
+agents-sales~quy-trinh @1440                            .    3    .    .    .    .    .    .    .    .    .
+agents-chatbot~quy-trinh @1440                          .    3    .    .    .    .    .    .    .    .    .
+agent-accounting-knowledge @1440                        .    .    .    1    .    2    .    .    .    .    .
+agent-accounting-setup-workflows @1440                  .    3    .    .    .    .    .    .    .    .    .
+agent-accounting-setup~quy-trinh @1440                  .    3    .    .    .    .    .    .    .    .    .
+agent-chatbot-knowledge @1440                           .    .    .    1    .    2    .    .    .    .    .
+agent-chatbot-setup-workflows @1440                     .    3    .    .    .    .    .    .    .    .    .
+agent-chatbot-setup~quy-trinh @1440                     .    3    .    .    .    .    .    .    .    .    .
+agent-sales-workbench~don-hang @1440                    .    3    .    .    .    .    .    .    .    .    .
+agent-sales-knowledge @1440                             .    .    .    1    .    2    .    .    .    .    .
+agent-sales-setup-workflows @1440                       .    3    .    .    .    .    .    .    .    .    .
+agent-sales-setup~quy-trinh @1440                       .    3    .    .    .    .    .    .    .    .    .
+brain-tab-knowledge-view-facts~cong-khai @1440          .    2    .    1    .    .    .    .    .    .    .
+brain-tab-knowledge-view-documents~cong-khai @1440      .    2    .    1    .    .    .    .    .    .    .
+brain-tab-knowledge-view-dossiers~cong-khai @1440       .    2    .    1    .    .    .    .    .    .    .
+brain-tab-knowledge-view-lessons~cong-khai @1440        .    2    .    1    .    .    .    .    .    .    .
+chat @390                                               1    2    .    .    .    .    .    .    .    .    .
+inbox @390                                              1    2    .    .    .    .    .    .    .    .    .
+team @390                                               1    2    .    .    .    .    .    .    .    .    .
+permissions @390                                        1    2    .    .    .    .    .    .    .    .    .
+agents @390                                             1    2    .    .    .    .    .    .    .    .    .
+agents-sales @390                                       .    1    .    1    .    .    .    .    .    1    .
+agents-chatbot @390                                     .    1    .    1    .    .    .    .    .    1    .
+agent-accounting-settings @390                          1    1    .    .    .    .    .    .    .    1    .
+agent-accounting-setup-general @390                     1    1    .    .    .    .    .    .    .    1    .
+agent-chatbot-setup @390                                .    1    .    1    .    .    .    .    .    1    .
+agent-sales-workbench @390                              .    1    1    .    .    .    .    .    .    1    .
+agent-sales-settings @390                               1    1    .    .    .    .    .    .    .    1    .
+agent-sales-setup @390                                  .    1    .    1    .    .    .    .    .    1    .
+agent-sales-setup-general @390                          1    1    .    .    .    .    .    .    .    1    .
+chat @1440                                              .    2    .    .    .    .    .    .    .    .    .
+team @1440                                              .    2    .    .    .    .    .    .    .    .    .
+permissions @1440                                       .    2    .    .    .    .    .    .    .    .    .
+account @1440                                           .    2    .    .    .    .    .    .    .    .    .
+agents @1440                                            .    2    .    .    .    .    .    .    .    .    .
+agent-accounting-workbench~tong-quan-ky @1440           .    1    .    .    .    .    .    1    .    .    .
+agent-accounting-connections @1440                      .    .    .    .    .    2    .    .    .    .    .
+agent-accounting-workbench~chung-tu @1440               .    2    .    .    .    .    .    .    .    .    .
+agent-chatbot-workbench~hop-thu @1440                   .    2    .    .    .    .    .    .    .    .    .
+agent-chatbot-workbench~quy-tac @1440                   .    2    .    .    .    .    .    .    .    .    .
+agent-chatbot-connections @1440                         .    .    .    .    .    2    .    .    .    .    .
+agent-sales-connections @1440                           .    .    .    .    .    2    .    .    .    .    .
+overview @390                                           .    .    .    2    .    .    .    .    .    .    .
+account @390                                            .    2    .    .    .    .    .    .    .    .    .
+brain @390                                              .    1    .    .    .    .    .    .    .    1    .
+knowledge @390                                          .    1    .    .    .    .    .    .    .    1    .
+agent-accounting-workbench @390                         .    1    .    .    .    .    .    .    .    1    .
+agent-accounting-work @390                              .    1    .    .    .    .    .    .    .    1    .
+agent-accounting-connections @390                       .    1    .    .    .    .    .    .    .    1    .
+agent-accounting-knowledge @390                         .    1    .    .    .    .    .    .    .    1    .
+agent-chatbot-work @390                                 .    1    .    .    .    .    .    .    .    1    .
+agent-chatbot-connections @390                          .    1    .    .    .    .    .    .    .    1    .
+agent-chatbot-knowledge @390                            .    1    .    .    .    .    .    .    .    1    .
+agent-sales-work @390                                   .    1    .    .    .    .    .    .    .    1    .
+agent-sales-connections @390                            .    1    .    .    .    .    .    .    .    1    .
+agent-sales-knowledge @390                              .    1    .    .    .    .    .    .    .    1    .
+brain-tab-knowledge-view-documents @390                 .    1    .    .    .    .    .    .    .    1    .
+brain-tab-knowledge-view-dossiers @390                  .    1    .    .    .    .    .    .    .    1    .
+brain-tab-knowledge-view-lessons @390                   .    1    .    .    .    .    .    .    .    1    .
+billing @1440                                           .    1    .    .    .    .    .    .    .    .    .
+brain~hoi-thu @1440                                     .    1    .    .    .    .    .    .    .    .    .
+knowledge~hoi-thu @1440                                 .    1    .    .    .    .    .    .    .    .    .
+knowledge-nivo~hoi-thu @1440                            .    1    .    .    .    .    .    .    .    .    .
+agents-accounting @1440                                 .    .    .    1    .    .    .    .    .    .    .
+agents-chatbot @1440                                    .    .    .    1    .    .    .    .    .    .    .
+agents-sales @1440                                      .    .    .    1    .    .    .    .    .    .    .
+agent-accounting-chat @1440                             .    .    .    .    .    .    .    .    .    1    .
+agent-accounting-performance @1440                      .    .    .    .    .    .    .    .    1    .    .
+agent-accounting-setup @1440                            .    .    .    1    .    .    .    .    .    .    .
+agent-accounting-setup-workflows~huong-dan @1440        .    .    .    1    .    .    .    .    .    .    .
+agent-chatbot-chat @1440                                .    .    .    .    .    .    .    .    .    1    .
+agent-chatbot-performance @1440                         .    .    .    .    .    .    .    .    1    .    .
+agent-chatbot-setup @1440                               .    .    .    1    .    .    .    .    .    .    .
+agent-chatbot-setup-workflows~huong-dan @1440           .    .    .    1    .    .    .    .    .    .    .
+agent-sales-performance @1440                           .    .    .    .    .    .    .    .    1    .    .
+agent-sales-setup @1440                                 .    .    .    1    .    .    .    .    .    .    .
+agent-sales-setup-workflows~huong-dan @1440             .    .    .    1    .    .    .    .    .    .    .
+brain-tab-knowledge-view-facts~hoi-thu @1440            .    1    .    .    .    .    .    .    .    .    .
+brain-tab-knowledge-view-documents~hoi-thu @1440        .    1    .    .    .    .    .    .    .    .    .
+brain-tab-knowledge-view-dossiers~hoi-thu @1440         .    1    .    .    .    .    .    .    .    .    .
+brain-tab-knowledge-view-lessons~hoi-thu @1440          .    1    .    .    .    .    .    .    .    .    .
+billing @390                                            .    1    .    .    .    .    .    .    .    .    .
+profile @390                                            1    .    .    .    .    .    .    .    .    .    .
+developers @390                                         1    .    .    .    .    .    .    .    .    .    .
+agent-accounting-performance @390                       .    .    .    .    .    .    .    .    1    .    .
+agent-chatbot-performance @390                          .    .    .    .    .    .    .    .    1    .    .
+agent-sales-performance @390                            .    .    .    .    .    .    .    .    1    .    .
+billing-plan @1440                                      .    .    .    .    .    .    .    .    .    .    .
+profile @1440                                           .    .    .    .    .    .    .    .    .    .    .
+developers @1440                                        .    .    .    .    .    .    .    .    .    .    .
+brain @1440                                             .    .    .    .    .    .    .    .    .    .    .
+knowledge @1440                                         .    .    .    .    .    .    .    .    .    .    .
+knowledge~viec-can-lam73 @1440                          .    .    .    .    .    .    .    .    .    .    .
+knowledge-nivo~viec-can-lam73 @1440                     .    .    .    .    .    .    .    .    .    .    .
+knowledge~cong-khai @1440                               .    .    .    .    .    .    .    .    .    .    .
+connections-google @1440                                .    .    .    .    .    .    .    .    .    .    .
+connections-drive @1440                                 .    .    .    .    .    .    .    .    .    .    .
+connections-sepay @1440                                 .    .    .    .    .    .    .    .    .    .    .
+connections-telegram @1440                              .    .    .    .    .    .    .    .    .    .    .
+connections-zalo @1440                                  .    .    .    .    .    .    .    .    .    .    .
+agents-marketplace @1440                                .    .    .    .    .    .    .    .    .    .    .
+agents-templates @1440                                  .    .    .    .    .    .    .    .    .    .    .
+agent-accounting-workbench @1440                        .    .    .    .    .    .    .    .    .    .    .
+agent-accounting-work @1440                             .    .    .    .    .    .    .    .    .    .    .
+agent-accounting-work~luot-chay @1440                   .    .    .    .    .    .    .    .    .    .    .
+agent-accounting-work-view-runs~viec-dang-lam @1440     .    .    .    .    .    .    .    .    .    .    .
+agent-accounting-workbench~so @1440                     .    .    .    .    .    .    .    .    .    .    .
+agent-accounting-settings @1440                         .    .    .    .    .    .    .    .    .    .    .
+agent-accounting-setup-general @1440                    .    .    .    .    .    .    .    .    .    .    .
+agent-chatbot-workbench @1440                           .    .    .    .    .    .    .    .    .    .    .
+agent-chatbot-work @1440                                .    .    .    .    .    .    .    .    .    .    .
+agent-chatbot-workbench~chua-tra-loi-duoc @1440         .    .    .    .    .    .    .    .    .    .    .
+agent-chatbot-work-view-runs~viec-dang-lam @1440        .    .    .    .    .    .    .    .    .    .    .
+agent-chatbot-settings @1440                            .    .    .    .    .    .    .    .    .    .    .
+agent-chatbot-setup-general @1440                       .    .    .    .    .    .    .    .    .    .    .
+agent-sales-workbench @1440                             .    .    .    .    .    .    .    .    .    .    .
+agent-sales-work @1440                                  .    .    .    .    .    .    .    .    .    .    .
+agent-sales-work-view-runs~viec-dang-lam @1440          .    .    .    .    .    .    .    .    .    .    .
+agent-sales-settings @1440                              .    .    .    .    .    .    .    .    .    .    .
+agent-sales-setup-general @1440                         .    .    .    .    .    .    .    .    .    .    .
+brain-tab-knowledge-view-documents @1440                .    .    .    .    .    .    .    .    .    .    .
+brain-tab-knowledge-view-dossiers @1440                 .    .    .    .    .    .    .    .    .    .    .
+brain-tab-knowledge-view-facts~viec-can-lam73 @1440     .    .    .    .    .    .    .    .    .    .    .
+brain-tab-knowledge-view-documents~viec-can-lam73 @1440    .    .    .    .    .    .    .    .    .    .    .
+brain-tab-knowledge-view-dossiers~viec-can-lam73 @1440    .    .    .    .    .    .    .    .    .    .    .
+connections-google-view-events @1440                    .    .    .    .    .    .    .    .    .    .    .
+connections-google-view-agents @1440                    .    .    .    .    .    .    .    .    .    .    .
+connections-google-view-settings @1440                  .    .    .    .    .    .    .    .    .    .    .
+brain-tab-knowledge-view-lessons @1440                  .    .    .    .    .    .    .    .    .    .    .
+brain-tab-knowledge-view-lessons~viec-can-lam73 @1440    .    .    .    .    .    .    .    .    .    .    .
+authority @390                                          .    .    .    .    .    .    .    .    .    .    .
+billing-plan @390                                       .    .    .    .    .    .    .    .    .    .    .
+connections-google @390                                 .    .    .    .    .    .    .    .    .    .    .
+connections-drive @390                                  .    .    .    .    .    .    .    .    .    .    .
+connections-sepay @390                                  .    .    .    .    .    .    .    .    .    .    .
+connections-telegram @390                               .    .    .    .    .    .    .    .    .    .    .
+connections-zalo @390                                   .    .    .    .    .    .    .    .    .    .    .
+agents-marketplace @390                                 .    .    .    .    .    .    .    .    .    .    .
+agents-templates @390                                   .    .    .    .    .    .    .    .    .    .    .
+connections-google-view-events @390                     .    .    .    .    .    .    .    .    .    .    .
+connections-google-view-agents @390                     .    .    .    .    .    .    .    .    .    .    .
+connections-google-view-settings @390                   .    .    .    .    .    .    .    .    .    .    .
+
+Total 599 findings on 194 page-widths. Report: scripts\ui-audit\report.json  Shots: gallery\shots\audit

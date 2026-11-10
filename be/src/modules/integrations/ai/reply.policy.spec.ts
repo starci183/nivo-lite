@@ -51,13 +51,26 @@ describe("withNotes", () => {
         expect(subject.withNotes(messages, "")).toEqual(messages)
     })
 
-    it("appends the block to the system message and leaves every other message alone", async () => {
+    it("puts the block after the system text that opens the prompt, as a message of its own, and leaves every other message alone", async () => {
         const subject = await buildSubject()
 
         expect(subject.withNotes(messages, "NOTES")).toEqual([
-            { role: "system", content: "You are Mai.\n\nNOTES" },
+            { role: "system", content: "You are Mai." },
+            { role: "system", content: "NOTES" },
             { role: "user", content: "hi" },
         ])
+    })
+
+    it("prompt cache: keeps the opening system text the same whatever notes the question found", async () => {
+        const subject = await buildSubject()
+        const opening = [{ role: "system" as const, content: "You are Mai." }, { role: "system" as const, content: "Rules." }]
+        const first = subject.withNotes([...opening, { role: "user", content: "giờ mở cửa?" }], "NOTES about hours")
+        const second = subject.withNotes([...opening, { role: "user", content: "có ship không?" }], "NOTES about delivery")
+
+        expect(first.slice(0, 2)).toEqual(opening)
+        expect(second.slice(0, 2)).toEqual(opening)
+        expect(first[2]).toEqual({ role: "system", content: "NOTES about hours" })
+        expect(subject.withNotes(opening, "NOTES")).toEqual([...opening, { role: "system", content: "NOTES" }])
     })
 
     it("opens the prompt with the block as a system message when it has none", async () => {

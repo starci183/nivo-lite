@@ -1,0 +1,48 @@
+[
+  {
+    "name": "Mua hoa → thanh toán",
+    "pages": [
+      {
+        "default": "agent-workbench/{agent}-wb-tien-trinh-ban",
+        "accounting": "agent-workbench/accounting-wb-hom-nay",
+        "chatbot": "agent-workbench/chatbot-wb-hop-thu"
+      },
+      {
+        "default": "agent-workbench/{agent}-wb-don-hang",
+        "accounting": "agent-workbench/accounting-wb-chung-tu",
+        "chatbot": "agent-workbench/chatbot-wb-khach-dang-xu-ly"
+      },
+      "agent-connections/{agent}-connections",
+      "agent-work/{agent}-work"
+    ]
+  },
+  {
+    "name": "Thiết lập agent",
+    "pages": [
+      "agent-setup/{agent}-huong-dan",
+      "agent-setup/{agent}-chung",
+      "agent-connections/{agent}-connections",
+      "agent-knowledge/{agent}-knowledge"
+    ]
+  },
+  {
+    "name": "Sửa quy trình",
+    "pages": [
+      "agent-workflows/{agent}-list",
+      "agent-workflows/{agent}-detail-map",
+      "agent-workflows/{agent}-detail-versions",
+      "agent-workflows/{agent}-detail-versions-confirm"
+    ]
+  },
+  {
+    "name": "Xem lượt chạy",
+    "pages": [
+      "agent-work/{agent}-work",
+      {
+        "default": "agent-work/{agent}-luot-chay",
+        "chatbot": "agent-work/chatbot-cong-viec-luot-chay"
+      },
+      "agent-workflows/{agent}-detail-runs"
+    ]
+  }
+]

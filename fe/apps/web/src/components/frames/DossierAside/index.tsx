@@ -2,7 +2,6 @@ import {
     Button,
     DescriptionList,
     Heading,
-    Icon,
     IconTile,
     ListBox,
     PaneSection,
@@ -39,7 +38,7 @@ const Missing = (props: Pick<DossierAsideProps, "aside" | "isWaiting">) => {
                 <Button
                     intent="commit"
                     width="fill"
-                    startContent={<Icon source={nivoIconSource("upload", "leading")} usage="leading" />}
+                    startGlyph="upload"
                     href={missing.upload.href}
                 >
                     {missing.upload.label}

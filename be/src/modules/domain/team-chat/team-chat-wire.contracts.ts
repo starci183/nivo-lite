@@ -2,6 +2,7 @@ import type {
     ApprovalState,
     ChatUpload,
     ChatMemberRef,
+    GroupPurpose,
     MessageView,
     RoomMemberView,
     RoomUnread,
@@ -154,6 +155,10 @@ export interface CreateRoomWireInput {
     readonly name: string | null
     /** The other members. */
     readonly members: ReadonlyArray<MemberRefWireInput>
+    /** What a group is for: `group`, `common` or `module`; null or omitted is a plain group. */
+    readonly purpose?: string | null
+    /** The module whose team room it is, for the purpose `module`. */
+    readonly purposeModule?: string | null
 }
 
 /** A member of a room as an input names it. */
@@ -178,6 +183,8 @@ export interface SendWireInput {
     readonly fileKeys: ReadonlyArray<string> | null
     /** The retry key. */
     readonly clientId: string | null
+    /** The message it answers; omitted or null for none. */
+    readonly replyTo?: string | null
 }
 
 /** A verdict as an input carries it. */
@@ -222,6 +229,8 @@ export interface CreateRoomWireRequest {
     readonly name: string | null
     /** The other members. */
     readonly members: ReadonlyArray<ChatMemberRef>
+    /** What a group is for; omitted is a plain group. */
+    readonly purpose?: GroupPurpose | undefined
 }
 
 /** The request that adds or removes a member of a room. */
@@ -250,6 +259,8 @@ export interface SendWireRequest {
     readonly fileKeys: ReadonlyArray<string>
     /** The retry key. */
     readonly clientId: string | null
+    /** The message it answers; null for none. */
+    readonly replyTo: string | null
 }
 
 /** The request of a verdict on a decision. */

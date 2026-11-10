@@ -1,4 +1,4 @@
-import { DisclosureList, Fieldset, PaneSection, Stepper } from "@starci/grammar/common"
+import { DisclosureList, Fieldset, Stack, Stepper, SurfaceCard } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 
 /** One numbered setup step of a connection page: its words, its body and its commands. */
@@ -35,21 +35,19 @@ const stateOf = (step: ConnectionStep): "done" | "current" | "problem" | "todo" 
 }
 
 /**
- * The setup of a connection as numbered steps in one joined list under a dense stepper that reads where the owner stands: each step
+ * The setup of a connection, in one card, as numbered steps in one joined list under a dense stepper that reads where the owner stands: each step
  * is a disclosure (STATE-7, one controlled value per step) whose row carries its mark (a check, the current number, a grey number),
  * the title and the summary, and whose body is a field group with the guidance, the fields and the commands.
  */
 export const ConnectionSteps = (props: ConnectionStepsProps) => (
-    <>
-        <PaneSection>
+    <SurfaceCard label={props.label}>
+        <Stack gap="row">
             <Stepper
                 label={props.label}
                 size="dense"
                 steps={props.steps.map((step) => ({ id: step.id, label: step.title }))}
                 currentStepId={(props.steps.find((step) => step.isOpen) ?? props.steps[0])?.id ?? ""}
             />
-        </PaneSection>
-        <PaneSection>
             <DisclosureList
                 label={props.label}
                 items={props.steps.map((step, index) => ({
@@ -67,8 +65,8 @@ export const ConnectionSteps = (props: ConnectionStepsProps) => (
                     ),
                 }))}
             />
-        </PaneSection>
-    </>
+        </Stack>
+    </SurfaceCard>
 )
 
 /** The steps of a connection page, each with its body and the commands that end it, picked by step id. */

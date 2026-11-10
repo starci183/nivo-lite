@@ -1,3 +1,4 @@
+import { isNamespaced } from "../schema/namespaced"
 import type { BlockDefinition } from "../block/block.types"
 import { SdkDefinitionError } from "../block/definition-error"
 import { specProblems } from "../spec/spec"
@@ -37,6 +38,9 @@ export const defineModule = (config: ModuleDeclarationConfig): ModuleDeclaration
         assertDeclared(config.permissions, action.permission, action.id)
         for (const refreshed of action.refreshes ?? [])
             if (!readIds.has(refreshed)) throw new SdkDefinitionError("MODULE_REFRESH_UNKNOWN", action.id)
+    }
+    for (const tool of config.agent?.tools ?? []) {
+        if (!isNamespaced(tool)) throw new SdkDefinitionError("ID_MALFORMED", tool)
     }
     return { ...config, entry: "module" }
 }

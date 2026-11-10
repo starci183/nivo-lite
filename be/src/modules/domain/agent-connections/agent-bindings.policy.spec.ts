@@ -3,6 +3,7 @@ import { builder } from "@starci/jest-preset"
 import type { BoundAgent, BoundAgentFacts, BoundConnectionFacts } from "./agent-connections.contracts"
 import {
     boundAgentsOf as boundAgentsOfImplementation,
+    exceedsManagerCeiling,
     boundConnectionsOf as boundConnectionsOfImplementation,
     handoversFrom as handoversFromImplementation,
     isAccess as isAccessImplementation,
@@ -169,8 +170,34 @@ describe("agent bindings policy", () => {
             ])
         })
     })
+})
 
+describe("agent bindings policy", () => {
     describe("splitRoute", () => {
+        it("hands over to the oldest agent of a role that runs several on the channel (one answers per role)", async () => {
+            const subject = await buildSubject()
+
+            const route = subject.splitRoute([
+                agentOf({ id: "c1" }),
+                agentOf({ id: "s1", module: "sales" }),
+                agentOf({ id: "s2", module: "sales" }),
+            ])
+
+            expect(route.front?.id).toBe("c1")
+            expect(route.handovers.map((agent) => agent.id)).toEqual(["s1"])
+        })
+
+        it("lists one hand-over agent per other module from a conversation's own agent", async () => {
+            const subject = await buildSubject()
+
+            const handovers = subject.handoversFrom(
+                [agentOf({ id: "c1" }), agentOf({ id: "s1", module: "sales" }), agentOf({ id: "s2", module: "sales" })],
+                "chatbot",
+            )
+
+            expect(handovers.map((agent) => agent.id)).toEqual(["s1"])
+        })
+
         it("makes the chatbot the front door and hands over to one agent per other module", async () => {
             const subject = await buildSubject()
 
@@ -204,5 +231,25 @@ describe("agent bindings policy", () => {
         const bound = [agentOf({ id: "a1" }), agentOf({ id: "a2", module: "booking" })]
 
         expect(subject.handoversFrom(bound, "chatbot").map((agent) => agent.id)).toEqual(["a2"])
+    })
+})
+
+describe("exceedsManagerCeiling", () => {
+    it.each([
+        ["read", null, false],
+        ["ask", null, false],
+        ["auto", null, true],
+        ["auto", "read", true],
+        ["auto", "ask", true],
+        ["auto", "auto", false],
+        ["ask", "auto", false],
+        ["read", "auto", false],
+    ] as const)("asking %s over %s: widens past the owner's ceiling is %s", (requested, existing, widens) => {
+        expect(exceedsManagerCeiling(requested, existing)).toBe(widens)
+    })
+
+    it("counts a stored level it does not know as the least one", () => {
+        expect(exceedsManagerCeiling("auto", "bogus")).toBe(true)
+        expect(exceedsManagerCeiling("ask", "bogus")).toBe(false)
     })
 })

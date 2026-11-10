@@ -106,7 +106,13 @@ export class WorkEngineService {
         return this.process(
             ctx,
             claimed,
-            { preset: spec.preset, noChain: spec.noChain, forceAsk: spec.forceAsk, tagGrant: spec.tagGrant },
+            {
+                preset: spec.preset,
+                noChain: spec.noChain,
+                forceAsk: spec.forceAsk,
+                tagGrant: spec.tagGrant,
+                ownCard: spec.ownCard,
+            },
             spec.origin ?? null,
         )
     }

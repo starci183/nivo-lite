@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
+import { MemberLobbyService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager, callDbFunction } from "@modules/platform/database"
 import { toShellFacts } from "./workspace-shell.mapper"
 import type { ShellFacts, ShellWindow } from "./workspaces.contracts"
@@ -11,11 +11,13 @@ export class WorkspaceShellService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly members: WorkspaceMembersService,
+        private readonly seats: MemberLobbyService,
     ) {}
 
-    /** The counts and lists of the workspace's console frame. */
+    /** The counts and lists of the workspace's console frame; reading them is opening the workspace, so the seat's last open is stamped. */
     async read(userId: string, workspaceId: string, window: ShellWindow): Promise<ShellFacts> {
         await this.members.require(userId, workspaceId)
+        await this.seats.markOpened(workspaceId, userId)
         const [row] = await callDbFunction<{ shell_data: unknown }>(this.entityManager, "public.shell_data", [
             workspaceId,
             window.from,

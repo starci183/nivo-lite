@@ -2,14 +2,12 @@
 
 import { useFormatter, useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
+import { DRIVE_PAGE_PATH } from "@/hooks/drive"
 import { useGoogleLedger } from "@/hooks/googleLedger"
 import { mapSlot, slotOfSwr, useSlotLabels } from "@/hooks/slot"
 import { DriveLedgerBase } from "./component"
 import { workspaceHref } from "@/modules/routes"
 import { useWorkspaceId } from "@/hooks/workspaces"
-
-/** The page that Google sends the owner back to after the consent. */
-const RETURN_TO = "/connections/drive"
 
 /** The chip of each state of the ledger. */
 const CHIP_TONES = { none: "neutral", granted: "warning", ready: "success", lost: "danger" } as const
@@ -76,7 +74,7 @@ export const DriveLedger = () => {
                 },
             }}
             on={{
-                allow: () => ledger.allow("sheets", workspaceHref(workspaceId, RETURN_TO)),
+                allow: () => ledger.allow("sheets", workspaceHref(workspaceId, DRIVE_PAGE_PATH)),
                 sheet: ledger.setSheet,
                 save: () => ledger.save(t("failGeneric")),
                 retry: () => void ledger.read.mutate(),

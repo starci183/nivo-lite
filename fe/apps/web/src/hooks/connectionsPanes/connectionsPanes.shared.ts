@@ -1,32 +1,33 @@
 import { bankLogo } from "@/hooks/banks"
 import { PROVIDERS, PROVIDER_LOGO, providerKey } from "@/hooks/connection-providers"
 import { connectionFactsOf, showsBankLogo } from "@/hooks/connection-rows"
-import { connectionPageHref, statusKey, statusTone } from "@/hooks/connections"
+import { connectionPageHref } from "@/hooks/connections"
+import { lifecycleChipOf, lifecycleOf, PHASE_COUNT, phaseOfLife } from "@/modules/connection-lifecycle"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type {
     Connection,
-    ConnectionAgentRow,
     ConnectionFilterChoice,
+    ConnectionLifecycleChip,
     ConnectionListRow,
     ConnectionNextStep,
-    ConnectionPaneTone,
 } from "@/modules/types"
 
 /** A catalog reader of the `connections` namespace: a key and the values of its placeholders. */
 type Translate = (key: string, values?: Record<string, string | number>) => string
 
 /** The filter ids of the list pane, in the order the chips draw. */
-export const FILTER_IDS = ["all", "attention", "money", "chat", "data", "email", "automation"] as const
+export const FILTER_IDS = ["all", "attention", "chat", "money", "google", "data", "automation"] as const
 
-/** The filter a provider's kind belongs to (besides "all" and "attention"). */
+/** The group a provider's kind belongs to (besides "all" and "attention"): the library's groups, plus automation. */
 const GROUP_OF_KIND: Readonly<Record<string, string>> = {
     money: "money",
     telegram: "chat",
     zalo: "chat",
     meta: "chat",
-    google: "data",
-    drive: "data",
+    google: "google",
+    drive: "google",
     data: "data",
-    email: "email",
+    email: "data",
     webhook: "automation",
 }
 
@@ -39,16 +40,14 @@ export const groupsOf = (connection: Connection): ReadonlyArray<string> => {
     ]
 }
 
-/** The status chip of a connection: a test-mode money feed says so, the others say how they are doing. */
-export const chipOf = (
-    connection: Connection,
-    t: Translate,
-): { readonly label: string; readonly tone: ConnectionPaneTone; readonly isDot: boolean } => {
-    if (connection.environment === "test" && connection.status === "connected") {
-        return { label: t("envBadgeTest"), tone: "warning", isDot: false }
-    }
-    return { label: t(statusKey(connection.status)), tone: statusTone(connection.status), isDot: true }
-}
+/** The status chip of a connection, in the one vocabulary of the Connections screens. */
+export const chipOf = (connection: Connection, t: Translate): ConnectionLifecycleChip =>
+    lifecycleChipOf(lifecycleOf(connection), t)
+
+/** The page a row opens: the provider's own page, or the generic page of a connection without one. */
+export const rowHrefOf = (connection: Connection, workspaceId: string): string =>
+    connectionPageHref(workspaceId, connection) ??
+    `${workspaceHref(workspaceId, CONSOLE_ROUTES.connections)}/open/${connection.id}`
 
 /** The mark of a connection: a bank feed wears the bank's wordmark, the others the provider's own mark. */
 export const logoOf = (connection: Connection): ConnectionListRow["logo"] => {
@@ -57,22 +56,45 @@ export const logoOf = (connection: Connection): ConnectionListRow["logo"] => {
     return { ...(src === undefined ? {} : { src }), isWordmark: bank !== null }
 }
 
-/** One row of the list pane. */
+/** The setup step a row names while the connection is set up or waits for its first event; empty otherwise. */
+const stepLineOf = (connection: Connection, t: Translate): string => {
+    const life = lifecycleOf(connection)
+    return life.id === "setup" || life.id === "waiting"
+        ? t("rowStep", { n: phaseOfLife(life), total: PHASE_COUNT })
+        : ""
+}
+
+/** A Google account is named by its email, its line says which service ("Google · Sheets"); the others by name and provider facts. */
+const identityOf = (connection: Connection, t: Translate, bankName: (code: string) => string) => {
+    const email = connection.meta.email ?? ""
+    const isGoogle = (connection.provider === "google" || connection.provider === "google_drive") && email !== ""
+    const parts = isGoogle
+        ? [t("group_google"), t(connection.provider === "google" ? "serviceSheets" : "serviceDrive")]
+        : [t(providerKey(connection.provider, "title")), connectionFactsOf(connection, t, bankName)]
+    const description = [...parts, stepLineOf(connection, t)].filter((part) => part !== "").join(" · ")
+    return { name: isGoogle ? email : connection.name, description }
+}
+
+/** One row of the list. */
 export const listRowOf = (
     connection: Connection,
     t: Translate,
     bankName: (code: string) => string,
     workspaceId: string,
+    agentNames: Readonly<Record<string, string>>,
 ): ConnectionListRow => ({
     id: connection.id,
-    name: connection.name,
-    description: [t(providerKey(connection.provider, "title")), connectionFactsOf(connection, t, bankName)]
-        .filter((part) => part !== "")
-        .join(" · "),
+    ...identityOf(connection, t, bankName),
     logo: logoOf(connection),
     status: chipOf(connection, t),
-    href: connectionPageHref(workspaceId, connection),
+    href: rowHrefOf(connection, workspaceId),
     groups: groupsOf(connection),
+    lastEventAt: connection.lastEventAt,
+    isFailed: connection.status === "error",
+    agents: connection.agentIds
+        .map((id) => agentNames[id])
+        .filter((name): name is string => name !== undefined)
+        .join(", "),
 })
 
 /** The filter row: "all" always, the other choices when some row passes them, each with its count. */
@@ -107,45 +129,61 @@ export const visibleRowsOf = (
     )
 }
 
-/** The connection that needs the owner first, in the words of the overview card; null when none does. */
+/** The providers whose failure is fixed by granting the access again (an OAuth grant expired or was revoked). */
+const GRANT_AGAIN: ReadonlySet<string> = new Set(["zalo_oa", "google_drive", "google", "meta"])
+
+/** The one action a connection that needs the owner gets: fix a failure (the region's primary), or continue a setup. */
+const actionLabelOf = (connection: Connection, t: Translate): string => {
+    if (connection.status !== "error") return t("actionContinue")
+    return GRANT_AGAIN.has(connection.provider) ? t("actionGrantAgain") : t("actionFix")
+}
+
+/** What is wrong or still missing: the failure as the provider said it, or the setup step and what it waits for. */
+const attentionBodyOf = (connection: Connection, t: Translate): string => {
+    const life = lifecycleOf(connection)
+    if (life.id === "attention") return connection.lastError ?? t("attentionError")
+    if (life.id === "waiting") {
+        return t("attentionWaitingBody", {
+            n: phaseOfLife(life),
+            total: PHASE_COUNT,
+            hint: t("attentionWaitingHint", { provider: t(providerKey(connection.provider, "title")) }),
+        })
+    }
+    return t("attentionSetupBody", { n: phaseOfLife(life), total: PHASE_COUNT })
+}
+
+/** The title of a connection that needs the owner: it stopped, it waits for its first event, or its setup is unfinished. */
+const attentionTitleOf = (connection: Connection, t: Translate): string => {
+    const life = lifecycleOf(connection)
+    if (life.id === "attention") return t("nextTitleError", { name: connection.name })
+    return t(life.id === "waiting" ? "nextTitleWaiting" : "nextTitlePending", { name: connection.name })
+}
+
+/** One connection that needs the owner, in the words of the "Needs you" card, with its one action. */
 export const nextStepOf = (
     connection: Connection,
     agentNames: ReadonlyArray<string>,
     canManage: boolean,
     t: Translate,
-    continueLabel: string,
     workspaceId: string,
 ): ConnectionNextStep => {
-    const href = connectionPageHref(workspaceId, connection)
-    const body = [
-        connection.status === "pending" ? t("attentionPending") : t("attentionError"),
-        agentNames.length > 0 ? t("attentionImpact", { names: agentNames.join(", ") }) : "",
-    ]
+    const impact = connection.status === "error" && agentNames.length > 0
+    const body = [attentionBodyOf(connection, t), impact ? t("attentionImpact", { names: agentNames.join(", ") }) : ""]
         .filter(Boolean)
         .join(" ")
     return {
         id: connection.id,
         name: connection.name,
-        title: t(connection.status === "error" ? "nextTitleError" : "nextTitlePending", { name: connection.name }),
+        title: attentionTitleOf(connection, t),
         logo: logoOf(connection),
         status: chipOf(connection, t),
         body,
-        action: canManage && href !== null ? { label: continueLabel, href } : null,
+        action: canManage
+            ? {
+                  label: actionLabelOf(connection, t),
+                  href: rowHrefOf(connection, workspaceId),
+                  isPrimary: connection.status === "error",
+              }
+            : null,
     }
-}
-
-/** One row per agent that works through a connection: its name and the connections. */
-export const agentRowsOf = (
-    connections: ReadonlyArray<Connection>,
-    agentNames: Readonly<Record<string, string>>,
-): ReadonlyArray<ConnectionAgentRow> => {
-    const ids = [...new Set(connections.flatMap((connection) => connection.grants.map((grant) => grant.agentId)))]
-    return ids.map((id) => ({
-        id,
-        name: agentNames[id] ?? id,
-        description: connections
-            .filter((connection) => connection.grants.some((grant) => grant.agentId === id))
-            .map((connection) => connection.name)
-            .join(" · "),
-    }))
 }

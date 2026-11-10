@@ -35,6 +35,7 @@ const installations = (): ReadonlyArray<Record<string, unknown>> =>
         agentId: `agent-${key}`,
         agentName: departmentOf(key),
         agentAvatarUrl: null,
+        agentAvatarPreset: null,
         agentHandle: key,
         status: "live",
         lifecycle: "running",

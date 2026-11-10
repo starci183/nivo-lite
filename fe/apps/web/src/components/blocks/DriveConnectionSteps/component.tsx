@@ -1,7 +1,8 @@
-import { Button, EmptyNotice, PaneSection } from "@starci/grammar/common"
+import { Button, EmptyNotice } from "@starci/grammar/common"
 import type { ComponentProps, ReactNode } from "react"
 import { ConnectionSteps } from "@/components/composites/ConnectionSteps"
 import { DriveFileChooser } from "@/components/composites/DriveFileChooser"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** One setup step as it is worded: its title, the summary beside it, the guidance under it, and whether it is open. */
 interface DriveSetupStepView {
@@ -50,7 +51,7 @@ export interface DriveConnectionStepsBaseProps {
 const actionOf = (id: string, view: DriveConnectionStepsBaseProps["props"], grant: () => void): ReactNode => {
     if (id === "brain") {
         return (
-            <Button intent="neutral" href={view.brain.href}>
+            <Button endArrow intent="neutral" href={view.brain.href}>
                 {view.brain.label}
             </Button>
         )
@@ -65,22 +66,21 @@ const actionOf = (id: string, view: DriveConnectionStepsBaseProps["props"], gran
 
 /**
  * Draws the setup of the Google Drive grant as three numbered steps (grant the read access, choose documents, find them in Second
- * Brain), each a band of the main pane whose head says whether the step is done. With no grant at all, one notice and its command
+ * Brain), each a band of the page whose head says whether the step is done. With no grant at all, one notice and its command
  * stand in place of the steps.
  */
 export const DriveConnectionStepsBase = (props: DriveConnectionStepsBaseProps) => {
     const { ungranted } = props.props
     if (ungranted !== undefined) {
         return (
-            <PaneSection>
-                <EmptyNotice
-                    message={ungranted.message}
-                    description={ungranted.description}
-                    actionLabel={ungranted.action}
-                    isActionPending={props.props.isGranting}
-                    onAction={props.on.grant}
-                />
-            </PaneSection>
+            <EmptyNotice
+                message={ungranted.message}
+                iconSource={nivoIconSource("link", "leading")}
+                description={ungranted.description}
+                actionLabel={ungranted.action}
+                isActionPending={props.props.isGranting}
+                onAction={props.on.grant}
+            />
         )
     }
     const chooserOn = {

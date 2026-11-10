@@ -44,6 +44,7 @@ import type { PostSetupMessageInput } from "./dto/post-setup-message.input"
 import type { RenameInstallationAgentInput } from "./dto/rename-installation-agent.input"
 import type { RenameModuleInstallationInput } from "./dto/rename-module-installation.input"
 import type { SaveHoldingMessageInput } from "./dto/save-holding-message.input"
+import type { SaveWorkingHoursInput } from "./dto/save-working-hours.input"
 import type { SaveReplyTimeoutInput } from "./dto/save-reply-timeout.input"
 import type { SetModuleLiveInput } from "./dto/set-module-live.input"
 import type { SetOperatingModeInput } from "./dto/set-operating-mode.input"
@@ -169,6 +170,17 @@ export const toSaveHoldingMessageRequest = (
     workspaceId,
     installationId: input.installationId,
     name: "holdingMessage",
+    value: input.value,
+})
+
+/** Maps the working hours of the GraphQL input, with the workspace it names, to the setting command request. */
+export const toSaveWorkingHoursRequest = (
+    workspaceId: string,
+    input: SaveWorkingHoursInput,
+): SaveInstallationSettingRequest => ({
+    workspaceId,
+    installationId: input.installationId,
+    name: "workingHours",
     value: input.value,
 })
 

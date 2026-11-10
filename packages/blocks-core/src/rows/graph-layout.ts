@@ -1,5 +1,6 @@
 import type { DataSlot } from "@nivo-lite/agent-sdk/client"
 import type { FlowGraphEdge, FlowGraphNode } from "@starci/grammar/common" with { "resolution-mode": "import" }
+import { TRIGGER_STEP } from "../nodes/node-ui"
 import { runPathView } from "./graph-view"
 import type { GraphNodeKind, GraphNodeView, GraphView, RunPath } from "./graph-view"
 import { runStateLook } from "./run-state"
@@ -16,13 +17,17 @@ export interface GraphFlow {
 /** A graph with nothing in it, for the skeleton. */
 export const EMPTY_FLOW: GraphFlow = { nodes: [], edges: [] }
 
-/** The Grammar kind of each kind of node: a wait is a step that stops for a person. */
+/** The Grammar kind of each kind of node: a wait or an ask is a step that stops (for time, for a person); the trigger card is a `trigger`. */
 const FLOW_KINDS: Readonly<Record<GraphNodeKind, NonNullable<FlowGraphNode["kind"]>>> = {
     trigger: "trigger",
     step: "execute",
     condition: "condition",
     wait: "execute",
     output: "output",
+    event: "output",
+    action: "execute",
+    ask: "execute",
+    end: "output",
 }
 
 /** The state each node reached in the run chosen on the screen; none when no run is chosen. */
@@ -42,7 +47,7 @@ const descriptionOf = (node: GraphNodeView, state: RunState | null, stateWords: 
 /** The tone of a node: its state's, else a wait stays cautionary because it stops for a person. */
 const toneOf = (node: GraphNodeView, state: RunState | null): "warning" | "info" | "danger" | "success" | undefined => {
     if (state !== null) return runStateLook(state).tone
-    return node.kind === "wait" ? "warning" : undefined
+    return node.kind === "wait" || node.kind === "ask" ? "warning" : undefined
 }
 
 /** A node as the Grammar draws it. */
@@ -57,7 +62,7 @@ const flowNodeOf = (
     return {
         id: node.id,
         label: node.label,
-        kind: FLOW_KINDS[node.kind],
+        kind: node.step === TRIGGER_STEP ? "trigger" : FLOW_KINDS[node.kind],
         ...(description === "" ? {} : { description }),
         ...(tone === undefined ? {} : { tone }),
         ...(node.kind === "wait" ? { shape: "round" as const } : {}),

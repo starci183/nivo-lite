@@ -1,4 +1,5 @@
 import type {
+    ConnectionLifecycle,
     SepayConnectionView,
     SepayEventKind,
     SepayEventOutcome,
@@ -107,9 +108,18 @@ export const sepaySetupDone = (view: SepayConnectionView): ReadonlyArray<readonl
     ["agents", view.agentIds.length > 0],
 ]
 
-/** The tone of a connection status. */
-export const sepayStatusTone = (status: string): "success" | "danger" | "warning" | "neutral" => {
-    if (status === "connected") return "success"
-    if (status === "error") return "danger"
-    return status === "pending" ? "warning" : "neutral"
+/**
+ * Where a SePay connection stands in the one life every connection shares: an error needs the owner; a pending one without its full
+ * account number is in the details phase, without a webhook seen it is in the grant phase, and with one it waits for the first
+ * transaction; a connected one runs.
+ */
+export const sepayLifecycleOf = (view: SepayConnectionView): ConnectionLifecycle => {
+    if (view.status === "disconnected") return { id: "disconnected" }
+    if (view.status === "error") return { id: "attention" }
+    if (view.status === "connected") return { id: "running" }
+    if (!view.hasFullAccount) return { id: "setup", phase: 1 }
+    if (view.health.lastWebhookAt === null && view.pingSeenAt === null && view.transactionSeenAt === null) {
+        return { id: "setup", phase: 2 }
+    }
+    return { id: "waiting", phase: 3 }
 }

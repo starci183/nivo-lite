@@ -3,9 +3,9 @@ import type {
     DataSlot,
     DocChipView,
     DocListTabView,
-    DocRowView,
     PublicBrainCopy,
     PublicDraftView,
+    PublicTableRowView,
 } from "@/modules/types"
 import { failureKeyOf, listedPublicDocs, publicBadgeOf } from "./public-docs"
 import type { PublicBadge, PublicDocument } from "./public-docs"
@@ -76,15 +76,28 @@ const approvalOf = (doc: PublicDocument, t: PublicTranslate, format: PublicForma
               when: format.dateTime(new Date(doc.approvedAt), { dateStyle: "medium" }),
           })
 
-/** One row of the list: the mark, the title, who approved it (or what it was drafted from) and where it stands. */
-export const publicRowOf = (doc: PublicDocument, t: PublicTranslate, format: PublicFormat): DocRowView => {
+/** How a document came to be, in the words of the table. */
+const kindOf = (doc: PublicDocument, t: PublicTranslate): string => {
+    if (doc.kind === "drafted") return t("kind_drafted")
+    return doc.kind === "answer" ? t("kind_answer") : t("kind_written")
+}
+
+/** One row of the table: the title with how many internal documents it came from, its kind, where it stands and who approved it. */
+export const publicRowOf = (
+    doc: PublicDocument,
+    t: PublicTranslate,
+    format: PublicFormat,
+    href: string,
+): PublicTableRowView => {
     const badge = publicBadgeOf(doc)
     return {
         id: doc.id,
         title: doc.title,
-        line: doc.approvedByName === null ? t("fromSources", { n: doc.sources.length }) : approvalOf(doc, t, format),
-        glyph: "public",
-        chip: { label: t(`badge_${badge}`), tone: BADGE_TONE[badge] },
+        line: t("fromSources", { n: doc.sources.length }),
+        kind: kindOf(doc, t),
+        badge: { label: t(`badge_${badge}`), tone: BADGE_TONE[badge] },
+        approval: approvalOf(doc, t, format),
+        href,
     }
 }
 
@@ -159,7 +172,7 @@ export const publicCopyOf = (t: PublicTranslate, p: PublicPaneTranslate, tp: Pan
     noMatchTitle: tp("noMatchTitle"),
     noMatchBody: tp("noMatchBody"),
     clearFilters: tp("clearFilters"),
-    emptyBody: t("listEmpty"),
+    emptyBody: t("listEmptyBody"),
     emptyAction: p("composeLabel"),
     errorBody: tp("errorBody"),
     noteTitle: p("noteTitle"),
@@ -179,6 +192,12 @@ export const publicCopyOf = (t: PublicTranslate, p: PublicPaneTranslate, tp: Pan
     asideTitle: p("asksTitle"),
     asideCount: (count) => p("asksCount", { count }),
     asideEmpty: p("asksEmpty"),
+    asideEmptyBody: p("asksEmptyBody"),
+    tableCount: (count) => p("tableCount", { count }),
+    columnTitle: p("columnTitle"),
+    columnKind: p("columnKind"),
+    columnStatus: p("columnStatus"),
+    columnApproval: p("columnApproval"),
     asideError: tp("errorBody"),
     asideHint: t("asksFooter"),
     answerLabel: p("asksAnswer"),

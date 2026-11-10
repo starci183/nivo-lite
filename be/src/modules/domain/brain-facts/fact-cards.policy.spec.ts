@@ -30,16 +30,22 @@ describe("waitingCardCount", () => {
         expect(subject.waitingCardCount([proposal("a|price", "100"), proposal("b|price", "200")])).toBe(2)
     })
 
+    it("makes one card of several proposals of the same value for one key", async () => {
+        const subject = await build()
+
+        expect(subject.waitingCardCount([proposal("a|price", "5.000 đ một chậu"), proposal("a|price", "5.000 đ")])).toBe(1)
+    })
+
     it("makes one card of competing values for one key", async () => {
         const subject = await build()
 
         expect(subject.waitingCardCount([proposal("a|price", "100"), proposal("a|price", "200")])).toBe(1)
     })
 
-    it("counts values that say the same thing as separate cards, since nothing competes", async () => {
+    it("makes one card of values that say the same thing, since they merge", async () => {
         const subject = await build()
 
-        expect(subject.waitingCardCount([proposal("a|price", "650.000"), proposal("a|price", "650,000")])).toBe(2)
+        expect(subject.waitingCardCount([proposal("a|price", "650.000"), proposal("a|price", "650,000")])).toBe(1)
     })
 
     it("makes one card of a value and a stop-using proposal of the same key", async () => {

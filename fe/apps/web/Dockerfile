@@ -4,7 +4,7 @@
 #   docker build -f fe/apps/web/Dockerfile -t nivo-lite/web:<tag> .
 #
 # Pass the public values with --build-arg: NEXT_PUBLIC_API_URL (default https://api.nivo.vn), NEXT_PUBLIC_DEVELOPER_API_URL (default https://api.nivo.vn),
-# NEXT_PUBLIC_SITE_URL (default https://app.nivo.vn), NEXT_PUBLIC_LANDING_URL (default https://nivo.vn). The Google Picker pair
+# NEXT_PUBLIC_SITE_URL (default https://app.nivo.vn), NEXT_PUBLIC_LANDING_URL (default https://nivo.vn), NEXT_PUBLIC_ADMIN_URL (default https://admin.nivo.vn). The Google Picker pair
 # NEXT_PUBLIC_GOOGLE_CLIENT_ID and NEXT_PUBLIC_GOOGLE_PICKER_API_KEY has no default: the build that passes neither hides the Picker.
 #
 # NEXT_PUBLIC_* values are published to every browser by design, so they are the one kind of build argument; every server-only
@@ -27,6 +27,8 @@ ARG NEXT_PUBLIC_API_URL=https://api.nivo.vn
 ARG NEXT_PUBLIC_DEVELOPER_API_URL=https://api.nivo.vn
 ARG NEXT_PUBLIC_SITE_URL=https://app.nivo.vn
 ARG NEXT_PUBLIC_LANDING_URL=https://nivo.vn
+# The platform-admin app: /admin of the console redirects there.
+ARG NEXT_PUBLIC_ADMIN_URL=https://admin.nivo.vn
 ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=
 ARG NEXT_PUBLIC_GOOGLE_PICKER_API_KEY=
 # NEXT_PUBLIC_LOCAL_API_URL is a dev-tunnel value only (the console opened on localhost keeps its local api); a deployed image leaves it empty.
@@ -37,6 +39,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_DEVELOPER_API_URL=$NEXT_PUBLIC_DEVELOPER_API_URL \
     NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
     NEXT_PUBLIC_LANDING_URL=$NEXT_PUBLIC_LANDING_URL \
+    NEXT_PUBLIC_ADMIN_URL=$NEXT_PUBLIC_ADMIN_URL \
     NEXT_TELEMETRY_DISABLED=1
 COPY --from=manifests /app ./
 RUN npm ci --ignore-scripts

@@ -1,4 +1,6 @@
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
+import { CONNECTION_GROUPS, groupOfConnector, unitOfProvider } from "@/modules/connection-groups"
+import type { ConnectionGroup, ProviderUnit } from "@/modules/connection-groups"
 import type {
     Connection,
     ConnectorAudience,
@@ -22,18 +24,6 @@ export interface CatalogEntry {
     /** Artwork for a connector that is not a provider yet (a provider logo comes from the provider registry). */
     readonly logo?: string
 }
-
-/** The categories, in display order. */
-export const CATEGORIES: ReadonlyArray<ConnectorCategory> = [
-    "payments",
-    "chat",
-    "commerce",
-    "accounting",
-    "data",
-    "email",
-    "productivity",
-    "automation",
-]
 
 const real = (
     provider: Provider,
@@ -142,9 +132,27 @@ export const matchesWords = (haystack: string, words: ReadonlyArray<string>): bo
 
 type Translate = (key: string, values?: Record<string, string | number>) => string
 
-/** Resolves a supported category from a control value. */
-export const asCategory = (id: string): ConnectorCategory | "all" =>
-    CATEGORIES.find((category) => category === id) ?? "all"
+/** The groups of the library, in the order they head it, for the sub tabs of the Connections page. */
+export { CONNECTION_GROUPS }
+
+/** The group a chip id names; "all" for any other id. */
+export const asGroup = (id: string): ConnectionGroup | "all" => CONNECTION_GROUPS.find((group) => group === id) ?? "all"
+
+/** The group a connector heads under in the library. */
+export const groupOfEntry = (entry: CatalogEntry): ConnectionGroup => groupOfConnector(entry.id, entry.category)
+
+/** The unit a connector counts its connections in ("bot", "account"…); a planned connector counts plain connections. */
+export const unitOfEntry = (entry: CatalogEntry): ProviderUnit =>
+    entry.provider === undefined ? "connection" : unitOfProvider(entry.provider)
+
+/** The connectors the library folds into another tile: Google Drive is a service of the one Google tile. */
+export const FOLDED_CONNECTORS: ReadonlySet<string> = new Set(["google_drive"])
+
+/** The providers a tile counts: the Google tile counts its Drive grant too. */
+export const providersOfEntry = (entry: CatalogEntry): ReadonlyArray<string> => {
+    if (entry.provider === undefined) return []
+    return entry.provider === "google" ? ["google", "google_drive"] : [entry.provider]
+}
 
 /** The connector's own availability beside its name: planned or early access; nothing for an official one. */
 export const catalogTagOf = (
@@ -153,17 +161,6 @@ export const catalogTagOf = (
 ): { readonly tone: "accent" | "neutral"; readonly label: string } | null => {
     if (entry.status === "soon") return { tone: "neutral", label: t("statusSoon") }
     return entry.status === "early" ? { tone: "accent", label: t("statusEarly") } : null
-}
-
-/** What the workspace runs of a connector, at the foot of its tile: the count in use, a check it needs, or not connected yet. */
-export const catalogStatusOf = (
-    count: number,
-    t: Translate,
-    needsCheck = false,
-): { readonly tone: "success" | "danger" | "muted"; readonly label: string; readonly isDot: boolean } => {
-    if (needsCheck) return { tone: "danger", label: t("libNeedsCheck"), isDot: true }
-    if (count > 0) return { tone: "success", label: t("libInUse", { count }), isDot: true }
-    return { tone: "muted", label: t("libNotConnected"), isDot: false }
 }
 
 /** The "Cho: ..." line of a connector: the agents it serves, or every agent. */
@@ -183,11 +180,3 @@ export const connectionCountsOf = (items: ReadonlyArray<Connection>): Map<string
     }
     return counts
 }
-
-/** The providers where the workspace has a connection that needs a check (unfinished or broken). */
-export const checkProvidersOf = (items: ReadonlyArray<Connection>): ReadonlySet<string> =>
-    new Set(
-        items
-            .filter((connection) => connection.status === "pending" || connection.status === "error")
-            .map((connection) => connection.provider),
-    )

@@ -147,6 +147,20 @@ describe("ConnectionGrantsService > candidates", () => {
     })
 })
 
+describe("ConnectionGrantsService > candidatesOf", () => {
+    it("lists the grantable connections of an agent named by its module, with no membership check", async () => {
+        const { em } = managerOf([{ agentId, connectionId: "c1", access: "auto" }], uuidAgent)
+        const { service } = await build(em, [
+            connection({ id: "c1" }),
+            connection({ id: "c2", provider: "sepay", meta: { account_masked: "****1234" } }),
+        ])
+
+        const found = await service.candidatesOf("ws-1", agentId, "accounting")
+
+        expect(found.map((one) => [one.id, one.purpose, one.access])).toEqual([["c2", "bank_feed", null]])
+    })
+})
+
 describe("ConnectionGrantsService > candidates", () => {
     it("treats a blank public fact as absent, an unknown level as auto, and no grant as none", async () => {
         const { em } = managerOf([{ agentId, connectionId: "c1", access: "nope" }], uuidAgent)

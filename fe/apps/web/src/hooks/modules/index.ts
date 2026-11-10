@@ -1,2 +1,3 @@
 export { ALL_CATEGORIES } from "./modules.shared"
-export { useCatalogView } from "./useCatalogView"
+export { useCatalogFilters } from "./useCatalogFilters"
+export type { CatalogFilters } from "./useCatalogFilters"

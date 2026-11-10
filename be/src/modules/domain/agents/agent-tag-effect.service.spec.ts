@@ -6,8 +6,8 @@ import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { agentInstallationOf } from "@tests/fixtures/builders/agents.builder"
 import { AgentTagEffectService } from "./agent-tag-effect.service"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
-import { AGENTS_INSTALLATIONS } from "./agents.decorators"
-import type { InstallationDirectory } from "./agents.port"
+import { AGENTS_CHANNEL_OWNERS, AGENTS_INSTALLATIONS } from "./agents.decorators"
+import type { ConversationChannelOwners, InstallationDirectory } from "./agents.port"
 
 const TURN: NodeTurn = {
     turnId: "run-1",
@@ -25,15 +25,19 @@ const build = async () => {
     const tags = mock<AgentTagService>({ tagAgent: jest.fn().mockResolvedValue({ tagged: true, wakeId: "wake-9" }) })
     const installations = mock<InstallationDirectory>()
     installations.firstOfModule.mockResolvedValue(agentInstallationOf({ agentId: "sales-1" }))
+    const channelOwners = mock<ConversationChannelOwners>()
+    channelOwners.ownerAgentOf.mockResolvedValue(null)
+    channelOwners.ownerAgentOfLead.mockResolvedValue(null)
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentTagEffectService,
             { provide: GraphNodeRegistryService, useValue: registry },
             { provide: AgentTagService, useValue: tags },
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
+            { provide: AGENTS_CHANNEL_OWNERS, useValue: channelOwners },
         ],
     }).compile()
-    return { executor: moduleRef.get(AgentTagEffectService), registry, tags, installations }
+    return { executor: moduleRef.get(AgentTagEffectService), registry, tags, installations, channelOwners }
 }
 
 describe("AgentTagEffectService", () => {
@@ -113,5 +117,73 @@ describe("AgentTagEffectService", () => {
         await expect(executor.execute(TURN, payload, CALL)).rejects.toMatchObject(
             refusal(AgentsErrorCode.TagTargetMissing, "EFFECT_PAYLOAD_INVALID"),
         )
+    })
+})
+
+describe("AgentTagEffectService > one role, many agents", () => {
+    it("hands the conversation to the agent of the module that answers its channel", async () => {
+        const { executor, tags, installations, channelOwners } = await build()
+        channelOwners.ownerAgentOf.mockResolvedValue("sales-lan")
+
+        await executor.execute(TURN, { toModuleKey: "sales", text: "Order 2 pots" }, CALL)
+
+        expect(channelOwners.ownerAgentOf).toHaveBeenCalledWith("ws-1", "c-1", "sales")
+        expect(tags.tagAgent).toHaveBeenCalledWith(expect.objectContaining({ toAgentId: "sales-lan" }))
+        expect(installations.firstOfModule).not.toHaveBeenCalled()
+    })
+
+    it("asks the channel of the conversation the tag names over the turn's own", async () => {
+        const { executor, channelOwners } = await build()
+        channelOwners.ownerAgentOf.mockResolvedValue("sales-lan")
+
+        await executor.execute(TURN, { toModuleKey: "sales", text: "Order", conversationId: "c-9" }, CALL)
+
+        expect(channelOwners.ownerAgentOf).toHaveBeenCalledWith("ws-1", "c-9", "sales")
+    })
+
+    it("falls back to the oldest agent of the module when no agent of it answers the channel", async () => {
+        const { executor, tags, installations } = await build()
+
+        await executor.execute(TURN, { toModuleKey: "sales", text: "Order" }, CALL)
+
+        expect(installations.firstOfModule).toHaveBeenCalledWith("ws-1", "sales")
+        expect(tags.tagAgent).toHaveBeenCalledWith(expect.objectContaining({ toAgentId: "sales-1" }))
+    })
+
+    it("asks no channel for a turn with no conversation", async () => {
+        const { executor, tags, channelOwners } = await build()
+
+        await executor.execute({ ...TURN, conversationId: null }, { toModuleKey: "sales", text: "Order" }, CALL)
+
+        expect(channelOwners.ownerAgentOf).not.toHaveBeenCalled()
+        expect(tags.tagAgent).toHaveBeenCalledWith(expect.objectContaining({ toAgentId: "sales-1" }))
+    })
+
+    it("hands a tag that names a customer and no conversation to the agent that answers the customer's channel, outside any conversation", async () => {
+        const { executor, tags, channelOwners } = await build()
+        channelOwners.ownerAgentOfLead.mockResolvedValue("sales-lan")
+
+        await executor.execute(
+            { ...TURN, conversationId: null },
+            { toModuleKey: "sales", text: "Paid", leadId: "l-1" },
+            CALL,
+        )
+
+        expect(channelOwners.ownerAgentOfLead).toHaveBeenCalledWith("ws-1", "l-1", "sales")
+        const [request] = tags.tagAgent.mock.calls[0] ?? []
+        expect(request).toMatchObject({ toAgentId: "sales-lan", leadId: "l-1" })
+        expect(request?.conversationId ?? null).toBeNull()
+    })
+
+    it("falls back to the oldest agent of the module when the customer's channel has no agent of it", async () => {
+        const { executor, tags } = await build()
+
+        await executor.execute(
+            { ...TURN, conversationId: null },
+            { toModuleKey: "sales", text: "Paid", leadId: "l-1" },
+            CALL,
+        )
+
+        expect(tags.tagAgent).toHaveBeenCalledWith(expect.objectContaining({ toAgentId: "sales-1" }))
     })
 })

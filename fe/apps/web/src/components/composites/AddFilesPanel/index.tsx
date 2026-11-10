@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 import { Button, Cluster, FileDropzone, Input, Progress, Stack, Text } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
-import { Icon } from "@/components/leaves/Icon"
 import type { BatchBytesView, LinkRowView, QueueRowView, StoppedUploadsView } from "@/modules/types"
 
 /** The words, values and state of the files and links panel. */
@@ -151,7 +150,6 @@ export const AddFilesPanel = (props: AddFilesPanelProps) => (
             <Button
                 intent="neutral"
                 size="sm"
-                startContent={<Icon props={{ name: "add", usage: "leading" }} />}
                 isDisabled={props.isBusy}
                 onPress={props.onAddLink}
             >

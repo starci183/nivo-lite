@@ -278,6 +278,8 @@ export interface InstallationView extends InstallationRecord {
     readonly agentHandle: string
     /** The HTTPS address of the agent's picture; null for the generated avatar or when there is no agent. */
     readonly agentAvatarUrl: string | null
+    /** The preset picture the owner chose for the agent; null for the default (the sprout) or an uploaded picture. */
+    readonly agentAvatarPreset: string | null
     /** The number of the version in use; null before the first apply. */
     readonly activeVersion: number | null
     /** The missing required roles, each with its possible providers. */

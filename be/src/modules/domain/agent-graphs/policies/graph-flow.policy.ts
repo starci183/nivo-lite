@@ -4,6 +4,9 @@ import type { StepEffect, StepJson, StepSpec } from "@modules/domain/agent-runs"
 import { tagPayloadOf } from "@modules/domain/agent-work"
 import type { AgentWakeContext } from "@modules/domain/agent-work"
 import type { Locale } from "@modules/platform/i18n"
+import { suppliedScopeOf } from "./workflow-trigger.policy"
+import { iterationKeyOf, joinKeyOf, loopNodeKeyOf } from "./for-each.policy"
+import type { LoopFrame, LoopJoin } from "./for-each.policy"
 
 /** The step kind a node of a graph runs as. */
 export const GRAPH_NODE_STEP_KIND = "graph_node"
@@ -34,7 +37,38 @@ export interface GraphNodeStepInput {
     readonly trigger: StepJson
     /** The person's approval of a tool call this node asked for, when the step runs the node again after it. */
     readonly approval?: GraphNodeApproval | undefined
+    /** The namespace of the workflow the run executes (`<moduleKey>.<workflowKey>`), under which lead memory keeps its outcomes. */
+    readonly namespace?: string | undefined
+    /** The workflow the run is pinned to, or null for the agent's own graph. */
+    readonly workflowId?: string | null | undefined
+    /** Inside a for-each body: the element this iteration works on; memory keys the step `<nodeKey>[<index>]`. */
+    readonly item?: { readonly value: StepJson[string]; readonly index: number } | undefined
+    /** Inside a for-each body, and on its join steps: the loop, the iteration and the list. */
+    readonly loop?: LoopFrame | undefined
+    /** On the join step of one iteration of a loop: how the iteration ended. */
+    readonly join?: LoopJoin | undefined
 }
+
+/** The input of the step of a node that follows: what the run carries (version, trigger, workflow, iteration, loop), never an approval. */
+export const carriedStepInput = (input: GraphNodeStepInput, nodeKey: string): GraphNodeStepInput => {
+    const { versionId, trigger, namespace, workflowId, item, loop } = input
+    return {
+        versionId,
+        trigger,
+        nodeKey,
+        ...(namespace === undefined ? {} : { namespace }),
+        ...(workflowId === undefined ? {} : { workflowId }),
+        ...(item === undefined ? {} : { item }),
+        ...(loop === undefined ? {} : { loop }),
+    }
+}
+
+/** The workflow key of the agent's own graph (a run of no workflow), in memory namespaces. */
+export const MAIN_WORKFLOW_KEY = "main"
+
+/** The memory namespace of a workflow: `<moduleKey>.<workflowKey>`, the agent's own graph under `main`. */
+export const namespaceOf = (moduleKey: string, workflowKey: string | undefined): string =>
+    `${moduleKey}.${workflowKey ?? MAIN_WORKFLOW_KEY}`
 
 /** An approval a node step carries: the step that asked (its key is the run's replay key), who approved, and what they saw. */
 export interface GraphNodeApproval {
@@ -70,17 +104,21 @@ export const subjectOfLabel = (label: unknown): { readonly kind: string; readonl
 }
 
 /**
- * The trigger scope the nodes read as `trigger.*`: every member of the wake's flat context as its door wrote it, the subject as
+ * The trigger scope the nodes read as `trigger.*`: the params the wake supplies to the workflow's input contract (`suppliedScopeOf`: a
+ * hand-off's mapped params and its caller, a tag's plain data, a credit's transaction, the close's slot), every member of the wake's flat context as its door wrote it, the subject as
  * `{ kind, id }` when the door wrote it as `<kind>:<id>`, the tag's plain data as `context`, the system source that tagged (or where the wake came from) as `source`, where it came from as `origin`, and the
  * language as `locale`.
  */
 export const triggerScopeOf = (wake: FlowWake): StepJson => {
     const members = Object.fromEntries(Object.entries(wake.context).filter(([name]) => name !== "tagContext"))
     const origin = tagSourceOf(wake)
+    const payload = tagPayloadOf(wake.context)
+    const subject = subjectOfLabel(wake.context.subject)
     return {
+        ...suppliedScopeOf({ members, payload, subject }),
         ...members,
-        subject: subjectOfLabel(wake.context.subject) ?? wake.context.subject ?? null,
-        context: tagPayloadOf(wake.context),
+        subject: subject ?? wake.context.subject ?? null,
+        context: payload,
         source: wake.context.tagSource ?? origin,
         origin,
         locale: localeOf(members),
@@ -96,9 +134,15 @@ const stepEffectOf = (saga: NodeSaga): StepEffect => {
     return saga === "pivot" ? { kind: "pivot" } : { kind: "read" }
 }
 
+/** The key of a node's step: the join of an iteration of a loop, else the iteration of a body node, else the node itself. */
+const nodeStepKeyIn = (node: GraphSpecNode, input: GraphNodeStepInput): string => {
+    if (input.join !== undefined) return joinKeyOf(node.key, input.join.index)
+    return input.item === undefined ? node.key : iterationKeyOf(node.key, input.item.index)
+}
+
 /** The step of one graph node in the run, keyed by the node, with the saga kind of the node it runs. */
 export const graphNodeStepOf = (node: GraphSpecNode, input: GraphNodeStepInput, saga: NodeSaga): StepSpec => ({
-    stepKey: node.key,
+    stepKey: nodeStepKeyIn(node, input),
     nodeKey: node.key,
     kind: GRAPH_NODE_STEP_KIND,
     effect: stepEffectOf(saga),
@@ -114,4 +158,12 @@ export const outputsOf = (earlier: Readonly<Record<string, StepJson>>): Readonly
 }
 
 /** The step key of the node a step ran: the key itself, or the node's key for a step that ran it again after an approval. */
-export const nodeStepKeyOf = (stepKey: string): string => stepKey.split(APPROVED_STEP_MARK, 1).join("")
+export const nodeStepKeyOf = (stepKey: string): string => loopNodeKeyOf(stepKey.split(APPROVED_STEP_MARK, 1).join(""))
+
+/**
+ * Whether a node blocks its run when it fails: the graph node's own `blocking` when it says one, else what the node definition says
+ * (`defined`), else it blocks. A side node (`blocking: false`: an owner notice, a report) is recorded as failed and the run goes past it.
+ */
+export const nodeBlocks = (node: GraphSpecNode, defined: boolean | undefined): boolean =>
+    (node.blocking ?? defined) !== false
+

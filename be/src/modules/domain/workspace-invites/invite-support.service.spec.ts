@@ -57,7 +57,7 @@ describe("InviteSupportService", () => {
         ])
         expect(update.callsOf("where")).toEqual([
             [
-                "id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL",
+                "id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL AND declined_at IS NULL",
                 { inviteId: "i-1", workspaceId: "ws-1" },
             ],
         ])

@@ -20,6 +20,7 @@ const VIEWED_AGENT = {
     agentName: "Chatbot",
     agentHandle: "chatbot",
     agentAvatarUrl: null,
+    agentAvatarPreset: null,
     activeVersion: 1,
     setupProgress: { confirmed: 0, total: 8 },
 } as const

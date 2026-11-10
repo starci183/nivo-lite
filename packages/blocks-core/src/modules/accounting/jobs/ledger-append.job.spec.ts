@@ -27,7 +27,7 @@ const harness = (answers: Readonly<Record<string, DoorCallResult>>, options: Opt
     if (order !== null) putOrder(world, order)
     if (options.lead ?? true) putLead(world, LEAD, "Bui Nguyen Dinh")
     for (const [tool, answer] of Object.entries(answers)) world.answers.set(tool, answer)
-    const run = (): Promise<void> =>
+    const run = (given: { readonly orderId: string | null } = { orderId: ORDER.id }): Promise<void> =>
         ledgerAppendJob.run(
             {
                 transactions: entityApi(world, "payment.transaction"),
@@ -35,7 +35,7 @@ const harness = (answers: Readonly<Record<string, DoorCallResult>>, options: Opt
                 leads: entityApi(world, "sales.lead"),
                 door: doorApi(world),
             },
-            { transactionId: TRANSACTION.id, orderId: ORDER.id },
+            { transactionId: TRANSACTION.id, orderId: given.orderId },
             CONTEXT,
         )
     return { calls: world.calls, run }
@@ -62,8 +62,30 @@ describe("accounting.ledger-append", () => {
                 transactionId: TRANSACTION.id,
                 status: "paid",
                 note: "",
+                direction: "in",
+                documentNo: "DH-20261104-0001",
+                description: TRANSACTION.reference,
+                counterpart: "Bui Nguyen Dinh",
+                category: "sale",
             },
         })
+    })
+
+    it("writes money the owner called other income as a line with no order, keyed by the bank reference", async () => {
+        const other = transactionOf({ status: "other_income", orderId: null, externalRef: "sepay-95958515" })
+        const { calls, run } = harness(both, { transaction: other })
+        await run({ orderId: null })
+        expect(calls.map((call) => call.tool)).toEqual([LEDGER_STATUS_TOOL, LEDGER_APPEND_TOOL])
+        expect(calls[1]?.input).toMatchObject({
+            entry: { orderNo: "", documentNo: "sepay-95958515", category: "other-income", direction: "in" },
+        })
+    })
+
+    it("writes nothing for a payment without an order that the owner did not call other income", async () => {
+        const open = transactionOf({ status: "unmatched", orderId: null })
+        const { calls, run } = harness(both, { transaction: open })
+        await run({ orderId: null })
+        expect(calls).toEqual([])
     })
 
     it("names the payer when the order has no lead or the lead has no name", async () => {

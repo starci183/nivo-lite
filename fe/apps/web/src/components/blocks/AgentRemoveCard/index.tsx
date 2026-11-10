@@ -13,13 +13,14 @@ type AgentRemoveCardProps = {
 /** The connected danger section: removing asks first, then leaves for the agents. */
 export const AgentRemoveCard = (props: AgentRemoveCardProps) => {
     const t = useTranslations("modulesCore")
+    const tg = useTranslations("agentGeneral")
     const { canEdit } = useAgentRights()
     const { slot } = useAgentInstallation(props.installationId, props.module)
     const { remove, isRemoving } = useRemoveAgent(props.installationId)
     return (
         <AgentRemoveCardBase
             props={{
-                title: t("removeTitle"),
+                rowTitle: tg("rowRemove"),
                 hint: t("removeHint"),
                 actionLabel: t("removeAction"),
                 dialogTitle: t("removeDialogTitle", { name: ("items" in slot ? slot.items : undefined)?.name ?? "" }),

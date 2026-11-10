@@ -8,6 +8,8 @@ import type {
     ChatRoomView,
 } from "./team-chat.contracts"
 import type { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity } from "./persistence/entities"
+import { quoteBodyOf } from "./team-chat-reaction.policy"
+import type { ReactionView, ReplyView } from "./team-chat-reaction.contracts"
 
 /** What a thread of messages is read against: the names, the pins, the file addresses and the decisions of its cards. */
 export interface MessageViewContext {
@@ -19,6 +21,10 @@ export interface MessageViewContext {
     readonly urls: ReadonlyMap<string, string>
     /** Where each decision stands for the viewer, by decision id. */
     readonly approvals: ReadonlyMap<string, ApprovalState>
+    /** The reactions of each message, by message id; a message with none has no entry. */
+    readonly reactions: ReadonlyMap<string, ReadonlyArray<ReactionView>>
+    /** The messages that were quoted, by message id. */
+    readonly quoted: ReadonlyMap<string, ChatRoomMessageEntity>
 }
 
 /** What a list of rooms is read against: the viewer, the names, what is unread and the newest message of each room. */
@@ -52,6 +58,23 @@ export const decisionIdsOf = (messages: ReadonlyArray<ChatRoomMessageEntity>): A
         return message.kind === "approval" && decisionId !== undefined ? [decisionId] : []
     })
 
+/** The quote of the message a reply answers; null when it answers none or the quoted message is gone. */
+const replyViewOf = (replyTo: string | null, context: MessageViewContext): ReplyView | null => {
+    const quoted = replyTo === null ? undefined : context.quoted.get(replyTo)
+    if (quoted === undefined) return null
+    return {
+        messageId: quoted.id,
+        authorName:
+            quoted.authorId === null ? "" : (context.names.get(nameKeyOf(quoted.authorKind, quoted.authorId)) ?? ""),
+        body: quoteBodyOf(quoted.body),
+    }
+}
+
+/** The ids of the messages the given messages answer. */
+export const repliedIdsOf = (messages: ReadonlyArray<ChatRoomMessageEntity>): Array<string> => [
+    ...new Set(messages.flatMap((message) => (typeof message.replyTo === "string" ? [message.replyTo] : []))),
+]
+
 /** One message as a screen shows it. */
 export const messageViewOf = (message: ChatRoomMessageEntity, context: MessageViewContext): MessageView => {
     const decisionId = message.ref?.decision_id ?? null
@@ -76,6 +99,10 @@ export const messageViewOf = (message: ChatRoomMessageEntity, context: MessageVi
         runId: message.kind === "report" ? (message.ref?.run_id ?? null) : null,
         decisionId: message.kind === "approval" ? decisionId : null,
         approval: decisionId === null ? null : (context.approvals.get(decisionId) ?? null),
+        agentMessage: message.ref?.agent_message ?? null,
+        reactions: context.reactions.get(message.id) ?? [],
+        replyTo: replyViewOf(message.replyTo, context),
+        forwardedFrom: message.ref?.forwarded_from ?? null,
     }
 }
 
@@ -92,6 +119,7 @@ export const memberViewsOf = (
             role: member.role,
             lastReadAt: member.lastReadAt,
             muted: member.muted,
+            mayPost: member.memberKind === "agent" && member.mayPost,
         }))
         .toSorted(
             (left, right) =>
@@ -112,6 +140,8 @@ export const roomViewOf = (
     return {
         id: room.id,
         kind: room.kind,
+        purpose: room.purpose,
+        purposeModule: room.purposeModule,
         name: room.kind === "group" ? (room.name ?? "") : (members.find((member) => !isViewer(member))?.name ?? ""),
         position: room.position,
         createdBy: room.createdBy,

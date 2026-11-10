@@ -6,7 +6,7 @@ export const DRIVE_ORIGIN = "google_drive"
 export const DRIVE_PROGRESS_POLL_MS = 5000
 
 /** Where Google sends the owner back after the page asked for the grant. */
-export const DRIVE_PAGE_PATH = "/connections/drive"
+export const DRIVE_PAGE_PATH = "/connections/google"
 
 /** Where Google sends the owner back after the hub wizard asked for the grant. */
 export const DRIVE_WIZARD_PATH = "/connections"

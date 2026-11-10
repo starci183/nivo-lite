@@ -8,6 +8,21 @@ export interface BrainPageHeading {
     }
 }
 
+/** One tab of the header strip or one chip of the knowledge tab: its words, its count, and whether the count waits for the owner. */
+export interface BrainTabItemView {
+    readonly id: string
+    readonly label: string
+    readonly count?: number
+    readonly isAttention?: boolean
+}
+
+/** The chips of the knowledge tab: the documents, the facts, the dossiers and the lessons, each a link to its page. */
+export interface BrainChipsView {
+    readonly label: string
+    readonly selectedKey: string
+    readonly items: ReadonlyArray<BrainTabItemView & { readonly href: string }>
+}
+
 /** Resolved header data; the Page owner builds its native controls and callbacks. */
 export interface BrainPageHeaderView {
     readonly heading: BrainPageHeading
@@ -15,8 +30,12 @@ export interface BrainPageHeaderView {
         readonly label: string
         readonly selectedKey: string
         readonly panelPrefix: string
-        readonly items: ReadonlyArray<{ readonly id: string; readonly label: string }>
+        /** The id of the panel the selected tab shows: one panel is swapped by every tab. */
+        readonly panelId: string
+        readonly items: ReadonlyArray<BrainTabItemView>
     }
+    /** The chips under the knowledge tab; null on every other tab. */
+    readonly chips: BrainChipsView | null
     readonly actions: {
         readonly part: {
             readonly label: string

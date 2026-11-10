@@ -13,6 +13,7 @@ import { PARKED_JOBS_SWEEP } from "./jobs.contracts"
 import { InjectJobsManagers, InjectJobsOptions } from "./jobs.decorators"
 import { JobsLogEvent } from "./jobs.log-events"
 import type { JobsOptions } from "./jobs.options"
+import { resumeKeyOf } from "./parked-job-resume.policy"
 import { JobEntity } from "./persistence/entities"
 
 /** The most parked jobs one resume pass hands back; the next sweep takes the rest. */
@@ -24,7 +25,7 @@ const workspaceOf = (payload: object): string | null =>
 
 @Injectable()
 /**
- * Hands parked jobs back to their queue (BE-JOBS-7). A parked job is written to the queue outbox again under `<jobKey>-r<n>` and its
+ * Hands parked jobs back to their queue (BE-JOBS-7). A parked job is written to the queue outbox again under `<jobKey>:r<n>` and its
  * row takes the new delivery's key, so the delivery claims the SAME row: the recorded steps stay, the fencing token is bumped, and every
  * effect key (`<jobId>:<step>`) is the one the first run used, so a remote effect is never made twice. It runs at boot for jobs parked
  * under another build, on the sweep tick for every parked job, and on demand for one job.
@@ -105,7 +106,7 @@ export class ParkedJobResumerService implements OnApplicationBootstrap {
                 queue,
                 job.kind,
                 JSON.stringify(job.payload),
-                `${job.jobKey}-r${String(resumeCount)}`,
+                resumeKeyOf(job.jobKey, resumeCount),
             ])
             if (minted === undefined)
                 throw new JobsError({ code: JobsErrorCode.ResumeNotQueued, params: { jobId: id } })

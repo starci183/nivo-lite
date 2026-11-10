@@ -10,9 +10,11 @@ import {
     cursorOf,
     directKeyOf,
     groupNameOf,
+    isPurposeValid,
     isUniqueViolation,
     isUuid,
     lineClientIdOf,
+    purposeColumnsOf,
     CLIENT_ID_MAX,
     pageSizeOf,
     positionOf,
@@ -183,5 +185,35 @@ describe("the client id of a line", () => {
         expect(id).toHaveLength(CLIENT_ID_MAX)
         expect(lineClientIdOf(long)).toBe(id)
         expect(lineClientIdOf(`${long}y`)).not.toBe(id)
+    })
+})
+
+describe("room purpose", () => {
+    const PURPOSE = Symbol("team-chat.policy purpose")
+    const build = async () =>
+        (
+            await Test.createTestingModule({
+                providers: [{ provide: PURPOSE, useValue: { isPurposeValid, purposeColumnsOf } }],
+            }).compile()
+        ).get<{ isPurposeValid: typeof isPurposeValid; purposeColumnsOf: typeof purposeColumnsOf }>(PURPOSE)
+
+    it("stores a direct room as direct, a group as plain unless given, and the module beside a module room", async () => {
+        const subject = await build()
+        const sales = { purpose: "module" as const, module: "sales" }
+        expect(subject.purposeColumnsOf("direct", sales)).toEqual({ purpose: "direct", purposeModule: null })
+        expect(subject.purposeColumnsOf("group", undefined)).toEqual({ purpose: "group", purposeModule: null })
+        expect(subject.purposeColumnsOf("group", { purpose: "common" })).toEqual({
+            purpose: "common",
+            purposeModule: null,
+        })
+        expect(subject.purposeColumnsOf("group", sales)).toEqual({ purpose: "module", purposeModule: "sales" })
+    })
+
+    it("refuses a module room with a blank module or one longer than the column holds", async () => {
+        const subject = await build()
+        expect(subject.isPurposeValid({ purpose: "common" })).toBe(true)
+        expect(subject.isPurposeValid({ purpose: "module", module: "sales" })).toBe(true)
+        expect(subject.isPurposeValid({ purpose: "module", module: "  " })).toBe(false)
+        expect(subject.isPurposeValid({ purpose: "module", module: "m".repeat(65) })).toBe(false)
     })
 })

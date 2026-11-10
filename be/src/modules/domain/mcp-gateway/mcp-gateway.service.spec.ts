@@ -4,17 +4,21 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import { McpCallLogService } from "@modules/domain/mcp-call-log"
 import { McpConnectorsService } from "@modules/domain/mcp-connectors"
 import { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
-import { McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
+import { AgentDirectoryService } from "@modules/domain/agents"
+import { McpConnectorAccessService, McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
+import type { ProviderAttachmentView } from "@modules/domain/mcp-tool-grants"
 import { MCP_REMOTE, McpError, McpErrorCode } from "@modules/integrations/mcp"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { QueueTimeout } from "@modules/platform/queue"
 import { SEPAY_MANIFEST } from "./adapters/sepay-native.service"
-import type { GatewayCaller, NativeAdapter, NativeConnectorManifest } from "./mcp-gateway.contracts"
+import { gatewayArgumentsSchema } from "./gateway-tools.schema"
+import type { GatewayCaller, GatewayRun, NativeAdapter, NativeConnectorManifest } from "./mcp-gateway.contracts"
 import { DATA_RIGHTS_GATE, MCP_GATEWAY_OPTIONS, NATIVE_ADAPTERS } from "./mcp-gateway.decorators"
 import { TOOL_GRAPH_GATE } from "./tool-graph.decorators"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
+import { ProviderAbilitiesService } from "./provider-abilities.service"
 import { McpGatewayService } from "./mcp-gateway.service"
 import { NativeRunnerService } from "./native-runner.service"
 import { GATEWAY_CALLER as CALLER, toolGrantRowOf as grantOf } from "@tests/fixtures/builders/mcp-gateway.builder"
@@ -34,6 +38,7 @@ const build = async (
     setup: gw.GatewaySpecSetup = {},
     manifest = gwt.OPEN_SEPAY_MANIFEST,
     added: ReadonlyArray<NativeConnectorManifest> = [],
+    attachments: ReadonlyArray<ProviderAttachmentView> | null = null,
 ) => {
     const clock = new FakeClock("2026-10-20T02:00:00.000Z")
     const logger = mock<Dependencies[3]>()
@@ -49,6 +54,10 @@ const build = async (
     const dataRights = mock<NonNullable<Dependencies[12]>>()
     const graph = mock<NonNullable<Dependencies[11]>>()
     const cancel = mock<gw.GatewayCancellation>().cancel
+    const access = mock<McpConnectorAccessService>()
+    access.listOfAgent.mockResolvedValue(attachments ?? [])
+    access.listOfWorkspace.mockResolvedValue(attachments ?? [])
+    const abilities = new ProviderAbilitiesService(access, mock<AgentDirectoryService>())
     const adapters = [native, ...added.map((extra) => mock<NativeAdapter>({ manifest: extra }))]
     const doubles = {
         clock,
@@ -84,9 +93,10 @@ const build = async (
             { provide: NativeRunnerService, useValue: runner },
             { provide: DATA_RIGHTS_GATE, useValue: dataRights },
             { provide: TOOL_GRAPH_GATE, useValue: graph },
+            ...(attachments === null ? [] : [{ provide: ProviderAbilitiesService, useValue: abilities }]),
         ],
     }).compile()
-    return { gateway: moduleRef.get(McpGatewayService), ...doubles }
+    return { gateway: moduleRef.get(McpGatewayService), access, ...doubles }
 }
 
 describe("McpGatewayService registry and discovery", () => {
@@ -496,5 +506,213 @@ describe("McpGatewayService the graph of the agent on writes", () => {
 
         expect(run.remote.call).toHaveBeenCalledTimes(1)
         expect(approved.graph.judge).not.toHaveBeenCalled()
+    })
+})
+
+/** A NIVO effect tool as the effect adapter declares it: a write granted by a step's allow-list, kept by the effect ledger. */
+const EFFECT_MANIFEST: NativeConnectorManifest = {
+    key: "order",
+    name: "NIVO order",
+    kind: "native",
+    contractVersion: "nivo-effects@1",
+    timeoutMs: 15_000,
+    tools: [
+        {
+            name: "create",
+            description: "NIVO business action order.create",
+            scope: "write",
+            defaultMode: "ask",
+            inputSchema: { type: "object" },
+            argumentSchema: gatewayArgumentsSchema,
+            ledgered: true,
+            stepGranted: true,
+            taintExempt: true,
+        },
+    ],
+}
+
+/** The graph step of the effect specs: a customer's turn whose allow-list holds the effect tool. */
+const STEP_RUN: GatewayRun = {
+    turnId: "run-1",
+    locale: "vi",
+    origin: "customer",
+    memberId: null,
+    handedOffBy: null,
+    leadId: null,
+    stepTools: ["order.create"],
+}
+
+/** A caller in that graph step. */
+const STEP_CALLER: GatewayCaller = { ...CALLER, opKey: "run-1:step-2:tool:0", turnId: "run-1", run: STEP_RUN }
+
+describe("McpGatewayService NIVO effect tools", () => {
+    it("runs an effect tool on the step's allow-list with no grant row, past the receipts, under the manifest's limit", async () => {
+        const { gateway, native, receipts } = await build({ grants: [] }, EFFECT_MANIFEST)
+        native.invoke.mockResolvedValue({ kind: "order", id: "o-1", facts: { amountVnd: 120_000 } })
+
+        const result = await gateway.call(STEP_CALLER, "order.create", { leadId: "lead-1" })
+
+        expect(result).toEqual({ ok: true, value: { kind: "order", id: "o-1", facts: { amountVnd: 120_000 } }, summary: expect.any(String) })
+        expect(receipts.run).not.toHaveBeenCalled()
+        expect(native.invoke).toHaveBeenCalledWith("ws-1", "create", { leadId: "lead-1" }, {
+            agentId: "sales",
+            conversationId: "conv-1",
+            opKey: STEP_CALLER.opKey,
+            run: STEP_CALLER.run,
+        })
+        const [connector] = await gateway.connectorsOf("ws-1")
+        expect(connector?.timeoutMs).toBe(15_000)
+    })
+
+    it("asks a person for an effect tool the step did not declare, when no grant row applies", async () => {
+        const { gateway, native } = await build({ grants: [] }, EFFECT_MANIFEST)
+        const caller: GatewayCaller = { ...STEP_CALLER, run: { ...STEP_RUN, stepTools: [] } }
+
+        await expect(gateway.call(caller, "order.create", { leadId: "lead-1" })).resolves.toEqual({
+            ok: false,
+            code: "approval_required",
+            reason: "no_rule",
+        })
+        expect(native.invoke).not.toHaveBeenCalled()
+    })
+
+    it("lets the owner's grant row decide over the step's allow-list", async () => {
+        const { gateway, native } = await build({ grants: [grantOf({ tool: "order.*", mode: "never", constraints: [] })] }, EFFECT_MANIFEST)
+
+        await expect(gateway.call(STEP_CALLER, "order.create", { leadId: "lead-1" })).resolves.toEqual({
+            ok: false,
+            code: "not_granted",
+            detail: "order.create",
+        })
+        expect(native.invoke).not.toHaveBeenCalled()
+    })
+
+    it("answers a refusal fact as a value and audits it as refused with its reason", async () => {
+        const { gateway, native, callLog } = await build({ grants: [] }, EFFECT_MANIFEST)
+        native.invoke.mockResolvedValue({ kind: "refused", id: "item_unknown", facts: { name: "Trà đào" } })
+
+        const result = await gateway.call(STEP_CALLER, "order.create", { leadId: "lead-1" })
+
+        assert(result.ok)
+        expect(result.value).toEqual({ kind: "refused", id: "item_unknown", facts: { name: "Trà đào" } })
+        expect(linesOf(callLog).at(-1)).toMatchObject({ tool: "order.create", outcome: "refused", errorCode: "item_unknown" })
+    })
+
+    it("still refuses an effect tool called with no step key", async () => {
+        const { gateway, native } = await build({ grants: [] }, EFFECT_MANIFEST)
+        const caller: GatewayCaller = { ...STEP_CALLER, opKey: undefined }
+
+        await expect(gateway.call(caller, "order.create", { leadId: "lead-1" })).resolves.toEqual({
+            ok: false,
+            code: "idempotency_key_required",
+            detail: "order.create",
+        })
+        expect(native.invoke).not.toHaveBeenCalled()
+    })
+})
+
+/** The attachment of the spec agent to SePay, with the abilities ticked. */
+const sepay = (abilities: ProviderAttachmentView["abilities"]): ProviderAttachmentView => ({
+    agentId: "sales",
+    provider: "sepay",
+    abilities,
+})
+
+/** A write tool of the payment provider, as the catalogue names it. */
+const QR_MANIFEST: NativeConnectorManifest = {
+    ...EFFECT_MANIFEST,
+    key: "payment",
+    tools: EFFECT_MANIFEST.tools.slice(0, 1).map((tool) => ({ ...tool, name: "qr.create" })),
+}
+const QR_CALLER: GatewayCaller = { ...STEP_CALLER, run: { ...STEP_RUN, stepTools: ["payment.qr.create"] } }
+
+describe("McpGatewayService provider abilities: the decision table", () => {
+    it("not attached: refuses a provider tool, whatever the tool grants say", async () => {
+        const { gateway, native, callLog } = await build({}, gwt.OPEN_SEPAY_MANIFEST, [], [
+            { agentId: "sales", provider: "zalo_oa", abilities: { "customer.send": "auto" } },
+        ])
+
+        await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual({
+            ok: false,
+            code: "not_granted",
+            detail: "not_attached",
+        })
+        expect(native.invoke).not.toHaveBeenCalled()
+        expect(linesOf(callLog).at(-1)).toMatchObject({ outcome: "refused", errorCode: "not_attached" })
+    })
+
+    it("attached, the ability unticked: refuses with ability_off", async () => {
+        const { gateway, native } = await build({}, gwt.OPEN_SEPAY_MANIFEST, [], [sepay({ "qr.create": "auto" })])
+
+        await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual({
+            ok: false,
+            code: "not_granted",
+            detail: "ability_off",
+        })
+        expect(native.invoke).not.toHaveBeenCalled()
+    })
+
+    it("ticked read: runs with no grant row at all", async () => {
+        const { gateway, native } = await build({ grants: [] }, gwt.OPEN_SEPAY_MANIFEST, [], [
+            sepay({ "transactions.read": "auto" }),
+        ])
+
+        const result = await gateway.call(CALLER, "sepay.transactions.list", {})
+
+        expect(result.ok).toBe(true)
+        expect(native.invoke).toHaveBeenCalled()
+    })
+
+    it("ticked write auto: runs by itself", async () => {
+        const { gateway, native } = await build({ grants: [] }, QR_MANIFEST, [], [sepay({ "qr.create": "auto" })])
+        native.invoke.mockResolvedValue({ kind: "message", id: "m-1" })
+
+        const result = await gateway.call(QR_CALLER, "payment.qr.create", { orderId: "o-1" })
+
+        expect(result.ok).toBe(true)
+    })
+
+    it("ticked write ask: waits for a person, and runs once that person approved the call", async () => {
+        const { gateway, native } = await build({ grants: [] }, QR_MANIFEST, [], [sepay({ "qr.create": "ask" })])
+        native.invoke.mockResolvedValue({ kind: "message", id: "m-1" })
+
+        await expect(gateway.call(QR_CALLER, "payment.qr.create", { orderId: "o-1" })).resolves.toEqual({
+            ok: false,
+            code: "approval_required",
+            reason: "ask_mode",
+        })
+        expect(native.invoke).not.toHaveBeenCalled()
+
+        const approved = await gateway.call({ ...QR_CALLER, approvedBy: "owner-1" }, "payment.qr.create", { orderId: "o-1" })
+        expect(approved.ok).toBe(true)
+    })
+
+    it("a tool that is no provider right is judged as before: the step's own business tool runs, an ungranted one is refused", async () => {
+        const { gateway, native, access } = await build({ grants: [] }, { ...EFFECT_MANIFEST, key: "payment" }, [], [])
+        native.invoke.mockResolvedValue({ kind: "message", id: "m-1" })
+        const caller: GatewayCaller = { ...STEP_CALLER, run: { ...STEP_RUN, stepTools: ["payment.create"] } }
+
+        const result = await gateway.call(caller, "payment.create", { orderId: "o-1" })
+
+        expect(result.ok).toBe(true)
+        expect(access.listOfAgent).not.toHaveBeenCalled()
+    })
+
+    it("the engine's own caller (a module's declared job) is not judged by abilities: its grant row decides", async () => {
+        const { gateway, access } = await build({ grants: [] }, gwt.OPEN_SEPAY_MANIFEST, [], [])
+
+        await expect(gateway.call({ ...CALLER, engine: true }, "sepay.transactions.list", {})).resolves.toEqual({
+            ok: false,
+            code: "not_granted",
+            detail: "sepay.transactions.list",
+        })
+        expect(access.listOfAgent).not.toHaveBeenCalled()
+    })
+
+    it("names the agents that hold a ticked ability with the tool beside those holding a grant row", async () => {
+        const { gateway, grants } = await build({}, gwt.OPEN_SEPAY_MANIFEST, [], [sepay({ "transactions.read": "auto" })])
+        grants.agentsGranted.mockResolvedValue(["a1"])
+
+        await expect(gateway.agentsGranted("ws-1", ["sepay.transactions.list"])).resolves.toEqual(["sales", "a1"])
     })
 })

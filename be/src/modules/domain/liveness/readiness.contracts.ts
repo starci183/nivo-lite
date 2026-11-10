@@ -4,6 +4,8 @@ export interface ReadinessChecks {
     readonly database: "ok"
     /** The jobs statistics function returned a check timestamp. */
     readonly jobs: "ok"
+    /** The AI endpoint is configured (gateway address and virtual key): model calls can be made. */
+    readonly ai: "ok"
 }
 
 /** What a successful readiness probe answers. */

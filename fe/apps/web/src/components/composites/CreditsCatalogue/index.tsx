@@ -1,5 +1,6 @@
-import { EmptyNotice, SurfaceCard, type ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, Section, type ListRowData } from "@starci/grammar/common"
 import type { CreditsOverviewView, PayTarget } from "@/modules/types"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 interface CreditsCatalogueProps {
     readonly props: {
@@ -34,13 +35,13 @@ export const CreditsCatalogue = (props: CreditsCatalogueProps) => {
             : {}),
     }))
     return (
-        <SurfaceCard
+        <Section
             kind="list"
-            label={copy.label}
+            title={copy.label}
             headingLevel={2}
-            fact={copy.fact}
+            caption={copy.fact}
             isLoading={copy.isLoading}
-            empty={<EmptyNotice message={copy.empty} />}
+            empty={<EmptyNotice message={copy.empty} iconSource={nivoIconSource("credit", "leading")} />}
             items={rows}
         />
     )

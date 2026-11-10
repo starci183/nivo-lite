@@ -2,7 +2,10 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { GraphNodeRunTokensService, GraphNodesErrorCode, toolFingerprintOf } from "@modules/domain/graph-nodes"
 import type { NodeRunClaims, NodeToolCall } from "@modules/domain/graph-nodes"
+import { AgentViewScopeService } from "@modules/domain/agents"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
+import { LOGGER } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import { McpGatewayService } from "./mcp-gateway.service"
 import type { GatewayCallResult } from "./mcp-gateway.contracts"
 import { NodeToolDoorService } from "./node-tool-door.service"
@@ -22,7 +25,7 @@ const CLAIMS: NodeRunClaims = {
 
 const callOf = (overrides: Partial<NodeToolCall> = {}): NodeToolCall => ({
     token: "token-1",
-    tool: "payment.instruction",
+    tool: "bank.transactions",
     args: ARGS,
     key: "step-1",
     approval: null,
@@ -31,22 +34,29 @@ const callOf = (overrides: Partial<NodeToolCall> = {}): NodeToolCall => ({
 
 const STEWARD = { seat_id: "member-owner", id: "user-1", name: "Lan", at: "2026-11-01T00:00:00.000Z" }
 
-const build = async (claims: NodeRunClaims | null = CLAIMS, result: GatewayCallResult = { ok: true, value: {} }) => {
+const build = async (
+    claims: NodeRunClaims | null = CLAIMS,
+    result: GatewayCallResult = { ok: true, value: {} },
+    scopes?: AgentViewScopeService,
+) => {
     const gateway = mock<McpGatewayService>()
     gateway.call.mockResolvedValue(result)
     const tokens = mock<GraphNodeRunTokensService>()
     tokens.verify.mockReturnValue(claims)
     const members = mock<WorkspaceMembersReadService>()
     members.firstStewards.mockResolvedValue([STEWARD])
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             NodeToolDoorService,
             { provide: McpGatewayService, useValue: gateway },
             { provide: GraphNodeRunTokensService, useValue: tokens },
             { provide: WorkspaceMembersReadService, useValue: members },
+            { provide: LOGGER, useValue: logger },
+            ...(scopes === undefined ? [] : [{ provide: AgentViewScopeService, useValue: scopes }]),
         ],
     }).compile()
-    return { door: moduleRef.get(NodeToolDoorService), gateway, tokens, members }
+    return { door: moduleRef.get(NodeToolDoorService), gateway, tokens, members, logger }
 }
 
 /** The door where no workspace members service is bound. */
@@ -60,6 +70,7 @@ const buildWithoutMembers = async (claims: NodeRunClaims) => {
             NodeToolDoorService,
             { provide: McpGatewayService, useValue: gateway },
             { provide: GraphNodeRunTokensService, useValue: tokens },
+            { provide: LOGGER, useValue: mock<Logger>() },
         ],
     }).compile()
     return { door: moduleRef.get(NodeToolDoorService), gateway }
@@ -82,8 +93,9 @@ describe("NodeToolDoorService who calls", () => {
                 opKey: "step-1",
                 turnId: "run-1",
                 audience: "internal",
+                graphStep: true,
             },
-            "payment.instruction",
+            "bank.transactions",
             ARGS,
         )
     })
@@ -93,9 +105,34 @@ describe("NodeToolDoorService who calls", () => {
 
         await expect(door.call(callOf())).rejects.toMatchObject({
             code: GraphNodesErrorCode.ToolTokenInvalid,
-            params: { tool: "payment.instruction" },
+            params: { tool: "bank.transactions" },
         })
         expect(gateway.call).not.toHaveBeenCalled()
+    })
+
+    it("carries the graph step the token signs, which the NIVO effect tools need", async () => {
+        const claims = { ...CLAIMS, locale: "vi" as const, handedOffBy: "agent-0", leadId: null, stepTools: ["order.create"] }
+        const { door, gateway } = await build(claims)
+
+        await door.call(callOf())
+
+        expect(gateway.call.mock.calls[0]?.[0].run).toEqual({
+            turnId: "run-1",
+            locale: "vi",
+            origin: CLAIMS.origin,
+            memberId: CLAIMS.memberId,
+            handedOffBy: "agent-0",
+            leadId: null,
+            stepTools: ["order.create"],
+        })
+    })
+
+    it("carries no step for a token that signs none", async () => {
+        const { door, gateway } = await build(CLAIMS)
+
+        await door.call(callOf())
+
+        expect(gateway.call.mock.calls[0]?.[0].run).toBeUndefined()
     })
 
     it("calls a customer's run as the customer audience", async () => {
@@ -106,10 +143,40 @@ describe("NodeToolDoorService who calls", () => {
         expect(gateway.call.mock.calls[0]?.[0]).toMatchObject({ audience: "customer" })
     })
 
+    it("calls a customer-started run as its agent's own audience: internal for an accounting step, the customer's for a front-desk step or an agent it cannot read", async () => {
+        const scopes = mock<AgentViewScopeService>()
+        const started: NodeRunClaims = { ...CLAIMS, origin: "customer", scope: "public" }
+        const { door, gateway } = await build(started, { ok: true, value: {} }, scopes)
+
+        scopes.lensOf.mockResolvedValueOnce({ module: "accounting", installationId: null })
+        await door.call(callOf())
+        scopes.lensOf.mockResolvedValueOnce({ module: "chatbot", installationId: null })
+        await door.call(callOf())
+        scopes.lensOf.mockResolvedValueOnce(null)
+        await door.call(callOf())
+
+        expect(scopes.lensOf).toHaveBeenCalledWith("ws-1", "agent-1")
+        expect(gateway.call.mock.calls.map(([caller]) => [caller.audience, caller.conversationId, caller.graphStep])).toEqual([
+            ["internal", "conv-1", true],
+            ["customer", "conv-1", true],
+            ["customer", "conv-1", true],
+        ])
+    })
+
+    it("never reads the agent for a run of the workspace: it is internal", async () => {
+        const scopes = mock<AgentViewScopeService>()
+        const { door, gateway } = await build(CLAIMS, { ok: true, value: {} }, scopes)
+
+        await door.call(callOf())
+
+        expect(scopes.lensOf).not.toHaveBeenCalled()
+        expect(gateway.call.mock.calls[0]?.[0]).toMatchObject({ audience: "internal", graphStep: true })
+    })
+
     it("lets an owner or manager's turn call, and refuses any other member's turn unless a person approved it", async () => {
         const owner = await build({ ...CLAIMS, origin: "owner", memberId: "member-owner" })
         const staff = await build({ ...CLAIMS, origin: "staff", memberId: "member-staff" })
-        const approval = { by: "member-owner", fingerprint: toolFingerprintOf("payment.instruction", ARGS) }
+        const approval = { by: "member-owner", fingerprint: toolFingerprintOf("bank.transactions", ARGS) }
 
         await expect(owner.door.call(callOf())).resolves.toEqual({})
         await expect(staff.door.call(callOf())).rejects.toMatchObject({
@@ -151,7 +218,7 @@ describe("NodeToolDoorService approvals", () => {
 
     it("runs a call that replays an approval of its fingerprint as approved by that person", async () => {
         const { door, gateway } = await build()
-        const approval = { by: "member-owner", fingerprint: toolFingerprintOf("payment.instruction", ARGS) }
+        const approval = { by: "member-owner", fingerprint: toolFingerprintOf("bank.transactions", ARGS) }
 
         await door.call(callOf({ approval }))
 
@@ -160,7 +227,7 @@ describe("NodeToolDoorService approvals", () => {
 
     it("asks again when the arguments changed after the approval", async () => {
         const { door, gateway } = await build()
-        const approval = { by: "member-owner", fingerprint: toolFingerprintOf("payment.instruction", ARGS) }
+        const approval = { by: "member-owner", fingerprint: toolFingerprintOf("bank.transactions", ARGS) }
 
         await door.call(callOf({ approval, args: { ...ARGS, amountVnd: 9000 } }))
 
@@ -185,13 +252,23 @@ describe("NodeToolDoorService failures", () => {
             { ok: false, code: "tool_error", detail: '{"error":"internal_only"}' },
             GraphNodesErrorCode.ToolFailed,
         ],
-        ["a grant it lacks", { ok: false, code: "not_granted", detail: "" }, GraphNodesErrorCode.ToolFailed],
+        [
+            "a grant it lacks",
+            { ok: false, code: "not_granted", detail: "bank.transactions" },
+            GraphNodesErrorCode.ToolNotGranted,
+        ],
+        [
+            "a data right it lacks",
+            { ok: false, code: "not_granted", detail: "no_data_right" },
+            GraphNodesErrorCode.ToolNotGranted,
+        ],
+        ["an unavailable provider", { ok: false, code: "unavailable", detail: "x" }, GraphNodesErrorCode.ToolFailed],
     ] satisfies ReadonlyArray<readonly [string, GatewayCallResult, GraphNodesErrorCode]>)(
         "answers the typed error for %s",
         async (_name, result, code) => {
             const { door } = await build(CLAIMS, result)
 
-            await expect(door.call(callOf())).rejects.toMatchObject({ code, params: { tool: "payment.instruction" } })
+            await expect(door.call(callOf())).rejects.toMatchObject({ code, params: { tool: "bank.transactions" } })
         },
     )
 
@@ -203,5 +280,41 @@ describe("NodeToolDoorService failures", () => {
             params: { reason: "invalid_arguments" },
         })
         expect(gateway.call).not.toHaveBeenCalled()
+    })
+})
+
+describe("NodeToolDoorService failure log", () => {
+    it("names a missing tool grant apart from a missing data right, and logs the refusal with its cause", async () => {
+        const { door, logger } = await build(CLAIMS, { ok: false, code: "not_granted", detail: "bank.transactions" })
+
+        await expect(door.call(callOf())).rejects.toMatchObject({
+            code: GraphNodesErrorCode.ToolNotGranted,
+            params: { tool: "bank.transactions", reason: "no_tool_grant" },
+        })
+        expect(logger.warn).toHaveBeenCalledWith("mcp-gateway.node-tool.failed", {
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            runId: "run-1",
+            tool: "bank.transactions",
+            code: GraphNodesErrorCode.ToolNotGranted,
+            gatewayCode: "not_granted",
+            reason: "no_tool_grant",
+        })
+    })
+
+    it("logs a refusal before the gateway too, and never an approval to ask", async () => {
+        const staff = await build({ ...CLAIMS, origin: "staff", memberId: "member-staff" })
+        const asking = await build(CLAIMS, { ok: false, code: "approval_required", reason: "ask_mode" })
+
+        await expect(staff.door.call(callOf())).rejects.toMatchObject({ code: GraphNodesErrorCode.ToolFailed })
+        await expect(asking.door.call(callOf())).rejects.toMatchObject({
+            code: GraphNodesErrorCode.ToolApprovalRequired,
+        })
+
+        expect(staff.logger.warn).toHaveBeenCalledWith(
+            "mcp-gateway.node-tool.failed",
+            expect.objectContaining({ code: GraphNodesErrorCode.ToolFailed, reason: "member_not_allowed" }),
+        )
+        expect(asking.logger.warn).not.toHaveBeenCalled()
     })
 })

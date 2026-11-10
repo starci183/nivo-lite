@@ -58,6 +58,10 @@ type OrderFields = {
     readonly items: FieldDef<"jsonb", false> & { readonly shape: ZodType<OrderItems> }
     readonly itemsText: FieldDef<"text", false>
     readonly note: FieldDef<"text", false>
+    readonly recipientName: FieldDef<"text", true>
+    readonly recipientPhone: FieldDef<"text", true>
+    readonly deliveryAddress: FieldDef<"text", true>
+    readonly deliveryAt: FieldDef<"text", true>
     readonly amountVnd: FieldDef<"money_vnd", true>
     readonly status: FieldDef<"enum", false>
     readonly confirmedBy: FieldDef<"text", true>
@@ -73,6 +77,14 @@ const orderFields: OrderFields = {
     items: field.jsonb({ shape: ORDER_ITEMS_SHAPE }),
     itemsText: field.text({ maxLength: MAX_BODY, searchable: true, default: "empty" }),
     note: field.text({ maxLength: MAX_BODY, searchable: true, default: "empty" }),
+    /** The name of the person who receives the delivery, as the customer gave it; null when it is the customer. */
+    recipientName: field.text({ maxLength: MAX_LINE, nullable: true }),
+    /** Where the order is delivered, in the customer's words. Older orders kept it in `note`. */
+    deliveryAddress: field.text({ maxLength: MAX_LINE, nullable: true }),
+    /** The phone number of the person who receives the delivery, as the customer gave it. */
+    recipientPhone: field.text({ maxLength: MAX_LINE, nullable: true }),
+    /** The day and the time window of the delivery, in the customer's words (not an instant: "thứ Bảy 9-11h"). */
+    deliveryAt: field.text({ maxLength: MAX_LINE, nullable: true }),
     amountVnd: field.moneyVnd({ nullable: true }),
     status: field.enum({ of: ORDER_STATUSES, default: { literal: "draft" } }),
     confirmedBy: field.text({ maxLength: MAX_LINE, nullable: true }),

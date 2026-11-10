@@ -27,7 +27,7 @@ export interface AgentReplyCardBaseProps {
 /** Draws the reply card of a chatbot: the longest a customer waits before the app answers directly, and the holding message. */
 export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
     <SurfaceCard label={props.props.title} headingLevel={2}>
-        <Stack gap="section">
+        <Stack gap="row">
             <Input
                 id="reply-timeout"
                 name="reply-timeout"
@@ -37,7 +37,7 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
                 isDisabled={props.props.isPending}
                 onValueChange={props.on.timeout}
             />
-            <Cluster gap="row">
+            <Cluster gap="inline">
                 <Button
                     intent="neutral"
                     isPending={props.props.isPending}
@@ -57,7 +57,7 @@ export const AgentReplyCardBase = (props: AgentReplyCardBaseProps) => (
                 isDisabled={props.props.isPending}
                 onValueChange={props.on.holding}
             />
-            <Cluster gap="row">
+            <Cluster gap="inline">
                 <Button
                     intent="neutral"
                     isPending={props.props.isPending}

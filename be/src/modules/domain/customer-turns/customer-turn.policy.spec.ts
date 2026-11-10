@@ -8,13 +8,11 @@ import {
     isRecentlyPaid,
     isStaleWake,
     latestQuestionOf,
-    sameItems,
     turnRefOf,
 } from "./customer-turn.policy"
 
 type Subject = {
     clipText: typeof clipText
-    sameItems: typeof sameItems
     isRecentlyPaid: typeof isRecentlyPaid
     latestQuestionOf: typeof latestQuestionOf
     handoffTranscriptOf: typeof handoffTranscriptOf
@@ -32,8 +30,7 @@ const build = async () => {
                 provide: SUBJECT,
                 useValue: {
                     clipText,
-                    sameItems,
-                    isRecentlyPaid,
+                                    isRecentlyPaid,
                     latestQuestionOf,
                     handoffTranscriptOf,
                     isStaleWake,
@@ -55,16 +52,6 @@ describe("clipText", () => {
         expect(subject.clipText("tea", 3)).toBe("tea")
         expect(subject.clipText("tea ", 4)).toBe("tea ")
         expect(subject.clipText("  tea cup  ", 6)).toBe("  tea\u2026")
-    })
-})
-
-describe("sameItems", () => {
-    it("treats case, spacing and composed letters as the same item", async () => {
-        const subject = await build()
-
-        expect(subject.sameItems("Tr\u00e0  s\u1eefa", "tra\u0300 su\u031b\u0303a")).toBe(true)
-        expect(subject.sameItems("Tr\u00e0  s\u1eefa", "tra\u0300 sua")).toBe(false)
-        expect(subject.sameItems("Tra sua", "Tra da")).toBe(false)
     })
 })
 

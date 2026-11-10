@@ -3,6 +3,8 @@ import type { DynamicModule } from "@nestjs/common"
 import { WORK_ITEM_CLOSED } from "@modules/domain/work-items"
 import { AgentStepQueueModule } from "@modules/queues/agent-step"
 import { AgentRunAlertsService } from "./agent-run-alerts.service"
+import { AgentRunCancelService } from "./agent-run-cancel.service"
+import { AgentRunsLimitService } from "./agent-runs-limit.service"
 import { AgentRunCompensationService } from "./agent-run-compensation.service"
 import { AgentRunDeadLetterService } from "./agent-run-dead-letter.service"
 import { AgentRunItemClosedService } from "./agent-run-item-closed.service"
@@ -10,6 +12,7 @@ import { AGENT_WAKE_INTERRUPTIONS } from "@modules/domain/agent-work"
 import { AgentRunInflightService } from "./agent-run-inflight.service"
 import { AgentRunHandlersService } from "./agent-run-handlers.service"
 import { AgentRunOwnerResumeService } from "./agent-run-owner-resume.service"
+import { AgentRunRecoveryService } from "./agent-run-recovery.service"
 import { AgentRunRecordsService } from "./agent-run-records.service"
 import { AgentRunDueService } from "./agent-run-due.service"
 import { AgentRunWorkspacesService } from "./agent-run-workspaces.service"
@@ -20,6 +23,7 @@ import { AgentRunReportService } from "./agent-run-report.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentRunSweepService } from "./agent-run-sweep.service"
 import { AgentRunTraceService } from "./agent-run-trace.service"
+import { AgentRunsViewService } from "./agent-runs-view.service"
 import { AgentStepJobService } from "./agent-step-job.service"
 import { AgentStepLedgerService } from "./agent-step-ledger.service"
 import { AgentRunsService } from "./agent-runs.service"
@@ -47,6 +51,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                         buildId: options.buildId,
                         parkSweepMinutes: options.parkSweepMinutes,
                         parkMaxResumes: options.parkMaxResumes,
+                        concurrency: options.concurrency,
                     },
                 },
                 AgentRunRecordsService,
@@ -57,6 +62,9 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AgentRunParkStoreService,
                 AgentRunResumeService,
                 AgentRunOwnerResumeService,
+                AgentRunRecoveryService,
+                AgentRunCancelService,
+                AgentRunsLimitService,
                 AgentStepLedgerService,
                 AgentRunHandlersService,
                 AgentRunInflightService,
@@ -67,6 +75,7 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AgentRunsService,
                 AgentRunSweepService,
                 AgentRunTraceService,
+                AgentRunsViewService,
                 AgentStepJobService,
                 AgentRunItemClosedService,
                 { provide: WORK_ITEM_CLOSED, useExisting: AgentRunItemClosedService },
@@ -81,9 +90,13 @@ export class AgentRunsModule extends ConfigurableModuleClass {
                 AgentRunResumeService,
                 AgentRunParkStoreService,
                 AgentRunOwnerResumeService,
+                AgentRunRecoveryService,
+                AgentRunCancelService,
+                AgentRunsLimitService,
                 AgentRunHandlersService,
                 AgentRunSweepService,
                 AgentRunTraceService,
+                AgentRunsViewService,
                 AgentStepJobService,
             ],
         }

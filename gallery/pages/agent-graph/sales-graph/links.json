@@ -1,0 +1,171 @@
+[
+ {
+  "label": "Tổng quan",
+  "box": {
+   "x": 268,
+   "y": 96,
+   "w": 69,
+   "h": 20
+  },
+  "to": "overview/overview",
+  "kind": "page"
+ },
+ {
+  "label": "Agent",
+  "box": {
+   "x": 357,
+   "y": 96,
+   "w": 39,
+   "h": 20
+  },
+  "to": "agents-catalog/sales-tao-agent",
+  "kind": "page"
+ },
+ {
+  "label": "Bàn làm việc",
+  "box": {
+   "x": 268,
+   "y": 188,
+   "w": 92,
+   "h": 40
+  },
+  "to": "agent-workbench/sales-wb-can-chu-y",
+  "kind": "page"
+ },
+ {
+  "label": "Công việc",
+  "box": {
+   "x": 360,
+   "y": 188,
+   "w": 86,
+   "h": 40
+  },
+  "to": "agent-work/sales-work",
+  "kind": "page"
+ },
+ {
+  "label": "Quy trình",
+  "box": {
+   "x": 509,
+   "y": 188,
+   "w": 84,
+   "h": 40
+  },
+  "to": "agent-workflows/sales-list",
+  "kind": "page"
+ },
+ {
+  "label": "Trò chuyện",
+  "box": {
+   "x": 593,
+   "y": 188,
+   "w": 93,
+   "h": 40
+  },
+  "to": "agent-chat/sales-chat",
+  "kind": "page"
+ },
+ {
+  "label": "Kết nối 1",
+  "box": {
+   "x": 686,
+   "y": 188,
+   "w": 104,
+   "h": 40
+  },
+  "to": null,
+  "kind": "page",
+  "note": "trỏ tới trang chưa có trong gallery",
+  "route": "/agents/sales/<inst>/connections"
+ },
+ {
+  "label": "Tri thức 73",
+  "box": {
+   "x": 790,
+   "y": 188,
+   "w": 113,
+   "h": 40
+  },
+  "to": null,
+  "kind": "page",
+  "note": "trỏ tới trang chưa có trong gallery",
+  "route": "/agents/sales/<inst>/knowledge"
+ },
+ {
+  "label": "Thiết lập",
+  "box": {
+   "x": 903,
+   "y": 188,
+   "w": 79,
+   "h": 40
+  },
+  "to": "agent-setup/sales-huong-dan",
+  "kind": "page"
+ },
+ {
+  "label": "Mở danh sách",
+  "box": {
+   "x": 1321,
+   "y": 247,
+   "w": 107,
+   "h": 32
+  },
+  "to": "agent-workflows/sales-list",
+  "kind": "page"
+ },
+ {
+  "label": "Tư vấn bán hàng Cửa mở · Khách, Cuộc trò chuyện, Lời khách C",
+  "box": {
+   "x": 751,
+   "y": 326,
+   "w": 194,
+   "h": 130
+  },
+  "to": "agent-workflows/sales-detail-map",
+  "kind": "page"
+ },
+ {
+  "label": "Cảm ơn sau mua Cửa mở · Đơn hàng Đã cảm ơn",
+  "box": {
+   "x": 751,
+   "y": 510,
+   "w": 194,
+   "h": 74
+  },
+  "to": "agent-workflows/sales-detail-map",
+  "kind": "page"
+ },
+ {
+  "label": "Đơn từ website Trang web Chờ chủ gọi",
+  "box": {
+   "x": 751,
+   "y": 630,
+   "w": 194,
+   "h": 74
+  },
+  "to": "agent-workflows/sales-detail-map",
+  "kind": "page"
+ },
+ {
+  "label": "Nhắc thanh toán Hẹn giờ chăm sóc Đã nhắc Hết chờ",
+  "box": {
+   "x": 751,
+   "y": 750,
+   "w": 194,
+   "h": 74
+  },
+  "to": "agent-workflows/sales-detail-map",
+  "kind": "page"
+ },
+ {
+  "label": "Hỏi thăm sau giao Hẹn giờ chăm sóc Đã hỏi thăm",
+  "box": {
+   "x": 751,
+   "y": 879,
+   "w": 194,
+   "h": 74
+  },
+  "to": "agent-workflows/sales-detail-map",
+  "kind": "page"
+ }
+]

@@ -1,21 +1,26 @@
-import { ChoiceChips, Stack, Text } from "@starci/grammar/common"
+import { SurfaceCard, Text } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 
 /** What the mode card shows once the installation arrived. */
 export interface ModeView {
     readonly mode: string
-    readonly help: string
     /** Authority is shared by every instance of the type; empty for a single instance agent. */
     readonly sharedNote: string
+}
+
+/** One choice of the card: its title and the subtitle under it. */
+export interface ModeOption {
+    readonly value: string
+    readonly label: string
+    readonly subtitle: string
 }
 
 /** Copy and slot of the operating mode card. */
 export interface AgentModeCardBaseProps {
     readonly props: {
         readonly title: string
-        readonly options: ReadonlyArray<{ readonly value: string; readonly label: string }>
-        readonly note: string
+        readonly options: ReadonlyArray<ModeOption>
         readonly isDisabled: boolean
         /** The read, its same-shape placeholder and the words of its states, as SlotView takes them. */
         readonly read: {
@@ -27,37 +32,41 @@ export interface AgentModeCardBaseProps {
     readonly on: { readonly mode: (value: string) => void; readonly retry: () => void }
 }
 
-/** Draws the operating mode band of the Activity card: its name, assist or autopilot as chips, and what each means. */
+/**
+ * The one choice list of the card: `SurfaceCard kind="select" selectionMode="single"` (Grammar 0.37.5), a checkbox row per mode.
+ */
+const ModeChoice = (props: AgentModeCardBaseProps, view: ModeView, isLoading: boolean) => (
+    <SurfaceCard
+        kind="select"
+        selectionMode="single"
+        label={props.props.title}
+        headingLevel={2}
+        isLoading={isLoading}
+        {...(view.sharedNote === ""
+            ? {}
+            : {
+                  note: (
+                      <Text size="xs" tone="muted">
+                          {view.sharedNote}
+                      </Text>
+                  ),
+              })}
+        items={props.props.options.map((option) => ({
+            id: option.value,
+            title: option.label,
+            subtitle: option.subtitle,
+            isDisabled: props.props.isDisabled,
+        }))}
+        value={view.mode}
+        onChange={props.on.mode}
+    />
+)
+
+/** Draws the operating mode as one field with its choice card: assist or autopilot, each a row with a title and a subtitle. */
 export const AgentModeCardBase = (props: AgentModeCardBaseProps) => (
     <SlotView
         {...props.props.read}
         onRetry={props.on.retry}
-        render={(view, isLoading) => (
-            <Stack gap="row">
-                <ChoiceChips
-                    label={props.props.title}
-                    options={props.props.options.map((option) => ({ ...option, isDisabled: props.props.isDisabled }))}
-                    value={view.mode}
-                    empty={
-                        <Text size="sm" tone="muted">
-                            {props.props.title}
-                        </Text>
-                    }
-                    isLoading={isLoading}
-                    onValueChange={props.on.mode}
-                />
-                <Text size="sm" tone="muted" isLoading={isLoading}>
-                    {view.help}
-                </Text>
-                <Text size="xs" tone="muted">
-                    {props.props.note}
-                </Text>
-                {view.sharedNote === "" ? null : (
-                    <Text size="xs" tone="muted">
-                        {view.sharedNote}
-                    </Text>
-                )}
-            </Stack>
-        )}
+        render={(view, isLoading) => ModeChoice(props, view, isLoading)}
     />
 )

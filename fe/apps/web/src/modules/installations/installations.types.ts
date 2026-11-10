@@ -38,8 +38,10 @@ export type Installation = {
     /** The type allows several instances (copied from the catalogue at insert). */
     readonly isMulti: boolean
     readonly agentId: string | null
-    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
+    /** The picture the owner gave the agent (an upload, or the image of a chosen preset); null draws the default sprout. */
     readonly agentAvatarUrl: string | null
+    /** The preset the owner chose ("initials" draws the initials); null when none was chosen. */
+    readonly agentAvatarPreset: string | null
     readonly agentHandle: string
     readonly status: InstallationStatus
     /** Where the agent stands by the business rules (the back end derives it): only `running` answers customers. */

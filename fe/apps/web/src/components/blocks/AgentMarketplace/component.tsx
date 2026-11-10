@@ -1,36 +1,15 @@
-import {
-    Alert,
-    Button,
-    Dialog,
-    EmptyNotice,
-    Grid,
-    Input,
-    NumberField,
-    Select,
-    Stack,
-    SurfaceCard,
-    Switch,
-    Textarea,
-} from "@starci/grammar/common"
-import { AGENT_MARK_MASCOT_SRC } from "@/components/leaves/AgentMark"
+import { Alert, Button, Dialog, EmptyNotice, Grid, Section, Stack, SurfaceCard } from "@starci/grammar/common"
+import { cloneElement, isValidElement, type ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
+import { nivoIconSource } from "@/components/leaves/Icon"
+import { ParameterField, type ParameterView } from "./parameters"
 
-/** One parameter of a listing the buyer fills in. */
-interface ParameterView {
-    readonly key: string
-    readonly label: string
-    readonly value: string
-    /** The type of the field: a number, one line of text, several lines, or a switch. */
-    readonly kind: "number" | "text" | "toggle" | "textarea" | "time" | "choice"
-    readonly hint: string
-    readonly min: number | null
-    readonly max: number | null
-    /** What is wrong with the value, in words; empty while it is fine (or not yet asked for). */
-    readonly error: string
-    /** The choices of a `choice` field: the value kept and the label read. */
-    readonly options: ReadonlyArray<{ readonly id: string; readonly label: string }>
-}
+/** The notice of a slot that is empty, forbidden or failed, set bare on the page ground (a notice on the well has no frame). */
+const framelessNotice = (notice: ReactNode): ReactNode =>
+    isValidElement<{ readonly frame?: "card" | "frameless" }>(notice)
+        ? cloneElement(notice, { frame: "frameless" })
+        : notice
 
 /** One approved listing as the card draws it. */
 interface ListingView {
@@ -58,6 +37,9 @@ export interface AgentMarketplaceBaseProps {
         readonly slot: DataSlot<ReadonlyArray<ListingView>>
         readonly placeholder: ReadonlyArray<ListingView>
         readonly slotLabels: SlotLabels
+        readonly sectionTitle: string
+        /** The muted line under the empty answer: when a template shows here. */
+        readonly emptyHint: string
         readonly installLabel: string
         readonly orderLabel: string
         readonly cancelLabel: string
@@ -89,7 +71,7 @@ const ListingTile = (props: ListingTileProps) => {
         <SurfaceCard
             kind="tile"
             name={listing.name}
-            mark={{ avatar: { name: listing.name, kind: "agent", src: AGENT_MARK_MASCOT_SRC } }}
+            mark={{ avatar: { name: listing.name, kind: "agent" } }}
             description={listing.summary}
             facts={`${listing.meta} · ${listing.needs}`}
             badge={{ label: listing.priceLabel, tone: listing.isPaid ? "warning" : "success" }}
@@ -119,94 +101,6 @@ const ListingTile = (props: ListingTileProps) => {
                 : {})}
         />
     )
-}
-
-/** What one typed field of a listing draws. */
-interface ParameterFieldProps {
-    readonly parameter: ParameterView
-    readonly isDisabled: boolean
-    readonly onValue: (value: string) => void
-}
-
-/** The hint of a field, nothing when it has none. */
-const hintOf = (parameter: ParameterView): string | undefined => (parameter.hint === "" ? undefined : parameter.hint)
-
-/** The error of a field, nothing while it is fine. */
-const errorOf = (parameter: ParameterView): string | undefined => (parameter.error === "" ? undefined : parameter.error)
-
-/** A toggle parameter: a switch. */
-const ToggleField = (props: ParameterFieldProps) => (
-    <Switch
-        name={props.parameter.key}
-        label={props.parameter.label}
-        isSelected={props.parameter.value === "true"}
-        isDisabled={props.isDisabled}
-        onSelectedChange={(on) => props.onValue(String(on))}
-    />
-)
-
-/** A choice parameter: one of its options. */
-const ChoiceField = (props: ParameterFieldProps) => (
-    <Select
-        label={props.parameter.label}
-        description={hintOf(props.parameter)}
-        options={[...props.parameter.options]}
-        value={props.parameter.value === "" ? null : props.parameter.value}
-        isInvalid={errorOf(props.parameter) !== undefined}
-        errorMessage={errorOf(props.parameter)}
-        isDisabled={props.isDisabled}
-        onValueChange={(value) => props.onValue(value ?? "")}
-    />
-)
-
-/** A number parameter: a number field with its bounds. */
-const NumberParameterField = (props: ParameterFieldProps) => (
-    <NumberField
-        label={props.parameter.label}
-        description={hintOf(props.parameter)}
-        {...(props.parameter.min === null ? {} : { minValue: props.parameter.min })}
-        {...(props.parameter.max === null ? {} : { maxValue: props.parameter.max })}
-        {...(props.parameter.value === "" ? {} : { value: Number(props.parameter.value) })}
-        isInvalid={errorOf(props.parameter) !== undefined}
-        errorMessage={errorOf(props.parameter)}
-        isDisabled={props.isDisabled}
-        onValueChange={(value) => props.onValue(Number.isNaN(value) ? "" : String(value))}
-    />
-)
-
-/** A text, textarea or time parameter: one line, a few lines, or one line with the time hint. */
-const TextParameterField = (props: ParameterFieldProps) => {
-    const Field = props.parameter.kind === "textarea" ? Textarea : Input
-    return (
-        <Field
-            id={`param-${props.parameter.key}`}
-            name={props.parameter.key}
-            label={props.parameter.label}
-            {...(props.parameter.kind === "time" ? { placeholder: "09:00" } : {})}
-            description={hintOf(props.parameter)}
-            value={props.parameter.value}
-            isInvalid={errorOf(props.parameter) !== undefined}
-            errorMessage={errorOf(props.parameter)}
-            isDisabled={props.isDisabled}
-            onValueChange={props.onValue}
-        />
-    )
-}
-
-/** One parameter as the field its type calls for; each says what is wrong in place. */
-const ParameterField = (props: ParameterFieldProps) => {
-    switch (props.parameter.kind) {
-        case "toggle":
-            return <ToggleField {...props} />
-        case "choice":
-            return <ChoiceField {...props} />
-        case "number":
-            return <NumberParameterField {...props} />
-        case "text":
-        case "textarea":
-        case "time":
-            return <TextParameterField {...props} />
-    }
 }
 
 /** The dialog that asks for the values of the listing (its parameters), then installs it in trial mode. */
@@ -261,14 +155,25 @@ export const AgentMarketplaceBase = (props: AgentMarketplaceBaseProps) => {
             placeholder={view.placeholder}
             labels={view.slotLabels}
             onRetry={props.on.retry}
+            frame={framelessNotice}
             render={(listings, isLoading) => (
                 <Stack gap="section">
-                    {listings.length === 0 ? <EmptyNotice message={view.slotLabels.empty} /> : null}
-                    <Grid kind="cards" columns={3}>
-                        {listings.map((listing) => (
-                            <ListingTile key={listing.id} {...props} listing={listing} isLoading={isLoading} />
-                        ))}
-                    </Grid>
+                    <Section title={view.sectionTitle} headingLevel={2} count={listings.length} isLoading={isLoading}>
+                        {listings.length === 0 ? (
+                            <EmptyNotice
+                                frame="card"
+                                message={view.slotLabels.empty}
+                                description={view.emptyHint}
+                                iconSource={nivoIconSource("explore", "leading")}
+                            />
+                        ) : (
+                            <Grid kind="cards" columns={3}>
+                                {listings.map((listing) => (
+                                    <ListingTile key={listing.id} {...props} listing={listing} isLoading={isLoading} />
+                                ))}
+                            </Grid>
+                        )}
+                    </Section>
                     {view.order === undefined ? null : (
                         <Alert tone="cautionary" title={view.order.title} description={view.order.lines.join(" | ")} />
                     )}

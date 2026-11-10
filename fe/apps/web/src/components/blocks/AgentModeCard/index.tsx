@@ -16,11 +16,12 @@ type AgentModeCardProps = {
     readonly module: ModuleKey
 }
 
-const PLACEHOLDER: ModeView = { mode: "assist", help: "-", sharedNote: "" }
+const PLACEHOLDER: ModeView = { mode: "assist", sharedNote: "" }
 
 /** The connected operating mode card: a choice shows at once and goes back when the server refuses it. */
 export const AgentModeCard = (props: AgentModeCardProps) => {
     const t = useTranslations("modulesCore")
+    const tg = useTranslations("agentGeneral")
     const typeName = useModuleName(props.module, "shortName")
     const slotLabels = useSlotLabels()
     const { canEdit } = useAgentRights()
@@ -39,15 +40,13 @@ export const AgentModeCard = (props: AgentModeCardProps) => {
             props={{
                 title: t("modeTitle"),
                 options: [
-                    { value: "assist", label: t("modeAssist") },
-                    { value: "autopilot", label: t("modeAutopilot") },
+                    { value: "assist", label: t("modeAssist"), subtitle: tg("modeAssistSub") },
+                    { value: "autopilot", label: t("modeAutopilot"), subtitle: tg("modeAutopilotSub") },
                 ],
-                note: t("modeNote"),
                 isDisabled: !canEdit || isSaving,
                 read: {
                     slot: mapSlot(slot, (installation): ModeView => ({
                         mode,
-                        help: mode === "autopilot" ? t("modeAutopilotHelp") : t("modeAssistHelp"),
                         sharedNote: installation.isMulti ? t("authorityShared", { type: typeName }) : "",
                     })),
                     placeholder: PLACEHOLDER,

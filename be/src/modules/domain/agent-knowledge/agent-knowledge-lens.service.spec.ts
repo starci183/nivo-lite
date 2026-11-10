@@ -354,3 +354,93 @@ describe("AgentKnowledgeLensService notes", () => {
         expect(recall.factsMatching).toHaveBeenCalledTimes(1)
     })
 })
+
+describe("AgentKnowledgeLensService overview", () => {
+    it("lists every document and fact of the scope but marks what a customer-facing view leaves unread", async () => {
+        const { lens, sources, recall } = await build()
+        sources.summariesFor.mockResolvedValue([
+            { id: "d1", title: "Prices", topic: null, kind: "text", visibility: "public", updatedAt: "2026-11-07" },
+            { id: "d2", title: "Costs", topic: null, kind: "text", visibility: "internal", updatedAt: "2026-11-06" },
+        ])
+        recall.factsToOverview.mockResolvedValue([
+            { ...factOf("public"), status: "proposed", evidence: [{ kind: "document", ref: "d1", label: "Prices" }] },
+            factOf("internal"),
+        ])
+
+        const overview = await lens.overviewFor(WS, "chatbot", "i1")
+
+        expect(sources.summariesFor).toHaveBeenCalledWith(
+            { workspaceId: WS, module: "chatbot", installationId: "i1", audience: "internal" },
+            200,
+        )
+        expect(recall.factsToOverview).toHaveBeenCalledWith({
+            workspaceId: WS,
+            module: "chatbot",
+            installationId: "i1",
+            audience: "internal",
+        })
+        expect(overview).toMatchObject({ module: "chatbot", installationId: "i1", audience: "customer", waitingFacts: 1 })
+        expect(overview.layers.map((layer) => [layer.layer, layer.isRead, layer.totalFacts])).toEqual([
+            ["public", true, 1],
+            ["internal", false, 1],
+            ["restricted", false, 0],
+        ])
+        expect(overview.documents.map((document) => [document.id, document.isRead, document.waitingFacts])).toEqual([
+            ["d1", true, 1],
+            ["d2", false, 0],
+        ])
+    })
+})
+
+describe("AgentKnowledgeLensService > waitingFactLabel", () => {
+    it("names the first fact that waits for the owner in the scope, subject and attribute", async () => {
+        const { lens, recall } = await build()
+        recall.factsToOverview.mockResolvedValue([
+            factOf("internal"),
+            { ...factOf("internal"), status: "proposed", subjectLabel: "Threshold", attributeLabel: "auto post" },
+        ])
+
+        await expect(lens.waitingFactLabel(WS, "accounting", null)).resolves.toBe("Threshold · auto post")
+        expect(recall.factsToOverview).toHaveBeenCalledWith({
+            workspaceId: WS,
+            module: "accounting",
+            installationId: null,
+            audience: "internal",
+        })
+    })
+
+    it("answers null when every fact in the scope is approved", async () => {
+        const { lens, recall } = await build()
+        recall.factsToOverview.mockResolvedValue([factOf("internal")])
+
+        await expect(lens.waitingFactLabel(WS, "accounting", null)).resolves.toBeNull()
+    })
+})
+
+describe("AgentKnowledgeLensService > waitingFactsOf", () => {
+    it("counts the waiting proposals through the view of the module: a customer-facing module reads the customer view", async () => {
+        const { lens, recall } = await build()
+        recall.waitingInView.mockResolvedValue(3)
+
+        await expect(lens.waitingFactsOf(WS, "chatbot", "i1")).resolves.toBe(3)
+        expect(recall.waitingInView).toHaveBeenCalledWith({
+            workspaceId: WS,
+            module: "chatbot",
+            audience: "customer",
+            installationId: "i1",
+        })
+    })
+
+    it("reads the internal view for an internal module", async () => {
+        const { lens, recall } = await build()
+        recall.waitingInView.mockResolvedValue(63)
+
+        await expect(lens.waitingFactsOf(WS, "accounting", null)).resolves.toBe(63)
+        expect(recall.waitingInView).toHaveBeenCalledWith({
+            workspaceId: WS,
+            module: "accounting",
+            audience: "internal",
+            installationId: null,
+        })
+    })
+})

@@ -68,6 +68,15 @@ export interface TeamInviteView {
     readonly isExpired: boolean
 }
 
+/** One invitation the invited person declined, as the team list marks it. */
+export interface TeamDeclinedView {
+    readonly id: string
+    readonly email: string
+    readonly role: "manager" | "staff"
+    /** ISO 8601. */
+    readonly declinedAt: string
+}
+
 /** One staff row an invitation can link to. */
 export interface StaffChoiceView {
     readonly id: string
@@ -98,6 +107,14 @@ const roleOf = (role: string): TeamRole => (role === "owner" || role === "manage
 const deliveryOf = (delivery: string): InviteSentView["delivery"] =>
     delivery === "invited" || delivery === "existing" ? delivery : "none"
 
+/** A declined invitation as the back end answers it. */
+interface DeclinedInviteShape {
+    readonly id: string
+    readonly email: string
+    readonly role: string
+    readonly declinedAt: string
+}
+
 /** The invitation result of the back end. */
 interface InviteResultShape {
     readonly email: string
@@ -116,6 +133,8 @@ export const inviteSentOf = (result: InviteResultShape): InviteSentView => ({
 export interface TeamViews {
     readonly members: ReadonlyArray<TeamMemberView>
     readonly invites: ReadonlyArray<TeamInviteView>
+    /** The invitations declined lately: shown as declined, never as revoked. */
+    readonly declined: ReadonlyArray<TeamDeclinedView>
     /** Active staff rows nobody is linked to yet (candidates for "this person is"). */
     readonly staffChoices: ReadonlyArray<StaffChoiceView>
 }
@@ -126,6 +145,7 @@ export const teamViews = (
     invites: ReadonlyArray<PendingInvite>,
     staff: ReadonlyArray<StaffOption>,
     now: number,
+    declined: ReadonlyArray<DeclinedInviteShape> = [],
 ): TeamViews => {
     const nameOf = new Map(staff.map((row) => [row.id, row.name]))
     const inviteViews = invites.map((invite): TeamInviteView => ({
@@ -155,6 +175,12 @@ export const teamViews = (
             lastSignInAt: member.lastSignInAt ?? null,
         })),
         invites: inviteViews,
+        declined: declined.map((invite) => ({
+            id: invite.id,
+            email: invite.email,
+            role: invite.role === "manager" ? "manager" : "staff",
+            declinedAt: invite.declinedAt,
+        })),
         staffChoices: staff.filter((row) => !linked.has(row.id)),
     }
 }

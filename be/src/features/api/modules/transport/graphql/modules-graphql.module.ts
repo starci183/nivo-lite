@@ -3,6 +3,7 @@ import { ModulesApiModule } from "../../modules.module"
 import { AgentSyncStatusResolver } from "./agent-sync-status.resolver"
 import { ApplySetupResolver } from "./apply-setup.resolver"
 import { ContextNotesResolver } from "./context-notes.resolver"
+import { CreateAgentInstallationResolver } from "./create-agent-installation.resolver"
 import { DismissContextNoteResolver } from "./dismiss-context-note.resolver"
 import { DecideSetupCardResolver } from "./decide-setup-card.resolver"
 import { InstallModuleResolver } from "./install-module.resolver"
@@ -17,6 +18,7 @@ import { PostSetupMessageResolver } from "./post-setup-message.resolver"
 import { RenameInstallationAgentResolver } from "./rename-installation-agent.resolver"
 import { RenameModuleInstallationResolver } from "./rename-module-installation.resolver"
 import { SaveHoldingMessageResolver } from "./save-holding-message.resolver"
+import { SaveWorkingHoursResolver } from "./save-working-hours.resolver"
 import { SaveReplyTimeoutResolver } from "./save-reply-timeout.resolver"
 import { RemoveAgentResolver } from "./remove-agent.resolver"
 import { SetModuleLiveResolver } from "./set-module-live.resolver"
@@ -35,6 +37,7 @@ import { SetupVersionsResolver } from "./setup-versions.resolver"
         AgentSyncStatusResolver,
         ModuleRequirementFactsResolver,
         InstallModuleResolver,
+        CreateAgentInstallationResolver,
         InstanceOfRecordResolver,
         RenameModuleInstallationResolver,
         RenameInstallationAgentResolver,
@@ -43,6 +46,7 @@ import { SetupVersionsResolver } from "./setup-versions.resolver"
         RemoveAgentResolver,
         SaveReplyTimeoutResolver,
         SaveHoldingMessageResolver,
+        SaveWorkingHoursResolver,
         SetupStateResolver,
         SetupVersionsResolver,
         PostSetupMessageResolver,

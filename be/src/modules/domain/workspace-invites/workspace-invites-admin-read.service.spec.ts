@@ -27,7 +27,7 @@ describe("WorkspaceInvitesAdminReadService", () => {
         ])
         expect(em.find).toHaveBeenCalledWith(WorkspaceInviteEntity, {
             select: { id: true, email: true, role: true, createdAt: true, expiresAt: true },
-            where: { workspaceId: "ws-1", acceptedAt: IsNull(), revokedAt: IsNull() },
+            where: { workspaceId: "ws-1", acceptedAt: IsNull(), revokedAt: IsNull(), declinedAt: IsNull() },
             order: { createdAt: "DESC" },
             take: 200,
         })

@@ -1,30 +1,48 @@
-import { FlowGraph } from "@starci/grammar/common"
-import type { AgentGraphCanvasView } from "@/modules/types"
+import { FlowGraph, FlowGraphLegend, Stack } from "@starci/grammar/common"
+import type { ReactElement } from "react"
+import type { StepsMapView } from "@/modules/types"
 
-/** The graph of the agent: what it draws and what a click on a card does. */
+/** The card map of the agent: what it draws, how large, and what pressing a step does. */
 type AgentGraphCanvasProps = {
-    readonly view: AgentGraphCanvasView
+    readonly map: StepsMapView
+    readonly label: string
+    readonly emptyLabel: string
+    /** The step whose drawer is open, outlined; null when none is. */
+    readonly selectedId: string | null
     readonly isLoading: boolean
-    readonly onSelect: (nodeKey: string) => void
+    /** `preview`: the map in the card, no zoom controls; `full` (default): the map with its zoom controls. Both at reading size. */
+    readonly size?: "preview" | "full"
+    /** Opens the settings drawer of a step. */
+    readonly onPress: (nodeKey: string) => void
 }
 
 /**
- * The work map left to right, a column per stage and one row per branch of a condition, so each path reads on one line (the trigger,
- * what the agent works out, the condition that picks a branch, what comes out), read and selected, never wired: a decision is a diamond whose edges read the condition, a step
- * a person answers is round, the rest are rectangles. A selected card and the cards of a traced run paint by tone; the others dim.
+ * The work map of the agent as the card map (`layout="steps"`): white step cards on the well with their kind icon tiles, the branch
+ * ports of a condition, curved edges and dashed back edges with their pills. Pressing a step opens its settings. The card map is
+ * never shrunk to fit: the preview in the setup card is the same map at its reading size without the zoom controls (the card puts
+ * the kind legend under it); the full map carries the legend itself.
  */
-export const AgentGraphCanvas = (props: AgentGraphCanvasProps) => (
-    <FlowGraph
-        label={props.view.label}
-        nodes={props.view.nodes}
-        edges={props.view.edges}
-        layout="lanes"
-        headers={props.view.headers}
-        fit="readable"
-        height="lg"
-        selectedId={props.view.selectedId === "" ? null : props.view.selectedId}
-        emptyLabel={props.view.emptyLabel}
-        isLoading={props.isLoading}
-        onSelect={(id) => props.onSelect(id ?? "")}
-    />
-)
+export const AgentGraphCanvas = (props: AgentGraphCanvasProps): ReactElement => {
+    const isPreview = props.size === "preview"
+    const graph = (
+        <FlowGraph
+            label={props.label}
+            nodes={props.map.nodes}
+            edges={props.map.edges}
+            layout="steps"
+            statusLabels={props.map.statusLabels}
+            emptyLabel={props.emptyLabel}
+            isLoading={props.isLoading}
+            selectedId={props.selectedId}
+            onNodePress={props.onPress}
+            showControls={!isPreview}
+        />
+    )
+    if (isPreview) return graph
+    return (
+        <Stack gap="row">
+            {graph}
+            <FlowGraphLegend items={props.map.legend} />
+        </Stack>
+    )
+}

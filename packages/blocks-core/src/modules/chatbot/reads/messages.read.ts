@@ -22,7 +22,7 @@ export const THREAD_MESSAGES: ReadDefinition = defineRead({
     id: "chatbot.messages",
     dataKind: "message",
     shape: "list",
-    fields: ["id", "text", "who", "at", "side", "state", "mark", "sentBy"],
+    fields: ["id", "text", "who", "at", "side", "state", "mark", "sentBy", "files", "order"],
     paths: { rows: "list" },
     variables: z.object({ threadId: z.string().min(1).max(MAX_ID), cursor: z.string().max(CURSOR_MAX).optional() }),
     permission: "chatbot.view",

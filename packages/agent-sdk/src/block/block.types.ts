@@ -58,6 +58,11 @@ export interface BlockConfig<P extends PropsSchema, S extends BlockSlots> {
      * object prop, `sort.param`); a spec is refused when one names no param.
      */
     readonly params?: ReadonlyArray<string>
+    /**
+     * How the block stands in a view: `cards` (default) floats it in the pink well; `panes` is a grid of its own panes (a master-detail inbox), which takes the whole main
+     * pane full-bleed, flush with the chrome, and scrolls inside each pane.
+     */
+    readonly layout?: "cards" | "panes"
 }
 
 /** A block definition: React-free data and a zod schema. Its component is registered apart, on the client side. */
@@ -298,7 +303,7 @@ export type SlotValues<S extends BlockSlots> = {
 
 /** The browsing ports of a block host. */
 export interface BlockNavigation {
-    /** The address of a path inside the app, for a link. */
+    /** The address of a path inside the app, for a link; a path that starts with `./` is a sibling page of the one that is open. */
     readonly href: (path: string) => string
     /** The value of a key of the route's query; null when absent. */
     readonly queryValue: (key: string) => string | null

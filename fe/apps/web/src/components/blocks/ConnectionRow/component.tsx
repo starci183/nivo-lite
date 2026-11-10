@@ -37,9 +37,9 @@ export const ConnectionRowBase = (props: ConnectionRowBaseProps) => {
                     </Button>
                 )}
                 {view.page === null ? null : (
-                    <Button intent="neutral" href={view.page.href}>
+                    <Link variant="head" href={view.page.href}>
                         {view.page.label}
-                    </Button>
+                    </Link>
                 )}
                 {view.access === null ? null : <ConnectionAccessMenu {...view.access} onPick={on.pick} />}
                 {entries.length === 0 ? null : (
@@ -57,7 +57,7 @@ export const ConnectionRowBase = (props: ConnectionRowBaseProps) => {
                     />
                 )}
             </Cluster>
-            <Stack gap="row">
+            <Stack gap="inline">
                 <Cluster gap="inline" align="center">
                     <ProviderLogo {...view.logo} glyph="email" />
                     <Badge isDot tone={view.statusTone}>

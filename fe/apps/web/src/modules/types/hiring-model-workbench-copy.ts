@@ -138,6 +138,7 @@ export interface HiringWorkbenchCopy {
     readonly qExpectNumber: string
     readonly qRemove: string
     readonly qRequired: string
+    readonly qRequiredHint: string
     readonly qType: string
     readonly setAutoClose: string
     readonly setAutoCloseHint: string

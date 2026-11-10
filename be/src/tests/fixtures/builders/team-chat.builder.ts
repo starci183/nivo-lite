@@ -209,6 +209,7 @@ export const messageOf: (overrides?: Partial<ChatRoomMessageEntity>) => ChatRoom
         createdAt: AT,
         editedAt: null,
         clientId: null,
+        replyTo: null,
         updatedAt: AT,
     })
 
@@ -227,6 +228,7 @@ export const seatOf = (
         role,
         lastReadAt: AT,
         muted,
+        mayPost: false,
         createdAt: AT,
         updatedAt: AT,
     })()
@@ -239,6 +241,8 @@ export const roomOf: (overrides?: Partial<ChatRoomEntity>) => ChatRoomEntity = b
     workspaceId: "11111111-1111-4111-8111-111111111111",
     position: 4,
     directKey: null,
+    purpose: "group",
+    purposeModule: null,
     createdBy: ANA,
     createdAt: AT,
     updatedAt: AT,

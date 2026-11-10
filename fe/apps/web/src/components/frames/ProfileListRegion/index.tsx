@@ -1,6 +1,5 @@
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { ListRegion } from "@/components/composites/ListRegion"
-import type { ListRegionProps } from "@/components/composites/ListRegion"
+import { ListRegion, type ListRegionProps } from "@/components/composites/ListRegion"
 import type { ProfileRegionBaseProps } from "@/modules/types"
 
 /** The card copy, its lines as a slot, and the retry. */
@@ -15,7 +14,9 @@ export const ProfileListRegion = (props: ProfileListRegionProps) => (
             <ListRegion
                 label={props.props.label}
                 rows={rows}
-                footer={props.props.footer}
+                count={props.props.count}
+                isAttention={props.props.isAttention}
+                action={props.props.action}
                 empty={props.props.read.labels.empty}
                 isLoading={isSkeleton}
             />

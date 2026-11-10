@@ -62,6 +62,14 @@ export interface OrderRow {
     readonly itemsText: string
     /** The delivery address and notes; empty when there are none. */
     readonly note: string
+    /** The name of the person who receives the delivery, or null (the customer). */
+    readonly recipientName: string | null
+    /** The phone number of the person who receives the delivery, or null. */
+    readonly recipientPhone: string | null
+    /** Where the order is delivered, or null (an older order kept it in `note`). */
+    readonly deliveryAddress: string | null
+    /** The day and time window of the delivery in the customer's words, or null. */
+    readonly deliveryAt: string | null
     /** The amount, VND, or null while a line has no price. */
     readonly amountVnd: number | null
     /** Where the order stands. */
@@ -139,6 +147,14 @@ export interface OrderDetail {
     readonly items: string
     /** The delivery address and notes. */
     readonly note: string
+    /** The name of the person who receives the delivery, or null (the customer). */
+    readonly recipientName: string | null
+    /** The phone number of the person who receives the delivery, or null. */
+    readonly recipientPhone: string | null
+    /** Where the order is delivered, or null (an older order kept it in `note`). */
+    readonly deliveryAddress: string | null
+    /** The day and time window of the delivery in the customer's words, or null. */
+    readonly deliveryAt: string | null
     /** The amount, VND, or null while unknown. */
     readonly amountVnd: number | null
     /** Where the order stands. */

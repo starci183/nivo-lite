@@ -3,8 +3,8 @@ import { BrainAsk } from "@/components/blocks/BrainAsk"
 import { BrainDossiers } from "@/components/blocks/BrainDossiers"
 import { BrainFacts } from "@/components/blocks/BrainFacts"
 import { BrainLessons } from "@/components/blocks/BrainLessons"
+import { BrainDocuments } from "@/components/blocks/BrainDocuments"
 import { BrainTodo } from "@/components/blocks/BrainTodo"
-import { KnowledgeDocs } from "@/components/blocks/KnowledgeDocs"
 import { PublicBrain } from "@/components/blocks/PublicBrain"
 import type { BrainTab } from "@/modules/routes"
 
@@ -37,9 +37,9 @@ export interface BrainPageBaseProps {
 }
 
 /**
- * Draws the Second Brain: its tabs on the header band, then the tab the address asks for. Every tab is a panes page (its grid
- * attaches flush under the tab line): the queue, the dossiers and the map, the facts, the lessons, the documents, the public
- * documents and the questions.
+ * Draws the Second Brain: its four tabs on the header band, then the page the address asks for. The to-do inbox; the knowledge tab with
+ * its chips (the documents and the facts as tables, the dossiers, the map and the lessons as panes pages with the chips across the
+ * top); the public documents and the questions; the try.
  */
 export const BrainPageBase = (props: BrainPageBaseProps) => {
     const page = props.props
@@ -55,7 +55,11 @@ export const BrainPageBase = (props: BrainPageBaseProps) => {
         )
     }
     if (page.tab === "publicTry" || page.tab === "agents") return <BrainAsk heading={page.header} />
-    if (page.tab === "sources") return <KnowledgeDocs heading={page.header} selection={{ kind: "none" }} />
+    if (page.tab === "sources") {
+        return (
+            <BrainDocuments header={page.header} />
+        )
+    }
     if (page.tab === "todo") {
         return <BrainTodo header={page.header} fact={page.fact} edit={page.edit} answer={page.answer} />
     }

@@ -10,6 +10,8 @@ export interface ConnectionGrantsBandProps {
         readonly emptyMessage: string
         readonly slot: DataSlot<ConnectionGrantsView>
         readonly labels: SlotLabels
+        /** The agents stand on the page well as their own card (a connection page's agents region). */
+        readonly isCard?: boolean
     }
     readonly on: {
         readonly pick: (agentId: string, level: string) => void
@@ -57,6 +59,7 @@ export const ConnectionGrantsBand = (props: ConnectionGrantsBandProps) => (
                     emptyMessage={props.props.emptyMessage}
                     isLoading={isLoading}
                     onPick={props.on.pick}
+                    isCard={props.props.isCard === true}
                 />
             )}
         />

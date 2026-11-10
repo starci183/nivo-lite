@@ -17,6 +17,15 @@ import { SetMemberStatusResolver } from "./set-member-status.resolver"
 import { WorkspaceInvitesResolver } from "./workspace-invites.resolver"
 import { WorkspaceMembersResolver } from "./workspace-members.resolver"
 import { WorkspaceStaffResolver } from "./workspace-staff.resolver"
+import { DeclineInviteResolver } from "./decline-invite.resolver"
+import { DeleteWorkspaceResolver } from "./delete-workspace.resolver"
+import { JoinInviteResolver } from "./join-invite.resolver"
+import { LeaveWorkspaceResolver } from "./leave-workspace.resolver"
+import { MyPendingInvitesResolver } from "./my-pending-invites.resolver"
+import { RenameWorkspaceResolver } from "./rename-workspace.resolver"
+import { MyWorkInHandResolver } from "./my-work-in-hand.resolver"
+import { RestoreWorkspaceResolver } from "./restore-workspace.resolver"
+import { WorkspaceDeclinedInvitesResolver } from "./workspace-declined-invites.resolver"
 import { ConfigurableModuleClass } from "./workspaces-graphql.module-definition"
 
 @Module({
@@ -39,6 +48,15 @@ import { ConfigurableModuleClass } from "./workspaces-graphql.module-definition"
         SaveStaffResolver,
         SetMemberStatusResolver,
         RemoveMemberResolver,
+        RenameWorkspaceResolver,
+        LeaveWorkspaceResolver,
+        DeleteWorkspaceResolver,
+        MyPendingInvitesResolver,
+        DeclineInviteResolver,
+        JoinInviteResolver,
+        RestoreWorkspaceResolver,
+        MyWorkInHandResolver,
+        WorkspaceDeclinedInvitesResolver,
     ],
 })
 /** The GraphQL transport of the workspaces feature. */

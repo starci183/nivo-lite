@@ -1,6 +1,13 @@
 import type { NodeInputBindings, NodeProblemCode, NodeRole } from "../node"
 import type { DataRight } from "../rights/rights.types"
 import type { JsonValue } from "../schema/schema.types"
+import type {
+    ContractProblemCode,
+    WorkflowContract,
+    WorkflowEntry,
+    WorkflowOutcome,
+    WorkflowTrigger,
+} from "./workflow-contract"
 
 /** The schema id of an agent graph spec. */
 export type GraphSpecSchemaId = "nivo/agent-graph@1"
@@ -56,6 +63,22 @@ export interface GraphSpecNode {
     readonly next?: string | undefined
     /** The node each branch of a condition goes to; a branch with no entry ends the run. */
     readonly routes?: Readonly<Record<string, string>> | undefined
+    /** False makes the node a side step whose failure the run records and goes past; absent takes the node's own `blocking`. */
+    readonly blocking?: boolean | undefined
+    /** The visible group the node belongs to in the graph view (a sub-flow such as the sales consult); absent for a node on its own. */
+    readonly group?: string | undefined
+    /** What the node waits for, for the graph view: the customer's reply, a payment or something else, with its timeout and reminder. */
+    readonly wait?: GraphSpecWait | undefined
+}
+
+/** What a waiting node waits for and how long, as durations like "2h" or "30m". */
+export interface GraphSpecWait {
+    /** What the node waits for. */
+    readonly kind: "reply" | "payment" | "other"
+    /** How long it waits before it gives up; absent for no timeout. */
+    readonly timeout?: string | undefined
+    /** When it nudges the other side; absent for no reminder. */
+    readonly reminder?: string | undefined
 }
 
 /** One agent graph as data: seeded into the database, composed only of SDK node ids. The first node starts the run. */
@@ -64,7 +87,18 @@ export interface GraphSpec {
     readonly schema: GraphSpecSchemaId
     /** The module whose agent runs it. */
     readonly moduleKey: string
-    /** What wakes the graph. */
+    /** The inputs a run of this workflow version needs, which its trigger's source (or its callers) must supply. */
+    readonly contract?: WorkflowContract | undefined
+    /**
+     * The inputs of the workflow: each a source (channel kind and connection) with its conditions, each supplying the full contract.
+     * `trigger.sources` must be exactly their wakes. Absent on a graph from before contracts.
+     */
+    readonly triggers?: ReadonlyArray<WorkflowTrigger> | undefined
+    /** The named business ends of the workflow, each with the outputs it hands on (`out.<name>`). */
+    readonly outcomes?: ReadonlyArray<WorkflowOutcome> | undefined
+    /** Who may call the workflow by an end hand-off; absent is open to any workflow of the workspace. */
+    readonly entry?: WorkflowEntry | undefined
+    /** The wake envelope: the tag sources routing reads, and the burst per source. */
     readonly trigger: GraphSpecTrigger
     /** The most the agent may hold to run this graph. */
     readonly grant: GraphSpecGrant
@@ -84,6 +118,7 @@ export type GraphSpecProblemCode =
     | "GRAPH_TOOLS_MISMATCH"
     | "GRAPH_COMPENSABLE_AFTER_PIVOT"
     | "GRAPH_BURST_INVALID"
+    | ContractProblemCode
 
 /** One problem of a graph spec and where it is: a node key, or a granted right, tool or effect. */
 export interface GraphSpecProblem {

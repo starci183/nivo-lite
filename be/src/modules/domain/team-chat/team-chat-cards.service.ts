@@ -86,6 +86,7 @@ export class TeamChatCardsService {
             authorAgentId: line.authorAgentId,
             body: cardBodyOf(text),
             key: line.key,
+            agentMessage: line.agentMessage ?? null,
         })
         if (created !== null) return { roomId, messageId: created }
         if (line.authorAgentId === null || line.key === null) return null
@@ -108,6 +109,7 @@ export class TeamChatCardsService {
             toUserId,
             body: post.body,
             key: post.key,
+            agentMessage: post.agentMessage ?? null,
         })
         return posted === null ? null : { ...posted, agentId }
     }

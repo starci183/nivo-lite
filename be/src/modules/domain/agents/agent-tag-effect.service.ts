@@ -6,8 +6,8 @@ import { AgentTagService } from "@modules/domain/agent-work"
 import { GraphNodeRegistryService, ledgerKeyOf } from "@modules/domain/graph-nodes"
 import type { NodeEffectExecutor, NodeTurn } from "@modules/domain/graph-nodes"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
-import { InjectInstallations } from "./agents.decorators"
-import type { InstallationDirectory } from "./agents.port"
+import { InjectChannelOwners, InjectInstallations } from "./agents.decorators"
+import type { ConversationChannelOwners, InstallationDirectory } from "./agents.port"
 
 /** The effect this executor runs. */
 const AGENT_TAG = agentTagEffect.id
@@ -33,6 +33,7 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
     constructor(
         private readonly tags: AgentTagService,
         @InjectInstallations() private readonly installations: InstallationDirectory,
+        @InjectChannelOwners() private readonly channelOwners: ConversationChannelOwners,
         @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
@@ -45,7 +46,14 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
     async execute(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<SubjectRef> {
         const tag = agentTagEffect.payload.parse(payload)
         const toAgentId =
-            tag.toModuleKey === undefined ? tag.toAgentId : await this.agentOfModule(turn.workspaceId, tag.toModuleKey)
+            tag.toModuleKey === undefined
+                ? tag.toAgentId
+                : await this.agentOfModule(
+                      turn.workspaceId,
+                      tag.conversationId ?? turn.conversationId,
+                      tag.toModuleKey,
+                      tag.leadId ?? null,
+                  )
         if (toAgentId == null) throw refusalOf(AgentsErrorCode.TagTargetMissing, "EFFECT_PAYLOAD_INVALID")
         const eventKey = ledgerKeyOf(call)
         const result = await this.tags.tagAgent({
@@ -69,7 +77,29 @@ export class AgentTagEffectService implements NodeEffectExecutor, OnModuleInit {
         throw refusalOf(AgentsErrorCode.TagRefused, "EFFECT_PAYLOAD_INVALID")
     }
 
-    private async agentOfModule(workspaceId: string, moduleKey: string): Promise<string | null> {
-        return (await this.installations.firstOfModule(workspaceId, moduleKey))?.agentId ?? null
+    /**
+     * The agent of a module a tag goes to: the one that answers the channel of the turn's conversation (one role, many agents: each
+     * channel has one agent per role), else the oldest agent the workspace runs for the module.
+     */
+    private async agentOfModule(
+        workspaceId: string,
+        conversationId: string | null,
+        moduleKey: string,
+        leadId: string | null,
+    ): Promise<string | null> {
+        const owner = await this.channelOwnerOf(workspaceId, conversationId, leadId, moduleKey)
+        return owner ?? (await this.installations.firstOfModule(workspaceId, moduleKey))?.agentId ?? null
+    }
+
+    /** The owner of the channel of the turn's conversation, else of the channel the tagged customer last wrote on; the tag stays out of the conversation's queue. */
+    private channelOwnerOf(
+        workspaceId: string,
+        conversationId: string | null,
+        leadId: string | null,
+        moduleKey: string,
+    ): Promise<string | null> {
+        if (conversationId !== null) return this.channelOwners.ownerAgentOf(workspaceId, conversationId, moduleKey)
+        if (leadId !== null) return this.channelOwners.ownerAgentOfLead(workspaceId, leadId, moduleKey)
+        return Promise.resolve(null)
     }
 }

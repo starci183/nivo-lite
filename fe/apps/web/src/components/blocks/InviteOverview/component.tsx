@@ -12,6 +12,8 @@ export interface InviteOverviewView {
     readonly body: string
     readonly forEmail: string
     readonly forTerm: string
+    readonly roleTerm: string
+    readonly roleLabel: string
     readonly staffTerm: string
     readonly asStaff?: string | undefined
     readonly signedOutHint: string
@@ -55,7 +57,7 @@ interface SignLinkProps {
 
 /** One full-width link of the signed-out visitor to the sign-in or the sign-up page. */
 const SignLink = (props: SignLinkProps) => (
-    <Button intent={props.intent} width="fill" href={props.href} isLoading={props.isLoading}>
+    <Button endArrow intent={props.intent} width="fill" href={props.href} isLoading={props.isLoading}>
         {props.label}
     </Button>
 )
@@ -125,6 +127,7 @@ const Actions = (props: InviteOverviewBaseProps) => {
 const Details = (props: InviteOverviewBaseProps) => {
     const view = props.props.view
     const items = [
+        { id: "role", term: view.roleTerm, description: view.roleLabel },
         { id: "for", term: view.forTerm, description: view.forEmail },
         ...(view.asStaff === undefined ? [] : [{ id: "staff", term: view.staffTerm, description: view.asStaff }]),
     ]
@@ -145,7 +148,7 @@ export const InviteOverviewBase = (props: InviteOverviewBaseProps) => {
             {isUsable ? (
                 <Details {...props} />
             ) : (
-                <Button intent="commit" width="fill" href={view.loginHref}>
+                <Button endArrow intent="commit" width="fill" href={view.loginHref}>
                     {view.goSignInLabel}
                 </Button>
             )}

@@ -1,10 +1,19 @@
 export { WORKSPACE_INVITES_ERROR_KINDS } from "./errors/workspace-invites.error"
 export { WORKSPACE_INVITES_MESSAGES } from "./messages/workspace-invites.messages"
-export type { AcceptedInvite, InvitePreview, InviteResult, PendingInvite } from "./workspace-invites.contracts"
+export type {
+    AcceptedInvite,
+    DeclinedInvite,
+    InviteForMe,
+    InvitePreview,
+    InviteResult,
+    PendingInvite,
+} from "./workspace-invites.contracts"
 export { parseWorkspaceInvitesConfig } from "./workspace-invites.config"
 export { WorkspaceInvitesModule } from "./workspace-invites.module"
 export { WorkspaceInvitesService } from "./workspace-invites.service"
 export { InviteSupportService } from "./invite-support.service"
 export { InviteCommandsService } from "./invite-commands.service"
+export { MyInvitesService } from "./my-invites.service"
+export { WorkspaceDeletionService } from "./workspace-deletion.service"
 export { workspaceInvitesEntities } from "./persistence/entities"
 export { WorkspaceInvitesAdminReadService } from "./workspace-invites-admin-read.service"

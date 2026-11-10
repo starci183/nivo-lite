@@ -315,7 +315,7 @@ export class AgentDirectoryService {
     async identitiesOf(workspaceId: string, agentIds: ReadonlyArray<string>): Promise<Array<AgentIdentityCard>> {
         if (agentIds.length === 0) return []
         const agents = await this.entityManager.find(AgentEntity, {
-            select: { id: true, name: true, handle: true, avatarUrl: true },
+            select: { id: true, name: true, handle: true, avatarUrl: true, avatarPreset: true },
             where: { workspaceId, id: In([...new Set(agentIds)]) },
             take: new Set(agentIds).size,
         })
@@ -324,6 +324,7 @@ export class AgentDirectoryService {
             name: agent.name,
             handle: agent.handle,
             avatarUrl: agent.avatarUrl,
+            avatarPreset: agent.avatarPreset,
         }))
     }
 

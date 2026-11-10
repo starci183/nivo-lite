@@ -84,16 +84,32 @@ const MESSAGE: MessageView = {
     runId: null,
     decisionId: null,
     approval: null,
+    agentMessage: null,
+    reactions: [],
+    replyTo: null,
+    forwardedFrom: null,
 }
 
 const ROOM: ChatRoomView = {
     id: ID_B,
     kind: "group",
+    purpose: "group",
+    purposeModule: null,
     name: "Ops",
     position: 1,
     createdBy: ID_C,
     createdAt: AT,
-    members: [{ memberKind: "user", memberId: ID_C, name: "Lan", role: "owner", lastReadAt: AT, muted: false }],
+    members: [
+        {
+            memberKind: "user",
+            memberId: ID_C,
+            name: "Lan",
+            role: "owner",
+            lastReadAt: AT,
+            muted: false,
+            mayPost: false,
+        },
+    ],
     unreadCount: 2,
     mentionCount: 1,
     muted: false,
@@ -106,7 +122,7 @@ describe("refusals and payloads", () => {
         const names = Object.values(TeamChatErrorCode).map(
             (code) => subject.roomPayloadOf({ ok: false, refusal: code }).refusal,
         )
-        expect(names).toHaveLength(16)
+        expect(names).toHaveLength(23)
         expect(names).toContain("not_a_member_to_remove")
         expect(subject.roomPayloadOf({ ok: false, refusal: TeamChatErrorCode.NotFound })).toEqual({
             room: null,
@@ -248,6 +264,13 @@ describe("request builders of a thread, a room and a message", () => {
             members: [{ memberKind: "agent", memberId: ID_C }],
         })
         expect(subject.createRoomRequestOf(ID_A, { kind: "group", name: "Ops", members }).kind).toBe("group")
+        expect(subject.createRoomRequestOf(ID_A, { kind: "group", name: "Ops", members })).not.toHaveProperty("purpose")
+        const purposeOf = (purpose: string | null, purposeModule: string | null) =>
+            subject.createRoomRequestOf(ID_A, { kind: "group", name: "Ops", members, purpose, purposeModule }).purpose
+        expect(purposeOf("common", null)).toEqual({ purpose: "common" })
+        expect(purposeOf("module", "sales")).toEqual({ purpose: "module", module: "sales" })
+        expect(purposeOf("module", null)).toEqual({ purpose: "module", module: "" })
+        expect(purposeOf("group", "sales")).toEqual({ purpose: "group" })
         expect(
             subject.roomMemberRequestOf(ID_A, { roomId: ID_B, member: members[0] ?? { memberKind: "", memberId: "" } }),
         ).toEqual({
@@ -269,6 +292,7 @@ describe("request builders of a thread, a room and a message", () => {
                 mentions: [{ memberKind: "user", memberId: ID_A }],
                 fileKeys: ["k"],
                 clientId: "c",
+                replyTo: ID_C,
             }),
         ).toEqual({
             workspaceId: ID_A,
@@ -278,6 +302,7 @@ describe("request builders of a thread, a room and a message", () => {
             mentions: [{ memberKind: "user", memberId: ID_A }],
             fileKeys: ["k"],
             clientId: "c",
+            replyTo: ID_C,
         })
         expect(
             subject.sendRequestOf(ID_A, {
@@ -288,6 +313,15 @@ describe("request builders of a thread, a room and a message", () => {
                 fileKeys: null,
                 clientId: null,
             }),
-        ).toEqual({ workspaceId: ID_A, roomId: null, to: null, body: "", mentions: [], fileKeys: [], clientId: null })
+        ).toEqual({
+            workspaceId: ID_A,
+            roomId: null,
+            to: null,
+            body: "",
+            mentions: [],
+            fileKeys: [],
+            clientId: null,
+            replyTo: null,
+        })
     })
 })

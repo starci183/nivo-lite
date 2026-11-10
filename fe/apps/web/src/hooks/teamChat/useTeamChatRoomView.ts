@@ -2,65 +2,36 @@
 
 import { useTranslations } from "next-intl"
 import { CHAT_FILE_ACCEPT, isChatRefusal, mentionTriggerOf, suggestionsOf } from "@/modules/teamChat"
+import { messagesCopyOf } from "./teamChat.copy"
+import { useChatRowWords } from "./useChatRowWords"
+import { headOf, panelsOf } from "./teamChat.head"
 import type { TeamChatRoomState } from "./useTeamChatRoomState"
+import type { AgentOfRoom, RoomViewContext, Words } from "./teamChat.view"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { isWaitingOf, useSlotLabels } from "@/hooks/slot"
+import { quoteOf } from "./teamChat.shared"
 import type {
     DataSlot,
-    SlotLabels,
+    TeamChatForwardView,
     TeamChatMessageRow,
-    TeamChatMessagesCopy,
     TeamChatRoomCopy,
     TeamChatRoomViewProps,
 } from "@/modules/types"
 
-/** The translator of the team chat words. */
-type Words = ReturnType<typeof useTranslations<"teamChat">>
-
-/** What the room is made of: the state of it, the words, and where it stands. */
-interface RoomViewContext {
-    readonly room: TeamChatRoomState
-    readonly t: Words
-    /** The shared words of every pane frame (the way back to the list). */
-    readonly backLabel: string
-    readonly labels: SlotLabels
-    /** The room is the direct room with an agent: the first message to it opens it. */
-    readonly withAgent: boolean
-    readonly canGoBack: boolean
-}
-
 /** The words of the room. */
-const copyOf = (t: Words, backLabel: string, withAgent: boolean): TeamChatRoomCopy => ({
-    title: t("title"),
+const copyOf = (t: Words, backLabel: string, agent: AgentOfRoom | null): TeamChatRoomCopy => ({
     back: backLabel,
     threadLabel: t("threadLabel"),
-    tabAll: t("tabAll"),
-    tabPinned: t("tabPinned"),
-    tabsLabel: t("tabsLabel"),
     pickTitle: t("pickTitle"),
     pickBody: t("pickBody"),
-    threadEmpty: withAgent ? t("agentThreadEmpty") : t("threadEmpty"),
+    threadEmpty: agent === null ? t("threadEmpty") : t("agentThreadEmpty", { agent: agent.name }),
     errorBody: t("errorBody"),
-    members: t("members"),
     mute: t("mute"),
     unmute: t("unmute"),
-})
-
-/** The words of the cards and controls of a thread. */
-const messagesCopyOf = (t: Words): TeamChatMessagesCopy => ({
-    pin: t("pin"),
-    unpin: t("unpin"),
-    pinned: t("pinned"),
-    report: t("reportBadge"),
-    approvalPending: t("approvalPending"),
-    approvalApproved: t("approvalApproved"),
-    approvalRefused: t("approvalRefused"),
-    approvalExpired: t("approvalExpired"),
-    approve: t("approve"),
-    refuse: t("refuse"),
-    olderLabel: t("older"),
-    openRun: t("openRun"),
-    decidedBy: t("decidedBy"),
+    pinnedOpen: t("pinned"),
+    pinnedEmpty: t("pinnedEmpty"),
+    membersOpen: t("membersTitle"),
+    panelClose: t("newChatClose"),
 })
 
 /** A refusal code in the viewer's words; a code the app does not know reads as a plain failure. */
@@ -79,7 +50,7 @@ const composerOf = (context: RoomViewContext): TeamChatRoomViewProps["composer"]
     return {
         formLabel: t("composerLabel"),
         messageLabel: t("messageLabel"),
-        placeholder: context.withAgent ? t("agentPlaceholder") : t("placeholder"),
+        placeholder: context.agent === null ? t("placeholder") : t("agentPlaceholder"),
         sendLabel: t("send"),
         draft: composer.draft,
         typing: typingLineOf(t, room.thread.typing),
@@ -92,10 +63,34 @@ const composerOf = (context: RoomViewContext): TeamChatRoomViewProps["composer"]
         },
         isSending: composer.isSending,
         isLoading: room.rooms.isLoading,
-        canSend: !composer.isSending && (room.rooms.roomId !== null || context.withAgent),
+        canSend: !composer.isSending && (room.rooms.roomId !== null || context.agent !== null),
         error:
             composer.error === null ? null : { title: t("sendFailedTitle"), text: refusalWordsOf(t, composer.error) },
         suggestions: trigger === null ? [] : suggestionsOf(room.parties, trigger.query),
+        reply:
+            room.replying === null
+                ? null
+                : {
+                      title: t("replyingTo", { name: room.replying.authorName }),
+                      body: quoteOf(room.replying.body),
+                      clearLabel: t("replyClear"),
+                  },
+    }
+}
+
+/** The dialog that picks the room a message is forwarded to. */
+const forwardOf = (context: RoomViewContext): TeamChatForwardView => {
+    const { room, t } = context
+    const { forward } = room
+    return {
+        isOpen: forward.messageId !== null,
+        title: t("forwardTitle"),
+        description: t("forwardBody"),
+        closeLabel: t("newChatClose"),
+        empty: t("forwardEmpty"),
+        rooms: forward.rooms,
+        sendingId: forward.sendingId,
+        error: forward.error === null ? null : forward.error === "failed" ? t("forwardFailed") : refusalWordsOf(t, forward.error),
     }
 }
 
@@ -107,31 +102,34 @@ const noRoomSlotOf = (rooms: RoomViewContext["room"]["rooms"]["slot"]): DataSlot
 const roomViewPropsOf = (context: RoomViewContext): TeamChatRoomViewProps => {
     const { room, t } = context
     const { rooms, thread, cards } = room
+    const threadSlot = rooms.roomId === null ? noRoomSlotOf(rooms.slot) : thread.slot
+    const hasAgent =
+        context.agent !== null || rooms.room?.members.some((member) => member.memberKind === "agent") === true
     return {
-        copy: copyOf(t, context.backLabel, context.withAgent),
+        copy: copyOf(t, context.backLabel, context.agent),
         labels: context.labels,
-        threadSlot: rooms.roomId === null ? noRoomSlotOf(rooms.slot) : thread.slot,
+        threadSlot,
+        threadAlign: "items" in threadSlot || "isLoading" in threadSlot ? "end" : "center",
         isWaiting: isWaitingOf(rooms.slot, ...(rooms.roomId === null ? [] : [thread.slot])),
-        roomId: rooms.roomId,
-        title: rooms.room?.name ?? "",
-        other: rooms.other,
-        memberCount: rooms.room?.members.length ?? 0,
-        tab: room.tab,
-        canWrite: rooms.roomId !== null || context.withAgent,
+        head: headOf(context),
+        panels: panelsOf(context),
+        canWrite: rooms.roomId !== null || context.agent !== null,
         canGoBack: context.canGoBack,
         isMuted: rooms.roomId === null ? null : rooms.isMuted,
         messagesCopy: messagesCopyOf(t),
+        askSuggestions: hasAgent ? [t("agentSuggest1"), t("agentSuggest2"), t("agentSuggest3")] : [],
         hasOlder: thread.hasOlder,
         isLoadingOlder: thread.isLoadingOlder,
         decidingId: cards.decidingId,
         decideError: cards.decideRefusal === null ? null : refusalWordsOf(t, cards.decideRefusal),
+        forward: forwardOf(context),
         composer: composerOf(context),
     }
 }
 
 /** Where the room stands on its page: opened by a direct room with an agent, and whether its head leads back to the list. */
 interface RoomMode {
-    readonly withAgent: boolean
+    readonly agent: AgentOfRoom | null
     readonly canGoBack: boolean
 }
 
@@ -140,12 +138,14 @@ export const useTeamChatRoomView = (room: TeamChatRoomState, mode: RoomMode): Te
     const t = useTranslations("teamChat")
     const pane = usePaneCopy()
     const slotLabels = useSlotLabels()
+    const words = useChatRowWords()
     return roomViewPropsOf({
         room,
         t,
+        words,
         backLabel: pane.backToList,
         labels: { ...slotLabels(t("roomsEmpty")), error: t("errorTitle") },
-        withAgent: mode.withAgent,
+        agent: mode.agent,
         canGoBack: mode.canGoBack,
     })
 }

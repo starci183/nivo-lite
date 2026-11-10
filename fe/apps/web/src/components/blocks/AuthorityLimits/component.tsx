@@ -1,5 +1,5 @@
 import { Fragment } from "react"
-import { Button, CheckboxGroup, Divider, Heading, Stack, Text, Textarea } from "@starci/grammar/common"
+import { Button, CheckboxGroup, Divider, Stack, Textarea } from "@starci/grammar/common"
 import { AuthoritySection } from "@/components/frames/AuthoritySection"
 import type { AuthoritySectionView } from "@/components/frames/AuthoritySection"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -67,37 +67,44 @@ export const AuthorityLimitsBase = (props: AuthorityLimitsBaseProps) => {
                             {view.section.saveLabel}
                         </Button>
                     }
-                >
-                    <Textarea
-                        isLoading={isLoading}
-                        label={view.noteLabel}
-                        description={view.noteHint}
-                        rows={3}
-                        value={view.note}
-                        onValueChange={props.on.note}
-                    />
-                    <div>
-                        <Heading level={3}>{view.requiredTitle}</Heading>
-                        <Text size="sm" tone="muted">
-                            {view.requiredHint}
-                        </Text>
-                    </div>
-                    <Stack gap="row">
-                        {limits.rows.map((row, index) => (
-                            <Fragment key={row.key}>
-                                {index > 0 && <Divider semantics="presentation" />}
-                                <CheckboxGroup
-                                    label={row.label}
-                                    orientation="horizontal"
+                    cards={[
+                        {
+                            id: "note",
+                            children: (
+                                <Textarea
                                     isLoading={isLoading}
-                                    options={view.fields}
-                                    value={row.value}
-                                    onValueChange={(value) => props.on.required(row.key, value)}
+                                    label={view.noteLabel}
+                                    description={view.noteHint}
+                                    rows={3}
+                                    value={view.note}
+                                    onValueChange={props.on.note}
                                 />
-                            </Fragment>
-                        ))}
-                    </Stack>
-                </AuthoritySection>
+                            ),
+                        },
+                        {
+                            id: "required",
+                            label: view.requiredTitle,
+                            note: view.requiredHint,
+                            children: (
+                                <Stack gap="row">
+                                    {limits.rows.map((row, index) => (
+                                        <Fragment key={row.key}>
+                                            {index > 0 && <Divider semantics="presentation" />}
+                                            <CheckboxGroup
+                                                label={row.label}
+                                                orientation="horizontal"
+                                                isLoading={isLoading}
+                                                options={view.fields}
+                                                value={row.value}
+                                                onValueChange={(value) => props.on.required(row.key, value)}
+                                            />
+                                        </Fragment>
+                                    ))}
+                                </Stack>
+                            ),
+                        },
+                    ]}
+                />
             )}
         />
     )

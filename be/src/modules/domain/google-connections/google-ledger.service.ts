@@ -13,6 +13,8 @@ import {
     HEADER_WRITTEN,
     isRefusedLedger,
     LEDGER_HEADER,
+    LEDGER_LAYOUT,
+    LEDGER_TAB,
     ledgerKeeperOf,
     ledgerRowOf,
     voidRowOf,
@@ -33,7 +35,7 @@ const isUnauthorized = (error: unknown): boolean => error instanceof GoogleError
 @Injectable()
 /**
  * The business ledger of a workspace as a Google spreadsheet it chose: a copy that only grows. Every entry is one appended row on the
- * first tab (the header row first, once); a void is one more row naming the transaction; no cell is changed, removed or read back. The
+ * cash book tab (the tab and its header row first, once; a sheet laid out by an older version gets the tab on its next write); a void is one more row naming the transaction; no cell is changed, removed or read back. The
  * database stays the truth. The workspace is ready when one of its Google connections gave the spreadsheets access and was told the
  * sheet. A sheet Google refuses, a withdrawn access or a lost grant is the refused ledger connection: only the owner can cure it.
  * Any other failure (timeout, 429, 5xx) is thrown as it is and the run tries again.
@@ -69,14 +71,16 @@ export class GoogleLedgerService implements LedgerPort {
         if (keeper === undefined) return undefined
         if (!this.google.isConfigured()) throw refusedLedger()
         const { row, sheetId } = keeper
-        const headed = row.meta.ledgerHeader === HEADER_WRITTEN
+        // A sheet headed by an older version (the first tab, seven columns) is laid out again: the cash book tab and its header are written
+        // once, and what was written before stays where it is.
+        const headed = row.meta.ledgerHeader === HEADER_WRITTEN && row.meta.ledgerLayout === LEDGER_LAYOUT
         const rows = headed ? [line] : [LEDGER_HEADER, line]
         try {
-            const range = await this.appended(row, sheetId, rows)
+            const range = await this.appended(row, sheetId, rows, !headed)
             await this.connections.patch(workspaceId, row.id, {
                 meta: {
                     ...row.meta,
-                    ...(headed ? {} : { ledgerHeader: HEADER_WRITTEN }),
+                    ...(headed ? {} : { ledgerHeader: HEADER_WRITTEN, ledgerLayout: LEDGER_LAYOUT }),
                     ledgerLastRowAt: this.clock.now().toISOString(),
                 },
             })
@@ -91,10 +95,14 @@ export class GoogleLedgerService implements LedgerPort {
         row: ConnectionRecord,
         sheetId: string,
         rows: ReadonlyArray<ReadonlyArray<SheetCell>>,
+        newTab: boolean,
     ): Promise<string> {
         return this.tokens.withRetry(
             (force) => this.tokens.accessToken({ row, force }),
-            (token) => this.google.appendValues(token, sheetId, rows),
+            async (token) => {
+                if (newTab) await this.google.ensureTab(token, sheetId, LEDGER_TAB)
+                return this.google.appendValues(token, sheetId, LEDGER_TAB, rows)
+            },
             isUnauthorized,
         )
     }

@@ -2,6 +2,7 @@ import type { JoinedRecord, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { z } from "zod"
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
 import { MESSAGE_STATUSES } from "../../entities/chat/message.entity"
+import { messageFilesShape, messageOrderShape } from "../../entities/chat/message-media.shape"
 import { CHATBOT_CHANNELS, INBOX_STATUSES, TAIL_TEXT_MAX } from "../../rules/chatbot"
 import type { ChatbotSettings } from "../../rules/chatbot/settings"
 import type { LeadFacts, MessageRecord, ThreadRow } from "./chatbot.types"
@@ -56,6 +57,14 @@ const messageData = z.object({
     deliveryStatus: orNull(z.enum(["sent", "failed"])),
     deliveryError: nullableText(MAX_BODY),
     sentBy: nullableText(MAX_ID),
+    files: messageFilesShape
+        .nullable()
+        .optional()
+        .transform((value) => (value === null || value === undefined ? undefined : value.items)),
+    orderCard: messageOrderShape
+        .nullable()
+        .optional()
+        .transform((value) => value ?? undefined),
 })
 
 /** The fields of the linked `sales.lead` record the customer pane shows. */
@@ -98,6 +107,8 @@ export const MESSAGE_FIELDS: ReadonlyArray<string> = [
     "deliveryStatus",
     "deliveryError",
     "sentBy",
+    "files",
+    "orderCard",
 ]
 
 /** The fields a query for the customer behind a conversation selects. */
@@ -112,7 +123,9 @@ export const threadRowOf = (record: RecordRow): ThreadRow | null => {
 /** The line a record holds; null when its fields are not those of a line. */
 export const messageRecordOf = (record: RecordRow): MessageRecord | null => {
     const parsed = messageData.safeParse(record.data)
-    return parsed.success ? { id: record.id, version: record.version, ...parsed.data } : null
+    if (!parsed.success) return null
+    const { orderCard, ...fields } = parsed.data
+    return { id: record.id, version: record.version, ...fields, ...(orderCard === undefined ? {} : { order: orderCard }) }
 }
 
 /** The customer facts a joined `sales.lead` record holds; null when there is no link or its fields are not a customer's. */

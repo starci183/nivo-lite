@@ -4,11 +4,13 @@ import { McpConnectorsModule } from "@modules/domain/mcp-connectors"
 import { McpGatewayReceiptsModule } from "@modules/domain/mcp-gateway-receipts"
 import { McpToolGrantsModule } from "@modules/domain/mcp-tool-grants"
 import { McpModule } from "@modules/integrations/mcp"
+import { EffectToolsService } from "./adapters/effect-tools.service"
 import { EinvoiceNativeService } from "./adapters/einvoice-native.service"
 import { ConnectionKeyCheckService } from "./connection-key-check.service"
+import { ProviderAbilitiesService } from "./provider-abilities.service"
 import { SepayNativeService } from "./adapters/sepay-native.service"
 import { GatewaySurfaceService } from "./gateway-surface.service"
-import { withoutShadowed } from "./native-adapters.policy"
+import { withEffectTools, withoutShadowed } from "./native-adapters.policy"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { McpGatewayAdminService } from "./mcp-gateway-admin.service"
 import type { NativeAdapter } from "./mcp-gateway.contracts"
@@ -44,19 +46,22 @@ export class McpGatewayModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 SepayNativeService,
                 EinvoiceNativeService,
+                EffectToolsService,
                 {
                     provide: NATIVE_ADAPTERS,
-                    useFactory: (...adapters: ReadonlyArray<NativeAdapter>) => withoutShadowed(adapters),
-                    inject: [SepayNativeService, EinvoiceNativeService, ...(options.natives ?? [])],
+                    useFactory: (effectTools: EffectToolsService, ...adapters: ReadonlyArray<NativeAdapter>) =>
+                        withEffectTools(withoutShadowed(adapters), effectTools.adapters()),
+                    inject: [EffectToolsService, SepayNativeService, EinvoiceNativeService, ...(options.natives ?? [])],
                 },
                 McpConnectorCredentialService,
                 NativeRunnerService,
                 McpGatewayService,
+                ProviderAbilitiesService,
                 ...admin,
                 ...keyCheck,
                 GatewaySurfaceService,
             ],
-            exports: [McpGatewayService, ...admin, GatewaySurfaceService],
+            exports: [McpGatewayService, ProviderAbilitiesService, ...admin, GatewaySurfaceService],
         }
     }
 }

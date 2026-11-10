@@ -28,4 +28,8 @@ export class ChatMemberType {
     /** Whether the member muted the room. */
     @Field(() => Boolean)
     muted!: boolean
+
+    /** Whether an agent holds the right to post in this group; always false for a person. */
+    @Field(() => Boolean)
+    mayPost!: boolean
 }

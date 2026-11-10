@@ -5,8 +5,8 @@ import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest 
 import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
 import { BankTransactionsRegistryService } from "@modules/domain/provider-registry"
 import type { BankTransactionsPort } from "@modules/domain/provider-registry"
-import { BANK_TRANSACTIONS_INPUT_SCHEMA, BANK_TRANSACTIONS_SCHEMA } from "./payment-native.schema"
-import type { BankTransactionsArgs } from "./payment-native.schema"
+import { BANK_TRANSACTIONS_INPUT_SCHEMA, BANK_TRANSACTIONS_SCHEMA } from "./bank-native.schema"
+import type { BankTransactionsArgs } from "./bank-native.schema"
 import { nativeRefusal } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
 

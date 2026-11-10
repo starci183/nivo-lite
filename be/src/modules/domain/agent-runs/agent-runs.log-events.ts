@@ -30,4 +30,12 @@ export enum AgentRunsLogEvent {
     RunParked = "agent_runs.run_parked",
     /** A pass over the parked runs failed on one run; the rest went on. */
     ResumeFailed = "agent_runs.resume_failed",
+    /** A parked chat run was not resumed by the machine: a newer run already answered its conversation, so it was closed. */
+    RunSuperseded = "agent_runs.run_superseded",
+    /** A side step failed past its tries; it was recorded as failed and the run went on to the steps that follow. */
+    StepPassedOver = "agent_runs.step_passed_over",
+    /** A side step's handler could not say how to go past it; the failure stops the run as any other. */
+    PassOverFailed = "agent_runs.pass_over_failed",
+    /** Telling a person about a side step that was passed over failed; the run went on regardless. */
+    SideTellFailed = "agent_runs.side_tell_failed",
 }

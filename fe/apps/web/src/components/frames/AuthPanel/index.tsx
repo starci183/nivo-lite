@@ -13,20 +13,16 @@ interface AuthPanelProps {
     readonly isLoading?: boolean
 }
 
-/** The auth card: a heading, an optional line of text and the form or message below them. */
+/** The auth card: a heading over the form or message; the line of text sits under the card as its note. */
 export const AuthPanel = (props: AuthPanelProps) => (
-    <SurfaceCard ariaLabel={props.label}>
+    <SurfaceCard
+        ariaLabel={props.label}
+        {...(props.text === undefined ? {} : { note: props.isLoading === true ? <Text isLoading>{props.text}</Text> : props.text })}
+    >
         <Stack gap="region">
-            <Stack gap="inline">
-                <Heading level={props.level ?? 1} {...(props.isLoading === true ? { isLoading: true } : {})}>
-                    {props.title}
-                </Heading>
-                {props.text === undefined ? null : (
-                    <Text tone="muted" {...(props.isLoading === true ? { isLoading: true } : {})}>
-                        {props.text}
-                    </Text>
-                )}
-            </Stack>
+            <Heading level={props.level ?? 1} {...(props.isLoading === true ? { isLoading: true } : {})}>
+                {props.title}
+            </Heading>
             {props.children}
         </Stack>
     </SurfaceCard>

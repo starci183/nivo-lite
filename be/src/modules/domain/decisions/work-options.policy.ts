@@ -7,7 +7,8 @@ export const proposalWithOptions = <T extends Partial<Proposal>>(proposal: T, op
         options.preset === undefined &&
         options.noChain === undefined &&
         options.forceAsk === undefined &&
-        options.tagGrant === undefined
+        options.tagGrant === undefined &&
+        options.ownCard === undefined
     )
         return proposal
     return {
@@ -17,6 +18,7 @@ export const proposalWithOptions = <T extends Partial<Proposal>>(proposal: T, op
             noChain: options.noChain,
             forceAsk: options.forceAsk,
             tagGrant: options.tagGrant,
+            ...(options.ownCard === undefined ? {} : { ownCard: options.ownCard }),
         },
     }
 }
@@ -27,4 +29,5 @@ export const processOptionsOf = (proposal: Proposal, options: ProcessOptions = {
     noChain: options.noChain ?? proposal.execution?.noChain,
     forceAsk: options.forceAsk ?? proposal.execution?.forceAsk,
     tagGrant: options.tagGrant ?? proposal.execution?.tagGrant,
+    ownCard: options.ownCard ?? proposal.execution?.ownCard,
 })

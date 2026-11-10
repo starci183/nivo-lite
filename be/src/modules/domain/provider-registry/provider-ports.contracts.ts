@@ -148,6 +148,12 @@ export interface MessageInboxPoller<Item = unknown> {
 /** How a ledger entry stands: the payment it records was received, or the entry takes an earlier one back. */
 export type LedgerEntryStatus = "paid" | "void"
 
+/** Money in (thu) or out (chi) on a ledger line. */
+export type LedgerEntryDirection = "in" | "out"
+
+/** What a ledger line is for, as a code the provider words in the shop's language. */
+export type LedgerEntryCategory = "sale" | "other-income" | "deposit" | "refund" | "expense" | "unclassified"
+
 /** One line of the business ledger in the domain's words; the provider decides where it goes and how it is laid out. */
 export interface BusinessLedgerEntry {
     /** The day the money was received, `YYYY-MM-DD`. */
@@ -164,6 +170,16 @@ export interface BusinessLedgerEntry {
     readonly status: LedgerEntryStatus
     /** A free note. */
     readonly note: string
+    /** Money in or out; in when absent. */
+    readonly direction?: LedgerEntryDirection
+    /** The document number: the order number, else the bank reference; the order number when absent. */
+    readonly documentNo?: string
+    /** What the line is for, in the words of the bank (the transfer content). */
+    readonly description?: string
+    /** Who the money came from or went to; the customer when absent. */
+    readonly counterpart?: string
+    /** What the line is for; a sale when absent. */
+    readonly category?: LedgerEntryCategory
 }
 
 /**

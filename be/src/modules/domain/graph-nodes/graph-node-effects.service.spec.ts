@@ -14,8 +14,15 @@ const AT = "2026-11-06T10:00:00.000Z"
 const LOOKUP_SCOPE = cursorScopeOf("graph-nodes.effect", {}, "id")
 const CALL = { key: "run:0", dedupeKey: null }
 
-const recordedAs = (subjectEntity: unknown, subjectId: unknown): PageRow => ({
-    row: { id: "e-1", workspaceId: WS, version: "1", createdAt: AT, updatedAt: AT, data: { subjectEntity, subjectId } },
+const recordedAs = (subjectEntity: unknown, subjectId: unknown, effectId = "core.send"): PageRow => ({
+    row: {
+        id: "e-1",
+        workspaceId: WS,
+        version: "1",
+        createdAt: AT,
+        updatedAt: AT,
+        data: { effectId, subjectEntity, subjectId },
+    },
     joined: {},
     position: ["e-1"],
     included: {},
@@ -41,6 +48,14 @@ describe("ledgerKeyOf", () => {
     it("keys a call by its business key when it has one, else by the run step's own", () => {
         expect(ledgerKeyOf({ key: "run:0", dedupeKey: null })).toBe("call:run:0")
         expect(ledgerKeyOf({ key: "run:0", dedupeKey: "pay:o1" })).toBe("dedupe:pay:o1")
+    })
+
+    it("keeps a key too long for the ledger as its digest: the same call gives the same key, another call another", () => {
+        const long = { key: `run:${"k".repeat(240)}`, dedupeKey: null }
+        const key = ledgerKeyOf(long)
+        expect(key).toMatch(/^digest:[0-9a-f]{64}$/)
+        expect(ledgerKeyOf({ ...long })).toBe(key)
+        expect(ledgerKeyOf({ key: `${long.key}x`, dedupeKey: null })).not.toBe(key)
     })
 })
 
@@ -93,6 +108,20 @@ describe("GraphNodeEffectsService.once", () => {
         })
     })
 
+    it("never answers one effect with what another kept: a key another effect holds is refused before anything acts", async () => {
+        const { service, engine, mutations } = await build()
+        engine.list.mockResolvedValue({ rows: [recordedAs("message", "m-0", "customer.message.send")], next: null })
+        const act = jest.fn()
+
+        await expect(service.once(WS, "order.confirm", CALL, act)).rejects.toMatchObject({
+            code: GraphNodesErrorCode.EffectKeyTaken,
+            params: { effect: "order.confirm", heldBy: "customer.message.send" },
+        })
+
+        expect(act).not.toHaveBeenCalled()
+        expect(mutations.mutate).not.toHaveBeenCalled()
+    })
+
     it("answers the subject of the record that won when two runs raced to write the key", async () => {
         const { service, engine, mutations } = await build()
         engine.list
@@ -107,6 +136,41 @@ describe("GraphNodeEffectsService.once", () => {
         const act = jest.fn().mockResolvedValue({ kind: "message", id: "m-1" })
 
         await expect(service.once(WS, "core.send", CALL, act)).resolves.toEqual({ kind: "message", id: "m-0" })
+    })
+})
+
+describe("GraphNodeEffectsService.once, when the act answers a refusal", () => {
+    const REFUSED = { kind: "refused", id: "waits_owner", facts: { amountVnd: 5_000_000, thresholdVnd: 2_000_000 } }
+
+    it("answers the refusal with its facts and writes nothing under the key: a refusal changed nothing", async () => {
+        const { service, engine, mutations } = await build()
+        engine.list.mockResolvedValue({ rows: [], next: null })
+        const act = jest.fn().mockResolvedValue(REFUSED)
+
+        await expect(service.once(WS, "order.confirm", CALL, act)).resolves.toEqual(REFUSED)
+
+        expect(act).toHaveBeenCalledTimes(1)
+        expect(mutations.mutate).not.toHaveBeenCalled()
+    })
+
+    it("really makes the call again under the same key after a refusal, and keeps the subject of the call that went through", async () => {
+        const { service, engine, mutations } = await build()
+        engine.list.mockResolvedValue({ rows: [], next: null })
+        mutations.mutate.mockResolvedValue({ ok: true, row: recordedAs("order", "o-1").row, version: "1" })
+        const act = jest.fn().mockResolvedValueOnce(REFUSED).mockResolvedValueOnce({ kind: "order", id: "o-1" })
+
+        await expect(service.once(WS, "order.confirm", CALL, act)).resolves.toEqual(REFUSED)
+        await expect(service.once(WS, "order.confirm", CALL, act)).resolves.toEqual({ kind: "order", id: "o-1" })
+
+        expect(act).toHaveBeenCalledTimes(2)
+        expect(mutations.mutate).toHaveBeenCalledTimes(1)
+        expect(mutations.mutate).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                values: { effectKey: "call:run:0", effectId: "order.confirm", subjectEntity: "order", subjectId: "o-1" },
+            }),
+            "job",
+        )
     })
 })
 

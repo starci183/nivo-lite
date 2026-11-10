@@ -156,7 +156,7 @@ export const cliModules = (options: CliAppOptions): Array<DynamicModule | Type> 
     ConnectionGrantsModule.register({ isGlobal: true }),
     ChannelSetupModule.register({ isGlobal: true, ...options.channelSetup }),
     ChannelConnectionsModule.register({ isGlobal: true }),
-    InventoryModule.register({ isGlobal: true, seedOnly: true }),
+    InventoryModule.register({ isGlobal: true, seedOnly: true, assets: STORAGE_ASSETS }),
     KnowledgeSourcesModule.register({ isGlobal: true, seedOnly: true }),
     ChannelProvisioningModule.register({ isGlobal: true, ...options.channelProvisioning }),
     EntityPlannerModule.register({ isGlobal: true, entities: FLOW_F_ENTITIES }),

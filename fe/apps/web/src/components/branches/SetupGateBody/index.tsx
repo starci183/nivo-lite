@@ -11,6 +11,7 @@ type SetupGateBodyProps = Pick<
     | "confirmLabel"
     | "editSaveLabel"
     | "editCancelLabel"
+    | "understoodLabel"
     | "onEditText"
     | "onGate"
     | "onStopEdit"
@@ -25,32 +26,29 @@ export const SetupGateBody = (props: SetupGateBodyProps) => (
     <Stack gap="inline">{props.isEditing ? renderEdit(props) : renderEvidence(props)}</Stack>
 )
 
-/** The evidence of the gate (its hint while waiting or before evidence is supplied) and confirm or reopen. */
-const renderEvidence = ({ gate, ...props }: SetupGateBodyProps) => {
-    const isHint = props.isLoading || gate.evidence === ""
-    return (
-        <>
+/** What NIVO understood for the item, with confirm when it is a proposal. */
+const renderEvidence = ({ gate, ...props }: SetupGateBodyProps) => (
+    <>
+        {gate.evidence === "" ? null : (
             <div className={EVIDENCE}>
-                <Text size="sm" tone={isHint ? "muted" : "default"}>
-                    {isHint ? gate.hint : gate.evidence}
-                </Text>
+                <Text size="sm">{`${props.understoodLabel} ${gate.evidence}`}</Text>
             </div>
+        )}
+        {gate.status === "proposed" ? (
             <Cluster gap="inline">
-                {gate.status === "proposed" ? (
-                    <Button
-                        intent="neutral"
-                        size="sm"
-                        isLoading={props.isLoading === true}
-                        isPending={props.isGating}
-                        onPress={() => props.onGate(gate.key, "confirm")}
-                    >
-                        {props.confirmLabel}
-                    </Button>
-                ) : null}
+                <Button
+                    intent="neutral"
+                    size="sm"
+                    isLoading={props.isLoading === true}
+                    isPending={props.isGating}
+                    onPress={() => props.onGate(gate.key, "confirm")}
+                >
+                    {props.confirmLabel}
+                </Button>
             </Cluster>
-        </>
-    )
-}
+        ) : null}
+    </>
+)
 
 /** The evidence editor of the gate with save and cancel. */
 const renderEdit = ({ gate, ...props }: SetupGateBodyProps) => (

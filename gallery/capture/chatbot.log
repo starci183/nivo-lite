@@ -1,0 +1,19 @@
+installation /workspaces/<ws>/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6
+page 1 /workspaces/<ws>/agents/chatbot/<inst>/workbench links=13 (overlay 0, in-page 3)
+page 2 /workspaces/<ws>/agents/chatbot/<inst>/work links=12 (overlay 0, in-page 0)
+page 3 /workspaces/<ws>/agents/chatbot/<inst>/work?view=runs links=19 (overlay 0, in-page 1)
+page 4 /workspaces/<ws>/agents/chatbot/<inst>/workflows links=11 (overlay 0, in-page 0)
+page 5 /workspaces/<ws>/agents/chatbot/<inst>/graph links=14 (overlay 0, in-page 4)
+page 6 /workspaces/<ws>/agents/chatbot/<inst>/chat links=12 (overlay 2, in-page 2)
+page 7 /workspaces/<ws>/agents/chatbot/<inst>/connections links=11 (overlay 0, in-page 0)
+page 8 /workspaces/<ws>/agents/chatbot/<inst>/knowledge links=10 (overlay 0, in-page 0)
+page 9 /workspaces/<ws>/agents/chatbot/<inst>/setup links=12 (overlay 0, in-page 0)
+page 10 /workspaces/<ws>/agents/chatbot/<inst>/setup/general links=12 (overlay 0, in-page 7)
+page 11 /workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=customers links=13 (overlay 0, in-page 3)
+page 12 /workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=inbox links=16 (overlay 1, in-page 3)
+page 13 /workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=rules links=13 (overlay 0, in-page 2)
+page 14 /workspaces/<ws>/agents/chatbot/<inst>/work/runs/<id> links=13 (overlay 0, in-page 0)
+page 15 /workspaces/<ws>/agents/chatbot/<inst>/workflows/front-desk links=14 (overlay 0, in-page 4)
+page 16 /workspaces/<ws>/agents/chatbot/<inst>/workflows/<id> links=14 (overlay 0, in-page 4)
+non-GET requests 
+done pages 16 links 209 blocked mutations 0 skipped 44

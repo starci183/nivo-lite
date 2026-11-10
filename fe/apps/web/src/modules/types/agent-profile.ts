@@ -4,8 +4,12 @@ import type { SlotPanelProps } from "./slot"
 export interface ProfileRegionBaseProps<R> {
     readonly props: {
         readonly label: string
-        /** A line under the list; null for none. */
-        readonly footer: string | null
+        /** How many things the list holds, as the head's count chip; null for none. */
+        readonly count: number | null
+        /** The count is work waiting for the owner: the chip is pink, not grey. */
+        readonly isAttention: boolean
+        /** The head's one navigation link ("Xem tat ca" then the arrow); null for none. */
+        readonly action: { readonly label: string; readonly href: string } | null
         readonly read: SlotPanelProps<R>
     }
     readonly on: { readonly retry: () => void }

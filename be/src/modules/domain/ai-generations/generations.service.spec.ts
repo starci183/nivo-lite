@@ -19,7 +19,9 @@ import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import type { AiGenerationsOptions } from "./ai-generations.options"
 import type { UsageGate } from "./ai-generations.port"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
-import { EngineStatusService, PauseClient } from "@modules/domain/agents"
+import { PauseClient } from "@modules/domain/agents"
+import { AI } from "@modules/integrations/ai"
+import type { AiService } from "@modules/integrations/ai"
 import { AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { GenerationsService } from "./generations.service"
 import { AiGenerationEntity } from "./persistence/entities"
@@ -56,7 +58,8 @@ const insertedAs = (purpose: string, input: object) => ({
 })
 
 interface Setup {
-    availability?: "ready" | "offline" | "not_configured"
+    /** False when the AI endpoint is not configured. */
+    available?: boolean
     blocked?: string
     progress?: ReadonlyArray<AiGenerationEntity>
 }
@@ -78,7 +81,7 @@ const build = async (setup: Setup = {}) => {
     const usage = mock<UsageGate>({
         blockedBy: jest.fn(() => Promise.resolve(setup.blocked === undefined ? null : { message: setup.blocked })),
     })
-    const engine = mock<EngineStatusService>({ availability: jest.fn(() => setup.availability ?? "ready") })
+    const ai = mock<AiService>({ available: jest.fn(() => setup.available ?? true) })
     const pause = mock<PauseClient>({
         wait: jest.fn((ms: number) => {
             clock.advance(ms)
@@ -98,12 +101,12 @@ const build = async (setup: Setup = {}) => {
             { provide: LOGGER, useValue: logger },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: AI_GENERATIONS_USAGE, useValue: usage },
-            { provide: EngineStatusService, useValue: engine },
+            { provide: AI, useValue: ai },
             { provide: PauseClient, useValue: pause },
             { provide: WorkspaceMembersService, useValue: members },
         ],
     }).compile()
-    return { service: moduleRef.get(GenerationsService), tx, queue, usage, pause, logger, catalog, members, engine }
+    return { service: moduleRef.get(GenerationsService), tx, queue, usage, pause, logger, catalog, members, ai }
 }
 
 describe("GenerationsService generateFor", () => {
@@ -156,11 +159,11 @@ describe("GenerationsService requestFor", () => {
         expect(pause.wait).not.toHaveBeenCalled()
     })
 
-    it("returns the localized engine refusal without enqueueing", async () => {
-        const { service, members, tx, queue, catalog } = await build({ availability: "offline" })
+    it("returns the localized refusal of a missing AI endpoint without enqueueing", async () => {
+        const { service, members, tx, queue, catalog } = await build({ available: false })
         await expect(service.requestFor("u1", paramsOf({ locale: "en" }))).resolves.toEqual({
             ok: false,
-            reason: "engine_offline",
+            reason: "not_configured",
             message: "[generation.busy]",
         })
         expect(members.require).toHaveBeenCalledWith("u1", "w1")
@@ -193,7 +196,7 @@ describe("GenerationsService request", () => {
 
     it.each([
         [{ blocked: "Over the plan" }, AiGenerationsErrorCode.QuotaBlocked],
-        [{ availability: "offline" }, AiGenerationsErrorCode.EngineUnavailable],
+        [{ available: false }, AiGenerationsErrorCode.EngineUnavailable],
     ] as const)("refuses unavailable work before inserting: %j", async (setup, code) => {
         const { service, tx, queue, usage } = await build(setup)
         await expect(service.request(paramsOf())).rejects.toMatchObject({ code })
@@ -362,12 +365,12 @@ describe("GenerationsService statusFor and progress", () => {
 describe("GenerationsService prepare", () => {
     it.each([
         [{ blocked: "Over the plan" }, false],
-        [{ availability: "offline" }, true],
+        [{ available: false }, true],
     ] as const)("returns fallback without inserting when unavailable: %j", async (setup, checkedEngine) => {
-        const { service, tx, queue, usage, engine } = await build(setup)
+        const { service, tx, queue, usage, ai } = await build(setup)
         await expect(service.prepare(paramsOf(), tx.em)).resolves.toBeNull()
         expect(usage.blockedBy).toHaveBeenCalledWith("w1", "relay", "vi")
-        expect(engine.availability).toHaveBeenCalledTimes(checkedEngine ? 1 : 0)
+        expect(ai.available).toHaveBeenCalledTimes(checkedEngine ? 1 : 0)
         expect(tx.em.insert).not.toHaveBeenCalled()
         expect(queue.enqueueGenerate).not.toHaveBeenCalled()
     })
@@ -415,16 +418,14 @@ describe("GenerationsService generate", () => {
         expect(tx.em.insert).not.toHaveBeenCalled()
     })
 
-    it("says the engine is not configured or offline with the busy sentence", async () => {
-        const missing = await build({ availability: "not_configured" })
-        const offline = await build({ availability: "offline" })
+    it("says the AI endpoint is not configured with the busy sentence", async () => {
+        const missing = await build({ available: false })
 
         await expect(missing.service.generate(paramsOf())).resolves.toEqual({
             ok: false,
             reason: "not_configured",
             message: "[generation.busy]",
         })
-        await expect(offline.service.generate(paramsOf())).resolves.toMatchObject({ reason: "engine_offline" })
         expect(missing.catalog.get).toHaveBeenCalledWith("generation.busy", {}, "vi")
         expect(missing.tx.em.insert).not.toHaveBeenCalled()
     })

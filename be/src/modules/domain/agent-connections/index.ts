@@ -5,7 +5,17 @@ export {
 } from "./errors/agent-connections.error"
 export { AGENT_CONNECTIONS_MESSAGES } from "./messages/agent-connections.messages"
 export { AgentBindingsService } from "./agent-bindings.service"
+export { ChannelOwnersService } from "./channel-owners.service"
+export { isChannelPurpose } from "./channel-ownership.policy"
 export { AgentConnectionsModule } from "./agent-connections.module"
 export { PURPOSES } from "./agent-bindings.policy"
-export type { Access, BoundAgent, BoundConnection, Purpose } from "./agent-connections.contracts"
+export type {
+    Access,
+    BoundAgent,
+    BoundConnection,
+    ConnectionGrant,
+    Purpose,
+    OptionalResumeKeep,
+    ResumeKeep,
+} from "./agent-connections.contracts"
 export { agentConnectionsEntities } from "./persistence/entities"

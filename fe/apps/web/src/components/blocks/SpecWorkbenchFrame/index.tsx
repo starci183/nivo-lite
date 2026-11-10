@@ -3,6 +3,7 @@
 import { useEnabledModules } from "@nivo-lite/agent-sdk/client"
 import type { StoredSpec } from "@nivo-lite/agent-sdk/spec"
 import { useWorkbenchDeclaration } from "@/hooks/workbenchSpec"
+import { useWorkbenchTabsSink } from "@/hooks/workbenchTabs"
 import { SpecWorkbenchFrameBase } from "./component"
 
 /** The module every installation has: its reads (the runs it parked) and actions (resume one) a spec of any module may bind. */
@@ -22,6 +23,7 @@ export const SpecWorkbenchFrame = (props: SpecWorkbenchFrameProps) => {
     const declaration = useWorkbenchDeclaration(props.module)
     const platform = useWorkbenchDeclaration(PLATFORM_MODULE_KEY)
     const enabled = useEnabledModules()
+    const tabsSink = useWorkbenchTabsSink()
     const isPlatform = props.module === PLATFORM_MODULE_KEY
     if (declaration === null || platform === null || !(isPlatform || enabled.includes(props.module))) return null
     return (
@@ -35,6 +37,7 @@ export const SpecWorkbenchFrame = (props: SpecWorkbenchFrameProps) => {
                 namespace: declaration.namespace,
                 installationId: props.installationId,
                 tab: props.tab,
+                tabsSink,
             }}
         />
     )

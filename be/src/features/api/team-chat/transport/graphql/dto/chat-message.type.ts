@@ -5,6 +5,8 @@ import { ChatMentionType } from "./chat-mention.type"
 import { ChatAttachmentType } from "./chat-attachment.type"
 import { ChatReportRefType } from "./chat-report-ref.type"
 import { ChatApprovalType } from "./chat-approval.type"
+import { ChatReactionType } from "./chat-reaction.type"
+import { ChatReplyType } from "./chat-reply.type"
 
 @ObjectType()
 /** One message of a room. */
@@ -64,4 +66,20 @@ export class ChatMessageType {
     /** Set when it is an approval card. */
     @Field(() => ChatApprovalType, { nullable: true })
     approval!: ChatApprovalType | null
+
+    /** The structured message of an agent as JSON text (kind, intent, payload), when the line carries one. */
+    @Field(() => String, { nullable: true })
+    agentMessage!: string | null
+
+    /** The emoji on it, the most tapped first. */
+    @Field(() => [ChatReactionType])
+    reactions!: ReadonlyArray<ChatReactionType>
+
+    /** The message it answers, as a quote. */
+    @Field(() => ChatReplyType, { nullable: true })
+    replyTo!: ChatReplyType | null
+
+    /** Whose words it carries when it was forwarded (empty when unknown); null when it was not forwarded. */
+    @Field(() => String, { nullable: true })
+    forwardedFrom!: string | null
 }

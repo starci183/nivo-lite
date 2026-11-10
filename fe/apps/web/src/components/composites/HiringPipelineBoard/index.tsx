@@ -7,12 +7,11 @@ interface HiringPipelineBoardProps extends Omit<HiringViews["pipelineFields"], "
 import {
     Alert,
     Button,
-    EmptyNotice,
     Cluster,
+    EmptyNotice,
     HorizontalScrollRegion,
-    Select,
     Section,
-    SurfaceCard,
+    Select,
     Stack,
     Text,
     type ListRowData,
@@ -108,7 +107,7 @@ const pipelineItem = (
                         </Text>
                     )}
                     <Cluster gap="inline">
-                        <Button isLoading={props.isLoading} intent="dismiss" size="sm" onPress={() => on.open(view.id)}>
+                        <Button endArrow isLoading={props.isLoading} intent="dismiss" size="sm" onPress={() => on.open(view.id)}>
                             {copy.openLabel}
                         </Button>
                     </Cluster>
@@ -154,10 +153,10 @@ const PipelineBoard = (props: HiringPipelineBoardProps) => {
                                     on.drop(lane.stage, event.dataTransfer.getData("text/plain"))
                                 }}
                             >
-                                <SurfaceCard
+                                <Section
                                     isLoading={props.isLoading}
                                     kind="list"
-                                    label={lane.label}
+                                    title={lane.label}
                                     fact={lane.count}
                                     items={lane.cards.map((view) => pipelineItem(props, view, true))}
                                     empty={<EmptyNotice message={copy.laneEmpty} />}
@@ -180,11 +179,11 @@ const PipelinePhoneLanes = (props: HiringPipelineBoardProps) => {
                 {lanes
                     .filter((lane) => lane.cards.length > 0)
                     .map((lane) => (
-                        <SurfaceCard
+                        <Section
                             isLoading={props.isLoading}
                             key={lane.stage}
                             kind="list"
-                            label={lane.label}
+                            title={lane.label}
                             fact={lane.count}
                             items={lane.cards.map((view) => pipelineItem(props, view, false))}
                             empty={<EmptyNotice message={copy.laneEmpty} />}

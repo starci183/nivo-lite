@@ -84,7 +84,7 @@ export const ZaloConnectionStepsBase = (props: ZaloConnectionStepsBaseProps) => 
     }
     const actions = {
         paste: (
-            <Button intent="neutral" href={props.props.paste.openZalo.href} target="_blank" rel="noreferrer">
+            <Button endArrow intent="neutral" href={props.props.paste.openZalo.href} target="_blank" rel="noreferrer">
                 {props.props.paste.openZalo.label}
             </Button>
         ),

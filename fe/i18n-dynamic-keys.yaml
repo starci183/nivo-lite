@@ -28,6 +28,17 @@ namespaces:
       reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (the event a trigger waits for) comes from data, so the detector cannot enumerate the keys."
     - prefix: "tool_"
       reason: "Key family built at run time as `${prefix}${kind}` in modules/agentWork/agentWork.words.ts: the kind (the tool a model named in a title) comes from data, so the detector cannot enumerate the keys."
+  agentWorkLog:
+    - prefix: "status_"
+      reason: "Key family built at run time as `${prefix}${key}` in modules/agentWorkLog/agentWorkLog.view.ts: the status of a work item comes from data, so the detector cannot enumerate the keys."
+    - prefix: "level_"
+      reason: "Key family built at run time as `${prefix}${key}` in modules/agentWorkLog/agentWorkLog.view.ts: the level a work item was decided at comes from data, so the detector cannot enumerate the keys."
+    - prefix: "kind_"
+      reason: "Key family built at run time as `${prefix}${key}` in modules/agentWorkLog/agentWorkLog.view.ts: the kind of record a work item is about comes from data, so the detector cannot enumerate the keys."
+    - prefix: "reason_"
+      reason: "Key family built at run time as `${prefix}${key}` in modules/agentWorkLog/agentWorkLog.view.ts: why a person was asked comes from data, so the detector cannot enumerate the keys."
+    - prefix: "step_"
+      reason: "Key family built at run time as `step_${key}` in modules/agentWorkLog/agentWorkLog.view.ts: the steps of a work item come from data, so the detector cannot enumerate the keys."
   auth:
     - key: "errEmailNotConfirmed"
       reason: "Read by t(authErrorKey(code)) or t(strengthKey(passwordStrength(value))) in the auth forms; authErrorKey and strengthKey of @starci/auth/client return this closed key."
@@ -70,6 +81,8 @@ namespaces:
     - key: "continue"
       reason: 'Read as the string "continue" in hooks/connection-rows/connection-rows.shared.ts, hooks/connections/useConnectionRowView.ts; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
   connections:
+    - prefix: "life_"
+      reason: "Key family built at run time as `life_${id}` in modules/connection-lifecycle/index.ts (lifecycleChipOf): the translator is handed in by hooks/connectionPage/useConnectionLife.ts, hooks/connection-catalog/useLibraryLife.ts and hooks/connectionsPanes/connectionsPanes.shared.ts, and the step of the life comes from data."
     - key: "earlyAccess"
       reason: 'Read as the string "earlyAccess" in components/blocks/MoneyWizard/component.tsx, components/blocks/MoneyWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "errName"
@@ -111,6 +124,287 @@ namespaces:
       reason: 'Read as the string "reconnect" in components/blocks/MetaWizard/component.tsx, components/blocks/MetaWizard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
     - key: "unavailable"
       reason: 'Read as the string "unavailable" in components/blocks/GoogleWizard/index.tsx, components/blocks/InviteOverview/component.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'
+  inbox:
+    - prefix: "chip_"
+      reason: "Key family: the mark of a lead row (`chip_${key}`) in modules/inbox/rows.ts: the key comes from the lead the back end read, so the detector cannot enumerate the keys."
+    - prefix: "channel_"
+      reason: "Key family: the channel of a customer (`channel_${channel}`) in modules/inbox/rows.ts and modules/inbox/detail.ts: the channel comes from data, so the detector cannot enumerate the keys."
+    - prefix: "badge_"
+      reason: "Key family: the short code of a channel (`badge_${channel}`) in modules/inbox/rows.ts and modules/inbox/detail.ts: the channel comes from data, so the detector cannot enumerate the keys."
+    - prefix: "via_"
+      reason: "Key family: how a customer arrived on a channel (`via_${via}`) in modules/inbox/detail.ts: the way comes from data, so the detector cannot enumerate the keys."
+    - prefix: "step_"
+      reason: "Key family: the stage of a customer (`step_${id}`) in modules/inbox/detail.ts: the stage is one of the closed INBOX_STAGES of modules/inbox/shared.ts."
+    - prefix: "orderStatus_"
+      reason: "Key family: the status of an order (`orderStatus_${status}`) in modules/inbox/detail.ts: the status comes from data, so the detector cannot enumerate the keys."
+    - prefix: "journeyDecision_"
+      reason: "Key family: the outcome of a decision (`journeyDecision_${status}`) in modules/inbox/detail.ts: the outcome comes from data, so the detector cannot enumerate the keys."
+    - prefix: "device_"
+      reason: "Key family: the kind of a device (`device_${device}`) in modules/inbox/detail.ts: the device comes from data, so the detector cannot enumerate the keys."
+    - key: "pageBody"
+      reason: 'Read as the string "pageBody" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "gridLabel"
+      reason: 'Read as the string "gridLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "actionWebsite"
+      reason: 'Read as the string "actionWebsite" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "actionConnections"
+      reason: 'Read as the string "actionConnections" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "figuresLabel"
+      reason: 'Read as the string "figuresLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "figVisitors"
+      reason: 'Read as the string "figVisitors" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "figNewToday"
+      reason: 'Read as the string "figNewToday" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "figNeeds"
+      reason: 'Read as the string "figNeeds" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "figAuto"
+      reason: 'Read as the string "figAuto" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "figResponse"
+      reason: 'Read as the string "figResponse" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "unitSeconds"
+      reason: 'Read as the string "unitSeconds" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "unitMinutes"
+      reason: 'Read as the string "unitMinutes" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "listTitle"
+      reason: 'Read as the string "listTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "listLabel"
+      reason: 'Read as the string "listLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "detailLabel"
+      reason: 'Read as the string "detailLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "asideLabel"
+      reason: 'Read as the string "asideLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "openAside"
+      reason: 'Read as the string "openAside" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "tabsLabel"
+      reason: 'Read as the string "tabsLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "tabAll"
+      reason: 'Read as the string "tabAll" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "tabNew"
+      reason: 'Read as the string "tabNew" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "tabNeeds"
+      reason: 'Read as the string "tabNeeds" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "tabOrdered"
+      reason: 'Read as the string "tabOrdered" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "tabPaid"
+      reason: 'Read as the string "tabPaid" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "searchLabel"
+      reason: 'Read as the string "searchLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "searchPlaceholder"
+      reason: 'Read as the string "searchPlaceholder" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "filterChannel"
+      reason: 'Read as the string "filterChannel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "filterAgent"
+      reason: 'Read as the string "filterAgent" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "filterSort"
+      reason: 'Read as the string "filterSort" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "optionAll"
+      reason: 'Read as the string "optionAll" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "sortRecent"
+      reason: 'Read as the string "sortRecent" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "sortOldest"
+      reason: 'Read as the string "sortOldest" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "sortName"
+      reason: 'Read as the string "sortName" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "sortAmount"
+      reason: 'Read as the string "sortAmount" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "sectionToday"
+      reason: 'Read as the string "sectionToday" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "sectionYesterday"
+      reason: 'Read as the string "sectionYesterday" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "sectionEarlier"
+      reason: 'Read as the string "sectionEarlier" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "unnamed"
+      reason: 'Read as the string "unnamed" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "stepsLabel"
+      reason: 'Read as the string "stepsLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "assignLabel"
+      reason: 'Read as the string "assignLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "assignNobody"
+      reason: 'Read as the string "assignNobody" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "message"
+      reason: 'Read as the string "message" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "moreLabel"
+      reason: 'Read as the string "moreLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "copyPhone"
+      reason: 'Read as the string "copyPhone" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "approvalTitle"
+      reason: 'Read as the string "approvalTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "approvalOrder"
+      reason: 'Read as the string "approvalOrder" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "approvalDecision"
+      reason: 'Read as the string "approvalDecision" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "approvalAgent"
+      reason: 'Read as the string "approvalAgent" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "approve"
+      reason: 'Read as the string "approve" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "edit"
+      reason: 'Read as the string "edit" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "reject"
+      reason: 'Read as the string "reject" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "approvalFailed"
+      reason: 'Read as the string "approvalFailed" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "needsTitle"
+      reason: 'Read as the string "needsTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "needsAi"
+      reason: 'Read as the string "needsAi" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "needsHint"
+      reason: 'Read as the string "needsHint" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "needsEmpty"
+      reason: 'Read as the string "needsEmpty" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "factItems"
+      reason: 'Read as the string "factItems" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "factValue"
+      reason: 'Read as the string "factValue" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "factDelivery"
+      reason: 'Read as the string "factDelivery" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "factNote"
+      reason: 'Read as the string "factNote" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "journeyTitle"
+      reason: 'Read as the string "journeyTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "journeyLabel"
+      reason: 'Read as the string "journeyLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "journeyAll"
+      reason: 'Read as the string "journeyAll" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "journeyMessages"
+      reason: 'Read as the string "journeyMessages" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "journeyAgent"
+      reason: 'Read as the string "journeyAgent" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "journeyEmpty"
+      reason: 'Read as the string "journeyEmpty" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "journeyOwner"
+      reason: 'Read as the string "journeyOwner" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "journeyPaid"
+      reason: 'Read as the string "journeyPaid" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "journeyOrder"
+      reason: 'Read as the string "journeyOrder" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "asideCustomer"
+      reason: 'Read as the string "asideCustomer" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "asideSource"
+      reason: 'Read as the string "asideSource" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "asideOrders"
+      reason: 'Read as the string "asideOrders" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "custPhone"
+      reason: 'Read as the string "custPhone" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "custZalo"
+      reason: 'Read as the string "custZalo" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "zaloLinked"
+      reason: 'Read as the string "zaloLinked" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "zaloNotLinked"
+      reason: 'Read as the string "zaloNotLinked" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "custFirst"
+      reason: 'Read as the string "custFirst" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "custBought"
+      reason: 'Read as the string "custBought" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "boughtCount"
+      reason: 'Read as the string "boughtCount" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "sourceChannel"
+      reason: 'Read as the string "sourceChannel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "sourcePage"
+      reason: 'Read as the string "sourcePage" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "sourceCampaign"
+      reason: 'Read as the string "sourceCampaign" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "sourceDevice"
+      reason: 'Read as the string "sourceDevice" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "noOrderTitle"
+      reason: 'Read as the string "noOrderTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "noOrderBody"
+      reason: 'Read as the string "noOrderBody" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "sourceLine"
+      reason: 'Read as the string "sourceLine" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "justNow"
+      reason: 'Read as the string "justNow" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "minutesAgo"
+      reason: 'Read as the string "minutesAgo" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "hoursAgo"
+      reason: 'Read as the string "hoursAgo" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "daysAgo"
+      reason: 'Read as the string "daysAgo" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "pickTitle"
+      reason: 'Read as the string "pickTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "pickBody"
+      reason: 'Read as the string "pickBody" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "emptyTitle"
+      reason: 'Read as the string "emptyTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "emptyBody"
+      reason: 'Read as the string "emptyBody" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "emptyAction"
+      reason: 'Read as the string "emptyAction" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "noMatchTitle"
+      reason: 'Read as the string "noMatchTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "noMatchBody"
+      reason: 'Read as the string "noMatchBody" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "errorTitle"
+      reason: 'Read as the string "errorTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "errorBody"
+      reason: 'Read as the string "errorBody" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "detailErrorTitle"
+      reason: 'Read as the string "detailErrorTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webTitle"
+      reason: 'Read as the string "webTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webBody"
+      reason: 'Read as the string "webBody" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webClose"
+      reason: 'Read as the string "webClose" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webCancel"
+      reason: 'Read as the string "webCancel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webTabsLabel"
+      reason: 'Read as the string "webTabsLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webTabEmbed"
+      reason: 'Read as the string "webTabEmbed" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webTabLink"
+      reason: 'Read as the string "webTabLink" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webTabHook"
+      reason: 'Read as the string "webTabHook" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webStepPaste"
+      reason: 'Read as the string "webStepPaste" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webStepLink"
+      reason: 'Read as the string "webStepLink" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webStepHook"
+      reason: 'Read as the string "webStepHook" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webCopyCode"
+      reason: 'Read as the string "webCopyCode" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webEmbedHint"
+      reason: 'Read as the string "webEmbedHint" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webCopyUrl"
+      reason: 'Read as the string "webCopyUrl" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webCopy"
+      reason: 'Read as the string "webCopy" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webCopied"
+      reason: 'Read as the string "webCopied" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webCopyFailed"
+      reason: 'Read as the string "webCopyFailed" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webLinkHint"
+      reason: 'Read as the string "webLinkHint" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webHookHint"
+      reason: 'Read as the string "webHookHint" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webStepShow"
+      reason: 'Read as the string "webStepShow" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webSwitchesLabel"
+      reason: 'Read as the string "webSwitchesLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webChatTitle"
+      reason: 'Read as the string "webChatTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webChatBody"
+      reason: 'Read as the string "webChatBody" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webFormTitle"
+      reason: 'Read as the string "webFormTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webFormBody"
+      reason: 'Read as the string "webFormBody" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webPricesTitle"
+      reason: 'Read as the string "webPricesTitle" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webPricesBody"
+      reason: 'Read as the string "webPricesBody" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webPendingNote"
+      reason: 'Read as the string "webPendingNote" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webStepAgent"
+      reason: 'Read as the string "webStepAgent" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webAgentLabel"
+      reason: 'Read as the string "webAgentLabel" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webEnable"
+      reason: 'Read as the string "webEnable" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webSave"
+      reason: 'Read as the string "webSave" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
+    - key: "webFailed"
+      reason: 'Read as the string "webFailed" through the translator `InboxWords.t` of modules/inbox (copy.ts, rows.ts, detail.ts) and hooks/inbox/useInboxWords.ts; the translator that reaches it is a wrapper handed in from the hook, whose namespace the detector does not bind.'
   invite:
     - key: "failed"
       reason: 'Read as the string "failed" in components/blocks/AutomationsBoard/component.tsx, components/blocks/AutomationsBoard/index.tsx; the translator that reaches it is a wrapper hook or typed callback handed in from the block, whose namespace the detector does not bind.'

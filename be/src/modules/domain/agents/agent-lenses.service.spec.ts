@@ -118,3 +118,34 @@ describe("AgentLensesService ask", () => {
         expect(knowledge.ask).toHaveBeenCalledWith("u1", "w1", input)
     })
 })
+
+describe("AgentLensesService overview", () => {
+    const overview = {
+        module: "chatbot",
+        installationId: "i1",
+        audience: "customer" as const,
+        waitingFacts: 9,
+        layers: [],
+        documents: [],
+        ownFacts: [],
+    }
+
+    it("reads the agent through its instance and names it", async () => {
+        const { lenses, service, installations, knowledge } = await build([agentOf("a1", "active")])
+        knowledge.overviewFor.mockResolvedValue(overview)
+
+        const result = await lenses.overview("u1", "w1", "a1")
+
+        expect(service.list).toHaveBeenCalledWith("u1", "w1")
+        expect(installations.ofAgent).toHaveBeenCalledWith("w1", "a1")
+        expect(knowledge.overviewFor).toHaveBeenCalledWith("w1", "chatbot", "i1")
+        expect(result).toEqual({ ...overview, agentId: "a1", name: "Agent a1" })
+    })
+
+    it("refuses an agent the workspace does not have", async () => {
+        const { lenses, knowledge } = await build([agentOf("a1", "active")])
+
+        await expect(lenses.overview("u1", "w1", "missing")).rejects.toMatchObject({ code: "AGENTS_AGENT_NOT_FOUND" })
+        expect(knowledge.overviewFor).not.toHaveBeenCalled()
+    })
+})

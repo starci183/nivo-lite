@@ -1,24 +1,50 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import { useWorkspaceCards, useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
-import { APP_ROUTES, workspaceHref } from "@/modules/routes"
+import { APP_ROUTES, CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { OnboardingReadyBase } from "./component"
 
-/** The connected ready screen: names the workspace just made (the one the address carries) and lands on the Office. */
+/** The connected ready screen: names the workspace just made (the one the address carries), offers the first steps, lands on the Office. */
 export const OnboardingReady = () => {
     const t = useTranslations("onboarding")
     const router = navigation.useRouter()
     const workspaceId = useWorkspaceId()
     const { cards, status } = useWorkspaceCards()
     const name = cards.find((card) => card.id === workspaceId)?.name
+    const open = (path: string) => workspaceHref(workspaceId, path)
     return (
         <OnboardingReadyBase
             props={{
-                title: t("readyTitle"),
+                badge: t("readyBadge"),
                 heading: name === undefined ? t("readyTitle") : t("readyHeading", { name }),
                 description: t("readyText"),
+                nextLabel: t("readyNextLabel"),
+                next: [
+                    {
+                        id: "inbox",
+                        title: t("readyNextInbox"),
+                        description: t("readyNextInboxText"),
+                        leading: { icon: nivoIconSource("chat", "leading") },
+                        href: open(CONSOLE_ROUTES.inbox),
+                    },
+                    {
+                        id: "connections",
+                        title: t("readyNextChannels"),
+                        description: t("readyNextChannelsText"),
+                        leading: { icon: nivoIconSource("link", "leading") },
+                        href: open(CONSOLE_ROUTES.connections),
+                    },
+                    {
+                        id: "team",
+                        title: t("readyNextTeam"),
+                        description: t("readyNextTeamText"),
+                        leading: { icon: nivoIconSource("community", "leading") },
+                        href: open(CONSOLE_ROUTES.teamInvite),
+                    },
+                ],
                 enterLabel: t("enterWorkspace"),
                 isLoading: status === "loading",
             }}

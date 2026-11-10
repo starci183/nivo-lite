@@ -6,4 +6,6 @@ export interface AgentRunsOptions {
     readonly parkSweepMinutes?: number | undefined
     /** The most times the machine resumes one parked run on its own; past it only a person resumes. */
     readonly parkMaxResumes?: number | undefined
+    /** How many runs one process drives at once; 4 when absent. */
+    readonly concurrency?: number | undefined
 }

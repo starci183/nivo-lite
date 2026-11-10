@@ -39,8 +39,24 @@ import { AgentGraphWatchService } from "./agent-graph-watch.service"
 import { AgentGraphViewService } from "./agent-graph-view.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphRecordsService } from "./agent-graph-records.service"
+import { AgentWorkflowRecordsService } from "./agent-workflow-records.service"
+import { AgentWorkflowAdoptionService } from "./agent-workflow-adoption.service"
+import { AgentWorkflowRunsService } from "./agent-workflow-runs.service"
+import { AgentWorkflowStoreService } from "./agent-workflow-store.service"
+import { AgentWorkflowsService } from "./agent-workflows.service"
+import { AgentGraphLayoutService } from "./agent-graph-layout.service"
+import { AgentWorkflowsAdminService } from "./agent-workflows-admin.service"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
+import { AgentGraphFreezeGateService } from "./agent-graph-freeze-gate.service"
+import { AgentGraphCallGuardService } from "./agent-graph-call-guard.service"
+import { AgentGraphHoursGateService } from "./agent-graph-hours-gate.service"
+import { AgentGraphConversationHoldsService } from "./agent-graph-conversation-holds.service"
 import { AgentGraphNodeStepService } from "./agent-graph-node-step.service"
+import { AgentGraphStepMemoryService } from "./agent-graph-step-memory.service"
+import { AgentGraphRunNoticesService } from "./agent-graph-run-notices.service"
+import { AgentGraphAiCoreService } from "./agent-graph-ai-core.service"
+import { AgentGraphTurnPolicyService } from "./agent-graph-turn-policy.service"
+import { AgentGraphWakeNoticesService } from "./agent-graph-wake-notices.service"
 import { GraphFactsService } from "./graph-facts.service"
 import { GraphFactReadersService } from "./graph-fact-readers.service"
 import type { GraphFactReader } from "./agent-graphs.port"
@@ -75,6 +91,7 @@ const RIGHTS_ONLY: Part = {
     services: [
         AgentGraphsService,
         AgentGraphRecordsService,
+        AgentWorkflowRecordsService,
         AgentDataRightsService,
         AgentGraphDecisionsService,
         GraphFactsService,
@@ -88,7 +105,15 @@ const RIGHTS_ONLY: Part = {
 
 /** The store alone, with the publishing of a flow: what an app that only seeds graphs carries. */
 const STORE_ONLY: Part = {
-    services: [AgentGraphsService, AgentGraphRecordsService, AgentGraphFlowService],
+    services: [
+        AgentGraphsService,
+        AgentGraphRecordsService,
+        AgentWorkflowRecordsService,
+        AgentGraphFlowService,
+        AgentWorkflowStoreService,
+        AgentWorkflowAdoptionService,
+        AgentWorkflowsService,
+    ],
     ports: [],
 }
 
@@ -103,6 +128,7 @@ const DECIDER_ONLY: Part = {
     services: [
         AgentGraphsService,
         AgentGraphRecordsService,
+        AgentWorkflowRecordsService,
         AgentGraphDecisionsService,
         GraphFactsService,
         AgentGraphChecksService,
@@ -119,6 +145,7 @@ const WHOLE: Part = {
     services: [
         AgentGraphsService,
         AgentGraphRecordsService,
+        AgentWorkflowRecordsService,
         AgentGraphDecisionsService,
         AgentGraphChecksService,
         AgentGraphToolGateService,
@@ -144,9 +171,24 @@ const WHOLE: Part = {
         AgentGraphSetupService,
         AgentGraphContractSetupService,
         AgentGraphWaitTimeoutService,
+        AgentGraphFreezeGateService,
+        AgentGraphCallGuardService,
+        AgentGraphHoursGateService,
+        AgentGraphConversationHoldsService,
+        AgentGraphWakeNoticesService,
         AgentGraphFlowRunsService,
+        AgentGraphRunNoticesService,
+        AgentGraphAiCoreService,
+        AgentGraphTurnPolicyService,
+        AgentGraphStepMemoryService,
         AgentGraphNodeStepService,
         AgentGraphBurstService,
+        AgentWorkflowStoreService,
+        AgentWorkflowAdoptionService,
+        AgentWorkflowsService,
+        AgentWorkflowRunsService,
+        AgentGraphLayoutService,
+        AgentWorkflowsAdminService,
     ],
     ports: [
         { provide: WORK_BRANCH_DECIDER, useExisting: AgentGraphDeciderService },

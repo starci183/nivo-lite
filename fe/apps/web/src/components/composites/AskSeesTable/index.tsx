@@ -39,7 +39,8 @@ export const AskSeesTable = (props: AskSeesTableProps) => {
             label={copy.seesTable}
             columns={[
                 { id: "lane", label: copy.seesLane, isRowHeader: true },
-                ...sees.audiences.map((audience) => ({ id: audience.id, label: audience.name })),
+                // An audience column holds a mark and a count: kept on one line so a short heading never breaks mid-word.
+                ...sees.audiences.map((audience) => ({ id: audience.id, label: audience.name, isNumeric: true })),
             ]}
             rows={rows}
             renderCell={renderCell}

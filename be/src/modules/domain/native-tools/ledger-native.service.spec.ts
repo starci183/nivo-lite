@@ -11,6 +11,9 @@ import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-r
 import { DOOR_GRANTS } from "@modules/domain/entity-engine-door"
 import { domainNameIn } from "@modules/domain/mcp-gateway"
 import type { WorkspaceConnector } from "@modules/domain/mcp-gateway"
+import type { EntityApi, ListPage, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
+import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
+import type { ScopedTx } from "@modules/domain/entity-engine"
 import { LEDGER_MANIFEST, LedgerNativeService } from "./ledger-native.service"
 import { NativeViewService } from "./native-view.service"
 import type { NativeView } from "./native-view.policy"
@@ -259,5 +262,112 @@ describe("LedgerNativeService > refusals", () => {
         await service.invoke("ws-1", "append", { entry: ENTRY }, CALLER)
 
         expect(port.append).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("LedgerNativeService > append by transaction id", () => {
+    const TRANSACTION = "55555555-5555-4555-8555-555555555555"
+    const ORDER = "44444444-4444-4444-8444-444444444444"
+    const LEAD = "33333333-3333-4333-8333-333333333333"
+
+    const recordOf = (id: string, data: Readonly<Record<string, unknown>>): RecordRow => ({
+        id,
+        workspaceId: "ws-1",
+        version: "1",
+        createdAt: "2026-11-04T03:00:00.000Z",
+        updatedAt: "2026-11-04T03:00:00.000Z",
+        data,
+    })
+
+    const pageOf = (rows: ReadonlyArray<RecordRow>, joined: Readonly<Record<string, string>> = {}): ListPage => ({
+        rows: rows.map((row) => ({
+            row,
+            joined: Object.fromEntries(Object.entries(joined).map(([name, id]) => [name, { id, data: {} }])),
+            position: [],
+            included: {},
+        })),
+        next: null,
+    })
+
+    const buildWithRecords = async (orderId: string | null) => {
+        const port = portOf(true)
+        const views = mock<NativeViewService>()
+        const providers = mock<LedgerRegistryService>()
+        const engine = mock<EntityEngineService>()
+        const ports = mock<EntityPortsService>()
+        const transactions = mock<EntityApi>()
+        const orders = mock<EntityApi>()
+        const leads = mock<EntityApi>()
+        arrange(views, providers, port)
+        engine.scoped.mockImplementation((_workspace, work) => work(mock<ScopedTx>()))
+        ports.entityApi.mockImplementation((_runIn, _by, entity) => {
+            if (entity === "payment.transaction") return transactions
+            return entity === "sales.order" ? orders : leads
+        })
+        transactions.get.mockResolvedValue(
+            recordOf(TRANSACTION, {
+                direction: "credit",
+                amountVnd: 5000,
+                reference: "DH7 thanh toan",
+                payer: "DINH VAN A",
+                orderId,
+                occurredAt: "2026-11-04T03:00:00.000Z",
+                status: orderId === null ? "unmatched" : "matched",
+            }),
+        )
+        orders.list.mockResolvedValue(
+            pageOf([recordOf(ORDER, { orderNo: "DH-7", amountVnd: 5000, status: "paid", leadId: LEAD })], { lead: LEAD }),
+        )
+        leads.get.mockResolvedValue(recordOf(LEAD, { contactName: "Dinh" }))
+        leads.list.mockResolvedValue(pageOf([recordOf(LEAD, { contactName: "Dinh" })]))
+        const moduleRef = await Test.createTestingModule({
+            providers: [
+                LedgerNativeService,
+                { provide: NativeViewService, useValue: views },
+                { provide: LedgerRegistryService, useValue: providers },
+                { provide: EntityEngineService, useValue: engine },
+                { provide: EntityPortsService, useValue: ports },
+            ],
+        }).compile()
+        return { service: moduleRef.get(LedgerNativeService), port, engine }
+    }
+
+    it("builds the line from the transaction and the order it paid: the caller gives the id alone", async () => {
+        const { service, port, engine } = await buildWithRecords(ORDER)
+
+        await expect(service.invoke("ws-1", "append", { transactionId: TRANSACTION }, CALLER)).resolves.toEqual({
+            ref: "Sheet1!A2:G2",
+        })
+        expect(engine.scoped).toHaveBeenCalledWith("ws-1", expect.any(Function))
+        expect(port.append).toHaveBeenCalledWith(
+            "ws-1",
+            expect.objectContaining({
+                orderNo: "DH-7",
+                amountVnd: 5000,
+                transactionId: TRANSACTION,
+                status: "paid",
+                direction: "in",
+                category: "sale",
+            }),
+        )
+    })
+
+    it("refuses a transaction that paid nothing yet, one that is not there, and an id that is no record id; nothing is written", async () => {
+        const unsettled = await buildWithRecords(null)
+        await expect(unsettled.service.invoke("ws-1", "append", { transactionId: TRANSACTION }, CALLER)).rejects.toMatchObject({
+            code: McpGatewayErrorCode.NativeRefused,
+            params: { reason: "not_found" },
+        })
+        await expect(unsettled.service.invoke("ws-1", "append", { transactionId: "tx-1" }, CALLER)).rejects.toMatchObject({
+            params: { reason: "not_found" },
+        })
+        expect(unsettled.port.append).not.toHaveBeenCalled()
+    })
+
+    it("refuses arguments that name both a transaction and an entry", async () => {
+        const { service } = await buildWithRecords(ORDER)
+        await expect(
+            service.invoke("ws-1", "append", { transactionId: TRANSACTION, entry: ENTRY }, CALLER),
+        ).rejects.toMatchObject({ code: McpGatewayErrorCode.InvalidArguments })
     })
 })

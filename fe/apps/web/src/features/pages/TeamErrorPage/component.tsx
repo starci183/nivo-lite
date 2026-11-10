@@ -1,8 +1,10 @@
 import { Alert, Page } from "@starci/grammar/common"
+import type { PageHeaderBreadcrumbs } from "@starci/grammar/common"
 
 /** Copy and retry the failed team route supplies. */
 export interface TeamErrorPageBaseProps {
     readonly props: {
+        readonly breadcrumbs: PageHeaderBreadcrumbs
         readonly title: string
         readonly description: string
         readonly tabsLabel: string
@@ -23,6 +25,7 @@ export interface TeamErrorPageBaseProps {
 export const TeamErrorPageBase = (props: TeamErrorPageBaseProps) => (
     <Page
         header={{
+            breadcrumbs: props.props.breadcrumbs,
             title: props.props.title,
             description: props.props.description,
             tabs: {

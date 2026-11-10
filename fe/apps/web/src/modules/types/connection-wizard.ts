@@ -409,3 +409,15 @@ export interface TelegramUserLoginView {
         Record<"phone" | "phoneHint" | "code" | "codeHint" | "passwordTitle" | "password" | "passwordHint", string>
     >
 }
+
+/**
+ * The four phases a connection wizard maps its steps onto (details, grant, check, hand to an agent): their names, and the phase of each
+ * step in step order. With phases, the Stepper draws the phases and the section title stays the step's own name.
+ */
+export interface WizardPhases {
+    readonly labels: ReadonlyArray<string>
+    /** The 0-based phase of each step, in step order. */
+    readonly ofStep: ReadonlyArray<number>
+    /** The accessible words of a phase's state. */
+    readonly stateLabels: { readonly complete: string; readonly current: string; readonly upcoming: string }
+}

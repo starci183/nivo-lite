@@ -185,6 +185,19 @@ describe("checkCatalog", () => {
         expect(checkCatalog([{ ...GOOD, gates }], CATEGORIES)).toEqual([])
     })
 
+    it("lets a back-office agent that speaks on channels run several instances (one role, many agents)", async () => {
+        const { checkCatalog } = await buildSubject()
+
+        const module: ModuleDefinition = {
+            ...GOOD,
+            audience: "internal",
+            multiInstance: true,
+            connectionProviders: ["telegram"],
+        }
+
+        expect(checkCatalog([module], CATEGORIES)).toEqual([])
+    })
+
     it("finds no problem in the shipped catalogue", async () => {
         const { checkCatalog } = await buildSubject()
 

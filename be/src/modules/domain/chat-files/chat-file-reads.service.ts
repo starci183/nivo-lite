@@ -108,7 +108,7 @@ export class ChatFileReadsService {
             usage: {
                 prompt_tokens: answer.usage.promptTokens ?? 0,
                 completion_tokens: answer.usage.completionTokens ?? 0,
-                cached_tokens: 0,
+                cached_tokens: answer.usage.cachedTokens ?? 0,
                 cost: answer.usage.costUsd ?? 0,
                 model: answer.model,
             },

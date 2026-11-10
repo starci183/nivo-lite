@@ -10,7 +10,7 @@ import { ViewGate } from "./ViewGate"
 
 /** What the body of the open view takes. */
 export interface ViewBodyProps {
-    /** The tabs band of the page. */
+    /** The tabs band of the page; null when the host frame draws the tabs in its header. */
     readonly tabs: ReactNode
     /** What stands above the open view: the problems alert and the head blocks. */
     readonly before: ReactNode
@@ -34,8 +34,13 @@ export interface ViewBodyProps {
  */
 export const ViewBody = (props: ViewBodyProps): ReactNode => {
     const { view, context } = props
+    const isPanes = view?.root.block.layout === "panes"
     const main = (
-        <div role="tabpanel" id={props.panelId(view?.id ?? "none")}>
+        <div
+            role="tabpanel"
+            id={props.panelId(view?.id ?? "none")}
+            {...(isPanes ? { style: { display: "contents" } } : {})}
+        >
             {view === undefined ? null : (
                 <ViewGate key={view.id}>
                     <SpecNode node={view.root} context={context} />
@@ -61,12 +66,18 @@ export const ViewBody = (props: ViewBodyProps): ReactNode => {
             installationId={context.installationId}
             params={context.params}
             tabs={props.tabs}
+            asideNode={aside}
+            isPanes={isPanes}
             main={
-                <Stack gap="region">
-                    {props.before}
-                    {main}
-                    {props.after}
-                </Stack>
+                isPanes ? (
+                    main
+                ) : (
+                    <Stack gap="region">
+                        {props.before}
+                        {main}
+                        {props.after}
+                    </Stack>
+                )
             }
             aside={
                 <ViewGate>

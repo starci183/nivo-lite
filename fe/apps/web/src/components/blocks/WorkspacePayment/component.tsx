@@ -1,4 +1,6 @@
 import { Alert, Button, Cluster, Image, MediaFrame, Page, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { CelebrationPanel } from "@/components/composites/CelebrationPanel"
+import type { CelebrationFact } from "@/components/composites/CelebrationPanel"
 import { WorkspacePaymentDetails } from "@/components/composites/WorkspacePaymentDetails"
 import type { WorkspacePaymentDetailsProps } from "@/components/composites/WorkspacePaymentDetails"
 import { CENTERED_CLASS_NAME, ART_CLASS_NAME, MEASURE_CLASS_NAME } from "./classNames"
@@ -17,6 +19,10 @@ export interface WorkspacePaymentBaseProps {
         readonly creatingLabel: string
         readonly paidTitle: string
         readonly paidText: string
+        /** The paid celebration's status mark and the facts of what was bought. */
+        readonly paidBadge: string
+        readonly paidFactsLabel: string
+        readonly paidFacts: ReadonlyArray<CelebrationFact>
         readonly expiredTitle: string
         readonly expiredText: string
         readonly regenerateLabel: string
@@ -35,22 +41,13 @@ export interface WorkspacePaymentBaseProps {
     }
 }
 
-/** The paid outcome's one command: open what was paid for. */
-type PaymentPaidActionProps = Pick<WorkspacePaymentBaseProps, "props">
-
-const PaymentPaidAction = (props: PaymentPaidActionProps) => (
-    <Button intent="commit" href={props.props.returnTo}>
-        {props.props.openLabel}
-    </Button>
-)
-
 /** The unpaid phase's decision: regenerate is the commit, all workspaces the quiet way out. */
 const PaymentPendingActions = (props: WorkspacePaymentBaseProps) => (
     <Cluster gap="row">
         <Button intent="commit" isDisabled={!props.props.canRegenerate} onPress={props.on.regenerate}>
             {props.props.regenerateLabel}
         </Button>
-        <Button intent="neutral" href={props.props.allWorkspacesHref}>
+        <Button endArrow intent="neutral" href={props.props.allWorkspacesHref}>
             {props.props.allWorkspacesLabel}
         </Button>
     </Cluster>
@@ -69,13 +66,13 @@ const PaymentSituation = (props: WorkspacePaymentBaseProps) => {
                     title={view.phase === "missing" ? view.missingTitle : view.errorTitle}
                     description={view.error}
                 />
-                <Button intent="neutral" href={view.allWorkspacesHref}>
+                <Button endArrow intent="neutral" href={view.allWorkspacesHref}>
                     {view.allWorkspacesLabel}
                 </Button>
             </>
         )
     }
-    if (view.phase === "paid" || view.phase === "expired") return <PaymentOutcome {...props} />
+    if (view.phase === "expired") return <PaymentExpired {...props} />
 
     return (
         <>
@@ -85,8 +82,29 @@ const PaymentSituation = (props: WorkspacePaymentBaseProps) => {
     )
 }
 
-/** Draws the payment page without reading data: the header band with its trail, then the payment progress, a paid outcome, or an expired code. */
-export const WorkspacePaymentBase = (props: WorkspacePaymentBaseProps) => (
+/** What the paid page reads: the copy and facts only, no command beyond the way in. */
+type PaymentPaidProps = Pick<WorkspacePaymentBaseProps, "props">
+
+/** The paid page: the purchase celebrated, with what was bought and the way into it. */
+const PaymentPaid = (props: PaymentPaidProps) => (
+    <Page measure="product">
+        <CelebrationPanel
+            art="payment-paid"
+            badge={props.props.paidBadge}
+            heading={props.props.paidTitle}
+            text={props.props.paidText}
+            isLoading={false}
+            factsLabel={props.props.paidFactsLabel}
+            facts={props.props.paidFacts}
+            nextLabel=""
+            next={[]}
+            primary={{ label: props.props.openLabel, href: props.props.returnTo }}
+        />
+    </Page>
+)
+
+/** The payment page while it is not yet paid: the header band with its trail, then the payment progress, an error, or an expired code. */
+const PaymentProgress = (props: WorkspacePaymentBaseProps) => (
     <Page
         measure="product"
         isLoading={props.props.phase === "loading" || props.props.phase === "creating"}
@@ -110,15 +128,15 @@ export const WorkspacePaymentBase = (props: WorkspacePaymentBaseProps) => (
     </Page>
 )
 
-/** The settled payment result retains its heading and exposes the result as output. */
-const PaymentOutcome = (props: WorkspacePaymentBaseProps) => {
+/** Draws the payment page without reading data: a celebration once paid, otherwise its progress. */
+export const WorkspacePaymentBase = (props: WorkspacePaymentBaseProps) =>
+    props.props.phase === "paid" ? <PaymentPaid props={props.props} /> : <PaymentProgress {...props} />
+
+/** An expired code: the waiting art, what happened, and a fresh code or the way out. */
+const PaymentExpired = (props: WorkspacePaymentBaseProps) => {
     const view = props.props
-    const paid = view.phase === "paid"
-    const title = paid ? view.paidTitle : view.expiredTitle
-    const description = paid ? view.paidText : view.expiredText
-    const art = paid ? "/images/promo/payment-paid-3d.webp" : "/images/promo/payment-waiting-3d.webp"
     return (
-        <SurfaceCard label={title} headingLevel={2}>
+        <SurfaceCard label={view.expiredTitle} headingLevel={2}>
             <div className={CENTERED_CLASS_NAME}>
                 <Stack gap="section" align="center">
                     <div className={ART_CLASS_NAME}>
@@ -126,12 +144,12 @@ const PaymentOutcome = (props: WorkspacePaymentBaseProps) => {
                             treatment="plain"
                             aspect="square"
                             fit="contain"
-                            media={<Image src={art} alt="" aspect="square" fit="contain" plate="none" />}
+                            media={<Image src="/images/promo/payment-waiting-3d.webp" alt="" aspect="square" fit="contain" plate="none" />}
                         />
                     </div>
-                    <Text>{description}</Text>
+                    <Text>{view.expiredText}</Text>
                     {view.error ? <Alert tone="negative" title={view.errorTitle} description={view.error} /> : null}
-                    {paid ? <PaymentPaidAction {...props} /> : <PaymentPendingActions {...props} />}
+                    <PaymentPendingActions {...props} />
                 </Stack>
             </div>
         </SurfaceCard>

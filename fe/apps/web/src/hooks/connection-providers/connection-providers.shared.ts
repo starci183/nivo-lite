@@ -154,7 +154,8 @@ export const PROVIDER_LOGO: Readonly<Partial<Record<Provider, string>>> = {
     telegram: "/logos/providers/telegram.svg",
     zalo_oa: "/logos/providers/zalo.svg",
     meta: "/logos/providers/meta.svg",
-    google: "/logos/providers/googlesheets.svg",
+    // The provider is the Google account (one consent holds Sheets and Drive), so its mark is the account "G", not a service.
+    google: "/logos/providers/google.svg",
     google_drive: "/logos/providers/google_drive.svg",
     webhook: "/logos/providers/n8n.svg",
     // The app's own connector artwork (public/logos/connectors): the data sources have no brand of their own.
@@ -165,6 +166,25 @@ export const PROVIDER_LOGO: Readonly<Partial<Record<Provider, string>>> = {
     telegram_user: "/logos/connectors/telegram_user.svg",
     smtp: "/logos/connectors/smtp.svg",
 }
+
+/**
+ * The marks of the services inside one Google account, in their official colours (the services list of the Google page): the 2020
+ * Google Workspace product marks, one generation for all four. Each file is the original, unedited, from Wikimedia Commons, whose
+ * file page states "Public domain" (Google's logos are trademarks):
+ * Drive https://commons.wikimedia.org/wiki/File:Google_Drive_icon_(2020).svg (the same mark as google_drive.svg, which is kept),
+ * Sheets https://commons.wikimedia.org/wiki/File:Google_Sheets_2020_Logo.svg,
+ * Calendar https://commons.wikimedia.org/wiki/File:Google_Calendar_icon_(2020).svg,
+ * Gmail https://commons.wikimedia.org/wiki/File:Gmail_icon_(2020).svg.
+ */
+export const GOOGLE_SERVICE_LOGO: Readonly<Record<"drive" | "sheets" | "calendar" | "gmail", string>> = {
+    drive: "/logos/providers/google_drive.svg",
+    sheets: "/logos/providers/googlesheets.svg",
+    calendar: "/logos/providers/googlecalendar.svg",
+    gmail: "/logos/providers/gmail.svg",
+}
+
+/** The mark of the Google account itself (the "G"): the page of the one account that holds Drive, Sheets and the services to come. */
+export const GOOGLE_ACCOUNT_LOGO = "/logos/providers/google.svg"
 
 /** Whether a string is one of the registry's providers. */
 export const isProvider = (value: string): value is Provider => Object.hasOwn(PROVIDERS, value)

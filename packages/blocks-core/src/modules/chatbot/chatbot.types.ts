@@ -1,5 +1,12 @@
 import type { ChatbotSettings } from "../../rules/chatbot/settings"
-import type { ChatbotChannel, ConversationState, InboxStatus, MessageRole } from "../../rules/chatbot"
+import type {
+    ChatbotChannel,
+    ConversationState,
+    InboxStatus,
+    LineFile,
+    LineOrder,
+    MessageRole,
+} from "../../rules/chatbot"
 
 /**
  * One conversation as the inbox lists and stores it: the fields of the `chat.conversation` record the Chatbot module reads and
@@ -58,6 +65,10 @@ export interface MessageRecord {
     readonly deliveryError: string | null
     /** The agent that sent an agent line (the agent of the turn that wrote it); null for the other lines and for lines from before it was kept. */
     readonly sentBy: string | null
+    /** The pictures and files the line carries; absent when it carries none. */
+    readonly files?: ReadonlyArray<LineFile> | undefined
+    /** The order the line is about (the order card of the thread); absent when it is about none. */
+    readonly order?: LineOrder | undefined
 }
 
 /** A line to store. */

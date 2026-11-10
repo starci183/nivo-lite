@@ -1,4 +1,5 @@
-import { Badge, Button, Cluster, DescriptionList, Stack, Text } from "@starci/grammar/common"
+import { Button, Cluster, SurfaceCard } from "@starci/grammar/common"
+import type { ListRowData } from "@starci/grammar/common"
 import { InviteLink } from "@/components/branches/InviteLink"
 import type { InviteRowView, TeamPanesBaseProps } from "@/modules/types"
 
@@ -16,26 +17,34 @@ interface TeamInviteDetailProps {
     readonly onLinkCopied: () => void
 }
 
-/** The facts of an invitation: the role it gives, when it ends, and the staff row it is for. */
-const factsOf = (props: TeamInviteDetailProps) => [
-    { id: "role", term: props.copy.roleTerm, description: props.view.roleLabel },
-    { id: "expiry", term: props.copy.expiryTerm, description: props.view.expiry },
+/** The invitation as rows of one list: the role it gives with its state, when it ends, and the staff row it is for. */
+const rowsOf = (props: TeamInviteDetailProps): ReadonlyArray<ListRowData> => [
+    {
+        id: "role",
+        title: props.copy.roleTerm,
+        description: props.view.roleLabel,
+        badges: [{ label: props.copy.stateLabel, tone: props.view.isExpired ? "warning" : "neutral" }],
+    },
+    { id: "expiry", title: props.copy.expiryTerm, description: props.view.expiry },
     ...(props.view.staffNote === undefined
         ? []
-        : [{ id: "staff", term: props.copy.staffTerm, description: props.view.staffNote }]),
+        : [{ id: "staff", title: props.copy.staffTerm, description: props.view.staffNote }]),
 ]
 
 /**
- * The opened invitation: its state, its facts, the commands (send again, copy a new link, withdraw) and the link once one was
- * issued. Issuing a link replaces the old one, which the note says.
+ * The opened invitation as cards on the well: its facts with its state, the commands (send again, copy a new link, withdraw) and
+ * the link once one was issued. Issuing a link replaces the old one, which the note under the commands says.
  */
 export const TeamInviteDetail = (props: TeamInviteDetailProps) => (
     <>
-        <Badge tone={props.view.isExpired ? "warning" : "neutral"} isLoading={props.isLoading}>
-            {props.copy.stateLabel}
-        </Badge>
-        <DescriptionList items={factsOf(props)} isLoading={props.isLoading} />
-        <Stack gap="row">
+        <SurfaceCard
+            kind="list"
+            ariaLabel={props.view.email}
+            isLoading={props.isLoading}
+            items={rowsOf(props)}
+            empty={null}
+        />
+        <SurfaceCard ariaLabel={props.copy.resendLabel} isLoading={props.isLoading} note={props.copy.rotateNote}>
             <Cluster gap="inline">
                 <Button intent="alternative" isPending={props.view.pendingAction === "resend"} onPress={props.onResend}>
                     {props.copy.resendLabel}
@@ -52,10 +61,9 @@ export const TeamInviteDetail = (props: TeamInviteDetailProps) => (
                     {props.copy.revokeLabel}
                 </Button>
             </Cluster>
-            <Text size="sm" tone="muted">
-                {props.copy.rotateNote}
-            </Text>
-            {props.view.link === undefined ? null : (
+        </SurfaceCard>
+        {props.view.link === undefined ? null : (
+            <SurfaceCard ariaLabel={props.view.link.label}>
                 <InviteLink
                     id="invite-detail-link"
                     label={props.view.link.label}
@@ -66,7 +74,7 @@ export const TeamInviteDetail = (props: TeamInviteDetailProps) => (
                     isCopied={props.view.link.isCopied}
                     onCopy={props.onLinkCopied}
                 />
-            )}
-        </Stack>
+            </SurfaceCard>
+        )}
     </>
 )

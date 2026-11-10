@@ -15,6 +15,8 @@ type AvatarEditorProps = {
     /** Why the chosen picture was refused, or undefined. */
     readonly error?: string | undefined
     readonly removeLabel: string
+    /** Draws the remove pill as a small neutral one (a reset beside the picker) instead of the alternative pill. */
+    readonly isRemoveCompact?: boolean
     /** False when there is no uploaded picture to remove. */
     readonly canRemove: boolean
     readonly isBusy: boolean
@@ -29,7 +31,7 @@ type AvatarEditorProps = {
  * line of what is accepted (the refusal replaces it). The pills are geometry while the account loads.
  */
 export const AvatarEditor = (props: AvatarEditorProps) => (
-    <Cluster gap="section" align="start">
+    <Cluster gap="row" align="start">
         {props.preview}
         <Stack gap="inline">
             <Cluster gap="inline">
@@ -45,7 +47,8 @@ export const AvatarEditor = (props: AvatarEditorProps) => (
                 />
                 {props.canRemove || props.isLoading ? (
                     <Button
-                        intent="alternative"
+                        intent={props.isRemoveCompact === true ? "neutral" : "alternative"}
+                        {...(props.isRemoveCompact === true ? { size: "sm" as const } : {})}
                         isDisabled={props.isBusy}
                         isLoading={props.isLoading}
                         onPress={props.onRemove}

@@ -51,7 +51,7 @@ export const VideoGoalForm = (props: VideoGoalFormProps) => (
                     onValueChange={props.on.title}
                 />
                 <Cluster gap="inline" justify="end">
-                    <Button
+                    <Button endArrow
                         isLoading={props.isLoading}
                         intent="commit"
                         isPending={props.pending}

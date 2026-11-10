@@ -46,7 +46,7 @@ export const ResetFormBase = (props: ResetFormBaseProps) => {
         return (
             <AuthPanel label={view.expiredTitle} title={view.expiredTitle} text={view.expiredText}>
                 <Stack gap="row">
-                    <Button intent="commit" width="fill" href={view.newLinkHref}>
+                    <Button endArrow intent="commit" width="fill" href={view.newLinkHref}>
                         {view.newLinkLabel}
                     </Button>
                     <Stack gap="inline" align="center">

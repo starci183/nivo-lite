@@ -11,7 +11,7 @@ export class AgentGenerationRequestedType {
     @Field(() => ID, { nullable: true })
     generationId?: string | null
 
-    /** `quota`, `engine_offline`, `timeout`, `error` or `not_configured`; present on failure. */
+    /** `quota`, `timeout`, `error` or `not_configured`; present on failure. */
     @Field(() => String, { nullable: true })
     reason?: string | null
 

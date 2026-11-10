@@ -280,6 +280,9 @@ export interface ReadableScope {
     readonly audience: "customer" | "internal"
 }
 
+/** An indexed document an agent view may list, without its text. */
+export type ReadableSummary = Omit<ReadableSource, "content">
+
 /** An indexed document an agent may read, with its text. */
 export interface ReadableSource {
     /** The source id. */

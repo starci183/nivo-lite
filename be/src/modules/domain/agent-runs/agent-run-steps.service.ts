@@ -14,15 +14,17 @@ import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentStepLedgerService } from "./agent-step-ledger.service"
 import { AgentRunsLogEvent } from "./agent-runs.log-events"
 import { DEFAULT_MAX_ATTEMPTS, HANDLER_THREW, NO_HANDLER } from "./policies/agent-runs.policy"
-import { routeFailure } from "./policies/failure-route.policy"
-import type { StepAnswer, StepView } from "./agent-runs.contracts"
+import { routeFailure, triesLeft } from "./policies/failure-route.policy"
+import type { OptionalStepPassOver, StepAnswer, StepPassOver, StepView } from "./agent-runs.contracts"
 import type { StepEnd } from "./agent-runs-engine.contracts"
 
 @Injectable()
 /**
  * Runs one claimed step: the handler does the business, this class commits the answer. A done step is stored with the steps that follow in
  * one transaction. A failed try goes to the failure policy in the same transaction that records it: it is tried again after a backoff,
- * undone in reverse order, or given to a person; a step that stopped the run is told to a person after the commit.
+ * undone in reverse order, or given to a person; a step that stopped the run is told to a person after the commit. A side step (one that
+ * only informs someone) that fails past its tries is recorded with its failure and the run goes on to the steps its handler names; a
+ * person is told after the commit.
  */
 export class AgentRunStepsService {
     constructor(
@@ -70,6 +72,7 @@ export class AgentRunStepsService {
      * Records a failed try and routes it. `retryable` says the handler asked for another try. The record and the route commit together; a
      * fence that moved on changes nothing. After the commit a run that went back is undone, and one that went to a person is told. `park` says
      * no other try can cure it (an invalid input, a bug, a handler nobody registered): the run waits for a fix with its done steps kept.
+     * A side step whose handler can go past it is committed done with its failure in the result and the steps that follow.
      */
     async fail(
         step: StepView,
@@ -79,16 +82,26 @@ export class AgentRunStepsService {
         park: boolean = false,
         params: ErrorParams = {},
     ): Promise<StepEnd> {
+        const tries = {
+            code,
+            retryable,
+            attempt: step.attempt,
+            maxAttempts: step.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+            park,
+        }
+        const pass = triesLeft(tries) ? null : await this.passOverOf(step, code)
         const routed = await this.entityManager.transaction(async (tx) => {
             const steps = await this.store.routeStepsOf(step.workspaceId, step.runId, tx)
-            const route = routeFailure({
-                code,
-                retryable,
-                attempt: step.attempt,
-                maxAttempts: step.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
-                steps,
-                park,
-            })
+            const route = routeFailure({ ...tries, steps, sideStep: pass !== null })
+            if (route.kind === "continue") {
+                if (pass === null) return null
+                const passed = await this.ledger.commitIn(tx, step, {
+                    kind: "done",
+                    result: pass.result,
+                    next: pass.next,
+                })
+                return passed === "ok" ? route : null
+            }
             if (route.kind === "retry") {
                 const retried = await this.ledger.commitIn(tx, step, { kind: "retry", code, afterMs: route.afterMs })
                 return retried === "ok" ? route : null
@@ -100,6 +113,7 @@ export class AgentRunStepsService {
             return route
         })
         if (routed === null) return this.fenced(step)
+        if (routed.kind === "continue" && pass !== null) return this.passedOver(step, code, params, pass)
         if (routed.kind === "retry") {
             this.logger.warn(AgentRunsLogEvent.StepRetry, { runId: step.runId, stepKey: step.stepKey, code, params })
         } else {
@@ -112,6 +126,37 @@ export class AgentRunStepsService {
             await this.deadLetter.tell(step.workspaceId, step.runId, step.stepKey, code, params)
         }
         return { kind: "failed", code }
+    }
+
+    /** The handler's way past a side step that failed, or null when the step blocks the run or its handler could not say. */
+    private async passOverOf(step: StepView, code: string): Promise<OptionalStepPassOver> {
+        const handler = this.handlers.of(step.kind)
+        if (handler?.passOver === undefined) return null
+        try {
+            return (await handler.passOver(step, code)) ?? null
+        } catch (cause) {
+            this.logger.error(AgentRunsLogEvent.PassOverFailed, cause, {
+                runId: step.runId,
+                stepKey: step.stepKey,
+                code,
+            })
+            return null
+        }
+    }
+
+    /** After the commit of a side step that was passed over: a person is told, and a failure to tell never stops the run. */
+    private async passedOver(step: StepView, code: string, params: ErrorParams, pass: StepPassOver): Promise<StepEnd> {
+        this.logger.warn(AgentRunsLogEvent.StepPassedOver, { runId: step.runId, stepKey: step.stepKey, code, params })
+        try {
+            await this.handlers.of(step.kind)?.sideFailed?.(step, code)
+        } catch (cause) {
+            this.logger.error(AgentRunsLogEvent.SideTellFailed, cause, {
+                runId: step.runId,
+                stepKey: step.stepKey,
+                code,
+            })
+        }
+        return { kind: "done", result: pass.result }
     }
 
     private fenced(step: StepView): StepEnd {

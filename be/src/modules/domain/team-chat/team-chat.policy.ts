@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { BODY_MAX, FILES_MAX, MENTIONS_MAX, PAGE_DEFAULT, PAGE_MAX } from "./team-chat.contracts"
-import type { ChatDone, ChatMemberRef, ChatRefused, StoredMention } from "./team-chat.contracts"
+import type { ChatDone, ChatMemberRef, ChatRefused, GroupPurpose, RoomKind, StoredMention } from "./team-chat.contracts"
+import type { PurposeColumns } from "./team-chat-audience.contracts"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
 
 /** The longest client id of a message: the column's CHECK (chat_room_messages_client_id_check) holds 1 to 64 characters. */
@@ -108,3 +109,38 @@ export const storedMentionsOf = (mentions: ReadonlyArray<ChatMemberRef>): Array<
 
 /** The body of a card or a line, cut to what the database keeps. */
 export const cardBodyOf = (body: string): string => body.slice(0, CARD_BODY_MAX)
+
+/** The prefix of the key a line of a graph node is kept under. */
+const KEY_PREFIX = "agent-message:"
+
+/** The longest key a room line keeps (`chat_room_messages.client_id`). */
+const KEY_MAX = 64
+
+/** The hex of the digest a key too long for the room is kept as. */
+const DIGEST_HEX = 48
+
+/**
+ * The key of the line of one effect call: the call's own key when it fits the room's column, else a digest of it. A digest keeps the
+ * line once per call (the same call gives the same digest); a key such as `payment-notice:<order uuid>` is over the bound with the
+ * prefix, and was refused by the column's check, so the payment notice of an order never reached the owner.
+ */
+export const lineKeyOf = (callKey: string): string => {
+    const key = `${KEY_PREFIX}${callKey}`
+    return key.length <= KEY_MAX
+        ? key
+        : `${KEY_PREFIX}${createHash("sha256").update(callKey).digest("hex").slice(0, DIGEST_HEX)}`
+}
+
+/** The longest module name a module room holds: the column's CHECK (chat_rooms_purpose_check) holds 1 to 64 characters. */
+export const PURPOSE_MODULE_MAX = 64
+
+/** The purpose and module columns of a room: a direct room is always `direct`; a group is plain unless a purpose is given. */
+export const purposeColumnsOf = (kind: RoomKind, given: GroupPurpose | undefined): PurposeColumns => {
+    if (kind === "direct") return { purpose: "direct", purposeModule: null }
+    if (given?.purpose === "module") return { purpose: "module", purposeModule: given.module }
+    return { purpose: given?.purpose ?? "group", purposeModule: null }
+}
+
+/** Whether a purpose can be stored: a module room names a module of 1 to 64 characters. */
+export const isPurposeValid = (given: GroupPurpose): boolean =>
+    given.purpose !== "module" || (given.module.trim().length > 0 && given.module.length <= PURPOSE_MODULE_MAX)

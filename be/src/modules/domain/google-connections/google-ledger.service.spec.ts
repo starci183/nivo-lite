@@ -3,13 +3,13 @@ import { Test } from "@nestjs/testing"
 import { ConnectionsService } from "@modules/domain/connections"
 import { ProviderRegistryErrorCode } from "@modules/domain/provider-registry"
 import type { BusinessLedgerEntry } from "@modules/domain/provider-registry"
-import { GOOGLE_CLIENT } from "@modules/integrations/google"
+import { GOOGLE_CLIENT, ledgerCategoryText, ledgerVoidText } from "@modules/integrations/google"
 import type { GoogleClient } from "@modules/integrations/google"
 import { CLOCK } from "@modules/platform/clock"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "./errors/google-connections.error"
 import { GoogleLedgerService } from "./google-ledger.service"
 import { GoogleTokensService } from "./google-tokens.service"
-import { LEDGER_HEADER } from "./policies/ledger-sheet.policy"
+import { BALANCE_FORMULA, LEDGER_HEADER, LEDGER_TAB } from "./policies/ledger-sheet.policy"
 import { runRealGoogleTokens } from "@tests/fixtures/builders/google-tokens.builder"
 import {
     EXPIRES,
@@ -30,7 +30,8 @@ const ENTRY: BusinessLedgerEntry = {
     status: "paid",
     note: "",
 }
-const ROW = ["2026-11-04", "DH-7", "Dinh", 5000, "sepay:95958515", "PAID", ""]
+const ROW = ["2026-11-04", "'DH-7", "", 5000, "", "'Dinh", `'${ledgerCategoryText("sale")}`, BALANCE_FORMULA]
+const HEADED = { ledgerHeader: "written", ledgerLayout: "v2" }
 const ledgerRow = (meta = {}, overrides = {}) =>
     record({ meta: { email: "shop@example.test", sheets: "granted", ledgerSheet: SHEET, ...meta }, ...overrides })
 const FRESH = { ...stored, access_token: "access-fresh", expires_at: EXPIRES }
@@ -42,6 +43,7 @@ const build = async (rows = [ledgerRow()]) => {
     const google = mock<GoogleClient>()
     google.isConfigured.mockReturnValue(true)
     google.appendValues.mockResolvedValue("Sheet1!A2:G3")
+    google.ensureTab.mockResolvedValue(undefined)
     google.refreshAccessToken.mockResolvedValue(tokens)
     const store = mock<GoogleTokensService>()
     const clock = new FakeClock(NOW)
@@ -80,17 +82,18 @@ describe("GoogleLedgerService > ready", () => {
 
 describe("GoogleLedgerService > append, once the header is there", () => {
     it("writes only the row once the header is there, and changes no cell", async () => {
-        const { service, google, connections } = await build([ledgerRow({ ledgerHeader: "written" })])
+        const { service, google, connections } = await build([ledgerRow(HEADED)])
 
         await service.append("ws-1", ENTRY)
 
-        expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, [ROW])
+        expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, LEDGER_TAB, [ROW])
         expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
             meta: {
                 email: "shop@example.test",
                 sheets: "granted",
                 ledgerSheet: SHEET,
                 ledgerHeader: "written",
+                ledgerLayout: "v2",
                 ledgerLastRowAt: new Date(NOW).toISOString(),
             },
         })
@@ -104,32 +107,63 @@ describe("GoogleLedgerService > append", () => {
 
         await expect(service.append("ws-1", ENTRY)).resolves.toBe("Sheet1!A2:G3")
 
-        expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, [LEDGER_HEADER, ROW])
+        expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, LEDGER_TAB, [LEDGER_HEADER, ROW])
         expect(connections.patch).toHaveBeenCalledWith("ws-1", "c1", {
             meta: {
                 email: "shop@example.test",
                 sheets: "granted",
                 ledgerSheet: SHEET,
                 ledgerHeader: "written",
+                ledgerLayout: "v2",
                 ledgerLastRowAt: new Date(NOW).toISOString(),
             },
         })
     })
 
+    it("adds the cash book tab before the header and the first entry", async () => {
+        const { service, google } = await build()
+
+        await service.append("ws-1", ENTRY)
+
+        expect(google.ensureTab).toHaveBeenCalledWith("access-fresh", SHEET, LEDGER_TAB)
+    })
+
+    it("lays out again a sheet an older version headed: the new tab and header once, then rows only", async () => {
+        const { service, google, connections } = await build([ledgerRow({ ledgerHeader: "written" })])
+
+        await service.append("ws-1", ENTRY)
+
+        expect(google.ensureTab).toHaveBeenCalledTimes(1)
+        expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, LEDGER_TAB, [LEDGER_HEADER, ROW])
+        expect(connections.patch).toHaveBeenCalledWith(
+            "ws-1",
+            "c1",
+            expect.objectContaining({ meta: expect.objectContaining({ ledgerHeader: "written", ledgerLayout: "v2" }) }),
+        )
+    })
+
+    it("does not look for the tab again once the sheet is laid out", async () => {
+        const { service, google } = await build([ledgerRow(HEADED)])
+
+        await service.append("ws-1", ENTRY)
+
+        expect(google.ensureTab).not.toHaveBeenCalled()
+    })
+
     it("answers the sheet itself when Google names no range", async () => {
-        const { service, google } = await build([ledgerRow({ ledgerHeader: "written" })])
+        const { service, google } = await build([ledgerRow(HEADED)])
         google.appendValues.mockResolvedValue("")
 
         await expect(service.append("ws-1", ENTRY)).resolves.toBe(SHEET)
     })
 
     it("refreshes the token once and writes again when Google refuses the one it holds with 401", async () => {
-        const { service, google } = await build([ledgerRow({ ledgerHeader: "written" })])
+        const { service, google } = await build([ledgerRow(HEADED)])
         google.appendValues.mockRejectedValueOnce(googleRefusal({ status: 401 })).mockResolvedValueOnce("Sheet1!A4:G4")
 
         await expect(service.append("ws-1", ENTRY)).resolves.toBe("Sheet1!A4:G4")
         expect(google.refreshAccessToken).toHaveBeenCalledTimes(1)
-        expect(google.appendValues).toHaveBeenLastCalledWith("access-new", SHEET, [ROW])
+        expect(google.appendValues).toHaveBeenLastCalledWith("access-new", SHEET, LEDGER_TAB, [ROW])
     })
 
     it.each([
@@ -138,7 +172,7 @@ describe("GoogleLedgerService > append", () => {
         ["a token still refused after the refresh", googleRefusal({ status: 401 })],
         ["a revoked grant", new GoogleConnectionsError({ code: GoogleConnectionsErrorCode.Lost })],
     ])("throws the refused connection for %s, which only the owner cures", async (_name, failure) => {
-        const { service, google } = await build([ledgerRow({ ledgerHeader: "written" })])
+        const { service, google } = await build([ledgerRow(HEADED)])
         google.appendValues.mockRejectedValue(failure)
 
         await expect(service.append("ws-1", ENTRY)).rejects.toMatchObject({
@@ -152,7 +186,7 @@ describe("GoogleLedgerService > append", () => {
         ["a server error", googleRefusal({ status: 503 })],
         ["a timeout", new Error("timeout")],
     ])("throws %s as it is, so the run tries again", async (_name, failure) => {
-        const { service, google } = await build([ledgerRow({ ledgerHeader: "written" })])
+        const { service, google } = await build([ledgerRow(HEADED)])
         google.appendValues.mockRejectedValue(failure)
 
         await expect(service.append("ws-1", ENTRY)).rejects.toBe(failure)
@@ -172,12 +206,12 @@ describe("GoogleLedgerService > append", () => {
 
 describe("GoogleLedgerService > void", () => {
     it("adds one row that names the transaction and the day, and removes nothing", async () => {
-        const { service, google } = await build([ledgerRow({ ledgerHeader: "written" })])
+        const { service, google } = await build([ledgerRow(HEADED)])
 
         await service.void("ws-1", ENTRY.transactionId)
 
-        expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, [
-            ["2026-10-12", "", "", "", "sepay:95958515", "VOID", "Hoan tac"],
+        expect(google.appendValues).toHaveBeenCalledWith("access-fresh", SHEET, LEDGER_TAB, [
+            ["2026-10-12", "'sepay:95958515", `'${ledgerVoidText()}`, "", "", "", "", BALANCE_FORMULA],
         ])
     })
 })

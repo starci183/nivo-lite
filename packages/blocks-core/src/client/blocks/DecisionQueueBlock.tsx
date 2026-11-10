@@ -1,9 +1,9 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
+import { SurfaceCard } from "@starci/grammar/common"
 import type { decisionQueueBlock } from "../../blocks/decision-queue.block"
 import { cellContextOf } from "../../rows/cell-format"
-import { declaredQueue, editAnswerOf, editFailure, editInputOf } from "../../rows/decision-commands"
-import type { EditAnswer } from "../../rows/decision-commands"
+import { declaredQueue, editAnswerOf, editFailure, editInputOf, type EditAnswer } from "../../rows/decision-commands"
 import type { FormValues } from "../../rows/form-values"
 import { parsedSlot, derivedSlot } from "../../slots/slots"
 import { DECISION_QUEUE_PLACEHOLDER } from "../../views/placeholders"
@@ -17,7 +17,24 @@ import { DecisionList } from "../composites/DecisionList"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
-/** The decisions waiting for a person, each decided in place; as a card it collapses while nothing waits. */
+/** What the notice of the queue stands in. */
+interface QueueFrameProps {
+    readonly surface: RenderOf<typeof decisionQueueBlock>["props"]["surface"]
+    readonly label: string
+    readonly children: ReactNode
+}
+
+/** The place of the queue while it has nothing to list: its card with the notice inside, so the card never comes and goes; a section needs none. */
+const QueueFrame = (props: QueueFrameProps): ReactNode =>
+    props.surface === "card" ? (
+        <SurfaceCard label={props.label} headingLevel={3}>
+            {props.children}
+        </SurfaceCard>
+    ) : (
+        props.children
+    )
+
+/** The decisions waiting for a person, each decided in place; as a card it keeps its place while nothing waits and says so inside. */
 export const DecisionQueueBlock = (props: RenderOf<typeof decisionQueueBlock>): ReactNode => {
     const host = useBlockHost()
     const words = useBlockWords()
@@ -57,8 +74,13 @@ export const DecisionQueueBlock = (props: RenderOf<typeof decisionQueueBlock>): 
                 labels={labels}
                 placeholder={DECISION_QUEUE_PLACEHOLDER}
                 forbidden="hide"
-                empty={spec.surface === "card" ? "collapse" : "notice"}
+                empty="notice"
                 emptyDescription={words(spec.emptyBody)}
+                frame={(notice) => (
+                    <QueueFrame surface={spec.surface} label={words(spec.label)}>
+                        {notice}
+                    </QueueFrame>
+                )}
                 onRetry={read.retry}
                 render={(view, isLoading) => (
                     <DecisionList

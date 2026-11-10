@@ -34,7 +34,6 @@ export const PermissionGrantsFields = (props: PermissionGrantsFieldsProps) => {
         <Section
             title={p.copy.grantsLabel}
             headingLevel={3}
-            description={p.copy.grantsNote}
             isLoading={props.isLoading === true}
         >
             <Stack gap="row">
@@ -59,7 +58,7 @@ export const PermissionGrantsFields = (props: PermissionGrantsFieldsProps) => {
                 ))}
             </Stack>
             <Text size="xs" tone="muted">
-                {p.copy.ownerAlways}
+                {`${p.copy.grantsNote} ${p.copy.ownerAlways}`}
             </Text>
         </Section>
     )

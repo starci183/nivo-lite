@@ -1,0 +1,8 @@
+installation /workspaces/<ws>/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa
+page 13 /workspaces/<ws>/agents/sales/<inst>/workbench?tab=orders links=18 (overlay 3, in-page 2)
+  bounce /workspaces/<ws>/agents/sales/<inst>/workbench?tab=settings -> /workspaces/<ws>/agents/sales/<inst>/workbench?tab=orders (retry)
+  bounce /workspaces/<ws>/agents/sales/<inst>/workflows/consult -> /workspaces/<ws>/agents/sales/<inst>/workbench?tab=orders (retry)
+  bounce /workspaces/<ws>/agents/sales/<inst>/workflows/after-sale -> /workspaces/<ws>/agents/sales/<inst>/workbench?tab=orders (retry)
+  bounce /workspaces/<ws>/agents/sales/<inst>/workflows/web-order -> /workspaces/<ws>/agents/sales/<inst>/workbench?tab=orders (retry)
+non-GET requests 
+done pages 13 links 174 blocked mutations 0 skipped 42

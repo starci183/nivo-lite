@@ -23,7 +23,10 @@ import { SALES_WORKBENCH_SPEC } from "./specs/sales.workbench"
 
 const nodesOf = (node: SpecNode): ReadonlyArray<SpecNode> => [node, ...(node.children ?? []).flatMap(nodesOf)]
 
-const allNodes: ReadonlyArray<SpecNode> = SALES_WORKBENCH_SPEC.views.flatMap((view) => nodesOf(view.root))
+const allNodes: ReadonlyArray<SpecNode> = [
+    ...SALES_WORKBENCH_SPEC.views.flatMap((view) => nodesOf(view.root)),
+    ...(SALES_WORKBENCH_SPEC.aside === undefined ? [] : nodesOf(SALES_WORKBENCH_SPEC.aside)),
+]
 
 /** Every message key a text names, found in the JSON of the spec. */
 const keysIn = (value: unknown): ReadonlyArray<string> => {
@@ -97,6 +100,10 @@ describe("the Sales module declaration", () => {
     it("has no tool, so nothing leaves the system from a transactional action", () => {
         expect(salesModule.tools).toBeUndefined()
     })
+
+    it("declares the payment reminder timings as policy values of the sales agent, in hours", () => {
+        expect(salesModule.agent?.policy.limits).toMatchObject({ paymentReminderHours: 2, paymentStaleHours: 24 })
+    })
 })
 
 describe("the fixtures of the Sales module", () => {
@@ -154,6 +161,7 @@ describe("the messages of the Sales module", () => {
             ...refusals.flatMap((reason) => keysIn(refusedWith(reason))),
             ...salesBlocks.flatMap((block) => keysIn(block.title)),
             ATTENTION_COUNT_KEY,
+            "attention_empty_hint",
             FIGURE_HINT_KEYS.open,
             FIGURE_HINT_KEYS.proposal,
             FIGURE_HINT_KEYS.closed,

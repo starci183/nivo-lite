@@ -1,7 +1,8 @@
 import type { ReactNode } from "react"
-import { Cluster, Progress, Section, Stack } from "@starci/grammar/common"
+import { Cluster, Section, Stack, Stepper } from "@starci/grammar/common"
 import { WizardFooter } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
+import type { WizardPhases } from "@/modules/types"
 
 /** What the shared wizard frame draws. */
 type WizardFrameProps = {
@@ -15,6 +16,45 @@ type WizardFrameProps = {
     /** The step's buttons: one filled primary, the rest outline or ghost. A step with a footer of its own passes `footer` instead. */
     readonly actions?: ReadonlyArray<WizardAction>
     readonly footer?: ReactNode
+    /** A connection wizard: the Stepper shows the four shared phases instead of the steps. */
+    readonly phases?: WizardPhases
+}
+
+/** The Stepper of the frame: the four phases of a connection wizard, or the wizard's own steps. */
+const FrameStepper = (props: Pick<WizardFrameProps, "stepLabel" | "steps" | "index" | "phases">) => {
+    const phases = props.phases
+    if (phases === undefined) {
+        return (
+            <Stepper
+                label={props.stepLabel}
+                currentStepId={`s${props.index}`}
+                completeMarker="check"
+                steps={props.steps.map((label, index) => ({
+                    id: `s${index}`,
+                    label,
+                    ...(index < props.index ? { state: "complete" as const } : {}),
+                }))}
+            />
+        )
+    }
+    const current = phases.ofStep[props.index] ?? 0
+    return (
+        <Stepper
+            label={props.stepLabel}
+            currentStepId={`p${current}`}
+            completeMarker="check"
+            stateLabel={(state) =>
+                state === "complete" || state === "current" || state === "upcoming"
+                    ? phases.stateLabels[state]
+                    : undefined
+            }
+            steps={phases.labels.map((label, index) => ({
+                id: `p${index}`,
+                label,
+                ...(index < current ? { state: "complete" as const } : {}),
+            }))}
+        />
+    )
 }
 
 /** The four fields every wizard view carries for its frame. */
@@ -34,17 +74,18 @@ export const frameOf = (view: WizardFrameHead): WizardFrameHead => ({
 })
 
 /**
- * The one frame every connection wizard shares, inside the Connections drawer: the step count, the step's name and a Grammar Progress
- * in step mode, one segment per step (a horizontal Stepper cannot fit five labelled steps in a 24rem drawer), then the body and buttons.
+ * The one frame every connection wizard shares, inside the wide Connections drawer: the step's name and count, the horizontal
+ * Stepper across the top (done steps checked, the same track as the first-run wizard), then the body and buttons. A connection
+ * wizard passes its phases, so every provider shows the same four: details, grant, check, hand to an agent.
  */
 export const WizardFrame = (props: WizardFrameProps) => (
     <Section title={props.steps[props.index] ?? props.title} description={props.stepLabel} headingLevel={3}>
         <Stack gap="section">
-            <Progress
-                label={props.stepLabel}
-                steps={{ total: props.steps.length, completed: props.index + 1 }}
-                valueText={props.stepLabel}
-                tone={props.index + 1 === props.steps.length ? "success" : "accent"}
+            <FrameStepper
+                stepLabel={props.stepLabel}
+                steps={props.steps}
+                index={props.index}
+                {...(props.phases === undefined ? {} : { phases: props.phases })}
             />
             <Stack gap="row">{props.children}</Stack>
             <Cluster gap="inline">

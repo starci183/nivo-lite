@@ -1,32 +1,34 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { useSearchParams } from "next/navigation"
 import { useMemo, useState } from "react"
 import {
     CATALOG,
-    CATEGORIES,
     CURRENT_CONNECTORS,
     catalogKey,
     matchesWords,
     searchWords,
-    asCategory,
+    asGroup,
+    FOLDED_CONNECTORS,
+    groupOfEntry,
+    providersOfEntry,
+    unitOfEntry,
     audienceLineOf,
-    catalogStatusOf,
     catalogTagOf,
-    checkProvidersOf,
     connectionCountsOf,
+    useLibraryLife,
 } from "@/hooks/connection-catalog"
 import type { CatalogEntry } from "@/hooks/connection-catalog"
 import { PROVIDER_LOGO } from "@/hooks/connection-providers"
 import {
-    connectionPageHref,
     mayConnect,
     useConnectionOverlays,
     useConnectionsData,
     useConnectionsRole,
     useWantConnector,
 } from "@/hooks/connections"
-import type { Connection, ConnectorCategory, Provider, LibraryCard, LibraryCategory } from "@/modules/types"
+import type { Connection, LibraryCard, LibraryCategory } from "@/modules/types"
 import { ConnectionLibraryBase } from "./component"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
@@ -47,26 +49,36 @@ interface LibraryInput {
     readonly t: Translate
     readonly items: ReadonlyArray<Connection>
     readonly text: string
-    readonly category: ConnectorCategory | "all"
+    readonly group: string
     /** The "I need this" commands pressed so far: pending, done, or refused with a note. */
     readonly wants: Readonly<Record<string, LibraryCard["want"]>>
     /** The viewer's role in the workspace. */
     readonly role: string | undefined
+    /** The tile status of a connector from the workspace's connections of it. */
+    readonly lifeOf: ReturnType<typeof useLibraryLife>
 }
 
-/** The providers a workspace holds one connection of: a tile then leads to that connection's page, not to another one. */
-const SINGLE_GRANT: ReadonlySet<Provider> = new Set<Provider>(["google_drive"])
+/** The line beside a tile's name: a planned connector says so; another one what it holds many of, with its early-access tag. */
+const bylineOf = (isSoon: boolean, many: string, tag: string | undefined): string => {
+    if (isSoon) return tag ?? ""
+    return tag === undefined ? many : `${many} · ${tag}`
+}
+
+/** The groups of the library, in the order they head it. */
+const GROUP_ORDER: ReadonlyArray<string> = ["chat", "money", "google", "data", "sales", "accounting"]
 
 const IDLE_WANT: LibraryCard["want"] = { isPending: false, isDone: false }
 
 const cardOf = (known: KnownEntry, input: LibraryInput): LibraryCard => {
     const { entry, name, blurb } = known
     const logo = entry.logo ?? (entry.provider === undefined ? undefined : PROVIDER_LOGO[entry.provider])
-    const mine = entry.provider === undefined ? [] : input.items.filter((item) => item.provider === entry.provider)
-    const count = connectionCountsOf(mine).get(entry.provider ?? "") ?? 0
-    const needsCheck = entry.provider !== undefined && checkProvidersOf(mine).has(entry.provider)
-    const [only] = entry.provider !== undefined && SINGLE_GRANT.has(entry.provider) ? mine : []
-    const pageHref = only === undefined ? null : connectionPageHref(input.workspaceId, only)
+    const providers = providersOfEntry(entry)
+    const mine = input.items.filter((item) => providers.includes(item.provider))
+    const counts = connectionCountsOf(mine)
+    const count = providers.reduce((sum, provider) => sum + (counts.get(provider) ?? 0), 0)
+    const unit = unitOfEntry(entry)
+    const life = input.lifeOf(mine, unit)
+    const tag = catalogTagOf(entry, input.t)
     return {
         id: entry.id,
         name,
@@ -75,27 +87,32 @@ const cardOf = (known: KnownEntry, input: LibraryInput): LibraryCard => {
         glyph: entry.glyph,
         ...(logo === undefined ? {} : { logo }),
         ...(entry.provider === undefined ? {} : { guide: entry.provider }),
-        tag: catalogTagOf(entry, input.t),
-        status: catalogStatusOf(count, input.t, needsCheck),
+        tag,
+        status: life.status,
+        ...(life.lifeAction === undefined ? {} : { lifeAction: life.lifeAction }),
         connected: count,
         isCurrent: CURRENT_CONNECTORS.includes(entry.id),
+        group: groupOfEntry(entry),
+        byline: bylineOf(entry.status === "soon", input.t(`many_${unit}`), tag?.label),
+        addLabel: input.t(`add_${unit}`),
         isSoon: entry.status === "soon",
         canConnect: entry.provider !== undefined && mayConnect(input.role, entry.provider),
-        ...(pageHref === null ? {} : { pageHref }),
         want: input.wants[entry.id] ?? IDLE_WANT,
     }
 }
 
 /** The connectors that pass the search, most used first and planned ones last, and the categories the search leaves with their counts. */
 const libraryOf = (input: LibraryInput) => {
-    const { t, text, category } = input
+    const { t, text, group } = input
     const words = searchWords(text)
-    const searched: ReadonlyArray<KnownEntry> = CATALOG.map((entry) => ({
-        entry,
-        name: t(catalogKey(entry, "name")),
-        blurb: t(catalogKey(entry, "blurb")),
-        haystack: `${t(catalogKey(entry, "name"))} ${t(catalogKey(entry, "blurb"))} ${t(catalogKey(entry, "keywords"))}`,
-    })).filter((item) => matchesWords(item.haystack, words))
+    const searched: ReadonlyArray<KnownEntry> = CATALOG.filter((entry) => !FOLDED_CONNECTORS.has(entry.id))
+        .map((entry) => ({
+            entry,
+            name: t(catalogKey(entry, "name")),
+            blurb: t(catalogKey(entry, "blurb")),
+            haystack: `${t(catalogKey(entry, "name"))} ${t(catalogKey(entry, "blurb"))} ${t(catalogKey(entry, "keywords"))}`,
+        }))
+        .filter((item) => matchesWords(item.haystack, words))
     const rankOf = (item: KnownEntry): number => {
         const current = CURRENT_CONNECTORS.indexOf(item.entry.id)
         return current === -1 ? CURRENT_CONNECTORS.length : current
@@ -104,17 +121,17 @@ const libraryOf = (input: LibraryInput) => {
         rankOf(a) - rankOf(b) ||
         (b.entry.status === "soon" ? 0 : 1) - (a.entry.status === "soon" ? 0 : 1) ||
         b.entry.popularity - a.entry.popularity
-    const perCategory = (id: ConnectorCategory) => searched.filter((item) => item.entry.category === id).length
+    const perGroup = (id: string) => searched.filter((item) => groupOfEntry(item.entry) === id).length
     const categories: ReadonlyArray<LibraryCategory> = [
-        { id: "all", label: t("libAllCategories"), count: searched.length },
-        ...CATEGORIES.filter((id) => perCategory(id) > 0).map((id) => ({
+        { id: "all", label: t("group_all"), count: searched.length },
+        ...GROUP_ORDER.filter((id) => perGroup(id) > 0).map((id) => ({
             id,
-            label: t(`cat_${id}`),
-            count: perCategory(id),
+            label: t(`group_${id}`),
+            count: perGroup(id),
         })),
     ]
     const cards = [...searched]
-        .filter((item) => category === "all" || item.entry.category === category)
+        .filter((item) => group === "all" || groupOfEntry(item.entry) === group)
         .sort(byPopularity)
         .map((item) => cardOf(item, input))
     return { categories, cards }
@@ -134,9 +151,10 @@ export const ConnectionLibrary = () => {
     const { items } = data
     const isLoading = "isLoading" in data.slot
     const [text, setText] = useState("")
-    const [category, setCategory] = useState<ConnectorCategory | "all">("all")
+    const group = asGroup(useSearchParams().get("group") ?? "all")
     const [wants, setWants] = useState<Readonly<Record<string, LibraryCard["want"]>>>({})
     const want = useWantConnector()
+    const lifeOf = useLibraryLife()
     const askFor = (id: string) => {
         setWants((current) => ({ ...current, [id]: { isPending: true, isDone: false } }))
         void want(id).then((result) =>
@@ -150,8 +168,8 @@ export const ConnectionLibrary = () => {
         )
     }
     const { categories, cards } = useMemo(
-        () => libraryOf({ workspaceId, t, items, text, category, wants, role }),
-        [workspaceId, t, items, text, category, wants, role],
+        () => libraryOf({ workspaceId, t, items, text, group, wants, role, lifeOf }),
+        [workspaceId, t, items, text, group, wants, role, lifeOf],
     )
     return (
         <ConnectionLibraryBase
@@ -160,24 +178,19 @@ export const ConnectionLibrary = () => {
                 searchLabel: t("libSearch"),
                 clearLabel: t("libClear"),
                 filterLabel: t("libFilter"),
-                category,
                 categories,
                 emptyMessage: t("libEmpty"),
                 emptyHint: t("libEmptyHint"),
                 wantLabel: t("libWant"),
                 wantedLabel: t("libWanted"),
                 connectLabel: t("libConnect"),
-                addLabel: t("libAddAnother"),
                 viewLabel: t("libView"),
                 openPageLabel: t("openPage"),
-                currentLabel: t("libCurrent"),
-                othersLabel: t("libOthers"),
                 cards,
                 isLoading,
             }}
             on={{
                 text: setText,
-                category: (id) => setCategory(asCategory(id)),
                 open: overlays.openDetail,
                 want: askFor,
             }}

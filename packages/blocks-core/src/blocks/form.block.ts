@@ -6,6 +6,7 @@ import { FORM_KINDS } from "../rows/form-values"
 import type { FormKind } from "../rows/form-values"
 import { PATH_MAX } from "./bounds"
 import { currencyCode } from "./currency-prop"
+import { RECORD_SURFACES } from "./record-surface"
 import type { EnumSchema, RequiredAction, TextSchema } from "./schema-types"
 
 /** The most fields one form holds. */
@@ -58,6 +59,7 @@ const props: z.ZodObject<{
     idPath: z.ZodOptional<z.ZodString>
     currency: z.ZodOptional<z.ZodString>
     fields: z.ZodArray<FormFieldSchema>
+    surface: z.ZodOptional<EnumSchema<(typeof RECORD_SURFACES)[number]>>
 }> = z.object({
     label: specText,
     submitLabel: specText,
@@ -67,6 +69,7 @@ const props: z.ZodObject<{
     idPath: z.string().max(PATH_MAX).optional(),
     currency: currencyCode.optional(),
     fields: z.array(formField).min(1).max(FORM_FIELDS_MAX),
+    surface: z.enum(RECORD_SURFACES).optional(),
 })
 
 /** A read slot that a spec may leave unbound. */

@@ -1,4 +1,4 @@
-import { STOP_STEP, graphSpecProblems, graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
+import { STOP_STEP, wakesOfTriggers, graphRefProblems, graphSpecProblems, graphSpecSchema, specRefContextOf } from "@nivo-lite/agent-sdk/graph"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import accounting from "../../../.starcistacks/dev/seeds/data/graphs/accounting.json"
@@ -24,25 +24,38 @@ describe("agent graph specs of flow F", () => {
         expect(missing).toEqual([])
     })
 
-    it.each(MODULE_KEYS)("%s: is the graph of its own module, woken by a tag from every source", (moduleKey) => {
+    it.each(MODULE_KEYS)("%s: is the graph of its own module, woken only by the wakes of its typed triggers", (moduleKey) => {
         const spec = loaded(moduleKey)
 
         expect(spec.moduleKey).toBe(moduleKey)
-        expect(spec.trigger.sources).toHaveLength(5)
+        expect(spec.triggers?.length ?? 0).toBeGreaterThan(0)
+        expect(spec.trigger.sources).toEqual(wakesOfTriggers(spec.triggers ?? []))
+        expect(spec.contract?.inputs.length ?? 0).toBeGreaterThan(0)
     })
 
     it.each(MODULE_KEYS)("%s: has no problem, and its grant is the minimum its nodes need", (moduleKey) => {
         expect(graphSpecProblems(loaded(moduleKey), index)).toEqual([])
     })
 
+    it.each(MODULE_KEYS)("%s: has no broken param or ref, as a new version is judged at save", (moduleKey) => {
+        const spec = loaded(moduleKey)
+        expect(graphRefProblems(spec, specRefContextOf(spec, index)).map((problem) => `${problem.code} ${problem.nodeKey}.${problem.field} ${problem.ref ?? ""}`)).toEqual([])
+    })
+
     it("refuses a graph whose branch has no route, whose grant is short or whose reference is not upstream", () => {
-        const sales = loaded("sales")
+        const chatbot = loaded("chatbot")
+        const ledger = loaded("accounting").nodes.find((node) => node.step === "accounting.post-payment")
+        if (ledger === undefined) throw new Error("the accounting seed has no ledger step")
         const broken: GraphSpec = {
-            ...sales,
-            grant: { ...sales.grant, tools: [], effects: [...sales.grant.effects, "agent.tag"] },
-            nodes: sales.nodes.map((node) =>
-                node.key === "needs-approval" ? { ...node, routes: { "approve-self": "confirm" } } : node,
-            ),
+            ...chatbot,
+            // No right granted, an effect no node uses, and no tool for the ledger step the graph now reaches.
+            grant: { rights: [], tools: [], effects: [...chatbot.grant.effects, "lead.ensure"] },
+            nodes: [
+                ...chatbot.nodes.map((node) =>
+                    node.kind === "condition" ? { ...node, routes: {} } : node.key === "answer" ? { ...node, next: ledger.key } : node,
+                ),
+                ledger,
+            ],
         }
 
         expect(graphSpecProblems(broken, index).map((problem) => problem.code)).toEqual(

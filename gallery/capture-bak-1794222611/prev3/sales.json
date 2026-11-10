@@ -1,0 +1,230 @@
+{
+ "agent": "sales",
+ "at": "2026-11-09T10:14:30.350Z",
+ "blockedMutations": 0,
+ "pages": [
+  {
+   "key": "/workspaces/<ws>/agents/sales/<inst>/workbench",
+   "url": "/workspaces/<ws>/agents/sales/<inst>/workbench",
+   "inPageControls": 7,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/workbench",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/setup"
+    },
+    {
+     "label": "Cần chú ý",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 74,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/workbench?tab=attention",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/workbench?tab=attention"
+    },
+    {
+     "label": "Tiến trình bán",
+     "box": {
+      "x": 342,
+      "y": 229,
+      "w": 113,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/workbench?tab=pipeline",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/workbench?tab=pipeline"
+    },
+    {
+     "label": "Đơn hàng",
+     "box": {
+      "x": 455,
+      "y": 229,
+      "w": 87,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/workbench?tab=orders",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/workbench?tab=orders"
+    },
+    {
+     "label": "Quy tắc",
+     "box": {
+      "x": 541,
+      "y": 229,
+      "w": 73,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/workbench?tab=settings",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/workbench?tab=settings"
+    },
+    {
+     "label": "Mở trợ lý NIVO",
+     "box": {
+      "x": 1360,
+      "y": 827,
+      "w": 56,
+      "h": 56
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/workbench",
+     "hint": "Trợ lý NIVO"
+    }
+   ]
+  }
+ ],
+ "skipped": [
+  {
+   "page": "/workspaces/<ws>/agents/sales/<inst>/workbench",
+   "label": "Thêm thao tác"
+  }
+ ]
+}

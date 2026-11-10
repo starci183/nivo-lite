@@ -89,7 +89,7 @@ export const TeamPeopleList = (props: TeamPeopleListProps) => (
             sections={sectionsOf(props)}
             selectedId={props.selectedId}
             onSelect={props.on.select}
-            empty={<EmptyNotice message={props.copy.noMatchTitle} description={props.copy.noMatchBody} />}
+            empty={<EmptyNotice message={props.copy.noMatchTitle} iconSource={nivoIconSource("search", "leading")} description={props.copy.noMatchBody} />}
             isLoading={props.isLoading}
         />
     </>

@@ -1,6 +1,7 @@
-import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { EmptyNotice, Section } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { CreditsHistoryRow, DataSlot, SlotLabels } from "@/modules/types"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** The payment history: its title, the placeholder word, the rows slot and the words of its states. */
 interface CreditsHistoryBaseProps {
@@ -30,9 +31,9 @@ export const CreditsHistoryBase = (props: CreditsHistoryBaseProps) => {
                 labels={props.props.labels}
                 onRetry={props.on.retry}
                 render={(rows, isLoading) => (
-                    <SurfaceCard
+                    <Section
                         kind="list"
-                        label={props.props.title}
+                        title={props.props.title}
                         headingLevel={2}
                         isLoading={isLoading}
                         items={rows.map((row) => ({
@@ -41,7 +42,7 @@ export const CreditsHistoryBase = (props: CreditsHistoryBaseProps) => {
                             description: row.description,
                             ...(row.status === "" ? {} : { badges: [{ label: row.status, tone: row.tone }] as const }),
                         }))}
-                        empty={<EmptyNotice message={props.props.labels.empty} />}
+                        empty={<EmptyNotice message={props.props.labels.empty} iconSource={nivoIconSource("history", "leading")} />}
                     />
                 )}
             />

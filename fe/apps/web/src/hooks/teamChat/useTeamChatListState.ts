@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useTeamChatNewChat } from "./useTeamChatNewChat"
 import type { TeamChatNewChatView } from "./useTeamChatNewChat"
 import { useTeamChatRooms } from "./useTeamChatRooms"
@@ -9,6 +10,9 @@ import type { TeamChatRoomsView } from "./useTeamChatRooms"
 export interface TeamChatListState {
     readonly rooms: TeamChatRoomsView
     readonly newChat: TeamChatNewChatView
+    /** What the search field of the list holds. */
+    readonly query: string
+    readonly setQuery: (value: string) => void
 }
 
 /** The rooms of the viewer with the one the address names marked, and the new-chat form; `onOpened` runs with the room it opened. */
@@ -18,5 +22,6 @@ export const useTeamChatListState = (
 ): TeamChatListState => {
     const rooms = useTeamChatRooms({ roomId: selectedId, withAgentId: null })
     const newChat = useTeamChatNewChat(rooms.open, onOpened)
-    return { rooms, newChat }
+    const [query, setQuery] = useState("")
+    return { rooms, newChat, query, setQuery }
 }

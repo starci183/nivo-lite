@@ -19,6 +19,8 @@ export const CHANNELS_MESSAGES: MessageBundle = {
         "errors.CHANNELS_ZALO_REFRESH_BUSY": "Zalo đang làm mới mã truy cập, hãy thử lại sau giây lát.",
         "errors.CHANNELS_ZALO_STATE_REJECTED": "Phiên cấp quyền Zalo không hợp lệ.",
         "errors.CHANNELS_ZALO_STATE_EXPIRED": "Phiên cấp quyền Zalo đã hết hạn, hãy bắt đầu lại.",
+        "errors.CHANNELS_COLLAGE_NOT_FOUND": "Không tìm thấy ảnh ghép này.",
+        "errors.CHANNELS_COLLAGE_STORE_FAILED": "Chưa lưu được ảnh ghép.",
     },
     en: {
         "errors.CHANNELS_CONNECTION_NOT_FOUND": "That connection was not found.",
@@ -27,5 +29,7 @@ export const CHANNELS_MESSAGES: MessageBundle = {
         "errors.CHANNELS_ZALO_REFRESH_BUSY": "Zalo is refreshing the access token, try again in a moment.",
         "errors.CHANNELS_ZALO_STATE_REJECTED": "The Zalo authorization session is not valid.",
         "errors.CHANNELS_ZALO_STATE_EXPIRED": "The Zalo authorization session expired, start again.",
+        "errors.CHANNELS_COLLAGE_NOT_FOUND": "That collage was not found.",
+        "errors.CHANNELS_COLLAGE_STORE_FAILED": "The collage could not be stored.",
     },
 }

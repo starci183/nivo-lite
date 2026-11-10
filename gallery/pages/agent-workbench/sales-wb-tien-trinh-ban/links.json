@@ -1,0 +1,160 @@
+[
+ {
+  "label": "Tổng quan",
+  "box": {
+   "x": 268,
+   "y": 96,
+   "w": 69,
+   "h": 20
+  },
+  "to": "overview/overview",
+  "kind": "page"
+ },
+ {
+  "label": "Agent",
+  "box": {
+   "x": 357,
+   "y": 96,
+   "w": 39,
+   "h": 20
+  },
+  "to": "agents-catalog/sales-tao-agent",
+  "kind": "page"
+ },
+ {
+  "label": "Bàn làm việc",
+  "box": {
+   "x": 268,
+   "y": 188,
+   "w": 92,
+   "h": 40
+  },
+  "to": "agent-workbench/sales-wb-can-chu-y",
+  "kind": "page"
+ },
+ {
+  "label": "Công việc",
+  "box": {
+   "x": 360,
+   "y": 188,
+   "w": 86,
+   "h": 40
+  },
+  "to": "agent-work/sales-work",
+  "kind": "page"
+ },
+ {
+  "label": "Graph",
+  "box": {
+   "x": 446,
+   "y": 188,
+   "w": 63,
+   "h": 40
+  },
+  "to": "agent-graph/sales-graph",
+  "kind": "page"
+ },
+ {
+  "label": "Quy trình",
+  "box": {
+   "x": 509,
+   "y": 188,
+   "w": 84,
+   "h": 40
+  },
+  "to": "agent-workflows/sales-list",
+  "kind": "page"
+ },
+ {
+  "label": "Trò chuyện",
+  "box": {
+   "x": 593,
+   "y": 188,
+   "w": 93,
+   "h": 40
+  },
+  "to": "agent-chat/sales-chat",
+  "kind": "page"
+ },
+ {
+  "label": "Kết nối 1",
+  "box": {
+   "x": 686,
+   "y": 188,
+   "w": 104,
+   "h": 40
+  },
+  "to": null,
+  "kind": "page",
+  "note": "trỏ tới trang chưa có trong gallery",
+  "route": "/agents/sales/<inst>/connections"
+ },
+ {
+  "label": "Tri thức 73",
+  "box": {
+   "x": 790,
+   "y": 188,
+   "w": 113,
+   "h": 40
+  },
+  "to": null,
+  "kind": "page",
+  "note": "trỏ tới trang chưa có trong gallery",
+  "route": "/agents/sales/<inst>/knowledge"
+ },
+ {
+  "label": "Thiết lập",
+  "box": {
+   "x": 903,
+   "y": 188,
+   "w": 79,
+   "h": 40
+  },
+  "to": "agent-setup/sales-huong-dan",
+  "kind": "page"
+ },
+ {
+  "label": "Cần chú ý",
+  "box": {
+   "x": 268,
+   "y": 229,
+   "w": 74,
+   "h": 40
+  },
+  "to": "agent-workbench/sales-wb-can-chu-y",
+  "kind": "page"
+ },
+ {
+  "label": "Đơn hàng",
+  "box": {
+   "x": 455,
+   "y": 229,
+   "w": 87,
+   "h": 40
+  },
+  "to": "agent-workbench/sales-wb-don-hang",
+  "kind": "page"
+ },
+ {
+  "label": "Quy tắc",
+  "box": {
+   "x": 541,
+   "y": 229,
+   "w": 73,
+   "h": 40
+  },
+  "to": "agent-workbench/sales-wb-quy-tac",
+  "kind": "page"
+ },
+ {
+  "label": "Khách Zalo",
+  "box": {
+   "x": 292,
+   "y": 450,
+   "w": 70,
+   "h": 20
+  },
+  "to": "agent-workbench/sales-wb-tien-trinh-ban-mo-chi-tiet",
+  "kind": "overlay"
+ }
+]

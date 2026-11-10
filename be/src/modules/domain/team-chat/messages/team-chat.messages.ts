@@ -22,6 +22,15 @@ export const TEAM_CHAT_MESSAGES: MessageBundle = {
         "errors.TEAM_CHAT_FILE_TOO_LARGE": "Tệp lớn hơn 25 MB.",
         "errors.TEAM_CHAT_FILE_TYPE_NOT_ALLOWED": "Loại tệp này không được gửi.",
         "errors.TEAM_CHAT_STORAGE_UNAVAILABLE": "Kho tệp tạm thời không dùng được.",
+        "errors.TEAM_CHAT_INVALID_AGENT_MESSAGE": "Tin nhắn của agent không đúng dạng.",
+        "errors.TEAM_CHAT_AGENT_MESSAGE_NOT_POSTED": "Không gửi được tin nhắn của agent vào khung trò chuyện.",
+        "errors.TEAM_CHAT_PURPOSE_INVALID":
+            "Mục đích phòng không hợp lệ: phòng của một bộ phận cần tên bộ phận, và phòng chat riêng không đổi mục đích.",
+        "errors.TEAM_CHAT_PURPOSE_TAKEN":
+            "Đã có một phòng khác giữ mục đích này (phòng chung, hoặc phòng của bộ phận này).",
+        "errors.TEAM_CHAT_POST_RIGHT_NEEDS_SEAT": "Agent cần ở trong phòng trước khi được cấp quyền nhắn.",
+        "errors.TEAM_CHAT_REACTION_INVALID": "Biểu tượng cảm xúc này không dùng được.",
+        "errors.TEAM_CHAT_REACTION_RATE_LIMITED": "Bạn thả cảm xúc quá nhanh, hãy thử lại sau giây lát.",
     },
     en: {
         "teamChat.report": "Done: {{trigger}}",
@@ -43,5 +52,15 @@ export const TEAM_CHAT_MESSAGES: MessageBundle = {
         "errors.TEAM_CHAT_FILE_TOO_LARGE": "The file is larger than 25 MB.",
         "errors.TEAM_CHAT_FILE_TYPE_NOT_ALLOWED": "This file type cannot be sent.",
         "errors.TEAM_CHAT_STORAGE_UNAVAILABLE": "The file store is unavailable for now.",
+        "errors.TEAM_CHAT_INVALID_AGENT_MESSAGE": "The agent message is not in the right shape.",
+        "errors.TEAM_CHAT_AGENT_MESSAGE_NOT_POSTED": "The agent message could not be posted to the chat.",
+        "errors.TEAM_CHAT_PURPOSE_INVALID":
+            "The room purpose is not valid: a team room names its module, and a direct room keeps its purpose.",
+        "errors.TEAM_CHAT_PURPOSE_TAKEN":
+            "Another room already holds this purpose (the common room, or this module's room).",
+        "errors.TEAM_CHAT_POST_RIGHT_NEEDS_SEAT":
+            "The agent must be in the room before it can be given the right to post.",
+        "errors.TEAM_CHAT_REACTION_INVALID": "This emoji cannot be used.",
+        "errors.TEAM_CHAT_REACTION_RATE_LIMITED": "You are reacting too fast, try again in a moment.",
     },
 }

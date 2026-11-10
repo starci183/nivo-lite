@@ -1,3 +1,5 @@
+import { WorkInHandService } from "./work-in-hand.service"
+import { WorkItemsDashboardReadService } from "./work-items-dashboard-read.service"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./work-items.module-definition"
@@ -26,6 +28,8 @@ export class WorkItemsModule extends ConfigurableModuleClass {
                 WorkItemsDecisionsReadService,
                 WorkItemsViewsReadService,
                 WorkItemsChainReadService,
+                WorkInHandService,
+                WorkItemsDashboardReadService,
             ],
             exports: [
                 WorkItemsService,
@@ -35,6 +39,8 @@ export class WorkItemsModule extends ConfigurableModuleClass {
                 WorkItemsDecisionsReadService,
                 WorkItemsViewsReadService,
                 WorkItemsChainReadService,
+                WorkInHandService,
+                WorkItemsDashboardReadService,
             ],
         }
     }

@@ -1,6 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
+import { TOOL } from "@nivo-lite/blocks-core"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
@@ -24,7 +25,7 @@ export class WorkItemWithdrawExecutorService implements OnModuleInit {
     /** Registers the executor when the app hosts graph nodes; otherwise there is nothing to serve. */
     onModuleInit(): void {
         this.registry?.addExecutor({
-            effect: "work-item.withdraw",
+            effect: TOOL.workItemWithdraw,
             execute: (turn, payload) => this.withdraw(turn, payload),
         })
     }

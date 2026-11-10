@@ -108,6 +108,16 @@ export class ChatConversationsService {
         })
     }
 
+    /**
+     * The conversation follows an agent that keeps it (a workflow holding the customer past the front door): from now on that agent holds the
+     * right to speak in it. The next meeting of the customer gives it back to the front door unless the keeper takes it again.
+     */
+    follow(workspaceId: string, conversationId: string, agentId: string): Promise<void> {
+        return this.entities.run(workspaceId, (api) =>
+            this.change(api, conversationId, () => ({ agentId }), WRITE_ATTEMPTS),
+        )
+    }
+
     /** "/start" opens a fresh visit: the previous conversation of the customer stays in history under the archived id. */
     archive(
         workspaceId: string,
@@ -129,11 +139,15 @@ export class ChatConversationsService {
         )
     }
 
-    /** Ties a conversation to the lead the customer became. */
+    /**
+     * Ties a conversation to the lead the customer became: the `lead` link, and the `leadId` field the graph nodes read a customer's
+     * conversation by (`conversation` where `leadId`), which the link alone never wrote.
+     */
     attachLead(workspaceId: string, conversationId: string, leadId: string): Promise<void> {
         return this.entities.run(workspaceId, async (api) => {
             const linked = await api.link(CONVERSATION_ENTITY, conversationId, "lead", leadId)
             if (!linked.ok) throw new ChatRecordsError({ code: ChatRecordsErrorCode.NotFound })
+            await this.change(api, conversationId, () => ({ leadId }), WRITE_ATTEMPTS)
         })
     }
 

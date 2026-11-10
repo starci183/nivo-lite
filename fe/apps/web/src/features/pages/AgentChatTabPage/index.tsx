@@ -20,10 +20,15 @@ export const agentChatTabMetadata = async (): Promise<Metadata> => {
 /** The chat tab of one instance: the room of the viewer with its agent; the page knows only the type. */
 export const AgentChatTabPage = async (props: AgentChatTabPageProps): Promise<ReactElement> => {
     if (!isModuleKey(props.module)) notFound()
-    const t = await getTranslations("teamChat")
+    const t = await getTranslations("agentChat")
+    const room = await getTranslations("teamChat")
     return (
         <AgentChatTabPageBase
-            props={{ module: props.module, installationId: props.installationId, label: t("gridLabel") }}
+            props={{
+                installationId: props.installationId,
+                gridLabel: t("gridLabel"),
+                roomLabel: room("threadLabel"),
+            }}
         />
     )
 }

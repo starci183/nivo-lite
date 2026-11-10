@@ -1,4 +1,4 @@
-import type { ZaloStepId, ZaloTone, ZnsRenewalForm } from "@/modules/types"
+import type { ConnectionLifecycle, ZaloStepId, ZaloTone, ZnsRenewalForm } from "@/modules/types"
 
 /** How often the live panel asks for newer events. */
 
@@ -19,6 +19,28 @@ export const zaloStatusKindOf = (healthy: boolean, status: string, tokenState: s
 export const chipToneOf = (healthy: boolean, tokenState: string, status: string): ZaloTone => {
     if (healthy) return "success"
     return tokenState === "expired" || tokenState === "none" || status === "error" ? "danger" : "warning"
+}
+
+/** What the life of a Zalo OA connection is read from. */
+interface ZaloLifeFacts {
+    readonly status: string
+    readonly healthy: boolean
+    readonly oaId: string
+    readonly access: { readonly state: string }
+}
+
+/**
+ * Where a Zalo OA connection stands in the one life every connection shares: a token that cannot work or a failed check needs the
+ * owner; an OA not authorized yet is in the grant phase; an authorized OA without its first message waits for it.
+ */
+export const zaloLifecycleOf = (page: ZaloLifeFacts): ConnectionLifecycle => {
+    if (page.status === "disconnected") return { id: "disconnected" }
+    if (page.healthy) return { id: "running" }
+    const kind = zaloStatusKindOf(page.healthy, page.status, page.access.state)
+    if (kind === "waiting") return { id: "waiting", phase: 3 }
+    if (page.status === "pending" && (page.oaId === "" || page.access.state === "none"))
+        return { id: "setup", phase: 2 }
+    return { id: "attention" }
 }
 
 /** The form while nothing is stored: every field empty, which leaves the fallback off. */

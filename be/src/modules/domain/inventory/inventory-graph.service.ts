@@ -5,19 +5,23 @@ import type { EntityManager } from "typeorm"
 import { GraphNodeRegistryService, rowsAnswering } from "@modules/domain/graph-nodes"
 import type { NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectInventoryPublicApiUrl } from "./inventory.decorators"
+import { productImageUrlOf } from "./inventory-image.policy"
 import { InventoryItemEntity } from "./persistence/entities"
 
 /** The most catalogue items one read looks through. */
 const CATALOGUE_LIMIT = 500
 
-/** The item as the `catalogue-item` data kind names its fields; a price the shop has not set stays null. */
-const rowOf = (item: InventoryItemEntity): NodeRow => ({
+/** The item as the `catalogue-item` data kind names its fields; a price the shop has not set stays null, and so does the photo link of an item without a photo. */
+const rowOf = (item: InventoryItemEntity, publicApiUrl: string): NodeRow => ({
     id: item.id,
     sku: item.sku,
     name: item.name,
     unit: item.unit,
     priceVnd: item.sellPriceVnd === null ? null : Number(item.sellPriceVnd),
     active: item.active,
+    imageUrl: productImageUrlOf(publicApiUrl, item.id, item.imagePath),
+    imageType: item.imagePath === null ? null : item.imageType,
 })
 
 @Injectable()
@@ -28,6 +32,7 @@ const rowOf = (item: InventoryItemEntity): NodeRow => ({
 export class InventoryGraphService implements OnModuleInit {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
+        @InjectInventoryPublicApiUrl() private readonly publicApiUrl: string,
         @Optional() private readonly registry?: GraphNodeRegistryService,
     ) {}
 
@@ -42,6 +47,6 @@ export class InventoryGraphService implements OnModuleInit {
             order: { name: "ASC" },
             take: CATALOGUE_LIMIT,
         })
-        return rowsAnswering(items.map(rowOf), query)
+        return rowsAnswering(items.map((item) => rowOf(item, this.publicApiUrl)), query)
     }
 }

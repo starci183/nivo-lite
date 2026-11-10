@@ -4,12 +4,9 @@ import {
     Button,
     Cluster,
     EmptyNotice,
-    Icon,
     Input,
     Stack,
     SurfaceCard,
-    Text,
-    type HeaderZone,
 } from "@starci/grammar/common"
 
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -70,95 +67,81 @@ export interface ApiKeysSectionBaseProps {
         readonly confirmRevoke: () => void
     }
 }
-/** The create form and the read/write notices in their existing body band. */
-const createKeyBandOf = (props: ApiKeysSectionBaseProps): HeaderZone => {
+/** The create form: the name of the key, the one command that makes it, and the failures that follow. */
+const CreateKeyForm = (props: ApiKeysSectionBaseProps) => {
     const view = props.props
-    return {
-        kind: "custom" as const,
-        children: (
-            <Stack gap="section">
-                <Text size="sm" tone="muted">
-                    {view.body}
-                </Text>
-                <Cluster gap="row" align="end">
-                    <div className={FIELD_GROW_CLASS}>
-                        <Input
-                            id="api-key-name"
-                            name="keyName"
-                            label={view.nameLabel}
-                            isLabelHidden
-                            placeholder={view.nameHint}
-                            isDisabled={view.isCreating}
-                            value={view.nameValue}
-                            onValueChange={props.on.changeName}
-                        />
-                    </div>
-                    <Button
-                        intent="commit"
-                        startContent={<Icon source={nivoIconSource("add", "leading")} usage="leading" />}
-                        isPending={view.isCreating}
-                        isDisabled={view.isCreateDisabled}
-                        onPress={props.on.create}
-                    >
-                        {view.createLabel}
-                    </Button>
-                </Cluster>
-                {view.createError === undefined ? null : <Alert tone="negative" title={view.createError} />}
-                {view.loadError === undefined ? null : <Alert tone="negative" title={view.loadError.title} />}
-                {view.emptyLabel === undefined ? null : (
-                    <Text size="sm" tone="muted">
-                        {view.emptyLabel}
-                    </Text>
-                )}
-                {view.revokeError === undefined ? null : <Alert tone="negative" title={view.revokeError} />}
-            </Stack>
-        ),
-    }
+    return (
+        <Stack gap="section">
+            <Cluster gap="row" align="end">
+                <div className={FIELD_GROW_CLASS}>
+                    <Input
+                        id="api-key-name"
+                        name="keyName"
+                        label={view.nameLabel}
+                        isLabelHidden
+                        placeholder={view.nameHint}
+                        isDisabled={view.isCreating}
+                        value={view.nameValue}
+                        onValueChange={props.on.changeName}
+                    />
+                </div>
+                <Button
+                    intent="commit"
+                    startGlyph="plus"
+                    isPending={view.isCreating}
+                    isDisabled={view.isCreateDisabled}
+                    onPress={props.on.create}
+                >
+                    {view.createLabel}
+                </Button>
+            </Cluster>
+            {view.createError === undefined ? null : <Alert tone="negative" title={view.createError} />}
+            {view.loadError === undefined ? null : <Alert tone="negative" title={view.loadError.title} />}
+            {view.revokeError === undefined ? null : <Alert tone="negative" title={view.revokeError} />}
+        </Stack>
+    )
 }
 
-/** The once-shown key and its exact copy/dismiss controls, when a key was created. */
-const freshKeyBandsOf = (props: ApiKeysSectionBaseProps): ReadonlyArray<HeaderZone> => {
-    const view = props.props
-    return view.fresh === undefined
-        ? []
-        : [
-              {
-                  kind: "custom" as const,
-                  children: (
-                      <Stack gap="section">
-                          <Alert tone="cautionary" title={view.fresh.warning} />
-                          <Input
-                              id="api-key-fresh"
-                              name="apiKey"
-                              label={view.fresh.title}
-                              value={view.fresh.value}
-                              isReadOnly
-                              isCopyable
-                              copyLabel={view.fresh.copyLabel}
-                              copiedLabel={view.fresh.copiedLabel}
-                          />
-                          <div>
-                              <Button intent="neutral" onPress={props.on.dismissFresh}>
-                                  {view.fresh.doneLabel}
-                              </Button>
-                          </div>
-                      </Stack>
-                  ),
-              },
-          ]
+/** The once-shown key and its exact copy/dismiss controls, as a card of its own, when a key was just created. */
+const FreshKeyCard = (props: ApiKeysSectionBaseProps) => {
+    const fresh = props.props.fresh
+    if (fresh === undefined) return null
+    return (
+        <SurfaceCard ariaLabel={fresh.title}>
+            <Stack gap="section">
+                <Alert tone="cautionary" title={fresh.warning} />
+                <Input
+                    id="api-key-fresh"
+                    name="apiKey"
+                    label={fresh.title}
+                    value={fresh.value}
+                    isReadOnly
+                    isCopyable
+                    copyLabel={fresh.copyLabel}
+                    copiedLabel={fresh.copiedLabel}
+                />
+                <div>
+                    <Button intent="neutral" onPress={props.on.dismissFresh}>
+                        {fresh.doneLabel}
+                    </Button>
+                </div>
+            </Stack>
+        </SurfaceCard>
+    )
 }
 
 /** Draws the API keys card: create a key (shown once), then the list with revoke confirmed through a dialog. */
 export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => {
     const view = props.props
-    const zones: ReadonlyArray<HeaderZone> = [createKeyBandOf(props), ...freshKeyBandsOf(props)]
     return (
         <>
+            <FreshKeyCard {...props} />
+            <SurfaceCard label={view.title} headingLevel={2} note={view.body}>
+                <CreateKeyForm {...props} />
+            </SurfaceCard>
             <SurfaceCard
                 kind="list"
-                label={view.title}
-                headingLevel={2}
-                headers={zones}
+                ariaLabel={view.title}
                 items={view.items.map((item) => ({
                     id: item.id,
                     leading: { icon: nivoIconSource("password", "leading") },
@@ -181,7 +164,7 @@ export const ApiKeysSectionBase = (props: ApiKeysSectionBaseProps) => {
                               },
                           }),
                 }))}
-                empty={<EmptyNotice message={view.emptyLabel ?? view.title} />}
+                empty={<EmptyNotice message={view.emptyLabel ?? view.title} iconSource={nivoIconSource("password", "leading")} />}
             />
             {view.revoking === undefined ? null : (
                 <AlertDialog

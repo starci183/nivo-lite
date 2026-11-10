@@ -1,5 +1,5 @@
 import type { BrainPageHeaderView } from "./brain-page"
-import type { DocChipView, DocListCopy, DocListFace } from "./knowledge-docs"
+import type { DocChipView, DocListCopy, DocListTabView } from "./knowledge-docs"
 import type { PaneGridLayout } from "./panes"
 import type { DataSlot, SlotLabels } from "./slot"
 
@@ -25,6 +25,45 @@ export interface PublicDraftView {
     readonly publishedBody: string | null
     readonly redraftLabel: string | null
     readonly approveLabel: string | null
+}
+
+/** One row of the public documents table: the title with how it was written, its kind, where it stands and who approved it. */
+export interface PublicTableRowView {
+    readonly id: string
+    readonly title: string
+    readonly line: string
+    readonly kind: string
+    readonly badge: DocChipView
+    readonly approval: string
+    /** The address that opens the document in the drawer. */
+    readonly href: string
+}
+
+/** What a card that keeps its own head in every state draws of a read: the rows (or the skeleton rows), and the failure with its retry. */
+export interface PublicCardState<Row> {
+    readonly rows: ReadonlyArray<Row>
+    /** The first read has no data yet: the rows are a same-shape placeholder. */
+    readonly isLoading: boolean
+    readonly error:
+        | {
+              readonly message: string
+              readonly description: string
+              readonly actionLabel: string
+              readonly onAction: () => void
+          }
+        | undefined
+    /** How many rows the read settled with; undefined until then. */
+    readonly count: number | undefined
+    /** The notice of a read that settled with nothing. */
+    readonly emptyTitle: string
+}
+
+/** The table of public documents with its filter tabs and search. */
+export interface PublicTableView {
+    readonly card: PublicCardState<PublicTableRowView>
+    readonly query: string
+    readonly tab: string
+    readonly tabs: ReadonlyArray<DocListTabView>
 }
 
 /** The values and state of the editor of the open public document. */
@@ -75,6 +114,12 @@ export interface PublicBrainCopy extends DocListCopy {
     readonly answerLabel: string
     readonly skipLabel: string
     readonly listTitle: string
+    readonly asideEmptyBody: string
+    readonly tableCount: (count: number) => string
+    readonly columnTitle: string
+    readonly columnKind: string
+    readonly columnStatus: string
+    readonly columnApproval: string
 }
 
 /** What the public documents screen draws. */
@@ -84,7 +129,7 @@ export interface PublicBrainView {
         readonly panelId: string
         readonly copy: PublicBrainCopy
         readonly grid: PaneGridLayout
-        readonly list: DocListFace
+        readonly table: PublicTableView
         /** The open document: nothing chosen, or its read in whatever state it is. */
         readonly main:
             | { readonly kind: "none" }
@@ -96,8 +141,9 @@ export interface PublicBrainView {
         readonly decided: PublicDraftView | null
         readonly opened: { readonly draft: PublicDraftView; readonly isLoading: boolean } | null
         readonly form: PublicFormView
-        readonly asks: DataSlot<ReadonlyArray<PublicAskView>>
-        readonly asksLabels: SlotLabels
+        readonly asks: PublicCardState<PublicAskView>
+        /** The words of the states of the open document's read. */
+        readonly slotLabels: SlotLabels
         readonly isWaiting: boolean
         readonly canWrite: boolean
         readonly composeHref: string
@@ -107,7 +153,6 @@ export interface PublicBrainView {
     readonly on: {
         readonly reviewAll: () => void
         readonly selectTab: (id: string) => void
-        readonly select: (id: string) => void
         readonly search: (value: string) => void
         readonly setTab: (id: string) => void
         readonly clear: () => void

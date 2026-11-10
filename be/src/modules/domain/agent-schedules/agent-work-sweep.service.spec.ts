@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import {
+    AgentTagService,
     AgentTasksService,
     AgentTriggersService,
     AgentTurnsService,
@@ -56,7 +57,11 @@ const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRe
     const queue = mock<AgentTurnQueue>({ enqueueSweepDrain: jest.fn(real.enqueueSweepDrain.bind(real)) })
     const turns = mock<AgentTurnsService>({ due: jest.fn().mockResolvedValue(items) })
     const wakes = mock<AgentWakeService>({ wake: jest.fn().mockResolvedValue(true) })
-    const tasks = mock<AgentTasksService>({ markWoken: jest.fn().mockResolvedValue(undefined) })
+    const tasks = mock<AgentTasksService>({
+        markWoken: jest.fn().mockResolvedValue(undefined),
+        byId: jest.fn().mockResolvedValue(null),
+    })
+    const tags = mock<AgentTagService>({ tagAgent: jest.fn().mockResolvedValue({ tagged: true, wakeId: "wake-1" }) })
     const triggers = mock<AgentTriggersService>({
         byId: jest.fn().mockResolvedValue(trigger),
         recordFire: jest.fn().mockResolvedValue(undefined),
@@ -81,6 +86,7 @@ const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRe
             { provide: AgentWakeRetentionService, useValue: retention },
             { provide: AgentTriggerSyncService, useValue: sync },
             { provide: AgentRunSweepService, useValue: runSweep },
+            { provide: AgentTagService, useValue: tags },
         ],
     }).compile()
     return {
@@ -88,6 +94,7 @@ const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRe
         turns,
         wakes,
         tasks,
+        tags,
         triggers,
         retention,
         sync,
@@ -151,6 +158,70 @@ describe("AgentWorkSweepService.sweep, tasks", () => {
         })
         expect(tasks.markWoken).toHaveBeenCalledWith(expect.anything(), "task-1", at)
         expect(tx.commits).toBe(1)
+    })
+
+    it("wakes the Sales agent with a tag for a care step that fell due, naming the step, the record and the real moment, and clears the time", async () => {
+        const at = MINUTES(3)
+        const { service, wakes, tasks, tags, tx } = await build([due({ kind: "task", subjectId: "task-9", at })])
+        tasks.byId.mockResolvedValue({
+            id: "task-9",
+            agentId: "agent-1",
+            goalId: null,
+            dedupeKey: "care:occasion:lead-1:birthday-2-1",
+            title: "care due 2027-01-25T17:00:00.000Z",
+            detail: "",
+            status: "open",
+            waitingOn: null,
+            nextActionAt: at,
+            workItemId: null,
+        })
+
+        await expect(service.sweep()).resolves.toMatchObject({ tasks: 1 })
+
+        expect(tags.tagAgent).toHaveBeenCalledWith(
+            {
+                workspaceId: "ws-1",
+                toAgentId: "agent-1",
+                source: "care-timer",
+                text: "care.due occasion",
+                subject: "lead:lead-1",
+                leadId: "lead-1",
+                eventKey: `care:task-9:${String(at.getTime())}`,
+                context: {
+                    event: "care.due",
+                    careKind: "occasion",
+                    ref: "lead-1",
+                    suffix: "birthday-2-1",
+                    dueAt: "2027-01-25T17:00:00.000Z",
+                },
+            },
+            expect.anything(),
+        )
+        expect(tasks.markWoken).toHaveBeenCalledWith(expect.anything(), "task-9", at)
+        expect(wakes.wake).not.toHaveBeenCalled()
+        expect(tx.commits).toBe(1)
+    })
+
+    it("subjects the tag of an order step to the order and gives it no customer", async () => {
+        const at = MINUTES(1)
+        const { service, tasks, tags } = await build([due({ kind: "task", subjectId: "task-8", at })])
+        tasks.byId.mockResolvedValue({
+            id: "task-8",
+            agentId: "agent-1",
+            goalId: null,
+            dedupeKey: "care:payment-reminder:o1",
+            title: "care due 2026-11-10T03:00:00.000Z",
+            detail: "",
+            status: "open",
+            waitingOn: null,
+            nextActionAt: at,
+            workItemId: null,
+        })
+
+        await service.sweep()
+
+        expect(tags.tagAgent.mock.calls[0]?.[0]).toMatchObject({ subject: "order:o1", context: { careKind: "payment-reminder", suffix: "" } })
+        expect(tags.tagAgent.mock.calls[0]?.[0]).not.toHaveProperty("leadId")
     })
 
     it("leaves a task row with no id or no time alone", async () => {

@@ -33,6 +33,8 @@ const inventoryItemBase = builder<InventoryItemEntity>({
     category: "",
     costVnd: "1000",
     sellPriceVnd: null,
+    imagePath: null,
+    imageType: null,
     reorderPoint: "0",
     reorderQty: "0",
     supplierId: null,

@@ -1,19 +1,23 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
+import { TOOL, refusalOf } from "@nivo-lite/blocks-core"
+import type { EffectFact } from "@nivo-lite/blocks-core"
 import { rematchJob } from "@nivo-lite/blocks-core/modules/accounting"
-import { AGENT_NAME, ORDER_FIELDS, leadRowOf, orderRowOf } from "@nivo-lite/blocks-core/modules/sales"
-import { itemsTextOf, pricedLinesOf, stageAfterConfirm } from "@nivo-lite/blocks-core/rules/sales"
+import { AGENT_NAME, ORDER_FIELDS, leadRowOf, orderRowOf, settingsOf } from "@nivo-lite/blocks-core/modules/sales"
+import { confirmDecision, itemsTextOf, waitsForOwner } from "@nivo-lite/blocks-core/rules/sales"
+import type { SalesSettings } from "@nivo-lite/blocks-core/rules/sales"
 import type { EntitiesApi } from "@nivo-lite/agent-sdk/entity/port"
 import { q } from "@nivo-lite/agent-sdk/query"
 import type { EffectCall, EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
+import type { RunIn } from "@modules/domain/entity-engine"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { SalesEffectsError, SalesEffectsErrorCode } from "./errors/sales-effects.error"
-import { OPEN_ORDER, isRecordId, payloadOf, standsFor } from "./sales-effects.policy"
-import type { OrderRequest } from "./sales-effects.policy"
+import { OPEN_ORDER, isRecordId, payloadOf, pricedFromCatalogue, standsFor, textOrNull } from "./sales-effects.policy"
+import type { CatalogueRow, OrderRequest } from "./sales-effects.policy"
 import type { OrderRow } from "@nivo-lite/blocks-core/modules/sales"
 import { confirmSchema, recordSchema, rematchSchema, voidSchema } from "./sales-effects.schema"
 
@@ -22,6 +26,41 @@ const OPEN_ORDERS_LOOKED_AT = 20
 
 const LEAD = "sales.lead"
 const ORDER = "sales.order"
+const SETTINGS = "sales.settings"
+
+/** The data kind the shop's catalogue is read through. */
+const CATALOGUE = "catalogue-item"
+
+/** The most catalogue items read to price an order. */
+const CATALOGUE_ROWS = 500
+
+/** A catalogue row as the data port answers it, read to the members pricing needs; null when it is not one. */
+const catalogueRowOf = (row: Readonly<Record<string, unknown>>): CatalogueRow | null =>
+    typeof row.id === "string" && typeof row.name === "string"
+        ? {
+              id: row.id,
+              name: row.name,
+              priceVnd: typeof row.priceVnd === "number" ? row.priceVnd : null,
+              active: row.active !== false,
+          }
+        : null
+
+/** What an order answers its caller: the number, where it stands, the total and the lines, all from the record. */
+const orderFacts = (
+    order: Pick<
+        OrderRow,
+        "orderNo" | "status" | "amountVnd" | "items" | "deliveryAddress" | "recipientName" | "recipientPhone" | "deliveryAt"
+    >,
+): EffectFact["facts"] => ({
+    orderNo: order.orderNo,
+    status: order.status,
+    amountVnd: order.amountVnd,
+    lines: order.items.lines.map((line) => ({ ...line })),
+    recipientName: order.recipientName,
+    recipientPhone: order.recipientPhone,
+    deliveryAddress: order.deliveryAddress,
+    deliveryAt: order.deliveryAt,
+})
 
 /** The subject a record is, for the ledger of the host. */
 const subjectOf = (id: string): SubjectRef => ({ kind: "order", id })
@@ -29,9 +68,16 @@ const subjectOf = (id: string): SubjectRef => ({ kind: "order", id })
 @Injectable()
 /**
  * The executors of `order.record`, `order.confirm` and `order.void` on the entity engine, each in one workspace-scoped transaction.
- * Recording makes a draft for a customer (the engine mints its number). Confirming confirms a draft once, in the name of the agent,
- * and wins the customer's deal unless it was lost. Voiding cuts a recorded order short: it is marked `failed_system` with every field
- * kept, once; an order that is already so, or is gone, changes nothing.
+ * - Recording makes a draft for a customer (the engine mints its number). The caller names what and how many; every price and the total
+ *   are the catalogue's, read here, so nothing a caller says can set an amount. An item the catalogue does not list or has not priced is
+ *   answered as a refusal fact and nothing is written.
+ * - Confirming confirms a confirmable order once, in the name of the agent, and answers the customer's deal stage as a fact; it moves
+ *   no deal (winning it is a step of the graph, from the policy). It enforces no business limit: the owner-approval threshold of the Sales settings is policy the agent reasons about (the recorded
+ *   order's facts carry `waitsOwner` and `thresholdVnd`), never a refusal here. Only the order's state refuses (`order_missing`,
+ *   `not_confirmable`).
+ * - Voiding cuts a recorded order short: it is marked `failed_system` with every field kept, once; an order that is already so, or is
+ *   gone, changes nothing.
+ * A refusal is a fact the step's agent reads (`refused`, the reason, the true values); only a write the engine did not make is thrown.
  */
 export class OrderEffectsService implements OnModuleInit {
     constructor(
@@ -43,11 +89,14 @@ export class OrderEffectsService implements OnModuleInit {
 
     /** Registers the executors when the app hosts graph nodes; otherwise there is nothing to serve. */
     onModuleInit(): void {
-        this.registry?.addExecutor({ effect: "order.record", execute: (turn, payload) => this.record(turn, payload) })
-        this.registry?.addExecutor({ effect: "order.confirm", execute: (turn, payload) => this.confirm(turn, payload) })
-        this.registry?.addExecutor({ effect: "order.void", execute: (turn, payload) => this.void(turn, payload) })
+        this.registry?.addExecutor({ effect: TOOL.orderRecord, execute: (turn, payload) => this.record(turn, payload) })
         this.registry?.addExecutor({
-            effect: "payment.rematch",
+            effect: TOOL.orderConfirm,
+            execute: (turn, payload) => this.confirm(turn, payload),
+        })
+        this.registry?.addExecutor({ effect: TOOL.orderVoid, execute: (turn, payload) => this.void(turn, payload) })
+        this.registry?.addExecutor({
+            effect: TOOL.paymentRematch,
             execute: (turn, payload, call) => this.rematch(turn, payload, call),
         })
     }
@@ -74,32 +123,82 @@ export class OrderEffectsService implements OnModuleInit {
         })
     }
 
-    private async record(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
+    private async record(turn: NodeTurn, payload: EffectPayload): Promise<EffectFact> {
         const given = payloadOf(recordSchema, payload)
-        return await this.inScope(turn, async (api) => {
+        const priced = pricedFromCatalogue(given.items, await this.catalogue(turn))
+        if ("refused" in priced) return refusalOf(priced.refused, { name: priced.name })
+        const request: OrderRequest = {
+            lines: priced.lines,
+            amountVnd: priced.lines.reduce((sum, line) => sum + line.amountVnd, 0),
+            note: textOrNull(given.note) ?? "",
+            deliveryAddress: textOrNull(given.address),
+            recipientName: textOrNull(given.recipientName),
+            recipientPhone: textOrNull(given.recipientPhone),
+            deliveryAt: textOrNull(given.deliveryAt),
+        }
+        return await this.inScope(turn, async (api, runIn) => {
             const lead = isRecordId(given.leadId) ? await api.get(LEAD, given.leadId) : null
-            if (lead === null) throw new SalesEffectsError({ code: SalesEffectsErrorCode.LeadNotFound })
-            const lines = pricedLinesOf(given.items)
-            const standing = await this.openOrderFor(api, lead.id, {
-                lines,
-                amountVnd: given.amountVnd,
-                note: given.note ?? "",
-            })
-            if (standing !== null) return subjectOf(standing.id)
-            const made = await api.insert(
-                ORDER,
-                {
-                    leadId: lead.id,
-                    items: { lines },
-                    itemsText: itemsTextOf(given.items),
-                    amountVnd: given.amountVnd,
-                    ...(given.note === undefined ? {} : { note: given.note }),
-                },
-                { lead: lead.id },
-            )
-            if (!made.ok) throw new SalesEffectsError({ code: SalesEffectsErrorCode.WriteRefused })
-            return subjectOf(made.row.id)
+            if (lead === null) return refusalOf("lead_missing")
+            const settings = await this.settings(runIn)
+            const standing = await this.openOrderFor(api, lead.id, request)
+            if (standing !== null) return this.recorded(standing, settings)
+            const values = {
+                items: { lines: request.lines },
+                itemsText: itemsTextOf(request.lines),
+                amountVnd: request.amountVnd,
+                note: request.note,
+                deliveryAddress: request.deliveryAddress,
+                recipientName: request.recipientName,
+                recipientPhone: request.recipientPhone,
+                deliveryAt: request.deliveryAt,
+            }
+            const draft = await this.draftOf(api, lead.id, given.orderId)
+            const written =
+                draft === null
+                    ? await api.insert(ORDER, { leadId: lead.id, ...values }, { lead: lead.id })
+                    : await api.update(ORDER, draft.id, draft.version, values)
+            const order = written.ok ? orderRowOf(written.row) : null
+            if (order === null) throw new SalesEffectsError({ code: SalesEffectsErrorCode.WriteRefused })
+            return this.recorded(order, settings)
         })
+    }
+
+    /** The fact of a recorded order: its number, lines and total, and whether it waits for the owner at the workspace's threshold. */
+    private recorded(order: OrderRow, settings: SalesSettings): EffectFact {
+        return {
+            ...subjectOf(order.id),
+            facts: {
+                ...orderFacts(order),
+                waitsOwner: waitsForOwner(order, settings),
+                thresholdVnd: settings.approvalThresholdVnd,
+            },
+        }
+    }
+
+    /** The shop's catalogue, read through its data port; empty when the app serves none, so every item is then refused as unknown. */
+    private async catalogue(turn: NodeTurn): Promise<ReadonlyArray<CatalogueRow>> {
+        if (this.registry === undefined) return []
+        const rows = await this.registry
+            .portOf(CATALOGUE)
+            .read(turn, { fields: ["id", "name", "priceVnd", "active"], limit: CATALOGUE_ROWS }, "workspace")
+        return rows.flatMap((row) => catalogueRowOf(row) ?? [])
+    }
+
+    /** The sales rules the workspace saved, else the defaults. */
+    private settings(runIn: RunIn): Promise<SalesSettings> {
+        return settingsOf(this.ports.entityApi(runIn, "action", SETTINGS))
+    }
+
+    /**
+     * The draft the caller named for this customer (`orderId`), which the new request rewrites: one order per customer while it is
+     * open, never a second. Null when none is named, or it is not a draft of theirs (a confirmed or paid order is never rewritten: the
+     * request becomes a new order).
+     */
+    private async draftOf(api: EntitiesApi, leadId: string, orderId: string | undefined): Promise<OrderRow | null> {
+        if (orderId === undefined || !isRecordId(orderId)) return null
+        const record = await api.get(ORDER, orderId)
+        const order = record === null ? null : orderRowOf(record)
+        return order?.leadId === leadId && order.status === "draft" ? order : null
     }
 
     /** The newest open order of the customer that already stands for the request, or null. */
@@ -121,33 +220,39 @@ export class OrderEffectsService implements OnModuleInit {
         )
     }
 
-    private async confirm(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
+    private async confirm(turn: NodeTurn, payload: EffectPayload): Promise<EffectFact> {
         const { orderId } = payloadOf(confirmSchema, payload)
-        return await this.inScope(turn, async (api) => {
+        return await this.inScope(turn, async (api, runIn) => {
             const record = isRecordId(orderId) ? await api.get(ORDER, orderId) : null
             const order = record === null ? null : orderRowOf(record)
-            if (order === null) throw new SalesEffectsError({ code: SalesEffectsErrorCode.OrderNotFound })
-            if (order.status !== "draft") return subjectOf(order.id)
+            if (order === null) return refusalOf("order_missing")
+            const settings = await this.settings(runIn)
+            const decision = confirmDecision({
+                status: order.status,
+                amountVnd: order.amountVnd,
+                settings,
+                byOwner: false,
+            })
+            if (decision.kind === "refused") return refusalOf("not_confirmable", { status: order.status })
+            const dealStage = await this.dealStageOf(api, order.leadId)
+            if (decision.kind === "already") return { ...subjectOf(order.id), facts: { ...orderFacts(order), dealStage } }
             const written = await api.update(ORDER, order.id, order.version, {
                 status: "confirmed",
                 confirmedBy: AGENT_NAME,
                 confirmedAt: this.clock.now().toISOString(),
             })
             if (!written.ok) throw new SalesEffectsError({ code: SalesEffectsErrorCode.WriteRefused })
-            await this.winDeal(api, order.leadId)
-            return subjectOf(order.id)
+            return { ...subjectOf(order.id), facts: { ...orderFacts({ ...order, status: "confirmed" }), dealStage } }
         })
     }
 
-    /** Wins the customer's deal after a confirmation, unless it was lost or is won already. */
-    private async winDeal(api: EntitiesApi, leadId: string | null): Promise<void> {
+    /**
+     * The pipeline stage of the customer's deal, as a fact: confirming an order moves no deal. Whether the deal is now won is the agent's
+     * call from the policy (`autoWon`), through `lead.stage.update`. Null when the order has no customer the workspace holds.
+     */
+    private async dealStageOf(api: EntitiesApi, leadId: string | null): Promise<string | null> {
         const record = leadId === null ? null : await api.get(LEAD, leadId)
-        const lead = record === null ? null : leadRowOf(record)
-        if (lead === null) return
-        const stage = stageAfterConfirm(lead.stage)
-        if (stage === lead.stage) return
-        const won = await api.update(LEAD, lead.id, lead.version, { stage, closedReason: null })
-        if (!won.ok) throw new SalesEffectsError({ code: SalesEffectsErrorCode.WriteRefused })
+        return (record === null ? null : leadRowOf(record))?.stage ?? null
     }
 
     private async void(turn: NodeTurn, payload: EffectPayload): Promise<SubjectRef> {
@@ -163,7 +268,10 @@ export class OrderEffectsService implements OnModuleInit {
     }
 
     /** Runs the effect in one transaction scoped to the workspace of the turn. */
-    private inScope<T>(turn: NodeTurn, work: (api: EntitiesApi) => Promise<T>): Promise<T> {
-        return this.engine.scoped(turn.workspaceId, (tx) => work(this.ports.entitiesApi((use) => use(tx), "action")))
+    private inScope<T>(turn: NodeTurn, work: (api: EntitiesApi, runIn: RunIn) => Promise<T>): Promise<T> {
+        return this.engine.scoped(turn.workspaceId, (tx) => {
+            const runIn: RunIn = (use) => use(tx)
+            return work(this.ports.entitiesApi(runIn, "action"), runIn)
+        })
     }
 }

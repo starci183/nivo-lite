@@ -76,6 +76,7 @@ export class WorkspaceInvitesService {
                 workspaceId,
                 acceptedAt: IsNull(),
                 revokedAt: IsNull(),
+                declinedAt: IsNull(),
                 expiresAt: MoreThan(this.clock.now()),
             },
             order: { createdAt: "DESC" },
@@ -95,7 +96,13 @@ export class WorkspaceInvitesService {
     async create(userId: string, workspaceId: string, request: InviteRequest): Promise<InviteResult> {
         const actor = await this.members.require(userId, workspaceId, MANAGERS)
         const pending = await this.entityManager.count(WorkspaceInviteEntity, {
-            where: { workspaceId, acceptedAt: IsNull(), revokedAt: IsNull(), expiresAt: MoreThan(this.clock.now()) },
+            where: {
+                workspaceId,
+                acceptedAt: IsNull(),
+                revokedAt: IsNull(),
+                declinedAt: IsNull(),
+                expiresAt: MoreThan(this.clock.now()),
+            },
         })
         await this.entitlements.requireRoomForInvite(workspaceId, pending)
         const email = normaliseEmail(request.email)
@@ -114,7 +121,7 @@ export class WorkspaceInvitesService {
                 .update()
                 .set({ revokedAt: now })
                 .where(
-                    "workspace_id = :workspaceId AND lower(email) = :email AND accepted_at IS NULL AND revoked_at IS NULL",
+                    "workspace_id = :workspaceId AND lower(email) = :email AND accepted_at IS NULL AND revoked_at IS NULL AND declined_at IS NULL",
                     {
                         workspaceId,
                         email,
@@ -169,10 +176,13 @@ export class WorkspaceInvitesService {
             .createQueryBuilder(WorkspaceInviteEntity, "i")
             .update()
             .set({ revokedAt: this.clock.now() })
-            .where("id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL", {
-                inviteId,
-                workspaceId,
-            })
+            .where(
+                "id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL AND declined_at IS NULL",
+                {
+                    inviteId,
+                    workspaceId,
+                },
+            )
             .returning("id, email, role")
             .execute()
         const revoked = firstChangedInvite(result.raw)
@@ -211,6 +221,7 @@ export class WorkspaceInvitesService {
             .addSelect("i.staff_id", "staff_id")
             .addSelect(
                 `CASE WHEN i.revoked_at IS NOT NULL THEN 'revoked'
+                WHEN i.declined_at IS NOT NULL THEN 'declined'
                 WHEN i.accepted_at IS NOT NULL THEN 'accepted'
                 WHEN i.expires_at < :now THEN 'expired'
                 ELSE 'pending' END`,
@@ -236,7 +247,18 @@ export class WorkspaceInvitesService {
 
     /** Accepts the invitation as the signed-in person whose email matches it; answers the workspace they joined. */
     async accept(acceptor: InviteAcceptor, token: string): Promise<AcceptedInvite> {
-        const row = await this.findByToken(token)
+        return this.acceptRow(acceptor, await this.findByToken(token))
+    }
+
+    /** Accepts, by its id, an invitation to the signed-in person (the lobby's pending invitations), as `accept` does by link. */
+    async acceptById(acceptor: InviteAcceptor, inviteId: string): Promise<AcceptedInvite> {
+        return this.acceptRow(
+            acceptor,
+            await this.entityManager.findOne(WorkspaceInviteEntity, { where: { id: inviteId } }),
+        )
+    }
+
+    private async acceptRow(acceptor: InviteAcceptor, row: WorkspaceInviteEntity | null): Promise<AcceptedInvite> {
         const invite = unwrapOutcome(
             judgeInvite(row === null ? undefined : toInviteState(row), acceptor.email ?? "", this.clock.now()),
             WorkspaceInvitesError,
@@ -287,9 +309,12 @@ export class WorkspaceInvitesService {
             .createQueryBuilder(WorkspaceInviteEntity, "i")
             .select("i.id")
             .where("i.workspace_id = :workspaceId AND i.staff_id = :staffId", { workspaceId, staffId })
-            .andWhere("i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > :now", {
-                now: this.clock.now(),
-            })
+            .andWhere(
+                "i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.declined_at IS NULL AND i.expires_at > :now",
+                {
+                    now: this.clock.now(),
+                },
+            )
             .andWhere("lower(i.email) <> :email", { email })
             .limit(1)
             .getRawOne<{ readonly i_id: string }>()
@@ -318,10 +343,13 @@ export class WorkspaceInvitesService {
             .createQueryBuilder(WorkspaceInviteEntity, "i")
             .update()
             .set({ tokenHash: hashInviteToken(minted.token), expiresAt: this.expiry(this.clock.now()) })
-            .where("id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL", {
-                inviteId,
-                workspaceId,
-            })
+            .where(
+                "id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL AND declined_at IS NULL",
+                {
+                    inviteId,
+                    workspaceId,
+                },
+            )
             .returning("id, email, role")
             .execute()
         const invite = firstChangedInvite(result.raw)
@@ -338,5 +366,6 @@ const toInviteState = (row: WorkspaceInviteEntity): InviteState => ({
     staffId: row.staffId,
     acceptedAt: row.acceptedAt === null ? null : row.acceptedAt.toISOString(),
     revokedAt: row.revokedAt === null ? null : row.revokedAt.toISOString(),
+    declinedAt: row.declinedAt === null ? null : row.declinedAt.toISOString(),
     expiresAt: row.expiresAt.toISOString(),
 })

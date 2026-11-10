@@ -20,7 +20,7 @@ type SalesShape = {
     }
     connectionProviders: string[]
     defaultOperatingMode: "assist"
-    multiInstance: false
+    multiInstance: true
     gates: {
         key: string
     }[]
@@ -126,7 +126,7 @@ export const SALES: SalesShape = {
     },
     connectionProviders: ["telegram", "zalo_oa", "meta"],
     defaultOperatingMode: "assist",
-    multiInstance: false,
+    multiInstance: true,
     gates: [
         {
             key: "offer_pricing",

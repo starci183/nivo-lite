@@ -1,7 +1,8 @@
 import type { ReactNode } from "react"
-import { Button, EmptyNotice, Stack, SurfaceCard } from "@starci/grammar/common"
+import { Button, EmptyNotice, Section, Stack, SurfaceCard } from "@starci/grammar/common"
 
 import type { CreditsOverviewView, PayTarget } from "@/modules/types"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 interface CreditsUpgradeProps {
     readonly props: {
@@ -21,12 +22,12 @@ export const CreditsUpgrade = (props: CreditsUpgradeProps) => {
     if (upgrade) offer = renderCreditsUpgradeRecommendation(copy, upgrade, props)
     else if (contact)
         offer = (
-            <SurfaceCard
+            <Section
                 kind="list"
-                label={copy.title}
+                title={copy.title}
                 headingLevel={2}
                 isLoading={copy.isLoading}
-                empty={<EmptyNotice message={copy.title} />}
+                empty={<EmptyNotice message={copy.title} iconSource={nivoIconSource("credit", "leading")} />}
                 items={[
                     {
                         id: "contact",

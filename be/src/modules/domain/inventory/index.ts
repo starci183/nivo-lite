@@ -5,6 +5,9 @@ export { InventoryDeductionService } from "./inventory-deduction.service"
 
 export { InventoryReplenishService } from "./inventory-replenish.service"
 
+export { InventoryProductImageService } from "./inventory-product-image.service"
+export type { ProductImage } from "./inventory-product-image.contracts"
+
 export { InventorySeedService } from "./inventory-seed.service"
 
 export { InventoryModule } from "./inventory.module"

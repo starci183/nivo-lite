@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl"
 import { useWorkspaceId } from "@/hooks/workspaces"
+import { consoleBreadcrumbsOf } from "@/modules/page-header"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { TeamErrorPageBase } from "./component"
 
@@ -20,6 +21,16 @@ export const TeamErrorPage = (props: TeamErrorPageProps) => {
     return (
         <TeamErrorPageBase
             props={{
+                breadcrumbs: consoleBreadcrumbsOf({
+                    workspaceId,
+                    label: shell("crumbLabel"),
+                    home: shell("crumbHome"),
+                    trail:
+                        props.selected === "permissions"
+                            ? [{ id: "team", label: t("title"), path: CONSOLE_ROUTES.team }]
+                            : [],
+                    current: props.selected === "permissions" ? p("tabPermissions") : t("title"),
+                }),
                 title: t("title"),
                 description: t("description"),
                 tabsLabel: p("tabsLabel"),

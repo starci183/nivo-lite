@@ -22,11 +22,14 @@ const memberOf = (memberId: string, name: string, memberKind: "user" | "agent" =
     role: "member",
     lastReadAt: new Date(NOW),
     muted: false,
+    mayPost: false,
 })
 
 const roomOf = (members: ReadonlyArray<RoomMember>): ChatRoomView => ({
     id: ROOM,
     kind: "group",
+    purpose: "group",
+    purposeModule: null,
     name: "Sales",
     position: 0,
     createdBy: "user-1",

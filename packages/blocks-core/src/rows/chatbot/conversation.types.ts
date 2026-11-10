@@ -20,6 +20,62 @@ export interface MessageRow {
     readonly mark: string
     /** How far a message of the viewer has travelled; null draws no mark. */
     readonly delivery: DeliveryState | null
+    /** The pictures and files it carries; empty when none. */
+    readonly files?: ReadonlyArray<MessageFile>
+    /** The order the message is about, for its order card; absent when it is about none. */
+    readonly order?: MessageOrder
+}
+
+/** One ordered item on the order card of a message. */
+export interface MessageOrderItem {
+    /** The item name. */
+    readonly name: string
+    /** How many. */
+    readonly qty: number
+    /** The price of one in words; empty when unknown. */
+    readonly unitText: string
+    /** The amount of the line in words; empty when unknown. */
+    readonly amountText: string
+    /** The photo of the item; empty draws a sprout. */
+    readonly imageUrl: string
+}
+
+/** The order a message is about, as the customer saw it. */
+export interface MessageOrder {
+    /** The order number. */
+    readonly orderNo: string
+    /** One entry per ordered item. */
+    readonly lines: ReadonlyArray<MessageOrderItem>
+    /** The total in words. */
+    readonly amountText: string
+    /** The delivery line; empty when unknown. */
+    readonly address: string
+    /** Whether the order was paid. */
+    readonly paid: boolean
+}
+
+/** The `order` member of a message, present only when the message is about an order. */
+export interface MessageOrderMember {
+    /** The order the message is about. */
+    readonly order?: MessageOrder
+}
+
+/** The `files` member of a message, present only when it carries some. */
+export interface MessageFiles {
+    /** The pictures and files of the message. */
+    readonly files?: ReadonlyArray<MessageFile>
+}
+
+/** A picture or file of a message. */
+export interface MessageFile {
+    /** The id of the file. */
+    readonly id: string
+    /** Where the file is served from. */
+    readonly url: string
+    /** The name of the file, which names its link. */
+    readonly name: string
+    /** The media type, which tells a picture from another file. */
+    readonly contentType: string
 }
 
 /** The dotted paths of a record that name the parts of its message. */
@@ -38,6 +94,10 @@ export interface MessagePaths {
     readonly sidePath?: string | undefined
     /** The path of the short marker beside the author. */
     readonly markPath?: string | undefined
+    /** The path of the list of pictures and files of the message. */
+    readonly filesPath?: string | undefined
+    /** The path of the order the message is about (its order card). */
+    readonly orderPath?: string | undefined
 }
 
 /** One entry of the thread: a day divider, or a message with the part of its anatomy grouping decides. */

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
-import { SlotView } from "@nivo-lite/agent-sdk/client"
+import { SlotView, type PageFrameTabs } from "@nivo-lite/agent-sdk/client"
+import { WorkbenchTabsContext } from "@/hooks/workbenchTabs"
 import type { DataSlot, SlotLabels } from "@/modules/types"
 import {
     Alert,
@@ -12,55 +13,21 @@ import {
     PaneGrid,
     PaneSection,
     Cluster,
+    type BreadcrumbItem,
+    type DropdownMenuEntry,
+    type PageHeaderContent,
 } from "@starci/grammar/common"
-import type { BadgeTone, BreadcrumbItem, DropdownMenuEntry, PageHeaderContent } from "@starci/grammar/common"
+import { AgentKindMark } from "@/components/branches/AgentKindMark"
 import { AgentMark } from "@/components/leaves/AgentMark"
-import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
+import { ConnectionNeeds } from "@/components/leaves/ConnectionNeeds"
 import { nivoIconSource } from "@/components/leaves/Icon"
-/** What the header shows once the instance is known, every word resolved. */
-export interface InstanceHeaderView {
-    readonly name: string
-    readonly seed: string
-    readonly avatarUrl: string | null
-    readonly isEarly: boolean
-    readonly statusLabel: string
-    readonly statusTone: BadgeTone
-    /** "@handle - role - channels", already joined. */
-    readonly subtitle: string
-    /** What a `needs_connection` agent waits for and where to connect it; no lines otherwise. */
-    readonly needs: ConnectionNeedsProps
-    /** The next step of an agent that is not set up: the button to Setup; null when it is set up, when the owner is already there or may not set up. */
-    readonly setup: { readonly label: string; readonly href: string } | null
-    /** The profile of the agent that drives this instance; null while the instance has no agent. */
-    readonly profileHref: string | null
-    /** The packaging page of this agent's workflow; null for a person who may not package. */
-    readonly packageHref: string | null
-}
+import type { FrameSubTabs, InstanceHeaderView, InstanceSwitch } from "./parts"
 
-/** One installed agent the switcher in the header can open. */
-export interface InstanceSwitchItem {
-    readonly id: string
-    readonly name: string
-    readonly seed: string
-    readonly avatarUrl: string | null
-    /** "role · status", already joined. */
-    readonly description: string
-    readonly href: string
-}
-
-/** The switcher of the installed agents: the agents, the current one, and the way to add another. */
-export interface InstanceSwitch {
-    readonly label: string
-    readonly items: ReadonlyArray<InstanceSwitchItem>
-    readonly currentId: string
-    /** The way to add another agent; null for a person who may not install agents. */
-    readonly add: { readonly label: string; readonly href: string } | null
-}
-
+export type { InstanceHeaderView, InstanceSwitch } from "./parts"
 /** Copy, header view and tabs of the frame of an agent instance. */
 export interface AgentInstanceFrameBaseProps {
     /** The routed tab. */
-    readonly children: ReactNode
+    readonly content: ReactNode
     readonly props: {
         /** The routed tab's body is panes: attached flush under the tab line instead of cards on the page ground. */
         readonly hasPanes: boolean
@@ -74,9 +41,19 @@ export interface AgentInstanceFrameBaseProps {
         readonly crumbLabel: string
         readonly crumbs: ReadonlyArray<BreadcrumbItem>
         readonly tabsLabel: string
-        readonly tabs: ReadonlyArray<{ readonly id: string; readonly label: string; readonly href: string }>
+        readonly tabs: ReadonlyArray<{
+            readonly id: string
+            readonly label: string
+            readonly href: string
+            /** The grants on Ket noi, the waiting facts on Tri thuc; absent while unknown or when the tab has none. */
+            readonly count?: number
+            /** The count waits for the owner. */
+            readonly isAttention?: boolean
+        }>
         /** The tab the route names; the line follows a soft navigation from inside the body, which the tabs alone do not see. */
         readonly selectedTab: string
+        /** The second tab row of the routed tab (the views of Work), or null for a tab with none. */
+        readonly subTabs: FrameSubTabs | null
         /** The instance is not known yet: the header keeps its boxes. */
         readonly isLoading: boolean
         readonly read: DataSlot<boolean>
@@ -84,7 +61,11 @@ export interface AgentInstanceFrameBaseProps {
         readonly view: InstanceHeaderView
         readonly switcher: InstanceSwitch
     }
-    readonly on: { readonly retry: () => void }
+    readonly on: {
+        readonly retry: () => void
+        /** Takes the view tabs a routed workbench hands up for the second tab row (null when it goes). */
+        readonly viewTabs: (tabs: PageFrameTabs | null) => void
+    }
 }
 
 type FrameCopy = AgentInstanceFrameBaseProps["props"]
@@ -146,15 +127,15 @@ const menuEntriesOf = (copy: FrameCopy): DropdownMenuEntry[] => {
     ]
 }
 
-/** The commands at the end of the header: the next setup step when one is owed, the private chat, and a menu of the rest. */
+/** The commands at the end of the header: the primary command of the open tab when it has one, and a menu of the rest. */
 const HeaderActions = (props: HeaderPartProps) => {
     const { copy } = props
     const entries = menuEntriesOf(copy)
     return (
         <Cluster gap="inline">
-            {copy.view.setup === null ? null : (
-                <Button intent="commit" href={copy.view.setup.href}>
-                    {copy.view.setup.label}
+            {copy.view.primary === null ? null : (
+                <Button intent="commit" href={copy.view.primary.href} startGlyph="plus">
+                    {copy.view.primary.label}
                 </Button>
             )}
             {entries.length === 0 ? null : (
@@ -194,15 +175,7 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
     const view = copy.view
     const header: PageHeaderContent = {
         breadcrumbs: { label: copy.crumbLabel, items: copy.crumbs },
-        mark: (
-            <AgentMark
-                label={view.name}
-                seed={view.seed}
-                src={view.avatarUrl}
-                size="control"
-                isLoading={copy.isLoading}
-            />
-        ),
+        mark: <AgentKindMark module={view.module} isLoading={copy.isLoading} />,
         title: view.name,
         status: <HeaderStatus copy={copy} />,
         meta: view.subtitle,
@@ -214,29 +187,31 @@ export const AgentInstanceFrameBase = (props: AgentInstanceFrameBaseProps) => {
             items: [...copy.tabs],
             selectedKey: copy.selectedTab,
         },
-    }
-    if (copy.hasPanes) {
-        return (
-            <Page chrome="panes" measure="product" isLoading={copy.isLoading} minHeight="lg" header={header}>
-                <PaneGrid label={copy.ariaLabel} areas={["tab"]}>
-                    <Pane area="tab" inset="flush">
-                        <FrameNotice read={copy.read} labels={copy.labels} onRetry={props.on.retry} />
-                        {copy.notice === "" ? null : (
-                            <PaneSection>
-                                <Alert tone="informative" title={copy.notice} />
-                            </PaneSection>
-                        )}
-                        {props.children}
-                    </Pane>
-                </PaneGrid>
-            </Page>
-        )
+        ...(copy.subTabs === null ? {} : { subTabs: copy.subTabs }),
     }
     return (
-        <Page measure="product" isLoading={copy.isLoading} header={header}>
-            <FrameNotice read={copy.read} labels={copy.labels} onRetry={props.on.retry} />
-            {copy.notice === "" ? null : <Alert tone="informative" title={copy.notice} />}
-            {props.children}
-        </Page>
+        <WorkbenchTabsContext.Provider value={props.on.viewTabs}>
+            {copy.hasPanes ? (
+                <Page chrome="panes" measure="product" isLoading={copy.isLoading} minHeight="lg" header={header}>
+                    <PaneGrid label={copy.ariaLabel} areas={["tab"]}>
+                        <Pane area="tab" inset="flush">
+                            <FrameNotice read={copy.read} labels={copy.labels} onRetry={props.on.retry} />
+                            {copy.notice === "" ? null : (
+                                <PaneSection>
+                                    <Alert tone="informative" title={copy.notice} />
+                                </PaneSection>
+                            )}
+                            {props.content}
+                        </Pane>
+                    </PaneGrid>
+                </Page>
+            ) : (
+                <Page measure="product" isLoading={copy.isLoading} header={header}>
+                    <FrameNotice read={copy.read} labels={copy.labels} onRetry={props.on.retry} />
+                    {copy.notice === "" ? null : <Alert tone="informative" title={copy.notice} />}
+                    {props.content}
+                </Page>
+            )}
+        </WorkbenchTabsContext.Provider>
     )
 }

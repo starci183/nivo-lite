@@ -3,7 +3,7 @@ import { InjectHttpClient } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
 import { isRecord } from "@modules/platform/primitives"
 import { TelegramError, TelegramErrorCode } from "./errors/telegram.error"
-import type { TelegramParams } from "./telegram.contracts"
+import type { TelegramParams, TelegramPhoto } from "./telegram.contracts"
 import { InjectTelegramOptions } from "./telegram.decorators"
 import type { TelegramOptions } from "./telegram.options"
 
@@ -43,6 +43,23 @@ export class TelegramClient {
     /** Sends a text message to a chat. */
     async sendMessage(token: string, chatId: string, text: string): Promise<void> {
         await this.call(token, "sendMessage", { chat_id: chatId, text })
+    }
+
+    /** Sends one picture, fetched by Telegram from its public address, with a caption under it. */
+    async sendPhoto(token: string, chatId: string, photoUrl: string, caption: string): Promise<void> {
+        await this.call(token, "sendPhoto", { chat_id: chatId, photo: photoUrl, ...(caption === "" ? {} : { caption }) })
+    }
+
+    /** Sends two to ten pictures as one album (Bot API `sendMediaGroup`), each fetched by Telegram from its public address and each with its own caption. */
+    async sendMediaGroup(token: string, chatId: string, photos: ReadonlyArray<TelegramPhoto>): Promise<void> {
+        await this.call(token, "sendMediaGroup", {
+            chat_id: chatId,
+            media: photos.map((photo) => ({
+                type: "photo",
+                media: photo.url,
+                ...(photo.caption === "" ? {} : { caption: photo.caption }),
+            })),
+        })
     }
 
     /** Shows "typing" in a chat; best effort, so a failure here never stops the reply. Resolves true when Telegram accepted it. */

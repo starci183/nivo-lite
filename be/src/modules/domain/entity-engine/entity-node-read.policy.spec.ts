@@ -5,7 +5,7 @@ import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
 import { queryProblems } from "@nivo-lite/agent-sdk/query"
 import type { EntityCatalog, FilterExpr, OrderBy, Query } from "@nivo-lite/agent-sdk/query"
 import type { EntityNodeTurn } from "./entity-node.contracts"
-import { isLookup, limitOf, nodeReadPlanOf, nodeRowOf, turnPathOf } from "./entity-node-read.policy"
+import { isLookup, limitOf, newestOrderOf, nodeReadPlanOf, nodeRowOf, turnPathOf } from "./entity-node-read.policy"
 
 const NODE_READ: unique symbol = Symbol("entity-node.node-read")
 
@@ -246,11 +246,32 @@ describe("the order a node read follows", () => {
         expect(await orderOf(UNIQUE, { dedupeKey: "d-1" })).toEqual([["id", "asc"]])
     })
 
-    it("keeps every other read newest first, whatever indexes the entity has", async () => {
+    it("falls back to the creation order where no index serves a newest-first read of the pins (the engine then refuses it)", async () => {
         expect(await orderOf(UNIQUE, { status: "open" })).toEqual([
             ["createdAt", "desc"],
             ["id", "desc"],
         ])
+    })
+
+    it("reads newest first by the time column a declared index serves after the pins, the creation time when one serves it", async () => {
+        const timed: EntityDefinition = {
+            ...UNIQUE,
+            fields: { ...UNIQUE.fields, sentAt: { kind: "timestamptz", nullable: false } },
+            indexes: [
+                { name: "status_sent", on: ["status", { desc: "sentAt" }, { desc: "id" }] },
+                { name: "dedupe_status_created", on: ["dedupeKey", "status", { desc: "createdAt" }, { desc: "id" }] },
+                { name: "status_folded", on: ["status", { fold: "dedupeKey" }, "id"] },
+            ],
+        }
+        expect(newestOrderOf(timed, ["status"])).toEqual([
+            ["sentAt", "desc"],
+            ["id", "desc"],
+        ])
+        expect(newestOrderOf(timed, ["status", "dedupeKey"])).toEqual([
+            ["createdAt", "desc"],
+            ["id", "desc"],
+        ])
+        expect(newestOrderOf(timed, [])).toBeNull()
     })
 })
 
@@ -320,6 +341,36 @@ const READS: ReadonlyArray<readonly [string, string, NodeQuery]> = [
         "order",
         { where: { id: "o1" }, fields: ["orderNo", "amountVnd", "status", "items"], limit: 1 },
     ],
+    [
+        "sales.consult-turn: the thread of the conversation",
+        "message",
+        { where: { conversationId: "v1" }, fields: ["role", "text", "sentAt"], limit: 30 },
+    ],
+    [
+        "chatbot understand / answer / complaint: the posted lines of the conversation",
+        "message",
+        { where: { conversationId: "v1", status: "posted" }, fields: ["role", "text", "sentAt"], limit: 30 },
+    ],
+    [
+        "agent-graph-turn-policy: the agent lines a step already sent",
+        "message",
+        { where: { conversationId: "v1", role: "agent" }, fields: ["text", "sentAt", "channelRef"], limit: 20 },
+    ],
+    [
+        "sales care: the customer's latest orders (the paid ones kept in the node)",
+        "order",
+        { where: { leadId: "l1" }, fields: ORDER_FIELDS, limit: 50 },
+    ],
+    [
+        "accounting close report: the credits of a status",
+        "bank-transaction",
+        { where: { direction: "credit", status: "matched" }, fields: TX_FIELDS, limit: 200 },
+    ],
+    [
+        "accounting close report: the booked credit of a bank reference",
+        "bank-transaction",
+        { where: { externalRef: "FT1" }, fields: TX_FIELDS, limit: 1 },
+    ],
 ]
 
 describe("the data reads of the payment and accounting nodes", () => {
@@ -338,14 +389,13 @@ describe("the data reads of the payment and accounting nodes", () => {
 
     it("lists the reads of a non-unique filter newest first, so the newer of two matching credits comes first", async () => {
         const policy = await build()
-        const newest = [
-            ["createdAt", "desc"],
-            ["id", "desc"],
-        ]
         for (const [, kind, query] of READS.filter(([, , one]) => !("id" in (one.where ?? {})))) {
             const entity = BY_KIND.get(kind)
             const plan = entity === undefined ? null : policy.nodeReadPlanOf(entity, kindOf, TURN, query, "workspace")
-            expect(plan?.query.order).toEqual(newest)
+            const order = plan?.query.order ?? []
+            if (order.length === 1) continue
+            expect(order.map(([, direction]) => direction)).toEqual(["desc", "desc"])
+            expect(order.at(-1)?.[0]).toBe("id")
         }
     })
 })
@@ -388,7 +438,7 @@ const BE_READS: ReadonlyArray<BeRead> = [
         BY_ID,
     ),
     read(
-        "chat-message-propose-executor: the proposed line of a conversation",
+        "customer-drafts: the proposed line of a conversation",
         "chat.message",
         AND(EQ("conversationId"), EQ("status")),
         RECENT("sentAt"),

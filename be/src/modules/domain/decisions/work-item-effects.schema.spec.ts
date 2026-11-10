@@ -19,11 +19,13 @@ describe("work-item-effects.schema", () => {
         ).toBe(true)
     })
 
-    it("refuses a negative amount, an empty title, and a payload, nested object or list over 500 members", () => {
+    it("refuses an empty title, and a payload, nested object or list over 500 members; an amount is no member of the payload (it is read from the records)", () => {
         const raise = (payload: unknown, extra: object = {}) =>
             raisePayloadSchema.safeParse({ action: "review", title: "Review", payload, ...extra }).success
 
-        expect(raise({}, { amountVnd: -1 })).toBe(false)
+        expect(raisePayloadSchema.parse({ action: "review", title: "Review", payload: {}, amountVnd: -1 })).not.toHaveProperty(
+            "amountVnd",
+        )
         expect(raise({}, { title: "" })).toBe(false)
         expect(raise(membersOf(501, 1))).toBe(false)
         expect(raise({ nested: membersOf(501, 1) })).toBe(false)

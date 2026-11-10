@@ -1,4 +1,4 @@
-import { Stack, Grid, Alert } from "@starci/grammar/common"
+import { Stack, Alert } from "@starci/grammar/common"
 
 import { CreditsBalance } from "@/components/composites/CreditsBalance"
 import { CreditsCatalogue } from "@/components/composites/CreditsCatalogue"
@@ -17,7 +17,11 @@ interface CreditsOverviewLabels {
     readonly emptyPacks: string
 }
 
+/** Which part of the overview a slot of the page draws: the balance in the main column, or the offers (upgrade, packs) in the rail. */
+export type CreditsOverviewShape = "balance" | "offers"
+
 type CreditsOverviewBaseProps = {
+    readonly shape: CreditsOverviewShape
     readonly props: {
         /** The view drawn from no data: the placeholder the skeleton reuses. */
         readonly view: CreditsOverviewView
@@ -28,7 +32,7 @@ type CreditsOverviewBaseProps = {
     readonly on: { readonly buy: (target: PayTarget) => void; readonly retry: () => void }
 }
 
-/** Draws the credits overview entirely from settled copy, slots and purchase actions. */
+/** Draws one part of the credits overview from settled copy, slots and purchase actions: the balance, or the upgrade and the packs. */
 export const CreditsOverviewBase = (props: CreditsOverviewBaseProps) => {
     const copy = props.props
     return (
@@ -38,11 +42,18 @@ export const CreditsOverviewBase = (props: CreditsOverviewBaseProps) => {
                 placeholder={copy.view}
                 labels={copy.slotLabels}
                 onRetry={props.on.retry}
-                render={(view, isLoading) => (
-                    <>
-                        {view.canBuy ? null : <Alert tone="informative" title={view.staffNote} isLoading={isLoading} />}
-                        <CreditsBalance props={{ balance: view.balance, label: copy.labels.balance, isLoading }} />
-                        <Grid kind="cards" columns={2}>
+                render={(view, isLoading) =>
+                    props.shape === "balance" ? (
+                        <>
+                            {view.canBuy ? null : <Alert tone="informative" title={view.staffNote} isLoading={isLoading} />}
+                            <CreditsBalance props={{ balance: view.balance, label: copy.labels.balance, isLoading }} />
+                        </>
+                    ) : (
+                        <>
+                            <CreditsUpgrade
+                                props={{ view, title: copy.labels.upgrade, loading: copy.labels.loading, isLoading }}
+                                on={{ upgrade: props.on.buy }}
+                            />
                             <CreditsCatalogue
                                 props={{
                                     packs: view.packs,
@@ -55,18 +66,9 @@ export const CreditsOverviewBase = (props: CreditsOverviewBaseProps) => {
                                 }}
                                 on={{ buy: props.on.buy }}
                             />
-                            <CreditsUpgrade
-                                props={{
-                                    view,
-                                    title: copy.labels.upgrade,
-                                    loading: copy.labels.loading,
-                                    isLoading: isLoading,
-                                }}
-                                on={{ upgrade: props.on.buy }}
-                            />
-                        </Grid>
-                    </>
-                )}
+                        </>
+                    )
+                }
             />
         </Stack>
     )

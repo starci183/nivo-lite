@@ -16,6 +16,8 @@ export interface StoredInviteRow {
     readonly acceptedAt: Date | null
     readonly acceptedBy: string | null
     readonly revokedAt: Date | null
+    readonly declinedAt: Date | null
+    readonly declinedBy: string | null
 }
 
 const optionalDate = (iso: string | null): Date | null => (iso === null ? null : new Date(iso))
@@ -35,6 +37,8 @@ export const storedInviteOf = (row: ReturnType<typeof inviteRowOf>): StoredInvit
     acceptedAt: optionalDate(row.accepted_at),
     acceptedBy: null,
     revokedAt: optionalDate(row.revoked_at),
+    declinedAt: null,
+    declinedBy: null,
 })
 
 /** The pending invitation the list query returns, as the table holds it. */
@@ -81,7 +85,7 @@ type RotateWhereShape = {
 
 /** The guard of a rotation of `invite-1` in `ws-1`. */
 export const ROTATE_WHERE: Array<string | RotateWhereShape> = [
-    "id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL",
+    "id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL AND declined_at IS NULL",
     { inviteId: "invite-1", workspaceId: "ws-1" },
 ]
 

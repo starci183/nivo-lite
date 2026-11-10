@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common"
 import { AGENT_TAG_RIGHTS } from "@modules/domain/agent-work"
 import { AgentTagEffectService } from "./agent-tag-effect.service"
+import { CareScheduleEffectService } from "./care-schedule-effect.service"
 import type { DynamicModule } from "@nestjs/common"
 import { AgentsQueueModule } from "@modules/queues/agents"
 import { AgentBundleService } from "./agent-bundle.service"
@@ -9,6 +10,7 @@ import { AgentDirectoryModule } from "./agent-directory.module"
 import { AgentCreationService } from "./agent-creation.service"
 import { AgentDirectoryService } from "./agent-directory.service"
 import { AgentIdentityService } from "./agent-identity.service"
+import { AgentCatalogService } from "./agent-catalog.service"
 import { AgentLensesService } from "./agent-lenses.service"
 import { AgentOwnershipService } from "./agent-ownership.service"
 import {
@@ -19,6 +21,7 @@ import {
     AGENTS_MODULES,
     AGENTS_OPTIONS,
     AGENTS_WORK,
+    AGENTS_CHANNEL_OWNERS,
 } from "./agents.decorators"
 import { noWorkLines } from "./agent-work.policy"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agents.module-definition"
@@ -79,11 +82,14 @@ export class AgentsModule extends ConfigurableModuleClass {
                 : {
                       providers: [
                           { provide: AGENTS_WORK, useExisting: options.ports.work },
+                          { provide: AGENTS_CHANNEL_OWNERS, useExisting: options.ports.channelOwners },
                           { provide: AGENTS_KNOWLEDGE, useClass: options.ports.knowledge },
+                          AgentCatalogService,
                           AgentLensesService,
                           AgentTagEffectService,
+                          CareScheduleEffectService,
                       ],
-                      exports: [AGENTS_KNOWLEDGE, AgentLensesService],
+                      exports: [AGENTS_KNOWLEDGE, AgentCatalogService, AgentLensesService],
                   }
         return {
             ...base,

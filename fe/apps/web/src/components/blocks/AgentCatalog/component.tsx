@@ -1,95 +1,18 @@
-import { AGENT_MARK_MASCOT_SRC } from "@/components/leaves/AgentMark"
-import { EmptyNotice, Grid, SearchField, SurfaceCard, Section, Tabs } from "@starci/grammar/common"
-import type { BadgeTone, ListRowData } from "@starci/grammar/common"
-import { AgentCatalogCard, type AgentCatalogCardProps } from "@/components/composites/AgentCatalogCard"
-import { AgentTeamRow } from "@/components/composites/AgentTeamRow"
+import {
+    Cluster,
+    EmptyNotice,
+    Grid,
+    SearchField,
+    Section,
+    SurfaceCard,
+    Tabs,
+    type ListRowData,
+} from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import { AgentCard, RemoveConfirm } from "./cards"
+import type { AgentCatalogBaseProps, AgentCatalogData, RoleEntryView } from "./types"
 
-/** What one installed agent shows on the catalogue, already in the reader language. */
-export interface AgentCatalogTeamRow {
-    readonly name: string
-    readonly seed: string
-    readonly avatarUrl: string | null
-    /** "role · channel", already joined. */
-    readonly description: string
-    readonly statusLabel: string
-    readonly statusTone: BadgeTone
-    /** "Setup 3/8". */
-    readonly progressLabel: string
-    readonly confirmed: number
-    readonly total: number
-    /** "Continue setup" while gates are open, else "Open". */
-    readonly actionLabel: string
-    readonly href: string
-}
-
-/** One installed agent of the first section with the key the row is listed by. */
-export interface AgentCatalogTeamEntry {
-    readonly key: string
-    readonly row: AgentCatalogTeamRow
-}
-
-/** The list item of one installed agent: its identity and status, with the setup progress as the detail. */
-const teamItemOf = (row: AgentCatalogTeamRow, id: string, detail: ListRowData["detail"]): ListRowData => ({
-    id,
-    title: row.name,
-    description: row.description,
-    leading: { avatar: { name: row.name, seed: row.seed, src: row.avatarUrl || AGENT_MARK_MASCOT_SRC, kind: "agent" } },
-    badges: [{ label: row.statusLabel, tone: row.statusTone, isDot: true }],
-    action: { label: row.actionLabel, intent: "neutral", href: row.href },
-    detail,
-})
-
-/** One role card of the second section with the key the handlers name it by. */
-export interface AgentCatalogRoleEntry {
-    readonly key: string
-    readonly card: Omit<AgentCatalogCardProps, "onInstall" | "isInstalling" | "isBlocked" | "isLoading">
-}
-
-/** What the catalogue lists once the installations arrived: the installed agents and the roles that match the filters. */
-export interface AgentCatalogData {
-    readonly team: ReadonlyArray<AgentCatalogTeamEntry>
-    readonly roles: ReadonlyArray<AgentCatalogRoleEntry>
-}
-
-/** Copy, state and commands of the agent catalogue. */
-export interface AgentCatalogBaseProps {
-    readonly props: {
-        readonly yoursTitle: string
-        readonly yoursEmptyTitle: string
-        readonly yoursEmptyHint: string
-        readonly addTitle: string
-        /** The anchor of the roles heading, the target of the header's create action. */
-        readonly addId: string
-        readonly searchLabel: string
-        readonly searchPlaceholder: string
-        readonly clearLabel: string
-        readonly query: string
-        readonly categoryLabel: string
-        readonly categoryOptions: ReadonlyArray<{
-            readonly value: string
-            readonly label: string
-            readonly count: number
-        }>
-        readonly category: string
-        readonly emptyTitle: string
-        readonly emptyHint: string
-        readonly emptyAction: string | undefined
-        readonly slot: DataSlot<AgentCatalogData>
-        /** Fake entries of the same shape: the skeleton reuses the ready tree. */
-        readonly placeholder: AgentCatalogData
-        readonly slotLabels: SlotLabels
-        readonly busyKey: string | null
-    }
-    readonly on: {
-        readonly query: (value: string) => void
-        readonly category: (value: string) => void
-        readonly clear: () => void
-        readonly retry: () => void
-        readonly install: (key: string) => void
-    }
-}
+export type { AgentCatalogBaseProps, AgentCatalogData } from "./types"
 
 /** The base props of the catalogue with the data of a ready (or placeholder) slot. */
 interface CatalogSectionProps extends AgentCatalogBaseProps {
@@ -97,87 +20,116 @@ interface CatalogSectionProps extends AgentCatalogBaseProps {
     readonly isLoading: boolean
 }
 
-/** What the team section reads: its words, the installed agents and whether they are placeholders. */
-interface TeamProps {
-    readonly title: string
-    readonly emptyTitle: string
-    readonly emptyHint: string
-    readonly data: AgentCatalogData
-    readonly isLoading: boolean
-}
+/** The empty answer of the team: no agents at all, or none that match the filters. */
+const TeamEmpty = (props: AgentCatalogBaseProps) =>
+    props.props.filters[0]?.count === 0 ? (
+        <EmptyNotice frame="card" message={props.props.noAgentsTitle} description={props.props.noAgentsHint} />
+    ) : (
+        <EmptyNotice
+            frame="card"
+            message={props.props.emptyTitle}
+            description={props.props.emptyHint}
+            actionLabel={props.props.emptyAction}
+            onAction={props.on.clear}
+        />
+    )
 
-/** The installed agents as rows of one list card: progress, status and the next step on each. */
-const Team = (props: TeamProps) => (
-    <SurfaceCard
-        kind="list"
-        label={props.title}
-        headingLevel={2}
-        fact={String(props.data.team.length)}
-        isLoading={props.isLoading}
-        items={props.data.team.map((entry) =>
-            teamItemOf(entry.row, entry.key, <AgentTeamRow {...entry.row} isLoading={props.isLoading} />),
-        )}
-        empty={<EmptyNotice message={props.emptyTitle} description={props.emptyHint} />}
-    />
-)
-
-/** The roles that can be added: the heading with the search, the group filter chips, the compact role cards. */
-const Roles = (props: CatalogSectionProps) => (
-    <Section
-        title={props.props.addTitle}
-        isLoading={props.isLoading}
-        action={
-            <SearchField
-                label={props.props.searchLabel}
-                isLabelHidden
-                placeholder={props.props.searchPlaceholder}
-                clearLabel={props.props.clearLabel}
-                value={props.props.query}
-                onValueChange={props.on.query}
-                isLoading={props.isLoading}
-            />
-        }
-        id={props.props.addId}
-    >
+/** The filter tabs and the search of a team larger than a person scans by eye, at the end of the section head. */
+const TeamFilters = (props: AgentCatalogBaseProps) => (
+    <Cluster gap="row">
         <Tabs
             kind="filter"
-            label={props.props.categoryLabel}
-            items={props.props.categoryOptions.map((option) => ({
-                id: option.value,
-                label: option.label,
-                count: option.count,
-            }))}
-            selectedKey={props.props.category}
-            onSelect={props.on.category}
+            label={props.props.filterLabel}
+            items={props.props.filters.map((option) => ({ id: option.id, label: option.label, count: option.count }))}
+            selectedKey={props.props.filter}
+            onSelect={props.on.filter}
         />
-        {props.data.roles.length === 0 ? (
-            <EmptyNotice
-                message={props.props.emptyTitle}
-                description={props.props.emptyHint}
-                {...(props.props.emptyAction === undefined
-                    ? {}
-                    : { actionLabel: props.props.emptyAction, onAction: props.on.clear })}
-            />
+        <SearchField
+            label={props.props.searchLabel}
+            placeholder={props.props.searchPlaceholder}
+            clearLabel={props.props.searchClear}
+            value={props.props.query}
+            onValueChange={props.on.query}
+            onClear={() => props.on.query("")}
+        />
+    </Cluster>
+)
+
+/** The installed agents: a head with their count (and the chips and the search when the team is large), then one card each, three to a row. */
+const Team = (props: CatalogSectionProps) => (
+    <Section
+        title={props.props.yoursTitle}
+        headingLevel={2}
+        count={props.data.rows.length}
+        {...(props.data.hasFilters ? { action: <TeamFilters props={props.props} on={props.on} /> } : {})}
+        isLoading={props.isLoading}
+    >
+        {props.data.rows.length === 0 ? (
+            <TeamEmpty props={props.props} on={props.on} />
         ) : (
-            <Grid kind="cards" columns={3}>
-                {props.data.roles.map((entry) => (
-                    <AgentCatalogCard
-                        key={entry.key}
-                        {...entry.card}
-                        isLoading={props.isLoading}
-                        isInstalling={props.props.busyKey === entry.key}
-                        isBlocked={props.props.busyKey !== null}
-                        onInstall={() => props.on.install(entry.key)}
-                    />
+            <Grid kind="cards" columns={3} gap="inline">
+                {props.data.rows.map((row) => (
+                    <AgentCard key={row.key} props={props.props} on={props.on} row={row} isLoading={props.isLoading} />
                 ))}
             </Grid>
         )}
     </Section>
 )
 
+/** One role that can be added as a row: the mark of its kind, what it does and needs, its state and the install command. */
+const roleRowOf = (entry: RoleEntryView, props: CatalogSectionProps): ListRowData => ({
+    id: entry.key,
+    title: entry.card.name,
+    description: entry.card.description,
+    leading: {
+        avatar: { name: entry.card.name, src: `/agents/${entry.card.moduleKey}.webp`, shape: "square" },
+        size: "sm",
+    },
+    badges: [{ label: entry.card.stateLabel, tone: entry.card.isInstalled ? "success" : "neutral", isDot: entry.card.isInstalled }],
+    ...(entry.card.needsLabel === "" ? {} : { meta: { text: entry.card.needsLabel } }),
+    ...(entry.card.canInstall
+        ? {
+              action: {
+                  label: entry.card.installLabel,
+                  intent: "neutral" as const,
+                  isPending: props.props.busyKey === entry.key,
+                  isDisabled: props.props.busyKey !== null,
+                  press: () => props.on.install(entry.key),
+              },
+          }
+        : {}),
+})
+
+/** The roles that can be added: one list card, the group chips in its filter zone, a row per role. */
+const Roles = (props: CatalogSectionProps) => (
+    <div id={props.props.addId}>
+        <SurfaceCard
+            kind="list"
+            label={props.props.addTitle}
+            headingLevel={2}
+            isLoading={props.isLoading}
+            headers={[
+                {
+                    kind: "filter",
+                    label: props.props.categoryLabel,
+                    items: props.props.categoryOptions.map((option) => ({
+                        id: option.id,
+                        label: option.label,
+                        count: option.count,
+                    })),
+                    selectedKey: props.props.category,
+                    onSelect: props.on.category,
+                },
+            ]}
+            items={props.data.roles.map((entry) => roleRowOf(entry, props))}
+            empty={<EmptyNotice message={props.props.rolesEmptyTitle} description={props.props.rolesEmptyHint} />}
+        />
+    </div>
+)
+
 /**
- * Draws the catalogue as the Page body's own regions (a fragment, so the page's region step spaces them): the installed
- * agents as rows, then the roles to add.
+ * Draws the catalogue as the Page body own regions (a fragment, so the page region step spaces them): the installed agents as
+ * one table with what each may use and read, then the roles to add.
  */
 export const AgentCatalogBase = (props: AgentCatalogBaseProps) => (
     <SlotView
@@ -187,13 +139,8 @@ export const AgentCatalogBase = (props: AgentCatalogBaseProps) => (
         onRetry={props.on.retry}
         render={(data, isLoading) => (
             <>
-                <Team
-                    title={props.props.yoursTitle}
-                    emptyTitle={props.props.yoursEmptyTitle}
-                    emptyHint={props.props.yoursEmptyHint}
-                    data={data}
-                    isLoading={isLoading}
-                />
+                <Team {...props} data={data} isLoading={isLoading} />
+                <RemoveConfirm props={props.props} on={props.on} />
                 <Roles {...props} data={data} isLoading={isLoading} />
             </>
         )}

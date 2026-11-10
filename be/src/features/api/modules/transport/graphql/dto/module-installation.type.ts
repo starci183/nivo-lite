@@ -42,6 +42,10 @@ export class ModuleInstallationType {
     @Field(() => String, { nullable: true })
     agentAvatarUrl?: string | null
 
+    /** The preset picture the owner chose ("nivo-ai", "role", "initials", a shop mark); null for the default or an uploaded picture. */
+    @Field(() => String, { nullable: true })
+    agentAvatarPreset?: string | null
+
     /** `installing`, `setup`, `ready`, `live`, `paused`, `needs_connection` (waits for a required connection) or `removed`. */
     @Field()
     status!: string

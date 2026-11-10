@@ -82,3 +82,26 @@ describe("NativeViewService internalOf", () => {
         })
     })
 })
+
+describe("NativeViewService internalOf, for a workflow step", () => {
+    it("gives the step of an internal agent its internal view whatever conversation its run carries", async () => {
+        const { view, scopes } = await build()
+        scopes.lensOf.mockResolvedValue({ module: "accounting", installationId: null })
+
+        await expect(
+            view.internalOf(WS, { agentId: "a1", conversationId: "c1", graphStep: true }),
+        ).resolves.toMatchObject({ module: "accounting", audience: "internal" })
+    })
+
+    it("refuses the step of a customer-facing agent, with or without a conversation", async () => {
+        const { view, scopes } = await build()
+        scopes.lensOf.mockResolvedValue({ module: "chatbot", installationId: null })
+
+        await expect(
+            view.internalOf(WS, { agentId: "a1", conversationId: "c1", graphStep: true }),
+        ).rejects.toMatchObject({ params: { reason: "internal_only" } })
+        await expect(
+            view.internalOf(WS, { agentId: "a1", conversationId: null, graphStep: true }),
+        ).rejects.toMatchObject({ params: { reason: "internal_only" } })
+    })
+})

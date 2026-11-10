@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { waitingChipOf } from "../../rows/count-chip"
 import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import type { ItemsRegionView } from "../../views/views.types"
 
@@ -15,7 +16,8 @@ export const WaitingRegion = (props: WaitingRegionProps): ReactNode => (
     <SurfaceCard
         kind="list"
         isLoading={props.isLoading}
-        label={props.view.count === null ? props.label : `${props.label} · ${props.view.count}`}
+        label={props.label}
+        {...waitingChipOf(props.view.count)}
         note={props.view.more ?? undefined}
         items={props.view.rows.map((row) => ({
             id: row.id,

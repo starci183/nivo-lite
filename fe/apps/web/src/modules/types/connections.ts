@@ -170,65 +170,6 @@ export interface ConnectionNotice {
     readonly action?: { readonly label: string; readonly run: () => void }
 }
 
-/** One step of the trail above a provider page. */
-interface ConnectionCrumb {
-    readonly id: string
-    readonly label: string
-    readonly href?: string
-}
-
-/** The live rail of a provider page, beside the main pane (a drawer on a narrow screen). */
-interface ConnectionRailView {
-    readonly label: string
-    readonly openLabel: string
-    readonly closeLabel: string
-    readonly isOpen: boolean
-}
-
-/** The frame of a provider page: the header, the trail, the notices, the owner's disconnect and its question. */
-export interface ConnectionPageHeadView {
-    /** The connection's name, status and facts once read; absent while it loads or when it could not be read (a notice then says why). */
-    readonly head?: ConnectionHeadView
-    readonly isLoading: boolean
-    readonly icon: "chat" | "apps"
-    readonly crumbLabel: string
-    readonly crumbs: ReadonlyArray<ConnectionCrumb>
-    readonly gridLabel: string
-    readonly mainLabel: string
-    /** The live rail of the page; absent for a provider with none. */
-    readonly rail?: ConnectionRailView
-    /** The one command of the header band (check again, grant again); absent when the page has none. */
-    readonly action?: { readonly label: string; readonly intent: "commit" | "neutral"; readonly isPending: boolean }
-    readonly notices: ReadonlyArray<ConnectionNotice>
-    /** Disconnect belongs to the workspace owner; absent for everyone else, whom the back end refuses. */
-    readonly disconnect?: { readonly title: string; readonly description: string; readonly label: string }
-    readonly confirm: {
-        readonly isOpen: boolean
-        readonly title: string
-        readonly description: string
-        readonly confirmLabel: string
-        readonly cancelLabel: string
-        readonly isPending: boolean
-    }
-}
-
-/** What the frame of a provider page can be told to do. */
-export interface ConnectionPageHeadCommands {
-    readonly act: () => void
-    readonly askDisconnect: () => void
-    readonly confirmDisconnect: () => void
-    readonly dismiss: () => void
-    readonly openRail?: (isOpen: boolean) => void
-    readonly retry: () => void
-}
-
-/** The health tiles of a provider page, with the sentence for when there is nothing to show. */
-export interface ConnectionTilesView {
-    readonly facts: DataSlot<ReadonlyArray<ConnectionFactView>>
-    readonly emptyLabel: string
-    readonly retry: () => void
-}
-
 /** The live rail of a provider page: its heading, the lines, and how it keeps itself current. */
 export interface ConnectionRailLinesView {
     readonly title: string
@@ -254,7 +195,7 @@ export interface LibraryTag {
 
 /** What the workspace runs of a connector, at the foot of its tile. */
 export interface LibraryStatus {
-    readonly tone: "success" | "danger" | "muted"
+    readonly tone: "success" | "danger" | "warning" | "muted"
     readonly label: string
     readonly isDot: boolean
 }
@@ -274,14 +215,22 @@ export interface LibraryCard {
     readonly status: LibraryStatus
     /** How many connections of it the workspace runs: with some, the tile offers "Add". */
     readonly connected: number
-    /** One of the connectors the workspace can use today: it stands in the first section. */
+    /** One of the connectors the workspace can use today. */
     readonly isCurrent: boolean
+    /** The library group it heads under: chat, money, google, data, sales, accounting. */
+    readonly group: string
+    /** What it holds many of ("Many bots"), beside its name; a planned connector says it is planned instead. */
+    readonly byline: string
+    /** Its "add another" command ("Add bot"), once the workspace has one. */
+    readonly addLabel: string
     /** A planned connector: no page, only the "I want it" command. */
     readonly isSoon: boolean
     /** The viewer may start a connection of it; otherwise the tile only opens its detail to read. */
     readonly canConnect: boolean
     /** The address of the only connection a workspace can have of it (Google Drive), once it has one. */
     readonly pageHref?: string
+    /** A connection of it needs the owner (fix, continue the setup, reconnect): the tile's one command opens that connection. */
+    readonly lifeAction?: { readonly label: string; readonly href: string }
     /** A planned connector: the state of its "I need this" command. */
     readonly want: { readonly isPending: boolean; readonly isDone: boolean; readonly note?: string }
 }
@@ -294,4 +243,31 @@ export interface ConnectionRefusalView {
     readonly homeHref: string
     readonly message: string
     readonly description: string
+}
+
+/** The tabs every connection page has. */
+export type ConnectionPageTabId = "overview" | "events" | "agents" | "settings"
+
+/** The tabs of a connection page as links of its own address, and the one the address opens. */
+export interface ConnectionPageTabsView {
+    readonly label: string
+    readonly selected: ConnectionPageTabId
+    readonly items: ReadonlyArray<{
+        readonly id: ConnectionPageTabId
+        readonly label: string
+        readonly href: string
+        readonly count?: number
+    }>
+    /** The address of one tab. */
+    readonly hrefOf: (id: ConnectionPageTabId) => string
+}
+
+/** The setup card of a connection page while the connection is unfinished: the four phases and the one being worked on. */
+export interface ConnectionSetupView {
+    /** "Setup · step 3/4". */
+    readonly title: string
+    readonly phases: ReadonlyArray<string>
+    /** 1-based. */
+    readonly current: number
+    readonly stateLabels: { readonly complete: string; readonly current: string; readonly upcoming: string }
 }

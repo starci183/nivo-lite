@@ -3,25 +3,29 @@
 import { useCallback, useEffect, useState } from "react"
 
 /**
- * After the guide sends someone to a page, the place it named (`data-guide="<target>"`) is scrolled into view and outlined for a
- * moment. The target is held in memory so it survives the client navigation; the element is waited for while the page streams in.
- * The outline is drawn with the Tailwind utilities of SPOTLIGHT, added to the element and taken off again.
+ * After the guide sends someone to a page, the place it named (`data-guide-id="<target>"`) is scrolled into view and ringed with a
+ * pulsing outline for about three seconds. The target is held in memory so it survives the client navigation; the element is waited
+ * for while the page streams in. Grammar has no spotlight yet, so the ring is the outline utilities of RING, added to the element and
+ * taken off again; the pulse alternates the ring between the accent and clear.
+ * A marker may wrap its control in an element without a box of its own (`display: contents`); the ring then goes to its first child.
  */
 
-/** The utilities that outline the spotlighted element. */
-const SPOTLIGHT = [
-    "outline-2",
-    "outline-solid",
-    "outline-accent",
-    "outline-offset-4",
-    "rounded-(--radius)",
-    "transition-[outline-color]",
-]
+/** The utilities that ring the spotlighted element. */
+const RING = ["outline-2", "outline-solid", "outline-offset-4", "rounded-(--radius)", "transition-[outline-color]", "duration-500"]
+const ON = "outline-accent"
+const OFF = "outline-transparent"
 
 const WAIT_MS = 5000
-const SHOW_MS = 2600
+const SHOW_MS = 3000
+const BEAT_MS = 500
 const LOOK_MS = 150
 const LOOKS = Math.ceil(WAIT_MS / LOOK_MS)
+
+/** The element that draws the ring: the marker, or its first child when the marker has no box. */
+const boxOf = (marker: HTMLElement): HTMLElement =>
+    window.getComputedStyle(marker).display === "contents" && marker.firstElementChild instanceof HTMLElement
+        ? marker.firstElementChild
+        : marker
 
 /** The target waiting for the next page to show it. */
 let queuedTarget: string | null = null
@@ -47,14 +51,26 @@ export const useGuideSpotlight = (pathname: string): ((target: string | undefine
         let left = LOOKS
         let timer: ReturnType<typeof setTimeout> | undefined
         let outlined: HTMLElement | null = null
+        let beat: ReturnType<typeof setInterval> | undefined
+        const clear = (element: HTMLElement) => {
+            clearInterval(beat)
+            element.classList.remove(...RING, ON, OFF)
+        }
         const look = () => {
-            const element = document.querySelector<HTMLElement>(`[data-guide="${CSS.escape(target)}"]`)
-            if (element) {
+            const marker = document.querySelector<HTMLElement>(`[data-guide-id="${CSS.escape(target)}"]`)
+            if (marker) {
+                const element = boxOf(marker)
                 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
                 element.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" })
-                element.classList.add(...SPOTLIGHT)
+                element.classList.add(...RING, ON)
                 outlined = element
-                timer = setTimeout(() => element.classList.remove(...SPOTLIGHT), SHOW_MS)
+                let beats = 0
+                beat = setInterval(() => {
+                    beats += 1
+                    element.classList.toggle(ON, beats % 2 === 0)
+                    element.classList.toggle(OFF, beats % 2 === 1)
+                }, BEAT_MS)
+                timer = setTimeout(() => clear(element), SHOW_MS)
                 return
             }
             left -= 1
@@ -63,7 +79,7 @@ export const useGuideSpotlight = (pathname: string): ((target: string | undefine
         look()
         return () => {
             clearTimeout(timer)
-            outlined?.classList.remove(...SPOTLIGHT)
+            if (outlined !== null) clear(outlined)
         }
     }, [pathname, jumps])
     return useCallback((target, isHere) => {

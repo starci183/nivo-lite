@@ -4,11 +4,10 @@ import {
     EmptyNotice,
     Section,
     Stack,
-    SurfaceCard,
     Switch,
     Text,
-    type ListRowData,
     type BadgeTone,
+    type ListRowData,
 } from "@starci/grammar/common"
 
 /** One badge of a gateway row. */
@@ -171,10 +170,10 @@ const gatewayItemOf = (row: McpGatewayRow, isLoading: boolean): ListRowData => {
 export const McpGatewayRegion = (props: McpGatewayRegionProps) => (
     <>
         {props.view.cards.map((card) => (
-            <SurfaceCard
+            <Section
                 kind="list"
                 key={card.label}
-                label={card.label}
+                title={card.label}
                 isLoading={props.isLoading}
                 empty={<EmptyNotice message={card.emptyMessage} description={card.emptyDescription} />}
                 items={card.rows.map((row) => gatewayItemOf(row, props.isLoading))}

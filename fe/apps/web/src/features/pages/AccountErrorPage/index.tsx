@@ -22,6 +22,8 @@ export const AccountErrorPage = (props: AccountErrorPageProps) => {
             props={{
                 header: accountHeadingOf({
                     workspaceId,
+                    crumbLabel: shell("crumbLabel"),
+                    home: shell("crumbHome"),
                     title: isProfile ? t("profilePageTitle") : t("title"),
                     description: isProfile ? t("profilePageDescription") : t("description"),
                     tabsLabel: t("tabsLabel"),

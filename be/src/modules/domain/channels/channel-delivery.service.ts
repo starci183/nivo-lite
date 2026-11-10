@@ -10,6 +10,7 @@ import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectChannelSenderRegistry } from "./channels.decorators"
 import type { ChannelSenderRegistry, DeliveryRequest, DeliveryReceipt, PersonMessage } from "./channels.contracts"
+import { TelegramPicturesService } from "./telegram-pictures.service"
 import { ChannelPlanNoticeService } from "./channel-plan-notice.service"
 import { customerIdOf } from "./customer-id.policy"
 import { deliveryFailureFieldsOf } from "./delivery-failure-fields.policy"
@@ -45,6 +46,7 @@ export class ChannelDeliveryService {
         private readonly credentials: ZaloCredentialsService,
         private readonly zaloDelivery: ZaloDeliveryService,
         private readonly planNotice: ChannelPlanNoticeService,
+        private readonly pictures: TelegramPicturesService,
         @InjectTelegram() private readonly telegram: TelegramClient,
         @InjectZalo() private readonly zalo: ZaloClient,
         @InjectChannelSenderRegistry() private readonly senders: ChannelSenderRegistry,
@@ -150,19 +152,23 @@ export class ChannelDeliveryService {
             return sent ? DELIVERED : UNKNOWN
         }
         if (target.channel !== "telegram" || target.externalId === null) return NOT_DELIVERED
-        return this.sendTelegram(target, target.externalId, request.text)
+        return this.sendTelegram(target, target.externalId, request)
     }
 
     private async sendTelegram(
         target: ChatConversationTarget,
         externalId: string,
-        text: string,
+        request: DeliveryRequest,
     ): Promise<DeliveryReceipt> {
         if (target.connectionId === null) return NOT_DELIVERED
         const token = await this.secrets.botToken(target.workspaceId, target.connectionId)
         if (token.kind !== "ok") return NOT_DELIVERED
-        return this.telegram.sendMessage(token.value, customerIdOf(externalId), text).then(
-            () => DELIVERED,
+        const chatId = customerIdOf(externalId)
+        return this.telegram.sendMessage(token.value, chatId, request.text).then(
+            async () => {
+                await this.pictures.send(target, token.value, chatId, request.images ?? [])
+                return DELIVERED
+            },
             (cause: unknown) => this.failed(target, cause),
         )
     }

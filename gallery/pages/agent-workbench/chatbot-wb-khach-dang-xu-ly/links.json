@@ -1,0 +1,142 @@
+[
+ {
+  "label": "Tổng quan",
+  "box": {
+   "x": 268,
+   "y": 96,
+   "w": 69,
+   "h": 20
+  },
+  "to": "overview/overview",
+  "kind": "page"
+ },
+ {
+  "label": "Agent",
+  "box": {
+   "x": 357,
+   "y": 96,
+   "w": 39,
+   "h": 20
+  },
+  "to": "agents-catalog/chatbot-tao-agent",
+  "kind": "page"
+ },
+ {
+  "label": "Bàn làm việc",
+  "box": {
+   "x": 268,
+   "y": 188,
+   "w": 92,
+   "h": 40
+  },
+  "to": "agent-workbench/chatbot-wb-hop-thu",
+  "kind": "page"
+ },
+ {
+  "label": "Công việc",
+  "box": {
+   "x": 360,
+   "y": 188,
+   "w": 86,
+   "h": 40
+  },
+  "to": "agent-work/chatbot-work",
+  "kind": "page"
+ },
+ {
+  "label": "Graph",
+  "box": {
+   "x": 446,
+   "y": 188,
+   "w": 63,
+   "h": 40
+  },
+  "to": "agent-graph/chatbot-graph",
+  "kind": "page"
+ },
+ {
+  "label": "Quy trình",
+  "box": {
+   "x": 509,
+   "y": 188,
+   "w": 84,
+   "h": 40
+  },
+  "to": null,
+  "kind": "page",
+  "note": "trỏ tới trang chưa có trong gallery",
+  "route": "/agents/chatbot/<inst>/workflows"
+ },
+ {
+  "label": "Trò chuyện",
+  "box": {
+   "x": 593,
+   "y": 188,
+   "w": 93,
+   "h": 40
+  },
+  "to": null,
+  "kind": "page",
+  "note": "trỏ tới trang chưa có trong gallery",
+  "route": "/agents/chatbot/<inst>/chat"
+ },
+ {
+  "label": "Kết nối 2",
+  "box": {
+   "x": 686,
+   "y": 188,
+   "w": 104,
+   "h": 40
+  },
+  "to": null,
+  "kind": "page",
+  "note": "trỏ tới trang chưa có trong gallery",
+  "route": "/agents/chatbot/<inst>/connections"
+ },
+ {
+  "label": "Tri thức 73",
+  "box": {
+   "x": 790,
+   "y": 188,
+   "w": 113,
+   "h": 40
+  },
+  "to": null,
+  "kind": "page",
+  "note": "trỏ tới trang chưa có trong gallery",
+  "route": "/agents/chatbot/<inst>/knowledge"
+ },
+ {
+  "label": "Thiết lập",
+  "box": {
+   "x": 903,
+   "y": 188,
+   "w": 79,
+   "h": 40
+  },
+  "to": "agent-setup/chatbot-huong-dan",
+  "kind": "page"
+ },
+ {
+  "label": "Hộp thư",
+  "box": {
+   "x": 524,
+   "y": 229,
+   "w": 77,
+   "h": 40
+  },
+  "to": "agent-workbench/chatbot-wb-hop-thu",
+  "kind": "page"
+ },
+ {
+  "label": "Quy tắc",
+  "box": {
+   "x": 600,
+   "y": 229,
+   "w": 73,
+   "h": 40
+  },
+  "to": "agent-workbench/chatbot-wb-quy-tac",
+  "kind": "page"
+ }
+]

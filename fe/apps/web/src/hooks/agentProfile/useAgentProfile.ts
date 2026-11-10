@@ -9,9 +9,9 @@ import type { AgentProfileView } from "./agentProfile.shared"
 
 /** The profile page of one agent, read from the back end in the browser. */
 export const useAgentProfile = (
-    agentId: string,
+    agentId: string | null,
 ): { readonly slot: DataSlot<AgentProfileView>; readonly reload: () => void } => {
-    const read = useQueryAgentPageSwr({ agentId })
+    const read = useQueryAgentPageSwr(agentId === null ? null : { agentId })
     const view = useMemo(() => (read.data === undefined ? undefined : toAgentProfile(read.data)), [read.data])
     return {
         slot: slotOfSwr({ data: view, error: read.error, isLoading: read.isLoading }),

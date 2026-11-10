@@ -1,12 +1,13 @@
 import { Test } from "@nestjs/testing"
 import { branchOf, decideOf, nodeOf, say } from "@tests/fixtures/builders/agent-graph.builder"
-import { CARD_LINE_MAX, cardLineOf, nodeCardOf, sourceWord } from "./node-card.policy"
+import { CARD_LINE_MAX, cardLineOf, flowNodeCardOf, nodeCardOf, sourceWord } from "./node-card.policy"
 
 /** The members of the subject under test. */
 interface Subject {
     readonly nodeCardOf: typeof nodeCardOf
     readonly cardLineOf: typeof cardLineOf
     readonly sourceWord: typeof sourceWord
+    readonly flowNodeCardOf: typeof flowNodeCardOf
 }
 
 const SUBJECT = Symbol("node-card.policy")
@@ -14,7 +15,7 @@ const SUBJECT = Symbol("node-card.policy")
 /** The policy functions, read through the Nest testing module. */
 const build = async (): Promise<Subject> => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { nodeCardOf, cardLineOf, sourceWord } }],
+        providers: [{ provide: SUBJECT, useValue: { nodeCardOf, cardLineOf, sourceWord, flowNodeCardOf } }],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
 }
@@ -114,5 +115,43 @@ describe("node-card.policy (continued)", () => {
             isPlaceholder: false,
             count: "agentGraphs.source.rule",
         })
+    })
+})
+
+describe("flowNodeCardOf", () => {
+    it("draws a flow node with its installed title, its group and what it waits for", async () => {
+        const { flowNodeCardOf } = await build()
+        const wait = { kind: "payment", timeout: "24h", reminder: "2h" } as const
+        expect(
+            flowNodeCardOf(
+                { key: "await-payment", kind: "execute", step: "sales.care-await-payment", group: "care", wait },
+                "Wait",
+            ),
+        ).toEqual({
+            id: "await-payment",
+            label: "Wait",
+            description: "sales.care-await-payment",
+            tone: "accent",
+            kind: "execute",
+            step: "call",
+            shape: "round",
+            count: "",
+            isPlaceholder: false,
+            group: "care",
+            wait,
+        })
+    })
+
+    it("draws a route as a decision, an output as a write and the stop as the end, titled by its key when nothing names it", async () => {
+        const { flowNodeCardOf } = await build()
+        const route = flowNodeCardOf(
+            { key: "consult-route", kind: "condition", step: "sales.consult-route", group: "consult" },
+            null,
+        )
+        expect(route).toMatchObject({ label: "consult-route", step: "evaluate", shape: "diamond", group: "consult" })
+        expect(flowNodeCardOf({ key: "consult", kind: "output", step: "sales.consult" }, "Consult")).not.toHaveProperty(
+            "group",
+        )
+        expect(flowNodeCardOf({ key: "end", kind: "output", step: "stop" }, null).step).toBe("stop")
     })
 })

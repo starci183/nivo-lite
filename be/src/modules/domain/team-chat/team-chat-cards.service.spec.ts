@@ -160,7 +160,18 @@ describe("TeamChatCardsService postMessage", () => {
             authorAgentId: BOT,
             body: "hello",
             key: "k1",
+            agentMessage: null,
         })
+    })
+
+    it("stores the structured message of an agent line beside its words", async () => {
+        const { cards, store } = await build()
+        store.roomById.mockResolvedValue(roomOf(NAMED))
+        store.insertLine.mockResolvedValue(MSG)
+        await cards.postMessage(WS, { ...line, agentMessage: '{"kind":"order.summary"}' })
+        expect(store.insertLine).toHaveBeenCalledWith(
+            expect.objectContaining({ agentMessage: '{"kind":"order.summary"}' }),
+        )
     })
 
     it("writes a line to one person in the direct room with the agent, opened on demand", async () => {

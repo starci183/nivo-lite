@@ -20,6 +20,7 @@ export const toSetMemberStatusRequest = (workspaceId: string, input: SetMemberSt
     workspaceId,
     userId: input.userId,
     status: input.status,
+    note: input.note,
 })
 
 /** Maps the GraphQL input to the removal request of the workspace it names. */

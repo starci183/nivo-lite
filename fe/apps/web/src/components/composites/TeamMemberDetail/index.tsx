@@ -1,5 +1,5 @@
-import { Badge, Button, ChoiceChips, Cluster, DescriptionList, Section, Stack, Text } from "@starci/grammar/common"
-import { PersonAvatar } from "@/components/leaves/PersonAvatar"
+import { Button, ChoiceChips, Cluster, SurfaceCard } from "@starci/grammar/common"
+import type { ListRowData } from "@starci/grammar/common"
 import type { TeamPanesBaseProps } from "@/modules/types"
 
 /** Derived from the panes contract. */
@@ -32,84 +32,85 @@ interface AccessSectionProps {
     readonly onRemove: () => void
 }
 
-/** The access commands of a person: switch access off or on, and remove them from the workspace. */
-const AccessSection = (props: AccessSectionProps) => (
-    <Section title={props.copy.accessTitle} headingLevel={3} isLoading={props.isLoading}>
-        <Stack gap="row">
-            <Cluster gap="inline">
-                {props.isActive ? (
-                    <Button intent="alternative" isPending={props.isPending} onPress={props.onDisable}>
-                        {props.copy.disableLabel}
-                    </Button>
-                ) : (
-                    <Button intent="alternative" isPending={props.isPending} onPress={props.onEnable}>
-                        {props.copy.enableLabel}
-                    </Button>
-                )}
-                <Button intent="destructive" step="entry" isPending={props.isPending} onPress={props.onRemove}>
-                    {props.copy.removeLabel}
+/** The access commands of a person as one card: switch access off or on, and remove them; the consequence sits under the card. */
+const AccessCard = (props: AccessSectionProps) => (
+    <SurfaceCard
+        label={props.copy.accessTitle}
+        headingLevel={3}
+        isLoading={props.isLoading}
+        note={props.copy.accessHint}
+    >
+        <Cluster gap="inline">
+            {props.isActive ? (
+                <Button intent="alternative" isPending={props.isPending} onPress={props.onDisable}>
+                    {props.copy.disableLabel}
                 </Button>
-            </Cluster>
-            <Text size="sm" tone="muted">
-                {props.copy.accessHint}
-            </Text>
-        </Stack>
-    </Section>
+            ) : (
+                <Button intent="alternative" isPending={props.isPending} onPress={props.onEnable}>
+                    {props.copy.enableLabel}
+                </Button>
+            )}
+            <Button intent="destructive" step="entry" isPending={props.isPending} onPress={props.onRemove}>
+                {props.copy.removeLabel}
+            </Button>
+        </Cluster>
+    </SurfaceCard>
 )
 
-/** The facts of a person that are not their role: the last sign-in and the staff row they are linked to. */
-const factsOf = (props: TeamMemberDetailProps) => [
-    { id: "lastSignIn", term: props.copy.lastSignInTerm, description: props.view.lastSignIn },
+/** The person as rows of one list: who they are with their state, then the last sign-in and the staff row they are linked to. */
+const rowsOf = (props: TeamMemberDetailProps): ReadonlyArray<ListRowData> => [
+    {
+        id: "person",
+        title: props.view.name,
+        description: props.view.email,
+        leading: { avatar: { name: props.view.name } },
+        badges: props.view.isYou
+            ? ([
+                  { label: props.view.statusLabel, tone: props.view.isActive ? "success" : "neutral" },
+                  { label: props.copy.youLabel, tone: "neutral" },
+              ] as const)
+            : ([{ label: props.view.statusLabel, tone: props.view.isActive ? "success" : "neutral" }] as const),
+    },
+    { id: "lastSignIn", title: props.copy.lastSignInTerm, description: props.view.lastSignIn },
     ...(props.view.staffName === null
         ? []
-        : [{ id: "staff", term: props.copy.staffTerm, description: props.view.staffName }]),
+        : [{ id: "staff", title: props.copy.staffTerm, description: props.view.staffName }]),
 ]
 
 /**
- * The opened person: identity with the status, the role control with what the role may do, the facts, and the access commands
- * when the viewer may change them. Every part is geometry together while the team loads.
+ * The opened person as cards on the well: who they are with the facts, the role control with what the role may do, and the access
+ * commands when the viewer may change them. Every card is geometry together while the team loads.
  */
 export const TeamMemberDetail = (props: TeamMemberDetailProps) => (
     <>
-        <Cluster gap="section" align="center">
-            <PersonAvatar name={props.view.name} size="lg" isLoading={props.isLoading} />
-            <Stack gap="identity">
-                <Text isStrong isLoading={props.isLoading}>
-                    {props.view.name}
-                </Text>
-                <Text size="sm" tone="muted" isLoading={props.isLoading}>
-                    {props.view.email}
-                </Text>
-                <Cluster gap="inline">
-                    <Badge tone={props.view.isActive ? "success" : "neutral"} isLoading={props.isLoading}>
-                        {props.view.statusLabel}
-                    </Badge>
-                    {props.view.isYou ? <Badge tone="neutral">{props.copy.youLabel}</Badge> : null}
-                </Cluster>
-            </Stack>
-        </Cluster>
-        <Section title={props.copy.roleTitle} headingLevel={3} isLoading={props.isLoading}>
-            <Stack gap="row">
-                <ChoiceChips
-                    label={props.copy.roleLabel}
-                    isLabelHidden
-                    options={props.view.roleOptions.map((option) => ({
-                        ...option,
-                        isDisabled: !props.view.canChangeRole || props.isPending,
-                    }))}
-                    value={props.view.role}
-                    empty={props.copy.roleLabel}
-                    isLoading={props.isLoading}
-                    onValueChange={props.onRole}
-                />
-                <Text size="sm" tone="muted" isLoading={props.isLoading}>
-                    {props.view.roleHint}
-                </Text>
-            </Stack>
-        </Section>
-        <DescriptionList items={factsOf(props)} isLoading={props.isLoading} />
+        <SurfaceCard
+            kind="list"
+            ariaLabel={props.view.name}
+            isLoading={props.isLoading}
+            items={rowsOf(props)}
+            empty={null}
+        />
+        <SurfaceCard
+            label={props.copy.roleTitle}
+            headingLevel={3}
+            isLoading={props.isLoading}
+            note={props.view.roleHint}
+        >
+            <ChoiceChips
+                label={props.copy.roleLabel}
+                isLabelHidden
+                options={props.view.roleOptions.map((option) => ({
+                    ...option,
+                    isDisabled: !props.view.canChangeRole || props.isPending,
+                }))}
+                value={props.view.role}
+                empty={props.copy.roleLabel}
+                isLoading={props.isLoading}
+                onValueChange={props.onRole}
+            />
+        </SurfaceCard>
         {props.view.canChangeAccess ? (
-            <AccessSection
+            <AccessCard
                 copy={props.copy}
                 isActive={props.view.isActive}
                 isPending={props.isPending}

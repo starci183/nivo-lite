@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { BrainFactsService, factLine } from "@modules/domain/brain-facts"
+import { BrainFactsService, factLine, visibleTo, waitingCardCount } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
 import { BrainLessonsService } from "@modules/domain/brain-lessons"
 import type { LessonRecord } from "@modules/domain/brain-lessons"
@@ -48,6 +48,24 @@ export class KnowledgeRecallService {
             VIEW_LIMIT,
         )
         return all.slice(0, limit)
+    }
+
+    /** The facts the view reads now (active, in force) and the proposals it would read once approved, each inside its module and instance. */
+    async factsToOverview(view: KnowledgeView): Promise<ReadonlyArray<FactRecord>> {
+        const [active, proposed] = await Promise.all([
+            this.facts.forView(view.workspaceId, view.audience, view.module, view.installationId, VIEW_LIMIT),
+            this.facts.list(view.workspaceId, { statuses: ["proposed"], limit: VIEW_LIMIT }),
+        ])
+        return [
+            ...active,
+            ...proposed.filter((fact) => visibleTo(fact, view.audience, view.module, view.installationId)),
+        ]
+    }
+
+    /** How many review cards the proposals inside the view make, counted as the Second Brain badge counts them. */
+    async waitingInView(view: KnowledgeView): Promise<number> {
+        const proposed = await this.facts.list(view.workspaceId, { statuses: ["proposed"], limit: VIEW_LIMIT })
+        return waitingCardCount(proposed.filter((fact) => visibleTo(fact, view.audience, view.module, view.installationId)))
     }
 
     /** The facts in force inside the view that best match a question. */

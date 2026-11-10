@@ -45,6 +45,10 @@ export class ChatRoomMessageEntity extends UuidAbstractEntity {
     @Column({ name: "client_id", type: "text", nullable: true })
     clientId!: string | null
 
+    /** The message of the same room this one answers; null when it answers none. */
+    @Column({ name: "reply_to", type: "uuid", nullable: true })
+    replyTo!: string | null
+
     /** When the message was edited; null when it never was. */
     @Column({ name: "edited_at", type: "timestamptz", nullable: true })
     editedAt!: Date | null

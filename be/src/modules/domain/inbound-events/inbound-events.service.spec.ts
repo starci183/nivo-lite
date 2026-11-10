@@ -252,6 +252,7 @@ describe("InboundEventsService recordInput", () => {
                     externalRef: null,
                     eventId: "evt-1",
                     dedupeKey: "zalo:lead:evt-1",
+                    customerKey: null, source: {},
                 },
             ],
         ])

@@ -55,6 +55,7 @@ export class EngineDoorService implements EngineDoorProvider {
                     conversationId: null,
                     workItemId: null,
                     audience: "internal",
+                    engine: true,
                     opKey: opKeyOf(binding.effectKey, tool, argsHashOf(args.data)),
                 }
                 const name = isDomainTool(tool)

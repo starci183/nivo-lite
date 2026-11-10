@@ -1,8 +1,10 @@
 import { Injectable } from "@nestjs/common"
 import type { AskAsAgentInput, AskedPassage } from "./agent-ask.contracts"
+import type { AgentKnowledgeOverview } from "./agent-knowledge-overview.contracts"
 import type { AgentKnowledgeLens, LensCell, LensCounts, LensLanes } from "./agents.contracts"
 import { InjectInstallations, InjectKnowledge } from "./agents.decorators"
 import type { InstallationDirectory, KnowledgeLens } from "./agents.port"
+import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
 import { AgentsService } from "./agents.service"
 
 /** How many items a view reads of each kind of knowledge, or null when they are not counted. */
@@ -74,5 +76,14 @@ export class AgentLensesService {
             }),
         )
         return [customer, ...views]
+    }
+
+    /** What the knowledge tab of one agent shows, read through the same view the agent reads by. Any member may look. */
+    async overview(userId: string, workspaceId: string, agentId: string): Promise<AgentKnowledgeOverview> {
+        const agent = (await this.agents.list(userId, workspaceId)).find((candidate) => candidate.id === agentId)
+        if (agent === undefined) throw new AgentsError({ code: AgentsErrorCode.AgentNotFound, params: { id: agentId } })
+        const installationId = (await this.installations.ofAgent(workspaceId, agent.id))?.id ?? null
+        const overview = await this.knowledge.overviewFor(workspaceId, agent.module, installationId)
+        return { ...overview, agentId: agent.id, name: agent.name }
     }
 }

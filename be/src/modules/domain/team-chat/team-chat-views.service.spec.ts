@@ -5,6 +5,7 @@ import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity } from "./persistence/entities"
 import { TeamChatApprovalsService } from "./team-chat-approvals.service"
 import { TeamChatFilesService } from "./team-chat-files.service"
+import { TeamChatReactionStoreService } from "./team-chat-reaction-store.service"
 import { TeamChatStoreService } from "./team-chat-store.service"
 import { TeamChatViewsService } from "./team-chat-views.service"
 
@@ -53,6 +54,9 @@ const build = async () => {
     const agents = mock<AgentDirectoryService>()
     const files = mock<TeamChatFilesService>()
     const approvals = mock<TeamChatApprovalsService>()
+    const reactions = mock<TeamChatReactionStoreService>()
+    store.messagesByIds.mockResolvedValue([])
+    reactions.rowsAmong.mockResolvedValue([])
     people.namesOf.mockResolvedValue([{ userId: ANA, displayName: "Ana" }])
     agents.activeInOrder.mockResolvedValue([{ id: BOT, name: "Bot", module: "sales", canTagAgentIds: [] }])
     store.pinnedAmong.mockResolvedValue(new Set([MSG]))
@@ -73,9 +77,10 @@ const build = async () => {
             { provide: AgentDirectoryService, useValue: agents },
             { provide: TeamChatFilesService, useValue: files },
             { provide: TeamChatApprovalsService, useValue: approvals },
+            { provide: TeamChatReactionStoreService, useValue: reactions },
         ],
     }).compile()
-    return { views: moduleRef.get(TeamChatViewsService), store, people, agents, files, approvals }
+    return { views: moduleRef.get(TeamChatViewsService), store, people, agents, files, approvals, reactions }
 }
 
 describe("TeamChatViewsService names and messages", () => {
@@ -155,5 +160,50 @@ describe("TeamChatViewsService rooms", () => {
     it("shows one room the same way", async () => {
         const { views } = await readRooms()
         await expect(views.roomView(WS, ANA, room)).resolves.toMatchObject({ id: ROOM, unreadCount: 2 })
+    })
+})
+
+describe("TeamChatViewsService reactions and replies", () => {
+    const QUOTED = "61111111-1111-4111-8111-111111111111"
+    const THUMB = "\u{1F44D}"
+    const text = (id: string, body: string, replyTo: string | null) =>
+        Object.assign(new ChatRoomMessageEntity(), {
+            id,
+            roomId: ROOM,
+            authorKind: "user",
+            authorId: ANA,
+            body,
+            kind: "text",
+            ref: null,
+            mentions: [],
+            attachments: [],
+            createdAt: AT,
+            editedAt: null,
+            replyTo,
+        })
+
+    it("sums the reactions of each message for the viewer", async () => {
+        const { views, reactions } = await build()
+        reactions.rowsAmong.mockResolvedValue([
+            { messageId: MSG, memberKind: "user", memberId: ANA, emoji: THUMB, count: 3 },
+            { messageId: MSG, memberKind: "agent", memberId: BOT, emoji: THUMB, count: 2 },
+        ])
+        const [view] = await views.messageViews(WS, [text(MSG, "hi", null)], ANA)
+        expect(view?.reactions).toEqual([{ emoji: THUMB, count: 5, mine: true, mineCount: 3 }])
+        expect(reactions.rowsAmong).toHaveBeenCalledWith([MSG])
+    })
+
+    it("quotes the message a reply answers, with its author and its first words", async () => {
+        const { views, store } = await build()
+        store.messagesByIds.mockResolvedValue([text(QUOTED, "the   quoted\nwords", null)])
+        const [view] = await views.messageViews(WS, [text(MSG, "yes", QUOTED)], ANA)
+        expect(view?.replyTo).toEqual({ messageId: QUOTED, authorName: "Ana", body: "the quoted words" })
+        expect(store.messagesByIds).toHaveBeenCalledWith(WS, [QUOTED])
+    })
+
+    it("shows no quote when the quoted message is gone", async () => {
+        const { views } = await build()
+        const [view] = await views.messageViews(WS, [text(MSG, "yes", QUOTED)], ANA)
+        expect(view?.replyTo).toBeNull()
     })
 })

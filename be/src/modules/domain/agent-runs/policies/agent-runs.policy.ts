@@ -84,6 +84,15 @@ export const DECISION_ACTOR_UNKNOWN = "decision_actor_unknown"
 /** How long a run stays parked before the sweep runs it again, minutes, when the app says nothing. */
 export const PARK_SWEEP_MINUTES = 30
 
+/** The code a run and its stopped steps carry when an owner or manager cancelled the run. */
+export const RUN_CANCELLED = "run_cancelled"
+
+/** How many runs one process drives at once when the app says nothing. */
+export const RUNS_CONCURRENCY = 4
+
+/** The most runs one process may be told to drive at once. */
+export const RUNS_CONCURRENCY_MAX = 64
+
 /** The most times the machine resumes one parked run when the app says nothing. */
 export const PARK_MAX_RESUMES = 5
 

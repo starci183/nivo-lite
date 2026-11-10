@@ -17,16 +17,19 @@ import type { ChatSendInput } from "./chat-send-native.schema"
 const MESSAGE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** The expected reasons `chat.send` and `chat.profile` refuse with. */
-type ChatSendRefusal = "not_found" | "connection_refused" | "delivery_unknown" | "profile_unavailable"
+type ChatSendRefusal = "not_found" | "held_by_person" | "connection_refused" | "delivery_unknown" | "profile_unavailable"
 
 /** The refusal of an expected case: an answer to the caller, never a failure of the connector. */
 const refusal = (reason: ChatSendRefusal): McpGatewayError =>
     new McpGatewayError({ code: McpGatewayErrorCode.NativeRefused, params: { reason } })
 
 /**
- * The chat capability of the NIVO MCP door: `chat.send` says one text in a customer conversation on its own channel, and `chat.profile`
- * reads what that channel says of the customer (name and picture). Both are for internal callers only (a declared job, a graph effect or
- * the profile round), never for a customer or a customer-facing agent.
+ * The chat capability of the NIVO MCP door, for the declared jobs of the modules only (never a step's agent, which says something to a
+ * customer through `customer.message.send` alone): `chat.send` delivers a line of a customer conversation on its own channel, and
+ * `chat.profile` reads what that channel says of the customer (name and picture). `chat.send` is the outbox delivery of a line a person
+ * stored (a reply, an approved draft: the action that stored it checked the person may speak), named by its id as the key; a declared
+ * job's own notice (a payment confirmation) is stored once under its key and holds the agent's rule that nothing is said over a person
+ * who holds the conversation. The Zalo window, its ZNS fallback and the recipient are the channel layer's, as for every send.
  */
 export const CHAT_MANIFEST: NativeConnectorManifest = {
     key: "chat",
@@ -95,9 +98,9 @@ export class ChatSendNativeService implements NativeAdapter {
     }
 
     private async send(workspaceId: string, input: ChatSendInput): Promise<void> {
-        const target = await this.conversations.targetOf(workspaceId, input.conversationId)
-        if (target.kind !== "ok") throw refusal("not_found")
-        const line = await this.lineOf(workspaceId, input)
+        const [conversation] = await this.conversations.humansOf(workspaceId, [input.conversationId])
+        if (conversation === undefined) throw refusal("not_found")
+        const line = await this.lineOf(workspaceId, input, conversation.handledBy)
         if (line.sent) return
         const receipt = await this.delivery.deliver({
             workspaceId,
@@ -111,14 +114,15 @@ export class ChatSendNativeService implements NativeAdapter {
 
     /**
      * The line to say: the stored line when the key is the id of one of the conversation (a reply a person or an action stored first, so it is
-     * never stored twice), else the line stored once under the key.
+     * never stored twice), else the job's own notice stored once under the key, refused while a person holds the conversation.
      */
-    private async lineOf(workspaceId: string, input: ChatSendInput): Promise<ChatStoredReply> {
+    private async lineOf(workspaceId: string, input: ChatSendInput, handledBy: string | null): Promise<ChatStoredReply> {
         const known = MESSAGE_ID.test(input.key)
             ? await this.messages.find(workspaceId, input.conversationId, input.key)
             : null
         if (known?.kind === "ok")
             return { id: known.value.id, body: known.value.body, sent: known.value.deliveryStatus === "sent" }
+        if (handledBy !== null) throw refusal("held_by_person")
         return await this.messages.storeAgentLine({
             workspaceId,
             conversationId: input.conversationId,

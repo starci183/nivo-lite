@@ -1,0 +1,15 @@
+installation /workspaces/<ws>/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa
+page 1 /workspaces/<ws>/agents/sales/<inst>/workbench links=14 (overlay 0, in-page 7)
+page 2 /workspaces/<ws>/agents/sales/<inst>/work links=12 (overlay 0, in-page 0)
+page 3 /workspaces/<ws>/agents/sales/<inst>/work?view=runs links=20 (overlay 0, in-page 1)
+page 4 /workspaces/<ws>/agents/sales/<inst>/workflows links=13 (overlay 0, in-page 0)
+page 5 /workspaces/<ws>/agents/sales/<inst>/graph links=11 (overlay 0, in-page 0)
+page 6 /workspaces/<ws>/agents/sales/<inst>/chat links=12 (overlay 2, in-page 2)
+page 7 /workspaces/<ws>/agents/sales/<inst>/connections links=11 (overlay 0, in-page 0)
+page 8 /workspaces/<ws>/agents/sales/<inst>/knowledge links=10 (overlay 0, in-page 0)
+page 9 /workspaces/<ws>/agents/sales/<inst>/setup links=12 (overlay 0, in-page 0)
+page 10 /workspaces/<ws>/agents/sales/<inst>/setup/general links=12 (overlay 0, in-page 7)
+page 11 /workspaces/<ws>/agents/sales/<inst>/workbench?tab=attention links=14 (overlay 0, in-page 7)
+page 12 /workspaces/<ws>/agents/sales/<inst>/workbench?tab=pipeline links=15 (overlay 1, in-page 2)
+non-GET requests 
+done pages 12 links 156 blocked mutations 0 skipped 36

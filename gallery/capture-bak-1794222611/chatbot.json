@@ -1,0 +1,3201 @@
+{
+ "agent": "chatbot",
+ "at": "2026-11-09T11:03:12.578Z",
+ "blockedMutations": 0,
+ "pages": [
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+   "inPageControls": 3,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Khách đang xử lý",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 121,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=customers",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench?tab=customers"
+    },
+    {
+     "label": "Hộp thư",
+     "box": {
+      "x": 524,
+      "y": 229,
+      "w": 77,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=inbox",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench?tab=inbox"
+    },
+    {
+     "label": "Quy tắc",
+     "box": {
+      "x": 600,
+      "y": 229,
+      "w": 73,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=rules",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench?tab=rules"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Việc đang làm",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 102,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Lượt chạy",
+     "box": {
+      "x": 370,
+      "y": 229,
+      "w": 86,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work?view=runs",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work?view=runs"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/work?view=runs",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/work?view=runs",
+   "inPageControls": 1,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Việc đang làm",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 102,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Lượt chạy",
+     "box": {
+      "x": 370,
+      "y": 229,
+      "w": 86,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Tất cả 1",
+     "box": {
+      "x": 288,
+      "y": 338,
+      "w": 77,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Đang chạy 0",
+     "box": {
+      "x": 369,
+      "y": 338,
+      "w": 114,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Xếp hàng 0",
+     "box": {
+      "x": 486,
+      "y": 338,
+      "w": 107,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Chờ bạn 0",
+     "box": {
+      "x": 597,
+      "y": 338,
+      "w": 100,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Xong 1",
+     "box": {
+      "x": 701,
+      "y": 338,
+      "w": 80,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Lỗi 0",
+     "box": {
+      "x": 785,
+      "y": 338,
+      "w": 66,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "#2ba0aa",
+     "box": {
+      "x": 280,
+      "y": 477,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work/runs/2ba0aac6-f259-43bd-ad4f-20c936b4cec5",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work/runs/<id>",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work/runs/2ba0aac6-f259-43bd-ad4f-20c936b4cec5"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Lễ tân từ mẫu Lễ tân v2 Zalo Telegram Khách muốn mua > Tư vấ",
+     "box": {
+      "x": 268,
+      "y": 386,
+      "w": 1160,
+      "h": 68
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows/front-desk",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows/front-desk"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+   "inPageControls": 4,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Mở danh sách",
+     "box": {
+      "x": 1321,
+      "y": 247,
+      "w": 107,
+      "h": 32
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Lễ tân Zalo · Telegram Khách muốn mua Khách báo đã chuyển Ch",
+     "box": {
+      "x": 751,
+      "y": 326,
+      "w": 194,
+      "h": 134
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows/front-desk",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows/front-desk",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows/front-desk"
+    },
+    {
+     "label": "Khách báo đã chuyển Kế toán",
+     "box": {
+      "x": 613,
+      "y": 524,
+      "w": 194,
+      "h": 71
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Tư vấn bán hàng Bán hàng",
+     "box": {
+      "x": 889,
+      "y": 532,
+      "w": 194,
+      "h": 54
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/sales/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa/graph"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+   "inPageControls": 2,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Đã ghim",
+     "box": {
+      "x": 1340,
+      "y": 243,
+      "w": 40,
+      "h": 40
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "hint": "Đã ghim"
+    },
+    {
+     "label": "Thành viên",
+     "box": {
+      "x": 1388,
+      "y": 243,
+      "w": 40,
+      "h": 40
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "hint": "Thành viên"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 288,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 377,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Thêm kết nối",
+     "box": {
+      "x": 1225,
+      "y": 132,
+      "w": 135,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/connections"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 288,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 380,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 466,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 529,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 613,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 706,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 810,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 923,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 288,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 377,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 288,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 380,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 466,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 529,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 613,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 706,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 810,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 923,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Hướng dẫn",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 84,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Chung",
+     "box": {
+      "x": 352,
+      "y": 229,
+      "w": 66,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/setup/general",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/setup/general",
+   "inPageControls": 7,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Hướng dẫn",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 84,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Chung",
+     "box": {
+      "x": 352,
+      "y": 229,
+      "w": 66,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=customers",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=customers",
+   "inPageControls": 3,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Khách đang xử lý",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 121,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Hộp thư",
+     "box": {
+      "x": 524,
+      "y": 229,
+      "w": 77,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=inbox",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench?tab=inbox&thread=a544428d-9215-45a5-8adf-33dd96873145"
+    },
+    {
+     "label": "Quy tắc",
+     "box": {
+      "x": 600,
+      "y": 229,
+      "w": 73,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=rules",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench?tab=rules"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=inbox",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=inbox&thread=a544428d-9215-45a5-8adf-33dd96873145",
+   "inPageControls": 3,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Khách đang xử lý",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 121,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=customers",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench?tab=customers&thread=a544428d-9215-45a5-8adf-33dd96873145"
+    },
+    {
+     "label": "Hộp thư",
+     "box": {
+      "x": 524,
+      "y": 229,
+      "w": 77,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Quy tắc",
+     "box": {
+      "x": 600,
+      "y": 229,
+      "w": 73,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=rules",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench?tab=rules&thread=a544428d-9215-45a5-8adf-33dd96873145"
+    },
+    {
+     "label": "Tất cả 3",
+     "box": {
+      "x": 272,
+      "y": 406,
+      "w": 85,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Cần người 0",
+     "box": {
+      "x": 361,
+      "y": 406,
+      "w": 112,
+      "h": 40
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=inbox",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench?tab=inbox&thread=a544428d-9215-45a5-8adf-33dd96873145&status=needs",
+     "hint": "query"
+    },
+    {
+     "label": "Mở hồ sơ khách",
+     "box": {
+      "x": 1133,
+      "y": 740,
+      "w": 116,
+      "h": 21
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/w/sales/pipeline?lead=715e93b2-4e07-4d3d-b153-653a271860a0",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/w/sales/pipeline",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/w/sales/pipeline?lead=715e93b2-4e07-4d3d-b153-653a271860a0"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=rules",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=rules",
+   "inPageControls": 2,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Khách đang xử lý",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 121,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=customers",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench?tab=customers"
+    },
+    {
+     "label": "Hộp thư",
+     "box": {
+      "x": 524,
+      "y": 229,
+      "w": 77,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=inbox",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench?tab=inbox&thread=a544428d-9215-45a5-8adf-33dd96873145"
+    },
+    {
+     "label": "Quy tắc",
+     "box": {
+      "x": 600,
+      "y": 229,
+      "w": 73,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/work/runs/<id>",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/work/runs/2ba0aac6-f259-43bd-ad4f-20c936b4cec5",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Chatbot",
+     "box": {
+      "x": 417,
+      "y": 96,
+      "w": 51,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 488,
+      "y": 96,
+      "w": 62,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Mở quy trình",
+     "box": {
+      "x": 1001,
+      "y": 311,
+      "w": 107,
+      "h": 21
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows/48af52d7-9395-4a0b-b672-9facfaffca44",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows/<id>",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows/48af52d7-9395-4a0b-b672-9facfaffca44"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/workflows/front-desk",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/workflows/front-desk",
+   "inPageControls": 4,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Vào · Ra",
+     "box": {
+      "x": 268,
+      "y": 309,
+      "w": 63,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Sơ đồ",
+     "box": {
+      "x": 331,
+      "y": 309,
+      "w": 61,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Phiên bản 4",
+     "box": {
+      "x": 392,
+      "y": 309,
+      "w": 122,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Lượt chạy 1",
+     "box": {
+      "x": 514,
+      "y": 309,
+      "w": 121,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/chatbot/<inst>/workflows/<id>",
+   "url": "/workspaces/<ws>/agents/chatbot/<inst>/workflows/48af52d7-9395-4a0b-b672-9facfaffca44",
+   "inPageControls": 4,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/chat"
+    },
+    {
+     "label": "Kết nối 2",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/chatbot/1ea3eaee-ace5-46d1-a45d-c892a75252b6/setup"
+    },
+    {
+     "label": "Vào · Ra",
+     "box": {
+      "x": 268,
+      "y": 309,
+      "w": 63,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Sơ đồ",
+     "box": {
+      "x": 331,
+      "y": 309,
+      "w": 61,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Phiên bản 4",
+     "box": {
+      "x": 392,
+      "y": 309,
+      "w": 122,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Lượt chạy 1",
+     "box": {
+      "x": 514,
+      "y": 309,
+      "w": 121,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    }
+   ]
+  }
+ ],
+ "skipped": [
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workbench",
+   "label": "Chưa trả lời được"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+   "label": "Thêm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/work",
+   "label": "Thêm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/work?view=runs",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/work?view=runs",
+   "label": "Xóa tìm kiếm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workflows",
+   "label": "Tạo quy trình"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/graph",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+   "label": "Có việc nào đang chờ tôi duyệt?"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+   "label": "Bạn đang trả lời dựa trên nguồn nào?"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/chat",
+   "label": "Gửi"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/connections",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/knowledge",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/setup/general",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/setup/general",
+   "label": "Huỷ"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/setup/general",
+   "label": "Lưu"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=customers",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=customers",
+   "label": "Chưa trả lời được"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=inbox",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=inbox",
+   "label": "Chưa trả lời được"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=inbox",
+   "label": "Xoá tìm kiếm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=inbox",
+   "label": "Tiếp quản hội thoại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=rules",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=rules",
+   "label": "Chưa trả lời được"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=rules",
+   "label": "Huỷ"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workbench?tab=rules",
+   "label": "Lưu quy tắc"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/work/runs/<id>",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workflows/front-desk",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/chatbot/<inst>/workflows/<id>",
+   "label": "Thêm thao tác"
+  }
+ ]
+}

@@ -11,6 +11,209 @@
       "maxLength": 200,
       "pattern": "^[a-z][a-z0-9_]{1,23}$"
     },
+    "contract": {
+      "type": "object",
+      "properties": {
+        "inputs": {
+          "maxItems": 40,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^[a-z][a-zA-Z0-9]{0,63}$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "number",
+                  "integer",
+                  "boolean",
+                  "object",
+                  "array"
+                ]
+              },
+              "required": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "type",
+              "required"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "inputs"
+      ],
+      "additionalProperties": false
+    },
+    "triggers": {
+      "minItems": 1,
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "source": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "zalo",
+                  "telegram",
+                  "website",
+                  "sepay",
+                  "timer",
+                  "schedule",
+                  "chats-group",
+                  "workflow"
+                ]
+              },
+              "connectionId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "connectionId"
+            ],
+            "additionalProperties": false
+          },
+          "conditions": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "param": {
+                  "type": "string",
+                  "maxLength": 200,
+                  "pattern": "^[a-z][a-zA-Z0-9]{0,63}$"
+                },
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "equals",
+                    "not-equals",
+                    "contains",
+                    "present"
+                  ]
+                },
+                "value": {
+                  "$ref": "#/$defs/__schema0"
+                }
+              },
+              "required": [
+                "param",
+                "op"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "key",
+          "source"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "outcomes": {
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "outputs": {
+            "maxItems": 40,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "maxLength": 200,
+                  "pattern": "^[a-z][a-zA-Z0-9]{0,63}$"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "string",
+                    "number",
+                    "integer",
+                    "boolean",
+                    "object",
+                    "array"
+                  ]
+                }
+              },
+              "required": [
+                "name",
+                "type"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "outputs"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "entry": {
+      "type": "object",
+      "properties": {
+        "openTo": {
+          "type": "string",
+          "enum": [
+            "any",
+            "agent"
+          ]
+        },
+        "holdsConversation": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "openTo"
+      ],
+      "additionalProperties": false
+    },
     "trigger": {
       "type": "object",
       "properties": {
@@ -24,7 +227,13 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["channel", "chats-group", "agent", "system-event", "schedule"]
+            "enum": [
+              "channel",
+              "chats-group",
+              "agent",
+              "system-event",
+              "schedule"
+            ]
           }
         },
         "burst": {
@@ -44,7 +253,9 @@
                   "pattern": "^\\d{1,6}(ms|s|m)$"
                 }
               },
-              "required": ["window"],
+              "required": [
+                "window"
+              ],
               "additionalProperties": false
             },
             "chats-group": {
@@ -61,7 +272,9 @@
                   "pattern": "^\\d{1,6}(ms|s|m)$"
                 }
               },
-              "required": ["window"],
+              "required": [
+                "window"
+              ],
               "additionalProperties": false
             },
             "agent": {
@@ -78,7 +291,9 @@
                   "pattern": "^\\d{1,6}(ms|s|m)$"
                 }
               },
-              "required": ["window"],
+              "required": [
+                "window"
+              ],
               "additionalProperties": false
             },
             "system-event": {
@@ -95,7 +310,9 @@
                   "pattern": "^\\d{1,6}(ms|s|m)$"
                 }
               },
-              "required": ["window"],
+              "required": [
+                "window"
+              ],
               "additionalProperties": false
             },
             "schedule": {
@@ -112,14 +329,19 @@
                   "pattern": "^\\d{1,6}(ms|s|m)$"
                 }
               },
-              "required": ["window"],
+              "required": [
+                "window"
+              ],
               "additionalProperties": false
             }
           },
           "additionalProperties": false
         }
       },
-      "required": ["kind", "sources"],
+      "required": [
+        "kind",
+        "sources"
+      ],
       "additionalProperties": false
     },
     "grant": {
@@ -138,11 +360,17 @@
               },
               "access": {
                 "type": "string",
-                "enum": ["read", "write"]
+                "enum": [
+                  "read",
+                  "write"
+                ]
               },
               "scope": {
                 "type": "string",
-                "enum": ["turn", "workspace"]
+                "enum": [
+                  "turn",
+                  "workspace"
+                ]
               },
               "fields": {
                 "type": "array",
@@ -161,7 +389,12 @@
                 "minItems": 1
               }
             },
-            "required": ["kind", "access", "scope", "fields"],
+            "required": [
+              "kind",
+              "access",
+              "scope",
+              "fields"
+            ],
             "additionalProperties": false
           }
         },
@@ -182,7 +415,11 @@
           }
         }
       },
-      "required": ["rights", "tools", "effects"],
+      "required": [
+        "rights",
+        "tools",
+        "effects"
+      ],
       "additionalProperties": false
     },
     "nodes": {
@@ -199,7 +436,12 @@
           },
           "kind": {
             "type": "string",
-            "enum": ["trigger", "condition", "execute", "output"]
+            "enum": [
+              "trigger",
+              "condition",
+              "execute",
+              "output"
+            ]
           },
           "step": {
             "type": "string",
@@ -242,14 +484,59 @@
               "maxLength": 200,
               "pattern": "^[a-z][a-z0-9-]*$"
             }
+          },
+          "blocking": {
+            "type": "boolean"
+          },
+          "group": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "wait": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "reply",
+                  "payment",
+                  "other"
+                ]
+              },
+              "timeout": {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^\\d{1,4}[dhm]$"
+              },
+              "reminder": {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^\\d{1,4}[dhm]$"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "additionalProperties": false
           }
         },
-        "required": ["key", "kind", "step"],
+        "required": [
+          "key",
+          "kind",
+          "step"
+        ],
         "additionalProperties": false
       }
     }
   },
-  "required": ["schema", "moduleKey", "trigger", "grant", "nodes"],
+  "required": [
+    "schema",
+    "moduleKey",
+    "trigger",
+    "grant",
+    "nodes"
+  ],
   "additionalProperties": false,
   "title": "NIVO agent graph spec",
   "$defs": {
@@ -311,7 +598,9 @@
               "maxLength": 200
             }
           },
-          "required": ["$ref"],
+          "required": [
+            "$ref"
+          ],
           "additionalProperties": false
         },
         {

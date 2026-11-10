@@ -15,7 +15,6 @@ import { AddNotePanel } from "@/components/composites/AddNotePanel"
 import { AddOptionsPanel } from "@/components/composites/AddOptionsPanel"
 import { DrawerFooter } from "@/components/composites/DrawerFooter"
 import { FormNotice } from "@/components/composites/FormNotice"
-import { Icon } from "@/components/leaves/Icon"
 import type { KnowledgeAddDrawerView } from "@/modules/types"
 
 type Props = KnowledgeAddDrawerView
@@ -34,7 +33,6 @@ const DriveRow = (props: Props) => {
                     <Button
                         intent="neutral"
                         size="sm"
-                        startContent={<Icon props={{ name: "attach", usage: "leading" }} />}
                         isDisabled={props.props.isBusy}
                         onPress={props.on.connectDrive}
                     >

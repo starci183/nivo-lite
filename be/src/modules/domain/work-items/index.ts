@@ -22,6 +22,16 @@ export type {
 } from "./work-items.contracts"
 export { WorkItemsModule } from "./work-items.module"
 export { WorkItemsService } from "./work-items.service"
+export { WorkInHandService } from "./work-in-hand.service"
+export { WorkItemsDashboardReadService } from "./work-items-dashboard-read.service"
+export type {
+    AgentActionActivity,
+    AgentResponseTime,
+    AgentWaiting,
+    DashboardRange,
+    WaitingApproval,
+    WaitingApprovals,
+} from "./work-items-dashboard-read.contracts"
 export { WorkItemsDecisionsReadService } from "./work-items-decisions-read.service"
 export { toProposal } from "./work-items.mapper"
 export type { WorkItemRecord } from "./work-items.contracts"

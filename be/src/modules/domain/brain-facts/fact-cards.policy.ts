@@ -1,5 +1,3 @@
-import { sameValue } from "./fact-key.policy"
-
 /** A proposal waiting for the owner, as far as counting its card needs it. */
 export interface WaitingProposal {
     /** The subject key. */
@@ -16,26 +14,11 @@ export interface WaitingProposal {
 const keyOf = (proposal: Pick<WaitingProposal, "subjectKey" | "attribute">): string =>
     `${proposal.subjectKey}|${proposal.attribute}`
 
-/** How many distinct values a list holds, two values that say the same thing counting once. */
-const distinctValues = (values: ReadonlyArray<string>): number =>
-    values.filter((value, index) => values.findIndex((other) => sameValue(other, value)) === index).length
-
 /**
- * How many cards of the owner's review the waiting proposals make, the way the review board lists them: proposals of one key with two or
- * more different values, or with a "stop using" beside them, are one card; every other proposal that sets a value is its own card; a
- * "stop using" proposal with no competing value is its own card.
+ * How many cards of the owner's review the waiting proposals make, the way the review lists them: one card per key (subject and
+ * attribute). Competing values, a "stop using" beside them, or values that say the same thing in other words are one card: the owner
+ * chooses or approves once per key. Counting keys keeps the number independent of how two values are compared, so the rail and the
+ * page that groups the same proposals always agree.
  */
-export const waitingCardCount = (proposals: ReadonlyArray<WaitingProposal>): number => {
-    const sets = new Map<string, Array<string>>()
-    const retiring = new Set<string>()
-    for (const proposal of proposals) {
-        const key = keyOf(proposal)
-        if (proposal.proposalKind === "retire") retiring.add(key)
-        else sets.set(key, [...(sets.get(key) ?? []), proposal.value])
-    }
-    let cards = [...retiring].filter((key) => !sets.has(key)).length
-    for (const [key, values] of sets) {
-        cards += distinctValues(values) >= 2 || retiring.has(key) ? 1 : values.length
-    }
-    return cards
-}
+export const waitingCardCount = (proposals: ReadonlyArray<WaitingProposal>): number =>
+    new Set(proposals.map(keyOf)).size

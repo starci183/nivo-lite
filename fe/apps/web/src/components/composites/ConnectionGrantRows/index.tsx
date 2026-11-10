@@ -1,5 +1,6 @@
-import { EmptyNotice, Section, Select } from "@starci/grammar/common"
+import { EmptyNotice, Section, Select, SurfaceCard } from "@starci/grammar/common"
 import type { ItemLeading, ListRowData } from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** One pair of an agent and a connection: who or what the row names, and the level between them. */
 interface ConnectionGrantRowData {
@@ -32,6 +33,8 @@ interface ConnectionGrantRowsProps {
     readonly emptyMessage: string
     readonly isLoading: boolean
     readonly onPick: (id: string, level: string) => void
+    /** The rows stand on the page well as their own card (a connection page); else they are a section inside a surface. */
+    readonly isCard?: boolean
 }
 
 /** What the rows need to draw their level pickers. */
@@ -67,25 +70,44 @@ const rowsOf = (rows: ReadonlyArray<ConnectionGrantRowData>, input: PickerInput)
  * gives another agent or connection. The same rows draw the agents of a connection on its page and the connections of an agent on
  * the agent's page, so both views look alike: agent and connection are many to many with one level per pair.
  */
-export const ConnectionGrantRows = (props: ConnectionGrantRowsProps) => (
-    <Section
-        kind="list"
-        title={props.title}
-        isLoading={props.isLoading}
-        action={
-            props.canManage && props.assign.options.length > 0 ? (
-                <Select
-                    label={props.assign.label}
-                    placeholder={props.assign.label}
-                    options={props.assign.options}
-                    value={null}
-                    onValueChange={(id) => {
-                        if (id !== null) props.assign.onAssign(id)
-                    }}
-                />
-            ) : undefined
-        }
-        items={rowsOf(props.rows, props)}
-        empty={<EmptyNotice message={props.emptyMessage} />}
-    />
-)
+export const ConnectionGrantRows = (props: ConnectionGrantRowsProps) => {
+    const assign =
+        props.canManage && props.assign.options.length > 0 ? (
+            <Select
+                label={props.assign.label}
+                isLabelHidden
+                placeholder={props.assign.label}
+                options={props.assign.options}
+                value={null}
+                onValueChange={(id) => {
+                    if (id !== null) props.assign.onAssign(id)
+                }}
+            />
+        ) : undefined
+    const items = rowsOf(props.rows, props)
+    const empty = <EmptyNotice message={props.emptyMessage} iconSource={nivoIconSource("link", "leading")} />
+    if (props.isCard === true) {
+        return (
+            <SurfaceCard
+                kind="list"
+                label={props.title}
+                {...(props.isLoading ? {} : { count: props.rows.length })}
+                {...(assign === undefined ? {} : { headers: [{ kind: "custom" as const, children: assign }] })}
+                isLoading={props.isLoading}
+                items={items}
+                empty={empty}
+            />
+        )
+    }
+    return (
+        <Section
+            kind="list"
+            title={props.title}
+            {...(props.isLoading ? {} : { count: props.rows.length })}
+            isLoading={props.isLoading}
+            {...(assign === undefined ? {} : { filter: assign })}
+            items={items}
+            empty={empty}
+        />
+    )
+}

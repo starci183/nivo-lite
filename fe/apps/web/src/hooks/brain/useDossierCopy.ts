@@ -21,6 +21,7 @@ export interface DossierCopyWords {
     readonly pickBody: string
     readonly emptyBody: string
     readonly emptyAction: string
+    readonly catalogBody: string
     readonly errorBody: string
     readonly back: string
     readonly moreOptions: string
@@ -56,6 +57,7 @@ export const useDossierCopy = (): DossierCopyWords => {
         pickBody: t("pickBody"),
         emptyBody: brain("dossiersEmpty"),
         emptyAction: t("emptyAction"),
+        catalogBody: t("emptyCatalogBody"),
         errorBody: pane.errorBody,
         back: pane.backToList,
         moreOptions: t("moreOptions"),

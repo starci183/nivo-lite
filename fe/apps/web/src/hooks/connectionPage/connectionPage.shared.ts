@@ -1,14 +1,7 @@
 import type { SWRResponse, KeyedMutator } from "swr"
 import { slotOfSwr } from "@/hooks/slot"
 import { isInvalidFailure, isNotFoundFailure } from "@/modules/failure"
-import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
-import type {
-    ConnectionHeadView,
-    ConnectionNotice,
-    ConnectionPageHeadView,
-    DataSlot,
-    SlotLabels,
-} from "@/modules/types"
+import type { ConnectionNotice, DataSlot, SlotLabels } from "@/modules/types"
 
 /** How many times slower a healthy connection page is asked again than one that needs attention. */
 const HEALTHY_SLOWDOWN = 4
@@ -57,21 +50,3 @@ export const readFailureNotice = (
     if (!("isError" in slot)) return undefined
     return { id: "failure", tone: "negative", title: labels.error, action: { label: labels.retry, run: retry } }
 }
-
-/** What the header of a provider page knows of its connection: the head once read, and whether it is still being read. */
-export const connectionHeadStateOf = (
-    head: DataSlot<ConnectionHeadView>,
-): Pick<ConnectionPageHeadView, "head" | "isLoading"> => ({
-    ...("items" in head ? { head: head.items } : {}),
-    isLoading: "isLoading" in head,
-})
-
-/** The trail of a provider page: the list of connections, then the connection itself. */
-export const connectionCrumbsOf = (
-    workspaceId: string,
-    connectionsLabel: string,
-    current: ConnectionPageHeadView["crumbs"][number],
-): ConnectionPageHeadView["crumbs"] => [
-    { id: "connections", label: connectionsLabel, href: workspaceHref(workspaceId, CONSOLE_ROUTES.connections) },
-    current,
-]

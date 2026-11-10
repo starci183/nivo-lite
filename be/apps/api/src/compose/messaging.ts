@@ -20,10 +20,15 @@ import {
     INBOUND_EVENTS_MESSAGES,
     InboundEventsModule,
 } from "@modules/domain/inbound-events"
+import {
+    INBOX_LEADS_ERROR_KINDS,
+    INBOX_LEADS_MESSAGES,
+    InboxLeadsModule,
+} from "@modules/domain/inbox-leads"
 import { ChatActivityModule } from "@modules/domain/chat-activity"
 import { CHAT_RECORDS_ERROR_KINDS, CHAT_RECORDS_MESSAGES, ChatRecordsModule } from "@modules/domain/chat-records"
 import { CHAT_TYPING_ERROR_KINDS, CHAT_TYPING_MESSAGES, ChatTypingModule } from "@modules/domain/chat-typing"
-import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
+import { STORAGE_ASSETS, STORAGE_OBJECTS } from "@modules/integrations/object-storage"
 import {
     TEAM_CHAT_ERROR_KINDS,
     TEAM_CHAT_MESSAGES,
@@ -47,6 +52,7 @@ import { TelegramInboxModule } from "@modules/domain/telegram-inbox"
 import { ZaloInboxModule, ZaloInboxPageReadService } from "@modules/domain/zalo-inbox"
 import { ZaloProviderModule } from "@modules/domain/zalo-provider"
 import { ZaloWizardDraftsModule } from "@modules/domain/zalo-wizard-drafts"
+import { IMAGE, IMAGE_ERROR_KINDS, IMAGE_MESSAGES, ImageModule } from "@modules/integrations/image"
 import { MAIL_ERROR_KINDS, MAIL_MESSAGES, MailModule } from "@modules/integrations/mail"
 import { SEPAY_ERROR_KINDS, SEPAY_MESSAGES, SepayModule } from "@modules/integrations/sepay"
 import { TELEGRAM_ERROR_KINDS, TELEGRAM_MESSAGES, TelegramModule } from "@modules/integrations/telegram"
@@ -59,6 +65,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     TelegramModule.register({ isGlobal: true, ...options.telegram }),
     SepayModule.register({ isGlobal: true, ...options.sepay }),
     ZaloModule.register({ isGlobal: true, ...options.zalo }),
+    ImageModule.register({ isGlobal: true }),
     MailModule.register({ isGlobal: true, ...options.mail }),
     ConnectionSecretsModule.register({ isGlobal: true, ...options.connectionSecrets }),
     ChatRecordsModule.register({ isGlobal: true }),
@@ -67,7 +74,15 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     TeamChatModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     ChannelReceiptsModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
-    ChannelsModule.register({ isGlobal: true, ...options.channels, ports: { inbox: ZaloInboxPageReadService } }),
+    InboxLeadsModule.register({ isGlobal: true }),
+    ChannelsModule.register({
+        isGlobal: true,
+        ...options.channels,
+        ports: { inbox: ZaloInboxPageReadService },
+        image: IMAGE,
+        storage: STORAGE_ASSETS,
+        publicApiUrl: options.connections.publicApiUrl,
+    }),
     ConversationsModule.register({
         isGlobal: true,
         outcomes: CustomerOutcomesService,
@@ -92,6 +107,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
 export const messagingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [
     CHAT_RECORDS_ERROR_KINDS,
     INBOUND_EVENTS_ERROR_KINDS,
+    INBOX_LEADS_ERROR_KINDS,
     CHANNELS_ERROR_KINDS,
     CONNECTION_SECRETS_ERROR_KINDS,
     CONVERSATIONS_ERROR_KINDS,
@@ -99,6 +115,7 @@ export const messagingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
     TELEGRAM_ERROR_KINDS,
     SEPAY_ERROR_KINDS,
     ZALO_ERROR_KINDS,
+    IMAGE_ERROR_KINDS,
     CHAT_TYPING_ERROR_KINDS,
     TEAM_CHAT_ERROR_KINDS,
     MCP_GATEWAY_ERROR_KINDS,
@@ -110,6 +127,7 @@ export const messagingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
 export const messagingMessages: ReadonlyArray<MessageBundle> = [
     CHAT_RECORDS_MESSAGES,
     INBOUND_EVENTS_MESSAGES,
+    INBOX_LEADS_MESSAGES,
     CHANNELS_MESSAGES,
     CONNECTION_SECRETS_MESSAGES,
     CONVERSATIONS_MESSAGES,
@@ -118,6 +136,7 @@ export const messagingMessages: ReadonlyArray<MessageBundle> = [
     TELEGRAM_MESSAGES,
     SEPAY_MESSAGES,
     ZALO_MESSAGES,
+    IMAGE_MESSAGES,
     CHAT_TYPING_MESSAGES,
     TEAM_CHAT_MESSAGES,
     MCP_GATEWAY_MESSAGES,

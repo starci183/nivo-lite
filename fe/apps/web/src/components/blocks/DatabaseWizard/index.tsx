@@ -3,7 +3,7 @@
 import type { SlotRead } from "@/hooks/slot"
 
 import { useFormatter, useTranslations } from "next-intl"
-import { agentChoicesOf } from "@/hooks/connection-wizard"
+import { agentChoicesOf, useWizardPhases } from "@/hooks/connection-wizard"
 import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import {
     DB_ENGINES,
@@ -39,6 +39,7 @@ interface DatabaseWizardProps {
 export const DatabaseWizard = (props: DatabaseWizardProps) => {
     const t = useTranslations("connectorDatabase")
     const tw = useTranslations("connectionWizard")
+    const phases = useWizardPhases("database")
     const format = useFormatter()
     const slotLabelsOf = useSlotLabels()
     const wizard = useDatabaseWizard({ resumeId: props.resumeId, onClose: props.onClose })
@@ -52,6 +53,7 @@ export const DatabaseWizard = (props: DatabaseWizardProps) => {
                 slotLabels: { ...slotLabelsOf(""), ...(wizard.loadError === null ? {} : { error: wizard.loadError }) },
                 title: t("title"),
                 stepLabel: tw("stepOf", { n: wizard.index + 1, total: DB_STEPS.length }),
+                phases,
                 steps: [t("stepConnect"), t("stepTables"), t("stepSchedule"), t("stepAgent")],
                 index: wizard.index,
                 step: wizard.step,

@@ -1,5 +1,5 @@
 import { dayNameOf, timeLabelOf } from "./conversation"
-import type { DeliveryState, ThreadEntry } from "./conversation.types"
+import type { DeliveryState, MessageFile, MessageOrder, ThreadEntry } from "./conversation.types"
 
 /** The words of the thread that are not the messages: the names of two days and the marks of delivery. */
 export interface ThreadWords {
@@ -54,6 +54,10 @@ export type ThreadViewEntry =
           readonly hasAvatar: boolean
           /** How far the message has travelled, with its words; null draws no mark. */
           readonly delivery: { readonly state: DeliveryState; readonly label: string } | null
+          /** The pictures and files of the message, drawn under its words. */
+          readonly files: ReadonlyArray<MessageFile>
+          /** The order the message is about, drawn as a card under its words; null when it is about none. */
+          readonly order: MessageOrder | null
           /** Whether the message failed to send and offers a retry in place. */
           readonly canRetry: boolean
       }
@@ -80,7 +84,9 @@ export const threadViewOf = (
             author: entry.isContinuation ? "" : row.author,
             text: row.text,
             meta: timeLabelOf(row.atMs, clock.locale, clock.zone),
-            mark: entry.isContinuation ? "" : row.mark,
+            mark: entry.isContinuation || row.mark.trim().toLowerCase() === row.author.trim().toLowerCase() ? "" : row.mark,
+            files: row.files ?? [],
+            order: row.order ?? null,
             tone: row.side === "outgoing" && row.mark !== "" ? "soft" : "brand",
             hasAvatar: row.side === "incoming" && !entry.isContinuation && row.author !== "",
             delivery: row.delivery === null ? null : { state: row.delivery, label: words.delivery[row.delivery] },

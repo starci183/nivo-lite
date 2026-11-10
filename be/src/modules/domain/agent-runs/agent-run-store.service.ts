@@ -13,11 +13,11 @@ import { AgentRunReportService } from "./agent-run-report.service"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { handlerViewOf, handlerViewsOf, routeStepOf, runRecordOf, runViewOf, stepViewOf } from "./agent-runs.mapper"
 import type { RunRecord } from "./agent-runs-records.contracts"
-import { SETTLE_TRIES, STEPS_MAX, TELL_STATUSES, filled } from "./policies/agent-runs.policy"
+import { RUN_CANCELLED, SETTLE_TRIES, STEPS_MAX, TELL_STATUSES, filled } from "./policies/agent-runs.policy"
 import { jsonValueOf } from "./policies/json-value.policy"
 import { planBindingVerdict } from "./policies/plan-binding.policy"
 import { CLOSED_RUN, statusAfter } from "./policies/run-status.policy"
-import type { RouteMove, RunRef, RunStepView, RunView, WaitAnswer } from "./agent-runs-engine.contracts"
+import type { RouteMove, RunCancelResult, RunRef, RunStepView, RunView, WaitAnswer } from "./agent-runs-engine.contracts"
 import type { RunOpen, StepLink, StepSpec, StepView } from "./agent-runs.contracts"
 import type { RouteStep } from "./policies/failure-route.policy"
 
@@ -366,6 +366,48 @@ export class AgentRunStoreService {
                 },
             )
             return true
+        })
+    }
+
+    /**
+     * Stops a run that is queued, running or waiting, once: the run is marked cancelled with who and when, the steps that were claimed or
+     * waiting are failed with `run_cancelled` and give back their claim, their wait and their timer, so a worker holding one reads `fenced`
+     * and a late decision on its item finds no waiting step. Steps already done are left as they are: nothing is undone.
+     */
+    cancel(workspaceId: string, runId: string, actor: string, manager?: EntityManager): Promise<RunCancelResult> {
+        return this.at(workspaceId, manager, async (scoped): Promise<RunCancelResult> => {
+            const current = await this.records.run(scoped, runId)
+            if (current === null) return { kind: "not_found" }
+            if (current.status === "cancelled") return { kind: "already_cancelled" }
+            const at = iso(this.clock.now())
+            const moved = await this.patchRunWith(scoped, runId, (run) =>
+                run.status === "running" || run.status === "waiting"
+                    ? {
+                          status: "cancelled",
+                          error: { code: RUN_CANCELLED },
+                          cancelledBy: actor,
+                          cancelledAt: at,
+                          endedAt: at,
+                          waitWorkItemId: null,
+                          waitDeadlineAt: null,
+                      }
+                    : null,
+            )
+            if (moved === null) return { kind: "not_cancellable" }
+            const steps = await this.records.stepsOf(scoped, runId)
+            await eachInOrder(
+                steps.filter((step) => step.status === "running"),
+                async (step) => {
+                    await this.records.patchStep(scoped, step, {
+                        status: "failed",
+                        errorCode: RUN_CANCELLED,
+                        claimedUntil: null,
+                        waitItemId: null,
+                        endedAt: at,
+                    })
+                },
+            )
+            return { kind: "cancelled" }
         })
     }
 

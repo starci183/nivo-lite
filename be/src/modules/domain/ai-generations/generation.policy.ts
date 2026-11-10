@@ -1,4 +1,4 @@
-import type { RunUsage } from "@modules/integrations/openclaw"
+import type { AiMessage, AiUsage } from "@modules/integrations/ai"
 import type {
     GenMessage,
     GenerateParams,
@@ -7,6 +7,7 @@ import type {
     PollVerdict,
     QueuedGeneration,
     ResponseFormat,
+    RunUsage,
 } from "./ai-generations.contracts"
 import type { AiGenerationEntity } from "./persistence/entities"
 
@@ -25,7 +26,6 @@ const MIN_TIMEOUT_MS = 5000
 const MAX_TIMEOUT_MS = 120_000
 const TURN_MARGIN_MS = 3000
 const PURPOSE_MAX = 60
-const FAILURE_MAX = 200
 
 /** Accepts persisted JSON objects while rejecting arrays and null. */
 export const isPlainObject = (value: unknown): value is Record<string, unknown> =>
@@ -37,15 +37,11 @@ const isNumber = (value: unknown): value is number => typeof value === "number" 
 export const clampTimeout = (timeoutMs: number | undefined): number =>
     Math.max(MIN_TIMEOUT_MS, Math.min(timeoutMs ?? DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS))
 
-/** How long the turn on the gateway may take: the caller's deadline less a margin to write the answer. */
+/** How long the model call may take: the caller's deadline less a margin to write the answer. */
 export const turnTimeoutOf = (timeoutMs: number): number => Math.max(MIN_TIMEOUT_MS, timeoutMs - TURN_MARGIN_MS)
 
 /** The purpose as the row keeps it. */
 export const purposeOf = (purpose: string): string => purpose.slice(0, PURPOSE_MAX)
-
-/** The failure text as the row keeps it. */
-export const failureTextOf = (cause: unknown): string =>
-    (cause instanceof Error ? cause.message : String(cause)).slice(0, FAILURE_MAX)
 
 /** The input JSON a queued generation stores. */
 export const inputJsonOf = (params: GenerateParams, timeoutMs: number): Record<string, unknown> => ({
@@ -122,46 +118,23 @@ export const verdictOf = (progress: GenerationProgress): PollVerdict | null => {
 /** True while the row still waits for its text, so the runner may work on it. */
 export const isWaiting = (status: string): boolean => status === "queued" || status === "running"
 
-/** The text sent into the one-shot session: the app's system prompt first, then the dialogue, then the output format. */
-export const composeTurn = (input: GenerationInput): string => {
-    const system = input.messages
-        .filter((message) => message.role === "system")
-        .map((message) => message.content)
-        .join("\n\n")
-    const dialogue = input.messages.filter((message) => message.role !== "system")
-    const last = dialogue.at(-1)
-    const earlier = dialogue
-        .slice(0, -1)
-        .map((message) => `${message.role === "assistant" ? "NIVO" : "User"}: ${message.content}`)
-        .join("\n")
-    const output =
-        input.responseFormat === "json"
-            ? "[OUTPUT] Answer with ONLY the JSON object described above. No prose, no code fences."
-            : "[OUTPUT] Answer with ONLY the requested text. No preface, no explanation."
-    return [
-        "[REQUEST: follow these instructions exactly]",
-        system === "" ? "(no extra instructions)" : system,
-        "",
-        ...(earlier === "" ? [] : ["[CONVERSATION SO FAR]", earlier, ""]),
-        "[INPUT]",
-        last === undefined ? "" : last.content,
-        "",
-        output,
-    ].join("\n")
+/** The last line of a prompt: the form of the answer, said the same way for every generation. */
+const OUTPUT_RULE: Readonly<Record<ResponseFormat, string>> = {
+    json: "Answer with ONLY the JSON object described above. No prose, no code fences.",
+    text: "Answer with ONLY the requested text. No preface, no explanation.",
 }
 
-/** Whether a failure is the deadline of the request passing (an aborted signal or a timeout error). */
-export const isTimeoutCause = (cause: unknown): boolean =>
-    cause instanceof Error && (cause.name === "TimeoutError" || cause.name === "AbortError")
+/** The prompt of a generation as the model reads it: the messages the app wrote, in order, then the form of the answer. */
+export const promptOf = (input: GenerationInput): ReadonlyArray<AiMessage> => [
+    ...input.messages.map((message) => ({ role: message.role, content: message.content })),
+    { role: "system", content: OUTPUT_RULE[input.responseFormat] },
+]
 
-/** Waits for the work, or fails the moment the signal aborts, so one deadline covers every step of a call. */
-export const untilAborted = <T>(work: Promise<T>, signal: AbortSignal): Promise<T> =>
-    new Promise<T>((resolve, reject) => {
-        const onAbort = (): void => reject(signal.reason)
-        if (signal.aborted) {
-            onAbort()
-            return
-        }
-        signal.addEventListener("abort", onAbort, { once: true })
-        work.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort))
-    })
+/** What the endpoint reported about a call, as the row and the meter keep it; a count it did not report is zero. */
+export const runUsageOf = (usage: AiUsage, model: string): RunUsage => ({
+    prompt_tokens: usage.promptTokens ?? 0,
+    completion_tokens: usage.completionTokens ?? 0,
+    cached_tokens: usage.cachedTokens ?? 0,
+    cost: usage.costUsd ?? 0,
+    model,
+})

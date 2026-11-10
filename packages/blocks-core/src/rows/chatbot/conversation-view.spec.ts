@@ -38,6 +38,20 @@ describe("threadViewOf", () => {
         expect(view[0]).toEqual({ kind: "day", id: "day-2026-11-03", label: "Yesterday" })
     })
 
+    it("hands the pictures and the order of a message to the component that draws them, none when it has none", () => {
+        const files = [{ id: "f", url: "https://x/1", name: "One", contentType: "image/png" }]
+        const order = {
+            orderNo: "DH-1",
+            lines: [{ name: "Pot", qty: 1, unitText: "", amountText: "", imageUrl: "" }],
+            amountText: "1.000",
+            address: "Q.3",
+            paid: true,
+        }
+        const view = viewOf([row({ id: "1", files, order }), row({ id: "2", atMs: NOON + 1000 })])
+        expect(view[1]).toMatchObject({ files, order })
+        expect(view[2]).toMatchObject({ files: [], order: null })
+    })
+
     it("draws a notice as a line of its own", () => {
         const view = viewOf([row({ id: "1", side: "notice", text: "A person joined", author: "" })])
         expect(view[1]).toEqual({ kind: "notice", id: "1", text: "A person joined" })

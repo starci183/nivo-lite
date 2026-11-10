@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
+import { InjectLogger, runInScope } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { noticeBody, noticeLevelOf } from "./notice.policy"
 import { AiUsageEventEntity } from "./persistence/entities"
@@ -21,6 +21,9 @@ import type { MonthlyUsageAggregate } from "./usage-summary.mapper"
 
 /** The most day-and-module rollups the billing card reads. */
 const MONTHLY_ROW_LIMIT = 2000
+
+/** The most module rollups one period read returns. */
+const MODULE_ROW_LIMIT = 200
 
 @Injectable()
 /** Meters every model call of a workspace and answers where the month stands against the allowance; the only writer of ai_usage_events. */
@@ -44,8 +47,10 @@ export class AiUsageEventsService {
                 model: input.model.slice(0, 120),
                 promptTokens: figures.promptTokens,
                 completionTokens: figures.completionTokens,
+                cachedTokens: figures.cachedTokens,
                 costUsd: String(figures.costUsd),
                 estimated: figures.estimated,
+                runId: input.runId ?? runInScope(),
             })
             const status = await this.quotaStatus(input.workspaceId)
             if (status !== null) await this.notifyOwner(input.workspaceId, status)
@@ -119,6 +124,35 @@ export class AiUsageEventsService {
             .andWhere("u.created_at >= now() - CAST(:days AS integer) * interval '1 day'", { days })
             .getRawOne<{ credits: number }>()
         return row?.credits ?? 0
+    }
+
+    /** The credits each module used between two instants (the guide never counts), whole credits per call, one grouped statement. */
+    async creditsByModule(workspaceId: string, from: Date, to: Date): Promise<ReadonlyMap<string, number>> {
+        const rows = await this.entityManager
+            .createQueryBuilder(AiUsageEventEntity, "u")
+            .select("COALESCE(u.module, 'other')", "module")
+            .addSelect("COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits")
+            .where("u.workspace_id = :workspaceId AND u.kind <> 'guide'", { workspaceId, creditUsd: CREDIT_USD_VALUE })
+            .andWhere("u.created_at >= :from AND u.created_at < :to", { from, to })
+            .groupBy("1")
+            .limit(MODULE_ROW_LIMIT)
+            .getRawMany<{ module: string; credits: number }>()
+        return new Map(rows.map((row) => [row.module, row.credits]))
+    }
+
+    /** The credits each run used, whole credits per call (the guide never counts), for the runs given; a run with no call is absent. */
+    async creditsByRun(workspaceId: string, runIds: ReadonlyArray<string>): Promise<ReadonlyMap<string, number>> {
+        if (runIds.length === 0) return new Map()
+        const rows = await this.entityManager
+            .createQueryBuilder(AiUsageEventEntity, "u")
+            .select("u.run_id", "run_id")
+            .addSelect("COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits")
+            .where("u.workspace_id = :workspaceId AND u.kind <> 'guide'", { workspaceId, creditUsd: CREDIT_USD_VALUE })
+            .andWhere("u.run_id IN (:...runIds)", { runIds })
+            .groupBy("u.run_id")
+            .limit(runIds.length)
+            .getRawMany<{ run_id: string; credits: number }>()
+        return new Map(rows.map((row) => [row.run_id, row.credits]))
     }
 
     /**

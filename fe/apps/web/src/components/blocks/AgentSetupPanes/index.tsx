@@ -1,6 +1,6 @@
 "use client"
 
-import { useFormatter, useTranslations } from "next-intl"
+import { useTranslations } from "next-intl"
 import { useAgentRights } from "@/hooks/agentSettings"
 import { useAgentGraphPanel } from "@/hooks/agentGraph"
 import {
@@ -10,19 +10,19 @@ import {
     useStaffSetupRedirect,
     useSetupVersions,
     useThreadScroll,
-    setupThreadOf,
+    useSetupChatView,
     startOf,
 } from "@/hooks/agentSetup"
 import { useModuleName, type ModuleKey } from "@/hooks/installations"
 import { useSetupSide } from "@/hooks/setupSide"
 import { useSetupWriteWords } from "@/hooks/setupCards"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { useSetupWorkflowSteps } from "@/hooks/workflowSteps"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
-import type { AgentSetupCopy, SetupSideGate } from "@/modules/types"
+import type { SetupSideGate } from "@/modules/types"
 import { AgentSetupPanesBase } from "./component"
-import type { AgentSetupChatContent } from "./component"
 
 /** What the Setup page hands the panes: the instance and catalogue key of the url. */
 type AgentSetupPanesProps = {
@@ -33,101 +33,13 @@ type AgentSetupPanesProps = {
 const NO_VERSIONS: ReadonlyArray<never> = []
 const NO_GATES: ReadonlyArray<SetupSideGate> = []
 
-/** How many of the next missing items the composer offers as starts of a message. */
-const SUGGESTIONS = 3
-
-/** The translator of the setup copy. */
-type SetupCopy = ReturnType<typeof useTranslations<"moduleSetup">>
-
-/** What the chat content is made of: the state of the setup, the thread, the typing, the gates and the brand flow. */
-interface ChatInput {
-    readonly t: SetupCopy
-    readonly state: Extract<ReturnType<typeof useSetupState>["slot"], { readonly items: unknown }>["items"] | undefined
-    readonly groups: ReturnType<typeof setupThreadOf>
-    readonly chat: ReturnType<typeof useSetupChat>
-    readonly gates: ReadonlyArray<SetupSideGate>
-    readonly words: ReturnType<typeof useSetupWriteWords>
-    readonly typeName: string
-    readonly brand: ReturnType<typeof useSetupBrandCards>
-}
-
-/** The proposals of NIVO (items it filled and the owner did not confirm) in the words of the chat. */
-const proposalsOf = (t: SetupCopy, gates: ReadonlyArray<SetupSideGate>): AgentSetupChatContent["proposals"] =>
-    gates.flatMap((gate, index) =>
-        gate.status === "proposed" && gate.evidence !== ""
-            ? [
-                  {
-                      key: gate.key,
-                      title: t("proposalTitle", { position: index + 1, label: gate.label }),
-                      evidence: gate.evidence,
-                  },
-              ]
-            : [],
-    )
-
-/** What the thread and the composer draw, every word resolved. */
-const chatContentOf = (input: ChatInput): AgentSetupChatContent => {
-    const { t, state, chat } = input
-    const kit = input.brand.content
-    return {
-        emptyTitle: t("emptyTitle"),
-        emptyBody: t("emptyBody"),
-        hasMessages: input.groups.some((group) => group.messages.length > 0),
-        groups: input.groups.map((group) => ({
-            id: group.id,
-            divider: group.divider,
-            messages: group.messages.map(({ message, cards }) => ({
-                id: message.id,
-                isOwner: message.role === "user",
-                author: message.role === "user" ? message.author || t("you") : t("nivo"),
-                body: message.body,
-                cards,
-            })),
-        })),
-        instance: state?.instance.isMulti === true ? { name: state.instance.name, typeName: input.typeName } : null,
-        sendingLabel: t("sending"),
-        isSending: chat.isSending,
-        staleLabel: state?.turn === "stale" && !chat.isSending ? t("turnStale") : "",
-        composerLabel: t("chatPlaceholder"),
-        composerHint: t("composerHint", { count: chat.text.length }),
-        text: chat.text,
-        sendLabel: t("send"),
-        words: input.words,
-        decidingId: chat.decidingId,
-        proposals: proposalsOf(t, input.gates),
-        suggestions: input.gates
-            .filter((gate) => gate.status === "missing")
-            .slice(0, SUGGESTIONS)
-            .map((gate) => ({ id: gate.key, label: gate.label })),
-        brandKits: kit === null ? null : { isReading: kit.isReading, readingLabel: kit.readingLabel, cards: kit.cards },
-        attach: kit === null ? null : { label: kit.attachLabel, prompt: kit.attachPrompt, isReading: kit.isReading },
-    }
-}
-
-/** The words of the panes that do not come from a slot. */
-const copyOf = (t: SetupCopy): AgentSetupCopy => ({
-    paneLabel: t("paneLabel"),
-    checklistLabel: t("checklistLabel"),
-    feedNote: t("feedNote"),
-    chatLabel: t("chatLabel"),
-    chatTitle: t("chatTitle"),
-    proposalsLabel: t("proposalsLabel"),
-    proposalsEmpty: t("proposalsEmpty"),
-    confirmLabel: t("confirm"),
-    proposalEditLabel: t("proposalEdit"),
-    suggestionsLabel: t("suggestionsLabel"),
-    askingLabel: t("gateAsking"),
-})
-
 /**
  * The connected Setup tab: the checklist of the eight items (progress, confirm, edit, run) and the private chat with NIVO that
  * fills them. The owner writes, NIVO answers in the background; its proposed items stand under its latest reply.
  */
 export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
-    const t = useTranslations("moduleSetup")
     const access = useTranslations("access")
     const typeName = useModuleName(props.module, "shortName")
-    const format = useFormatter()
     const router = navigation.useRouter()
     const workspaceId = useWorkspaceId()
     const slotLabels = useSlotLabels()
@@ -136,6 +48,7 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
     const { slot, reload } = useSetupState(props.installationId)
     const side = useSetupSide(props.module, props.installationId)
     const graph = useAgentGraphPanel(props.installationId, side.setup)
+    const steps = useSetupWorkflowSteps(props.installationId, graph.on.retryGraph)
     const versionsSlot = useSetupVersions(props.installationId)
     const versions = ("items" in versionsSlot ? versionsSlot.items : undefined)?.versions ?? NO_VERSIONS
     const state = "items" in slot ? slot.items : undefined
@@ -145,37 +58,27 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
     const threadRef = useThreadScroll(
         `${state?.messages.length ?? 0}:${chat.isSending}:${state?.revisions.length ?? 0}:${brand.scrollKey}`,
     )
-    const groups = setupThreadOf(
-        state?.revisions ?? NO_VERSIONS,
-        state?.messages ?? NO_VERSIONS,
-        state?.writes ?? NO_VERSIONS,
-        versions,
-        sessionId,
-        {
-            applied: (version, appliedAt, who) =>
-                t("revisionApplied", {
-                    version,
-                    when: format.dateTime(new Date(appliedAt), { day: "2-digit", month: "2-digit", year: "numeric" }),
-                    who,
-                }),
-            appliedPlain: (version) => t("revisionAppliedPlain", { version }),
-        },
-    )
     useStaffSetupRedirect(props.module, props.installationId)
     const gates = ("items" in side.slot ? side.slot.items : undefined)?.gates.gates ?? NO_GATES
-    const content = chatContentOf({ t, state, groups, chat, gates, words, typeName, brand })
+    const { copy, messagesCopy, content } = useSetupChatView({ state, versions, chat, gates, words, typeName, brand })
+    const kit = brand.content
+    const isGreeting = content.rows.length === 0 && (kit?.cards.length ?? 0) === 0
     return (
         <AgentSetupPanesBase
             props={{
-                copy: copyOf(t),
+                copy,
+                messagesCopy,
                 chat: mapSlot(slot, () => content),
+                thread: "items" in slot && isGreeting ? { isEmpty: true } : mapSlot(slot, () => content),
                 chatPlaceholder: content,
+                brandKits: kit === null ? null : { isReading: kit.isReading, readingLabel: kit.readingLabel, cards: kit.cards },
                 side: side.slot,
                 sidePlaceholder: side.placeholder,
                 ...graph.props,
-                slotLabels: slotLabels(t("emptyTitle")),
+                slotLabels: slotLabels(content.emptyTitle),
                 forbidden: canEdit ? "" : access("forbidden"),
                 threadRef,
+                steps: { map: steps.map, selectedId: steps.selectedId, drawer: steps.drawer },
             }}
             on={{
                 text: chat.setText,
@@ -192,6 +95,7 @@ export const AgentSetupPanes = (props: AgentSetupPanesProps) => {
                 retryChat: reload,
                 retrySide: side.reload,
                 ...graph.on,
+                step: steps.act,
             }}
         />
     )

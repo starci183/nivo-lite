@@ -33,6 +33,9 @@ export const PaneBody = (props: PaneBodyProps) => (
                     width="fill"
                     isPending={props.phonePrimary.isPending === true}
                     onPress={props.phonePrimary.onPress}
+                    {...(props.phonePrimary.startContent === undefined
+                        ? {}
+                        : { startContent: props.phonePrimary.startContent })}
                 >
                     {props.phonePrimary.label}
                 </Button>

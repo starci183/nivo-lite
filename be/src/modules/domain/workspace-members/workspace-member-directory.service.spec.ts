@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { In } from "typeorm"
 import { entityOf } from "@tests/fixtures/builders/entity.builder"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
+import { CHU_OWNER_SEAT, SWITCHED_OFF_SEAT } from "@tests/fixtures/builders/workspace-members.builder"
 import { queueSubQueryBuilders } from "@tests/fixtures/builders/sub-query-builder.builder"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
@@ -16,6 +18,11 @@ const memberOf = entityOf(WorkspaceMemberEntity, {
     staffId: null,
     displayName: "Mr Minh",
     status: "active",
+    lastOpenedAt: new Date("2026-11-08T09:00:00.000Z"),
+    disabledAt: null,
+    disabledBy: null,
+    disabledNote: null,
+    disabledByDeletion: false,
 })
 
 const MINH = { id: "m1", displayName: "Mr Minh", role: "manager" }
@@ -39,6 +46,11 @@ describe("WorkspaceMemberDirectoryService > seatsOf", () => {
                 staffId: null,
                 displayName: "Mr Minh",
                 status: "active",
+                lastOpenedAt: "2026-11-08T09:00:00.000Z",
+                disabledAt: null,
+                disabledBy: null,
+                disabledNote: null,
+                disabledByDeletion: false,
             },
         ])
         expect(em.find).toHaveBeenCalledWith(WorkspaceMemberEntity, {
@@ -46,6 +58,61 @@ describe("WorkspaceMemberDirectoryService > seatsOf", () => {
             order: { createdAt: "ASC", id: "ASC" },
             take: 7,
         })
+    })
+})
+
+describe("WorkspaceMemberDirectoryService > seatsOf / switched off", () => {
+    it("names who switched a seat off, when and with which note", async () => {
+        const em = mockEntityManager({
+            find: [
+                [WorkspaceMemberEntity, [SWITCHED_OFF_SEAT]],
+                [WorkspaceMemberEntity, [CHU_OWNER_SEAT]],
+            ],
+        })
+
+        await expect((await build(em)).seatsOf("user-1", 7)).resolves.toMatchObject([
+            {
+                status: "disabled",
+                disabledAt: "2026-10-12T11:40:00.000Z",
+                disabledNote: "Left the shop",
+                disabledByDeletion: false,
+            },
+        ])
+        expect(em.find).toHaveBeenLastCalledWith(WorkspaceMemberEntity, {
+            select: { workspaceId: true, userId: true, displayName: true, role: true },
+            where: [{ workspaceId: "ws-1", userId: "user-9" }],
+            take: 1,
+        })
+    })
+})
+
+describe("WorkspaceMemberDirectoryService > activeCountsOf", () => {
+    it("asks for nothing when no workspace is given", async () => {
+        const em = mockEntityManager()
+
+        await expect((await build(em)).activeCountsOf([])).resolves.toEqual([])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+
+    it("counts the active members of each workspace, bounded by the workspaces asked", async () => {
+        const em = mockEntityManager()
+        const [counts] = queueQueryBuilders(em, [
+            {
+                getRawMany: [
+                    { workspace_id: "w1", count: 4, owners: 1 },
+                    { workspace_id: "w2", count: "2", owners: "0" },
+                ],
+            },
+        ])
+
+        await expect((await build(em)).activeCountsOf(["w1", "w2"])).resolves.toEqual([
+            { workspaceId: "w1", count: 4, owners: 1 },
+            { workspaceId: "w2", count: 2, owners: 0 },
+        ])
+        expect(counts?.callsOf("where")).toEqual([
+            ["m.workspaceId IN (:...workspaceIds) AND m.status = 'active'", { workspaceIds: ["w1", "w2"] }],
+        ])
+        expect(counts?.callsOf("limit")).toEqual([[2]])
     })
 })
 

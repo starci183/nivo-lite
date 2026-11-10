@@ -40,6 +40,12 @@ export class AgentTasksService {
         return rows.map(toTaskRecord)
     }
 
+    /** One task by its id, or null when there is none. */
+    async byId(taskId: string): Promise<AgentTaskRecord | null> {
+        const row = await this.entityManager.findOne(AgentTaskEntity, { where: { id: taskId } })
+        return row === null ? null : toTaskRecord(row)
+    }
+
     /** Applies the operations of a proposal in order. A wake time the agent asks for is kept between five minutes and seven days ahead. */
     async apply(workspaceId: string, agentId: string, ops: ReadonlyArray<AgentTaskOp>): Promise<void> {
         await eachInOrder(ops, (op) => this.applyOne(workspaceId, agentId, op))

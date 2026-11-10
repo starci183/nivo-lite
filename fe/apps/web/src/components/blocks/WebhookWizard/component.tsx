@@ -1,9 +1,9 @@
-import type { DataSlot, SlotLabels, CopyLabels } from "@/modules/types"
+import type { DataSlot, SlotLabels, CopyLabels, WizardPhases } from "@/modules/types"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Alert, CheckboxGroup, EmptyNotice, Input, Section, Stack, Text } from "@starci/grammar/common"
 import { ConnectionCopyInput } from "@/components/composites/ConnectionCopyInput"
 import { WizardCodeBlock } from "@/components/composites/WizardCodeBlock"
-import { backAction, closeAction, nextAction, WizardFooter } from "@/components/branches/WizardFooter"
+import { backAction, closeAction, forwardAction, nextAction, WizardFooter } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
 import { WizardFrame } from "@/components/frames/WizardFrame"
 import { WizardTestAlert } from "@/components/composites/WizardTestAlert"
@@ -19,6 +19,7 @@ export interface WebhookWizardBaseProps {
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
+        readonly phases: WizardPhases
         readonly index: number
         readonly step: "address" | "secret" | "test" | "done"
         readonly form: { readonly name: string; readonly url: string }
@@ -77,11 +78,11 @@ const actionsOf = ({ props, on }: WebhookWizardBaseProps): ReadonlyArray<WizardA
     if (props.step === "address") {
         const missing = props.form.name.trim() === "" || props.form.url.trim() === "" || props.events.length === 0
         return [
-            nextAction(text.saveAndNext, on.save, { isPending: props.isPending, isDisabled: missing }),
+            forwardAction(text.saveAndNext, on.save, { isPending: props.isPending, isDisabled: missing }),
             closeAction(text.close, on.close, props.isPending),
         ]
     }
-    if (props.step === "secret") return [nextAction(text.next, () => on.go(2))]
+    if (props.step === "secret") return [forwardAction(text.next, () => on.go(2))]
     if (props.step === "test") {
         const sent = props.test !== null
         const test: WizardAction = {
@@ -91,7 +92,7 @@ const actionsOf = ({ props, on }: WebhookWizardBaseProps): ReadonlyArray<WizardA
             isPending: props.isPending,
             onPress: on.sendTest,
         }
-        return [nextAction(text.next, () => on.go(3), { isDisabled: !sent }), test]
+        return [forwardAction(text.next, () => on.go(3), { isDisabled: !sent }), test]
     }
     return [
         nextAction(text.finish, on.finish, { isPending: props.isPending }),
@@ -149,6 +150,7 @@ const renderWebhookWizard = (props: WebhookWizardBaseProps, isLoading: boolean) 
             title={view.title}
             stepLabel={view.stepLabel}
             steps={view.steps}
+            phases={view.phases}
             index={view.index}
             footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
         >

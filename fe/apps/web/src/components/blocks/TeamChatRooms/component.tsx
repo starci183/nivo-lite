@@ -1,8 +1,7 @@
-import { Button, IconButton } from "@starci/grammar/common"
+import { Button, PaneSection } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PaneHead } from "@/components/composites/PaneHead"
 import { TeamChatNewChat } from "@/components/composites/TeamChatNewChat"
-import { PaneBody } from "@/components/frames/PaneBody"
 import { TeamChatRoomList } from "@/components/frames/TeamChatRoomList"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { TeamChatRoomRow, TeamChatRoomsHandlers, TeamChatRoomsViewProps } from "@/modules/types"
@@ -56,33 +55,32 @@ const RoomsContent = (props: TeamChatRoomsBaseProps) => (
                 isLoading={isLoading}
                 copy={props.props.copy}
                 selectedId={props.props.selectedId}
+                query={props.props.query}
+                onQuery={props.on.query}
                 onSelect={props.on.select}
             />
         )}
     />
 )
 
-/** Presentational list of the rooms of the viewer, to stand in a pane: its head with the way to start a chat, and the rooms. */
+/** The rooms pane on the surface: its head with the way to start a chat, then the searchable rooms under their kind. */
 export const TeamChatRoomsBase = (props: TeamChatRoomsBaseProps) => (
     <>
         <PaneHead
             title={props.props.copy.title}
             actions={
-                <>
-                    <Button intent="neutral" onPress={props.on.openNewChat}>
-                        {props.props.copy.newChat}
-                    </Button>
-                    <IconButton
-                        intent="neutral"
-                        source={nivoIconSource("retry", "leading")}
-                        label={props.props.copy.refresh}
-                        onPress={props.on.refresh}
-                    />
-                </>
+                <Button
+                    intent="neutral"
+                    size="sm"
+                    onPress={props.on.openNewChat}
+                >
+                    {props.props.copy.newChat}
+                </Button>
             }
         />
-        <PaneBody overlay={<NewChat {...props} />}>
+        <PaneSection scroll={{ label: props.props.copy.listLabel }}>
             <RoomsContent {...props} />
-        </PaneBody>
+            <NewChat {...props} />
+        </PaneSection>
     </>
 )

@@ -5,18 +5,9 @@ import type { TurnRef } from "@modules/domain/conversations"
 /** A paid invoice counts as "just confirmed" for a customer's late "I have paid" within this window. */
 export const RECENTLY_PAID_MS: number = 14 * 86_400_000
 
-/** The order statuses that mean the order is still open (not paid, not cancelled). */
-export const OPEN_ORDER_STATUSES: ReadonlySet<string> = new Set(["draft", "confirmed", "invoiced"])
-
 /** Shortens a text to `max` characters with an ellipsis. */
 export const clipText = (text: string, max: number): string =>
     text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text
-
-/** An item with case, spacing and Unicode form folded away. */
-const norm = (text: string): string => text.normalize("NFC").toLowerCase().replace(/\s+/gu, " ").trim()
-
-/** The same item said twice is one item: case, spacing and Unicode form do not matter. */
-export const sameItems = (a: string, b: string): boolean => norm(a) === norm(b)
 
 /** True when a paid invoice was paid recently enough that the customer's claim is about it. */
 export const isRecentlyPaid = (paidAt: string | null, now: Date): boolean =>

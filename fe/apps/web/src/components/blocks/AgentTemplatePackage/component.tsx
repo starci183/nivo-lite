@@ -102,18 +102,14 @@ const VersionCard = (props: Props): ReactElement => (
                 isDisabled={props.props.isPending}
                 onValueChange={props.on.setChangelog}
             />
-            <Stack gap="identity">
-                <Switch
-                    name="package-breaking"
-                    label={props.props.breakingLabel}
-                    isSelected={props.props.isBreaking}
-                    isDisabled={props.props.isPending}
-                    onSelectedChange={props.on.toggleBreaking}
-                />
-                <Text size="sm" tone="muted">
-                    {props.props.breakingHint}
-                </Text>
-            </Stack>
+            <Switch
+                name="package-breaking"
+                label={props.props.breakingLabel}
+                description={props.props.breakingHint}
+                isSelected={props.props.isBreaking}
+                isDisabled={props.props.isPending}
+                onSelectedChange={props.on.toggleBreaking}
+            />
         </Stack>
     </SurfaceCard>
 )

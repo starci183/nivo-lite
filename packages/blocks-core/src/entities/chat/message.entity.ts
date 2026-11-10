@@ -1,7 +1,11 @@
 import { defineEntity, field } from "@nivo-lite/agent-sdk/entity"
 import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
 
+import type { ZodType } from "zod"
+
 import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
+import { messageFilesShape, messageOrderShape } from "./message-media.shape"
+import type { MessageFilesShape, MessageOrderShape } from "./message-media.shape"
 
 /** The longest delivery error kept. */
 const MAX_DELIVERY_ERROR = 1_000
@@ -23,6 +27,8 @@ type MessageFields = {
     readonly channelRef: FieldDef<"text", true>
     readonly inReplyTo: FieldDef<"uuid", true>
     readonly sentBy: FieldDef<"uuid", true>
+    readonly files: FieldDef<"jsonb", true> & { readonly shape: ZodType<MessageFilesShape> }
+    readonly orderCard: FieldDef<"jsonb", true> & { readonly shape: ZodType<MessageOrderShape> }
 }
 
 const messageFields: MessageFields = {
@@ -39,6 +45,8 @@ const messageFields: MessageFields = {
     channelRef: field.text({ maxLength: MAX_ID, nullable: true }),
     inReplyTo: field.uuid({ nullable: true }),
     sentBy: field.uuid({ nullable: true }),
+    files: field.jsonb({ shape: messageFilesShape, nullable: true }),
+    orderCard: field.jsonb({ shape: messageOrderShape, nullable: true }),
 }
 
 /** One message of a conversation. Graph node kind `message`. */
@@ -50,6 +58,8 @@ export const messageEntity: EntityDefinition<MessageFields> = defineEntity({
     indexes: [
         { name: "conversation_sent", on: ["conversationId", { desc: "sentAt" }, { desc: "id" }] },
         { name: "conversation_status_sent", on: ["conversationId", "status", { desc: "sentAt" }, { desc: "id" }] },
+        { name: "conversation_role_sent", on: ["conversationId", "role", { desc: "sentAt" }, { desc: "id" }] },
+        { name: "conversation_status_created", on: ["conversationId", "status", { desc: "createdAt" }, { desc: "id" }] },
         { name: "channel_ref", on: ["channelRef", "id"] },
         { name: "reply_of", on: ["conversationId", "inReplyTo", { desc: "sentAt" }, { desc: "id" }] },
         { name: "role_recent", on: ["role", { desc: "sentAt" }, { desc: "id" }] },

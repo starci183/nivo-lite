@@ -17,6 +17,8 @@ export enum WorkspaceMembersErrorCode {
     SelfForbidden = "WORKSPACE_MEMBERS_SELF_FORBIDDEN",
     /** The change would leave the workspace without an active owner. */
     LastOwner = "WORKSPACE_MEMBERS_LAST_OWNER",
+    /** The only active owner may not leave: they hand the ownership on or delete the workspace. */
+    LastOwnerLeave = "WORKSPACE_MEMBERS_LAST_OWNER_LEAVE",
     /** The session to sign out is the one the request runs on; signing out uses the sign-out flow. */
     CurrentSession = "WORKSPACE_MEMBERS_CURRENT_SESSION",
     /** The caller has no such session. */
@@ -36,6 +38,7 @@ export const WORKSPACE_MEMBERS_ERROR_KINDS: Record<WorkspaceMembersErrorCode, Er
     [WorkspaceMembersErrorCode.ChangeNotAllowed]: "forbidden",
     [WorkspaceMembersErrorCode.SelfForbidden]: "invalid",
     [WorkspaceMembersErrorCode.LastOwner]: "conflict",
+    [WorkspaceMembersErrorCode.LastOwnerLeave]: "conflict",
     [WorkspaceMembersErrorCode.CurrentSession]: "invalid",
     [WorkspaceMembersErrorCode.SessionNotFound]: "not-found",
     [WorkspaceMembersErrorCode.EnsureConflict]: "conflict",

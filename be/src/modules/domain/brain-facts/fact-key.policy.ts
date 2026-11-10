@@ -42,7 +42,7 @@ export const factSlugOf = (text: string): string =>
 const BILLION = /^(t\u1ef7|ty)$/
 const MILLION = /^(tri\u1ec7u|trieu|tr)$/
 const THOUSAND = /^(ngh\u00ecn|nghin|ng\u00e0n|ngan|k)$/
-const NUMBER_WITH_SCALE = /(-?\d[\d.,]*)\s*(t\u1ef7|ty|tri\u1ec7u|trieu|tr|ngh\u00ecn|nghin|ng\u00e0n|ngan|k)?/
+const NUMBER_WITH_SCALE = /(-?\d[\d.,]*)(?:\s*(t\u1ef7|ty|tri\u1ec7u|trieu|tr|ngh\u00ecn|nghin|ng\u00e0n|ngan|k)(?!\p{L}))?/u
 
 /** The multiplier a written scale word stands for. */
 const scaleOf = (word: string): number => {
@@ -66,8 +66,27 @@ export const numberOf = (raw: string): number | null => {
     return Number.isFinite(amount) ? Math.round(amount * scale * 100) / 100 : null
 }
 
-/** The wording of a value without its digits, to compare "8h" with "8 minutes". */
-const wording = (text: string): string => factSlugOf(text.replace(/[\d.,\s]/g, ""))
+/** Currency marks (folded): the amount carries the currency, so the mark adds nothing to the comparison. */
+const CURRENCY_WORDS: ReadonlySet<string> = new Set(["d", "vnd", "vn", "dong"])
+/** Words that open a per-unit phrase ("one pot", "per night"): the phrase says what the price is for, not what it is. */
+const PER_UNIT_WORDS: ReadonlySet<string> = new Set(["mot", "moi", "per"])
+
+/**
+ * The wording of a value without its number, scale word, currency mark and per-unit phrase, to compare "8h" with "8 minutes" and to see
+ * that "5.000 d one pot" and "5.000 d" are the same price.
+ */
+const wording = (text: string): string => {
+    const words = foldedText(text.toLowerCase().replace(new RegExp(NUMBER_WITH_SCALE.source, "gu"), " ").replace(/\/\s*\p{L}+/gu, " "))
+        .split(" ")
+        .filter((word) => word !== "" && !CURRENCY_WORDS.has(word))
+    const kept: Array<string> = []
+    for (let index = 0; index < words.length; index += 1) {
+        const word = words[index] ?? ""
+        if (PER_UNIT_WORDS.has(word)) index += 1
+        else kept.push(word)
+    }
+    return kept.join("-")
+}
 
 /** Two values say the same thing: equal numbers with the same wording around them, or equal once normalised. */
 export const sameValue = (first: string, second: string): boolean => {

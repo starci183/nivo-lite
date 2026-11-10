@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { Cluster, Heading, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { Cluster, Heading, SurfaceCard } from "@starci/grammar/common"
 import type { Collection } from "@starci/grammar/common"
 
 /** What a first-run card draws: its question, the line under it, the body and the ways back and on. */
@@ -22,11 +22,9 @@ type FirstRunCardProps = FirstRunCardHead &
 /** The question, its form or collection, and the unchanged back/forward controls. */
 export const FirstRunCard = (props: FirstRunCardProps) => {
     const head = (
-        <Stack gap="identity">
-            <Heading level={1}>{props.heading}</Heading>
-            <Text tone="muted">{props.description}</Text>
-        </Stack>
+        <Heading level={1}>{props.heading}</Heading>
     )
+    const note = props.description
     const actions = (
         <Cluster gap="row" justify="between">
             {props.actions}
@@ -36,6 +34,7 @@ export const FirstRunCard = (props: FirstRunCardProps) => {
         return (
             <SurfaceCard
                 ariaLabel={props.title}
+                note={note}
                 headers={[{ kind: "custom", children: head }]}
                 footers={[{ kind: "custom", children: actions }]}
                 {...props.collection}
@@ -45,6 +44,7 @@ export const FirstRunCard = (props: FirstRunCardProps) => {
     return (
         <SurfaceCard
             ariaLabel={props.title}
+            note={note}
             headers={[{ kind: "custom", children: head }]}
             footers={[{ kind: "custom", children: actions }]}
         >

@@ -1,6 +1,6 @@
 import { ADJUSTMENT, INVOICE, ORDER, TRANSACTION, adjustmentOf, invoiceOf, transactionOf } from "./accounting.fixtures"
 import { ACCOUNTING_SETTINGS_DEFAULTS } from "./settings"
-import { ledgerLineOf, postAdjustment, postInvoice, postTransaction } from "./posting"
+import { differenceNoteOf, ledgerLineOf, otherIncomeLineOf, postAdjustment, postInvoice, postTransaction } from "./posting"
 
 const SETTINGS = ACCOUNTING_SETTINGS_DEFAULTS
 const matched = transactionOf({ status: "matched", orderId: ORDER.id })
@@ -153,8 +153,41 @@ describe("posting", () => {
             transactionId: TRANSACTION.id,
             status: "paid",
             note: "",
+            direction: "in",
+            documentNo: "DH-20261104-0001",
+            description: matched.reference ?? "",
+            counterpart: "Bui Nguyen Dinh",
+            category: "sale",
         })
         expect(ledgerLineOf(matched, ORDER, null).customer).toBe("NGUYEN VAN DINH")
         expect(ledgerLineOf({ ...matched, payer: null }, ORDER, null).customer).toBe("")
+    })
+
+    it("writes money the owner called other income as a line with no order: the bank reference is the document", () => {
+        const line = otherIncomeLineOf({ ...matched, orderId: null, status: "other_income", externalRef: "sepay-95958515" })
+        expect(line).toMatchObject({
+            orderNo: "",
+            documentNo: "sepay-95958515",
+            direction: "in",
+            category: "other-income",
+            counterpart: "NGUYEN VAN DINH",
+            transactionId: TRANSACTION.id,
+        })
+        expect(otherIncomeLineOf({ ...matched, orderId: null }).documentNo).toBe(TRANSACTION.id)
+    })
+
+    it("notes on the line what the order was due when the money differs; the amount stays what really arrived", () => {
+        const over = ledgerLineOf(matched, { ...ORDER, amountVnd: 4_000_000 }, null)
+        expect(over.amountVnd).toBe(5_000_000)
+        expect(over.note).toBe(differenceNoteOf(5_000_000, 4_000_000))
+        expect(differenceNoteOf(2000, 1000)).toBe("Đơn 1.000đ, nhận 2.000đ, dư 1.000đ")
+        expect(differenceNoteOf(500, 1000)).toBe("Đơn 1.000đ, nhận 500đ, thiếu 500đ")
+        expect(differenceNoteOf(1000, 1000)).toBe("")
+        expect(differenceNoteOf(1000, null)).toBe("")
+    })
+
+    it("keeps no more of the transfer content than a description holds", () => {
+        const long = ledgerLineOf({ ...matched, reference: "x".repeat(900) }, ORDER, null)
+        expect(long.description).toHaveLength(200)
     })
 })

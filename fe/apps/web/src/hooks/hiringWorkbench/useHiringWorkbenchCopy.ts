@@ -152,6 +152,7 @@ const copyGroup3 = (t: ReturnType<typeof useTranslations<"hiring">>) => ({
     qExpectNumber: t("qExpectNumber"),
     qRemove: t("qRemove"),
     qRequired: t("qRequired"),
+    qRequiredHint: t("qRequiredHint"),
     qType: t("qType"),
     setAutoClose: t("setAutoClose"),
     setAutoCloseHint: t("setAutoCloseHint"),

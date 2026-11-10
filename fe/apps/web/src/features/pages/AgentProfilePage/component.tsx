@@ -1,4 +1,3 @@
-import { Grid, Stack } from "@starci/grammar/common"
 import { AgentProfileAssignable } from "@/components/blocks/AgentProfileAssignable"
 import { AgentProfileHead } from "@/components/blocks/AgentProfileHead"
 import { AgentProfileIdentity } from "@/components/blocks/AgentProfileIdentity"
@@ -21,15 +20,11 @@ export const AgentProfilePageBase = (props: AgentProfilePageBaseProps) => {
     return (
         <AgentProfileHead agentId={agentId}>
             <AgentProfileIdentity agentId={agentId} />
-            <Grid kind="cards" columns={2}>
-                <AgentProfileRecent agentId={agentId} />
-                <Stack gap="region">
-                    <AgentProfileOwner agentId={agentId} />
-                    <AgentProfileAssignable agentId={agentId} />
-                    <AgentProfileTags agentId={agentId} />
-                    <AgentProfileRules agentId={agentId} />
-                </Stack>
-            </Grid>
+            <AgentProfileRecent agentId={agentId} />
+            <AgentProfileOwner agentId={agentId} />
+            <AgentProfileAssignable agentId={agentId} />
+            <AgentProfileTags agentId={agentId} />
+            <AgentProfileRules agentId={agentId} />
         </AgentProfileHead>
     )
 }

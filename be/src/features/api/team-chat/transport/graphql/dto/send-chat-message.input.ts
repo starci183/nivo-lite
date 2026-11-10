@@ -50,4 +50,11 @@ export class SendChatMessageInput {
     @IsString()
     @MaxLength(64)
     clientId: string | null = null
+
+    /** The message of the same room this one answers. */
+    @Field(() => ID, { nullable: true })
+    @IsOptional()
+    @IsUUID("all")
+    @MaxLength(36)
+    replyTo: string | null = null
 }

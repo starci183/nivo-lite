@@ -23,6 +23,8 @@ export enum McpGatewayErrorCode {
     CatalogChanged = "MCP_GATEWAY_CATALOG_CHANGED",
     /** A native adapter refused an expected case (`not_connected`, `internal_only`): an answer to the caller, never a failure of the connector. */
     NativeRefused = "MCP_GATEWAY_NATIVE_REFUSED",
+    /** An agent's attachment to a provider, or an ability on it, cannot be changed as asked; `reason` says why. */
+    AttachmentRefused = "MCP_GATEWAY_ATTACHMENT_REFUSED",
 }
 
 /** How each code travels. */
@@ -37,6 +39,7 @@ export const MCP_GATEWAY_ERROR_KINDS: Record<McpGatewayErrorCode, ErrorKind> = {
     [McpGatewayErrorCode.WorkspaceMismatch]: "forbidden",
     [McpGatewayErrorCode.CatalogChanged]: "conflict",
     [McpGatewayErrorCode.NativeRefused]: "forbidden",
+    [McpGatewayErrorCode.AttachmentRefused]: "invalid",
 }
 
 /** The one error class of the gateway. */

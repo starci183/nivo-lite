@@ -7,12 +7,14 @@ describe("settle decision", () => {
     it("pays a confirmed or invoiced order with the exact amount, from a transfer or from an open claim", () => {
         expect(settleDecision(clean, null)).toEqual({
             kind: "pay",
+            facts: { expectedVnd: 5_000_000, receivedVnd: 5_000_000, differenceVnd: 0 },
             transaction: TRANSACTION,
             order: ORDER,
             claim: null,
         })
         expect(settleDecision({ ...clean, claim: CLAIM }, CLAIM.id)).toEqual({
             kind: "pay",
+            facts: { expectedVnd: 5_000_000, receivedVnd: 5_000_000, differenceVnd: 0 },
             transaction: TRANSACTION,
             order: ORDER,
             claim: CLAIM,
@@ -35,35 +37,55 @@ describe("settle decision", () => {
         expect(settleDecision({ ...clean, transaction: null }, null)).toEqual({
             kind: "refuse",
             reason: "transaction_missing",
+            facts: {},
         })
-        expect(settleDecision({ ...clean, order: null }, null)).toEqual({ kind: "refuse", reason: "order_missing" })
-        expect(settleDecision(clean, CLAIM.id)).toEqual({ kind: "refuse", reason: "claim_missing" })
+        expect(settleDecision({ ...clean, order: null }, null)).toEqual({
+            kind: "refuse",
+            reason: "order_missing",
+            facts: {},
+        })
+        expect(settleDecision(clean, CLAIM.id)).toEqual({ kind: "refuse", reason: "claim_missing", facts: {} })
     })
 
-    it("refuses money out, a transaction that paid another order and an order that no longer waits", () => {
+    it("refuses money out, a transaction that paid another order and an order that no longer waits, with the true values", () => {
+        const amounts = { receivedVnd: 5_000_000, orderAmountVnd: 5_000_000 }
         expect(settleDecision({ ...clean, transaction: transactionOf({ direction: "debit" }) }, null)).toEqual({
             kind: "refuse",
             reason: "transaction_not_credit",
+            facts: amounts,
         })
         expect(settleDecision({ ...clean, transaction: transactionOf({ orderId: "other" }) }, null)).toEqual({
             kind: "refuse",
             reason: "transaction_used",
+            facts: { ...amounts, paidOrderId: "other" },
         })
         expect(settleDecision({ ...clean, order: orderOf({ status: "paid" }) }, null)).toEqual({
             kind: "refuse",
             reason: "order_not_open",
+            facts: { ...amounts, status: "paid" },
         })
     })
 
-    it("refuses another amount, an unpriced order and a claim closed another way", () => {
-        expect(settleDecision({ ...clean, order: orderOf({ amountVnd: 4_000_000 }) }, null)).toEqual({
-            kind: "refuse",
-            reason: "amount_differs",
+    it("never refuses the amount: a short or an over credit pays the order, with the two amounts and the gap", () => {
+        expect(settleDecision({ ...clean, order: orderOf({ amountVnd: 4_000_000 }) }, null)).toMatchObject({
+            kind: "pay",
+            facts: { expectedVnd: 4_000_000, receivedVnd: 5_000_000, differenceVnd: 1_000_000 },
         })
-        expect(settleDecision({ ...clean, order: orderOf({ amountVnd: null }) }, null).kind).toBe("refuse")
+        expect(settleDecision({ ...clean, order: orderOf({ amountVnd: 5_000_001 }) }, null)).toMatchObject({
+            kind: "pay",
+            facts: { expectedVnd: 5_000_001, receivedVnd: 5_000_000, differenceVnd: -1 },
+        })
+        expect(settleDecision({ ...clean, order: orderOf({ amountVnd: null }) }, null)).toEqual({
+            kind: "refuse",
+            reason: "order_unpriced",
+            facts: { receivedVnd: 5_000_000 },
+        })
+    })
+
+    it("refuses a claim closed another way", () => {
         for (const status of ["settled", "withdrawn"] as const) {
             const closed = claimOf({ status, settledTransactionId: "other" })
-            expect(settleDecision({ ...clean, claim: closed }, CLAIM.id)).toEqual({
+            expect(settleDecision({ ...clean, claim: closed }, CLAIM.id)).toMatchObject({
                 kind: "refuse",
                 reason: "claim_closed",
             })

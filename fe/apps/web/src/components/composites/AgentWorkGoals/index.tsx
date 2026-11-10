@@ -1,5 +1,4 @@
 import type { ReactNode } from "react"
-import { Badge, Button } from "@starci/grammar/common"
 import { AgentWorkRows } from "@/components/branches/AgentWorkRows"
 import type { AgentWorkGoalView } from "@/modules/types"
 
@@ -12,8 +11,10 @@ interface AgentWorkGoalsProps {
     readonly canEdit: boolean
     readonly isSaving: boolean
     readonly isLoading: boolean
-    /** The command at the end of the heading. */
-    readonly action?: ReactNode
+    /** The command in the foot of the card. */
+    readonly add?: { readonly label: string; readonly onPress: () => void }
+    /** What stands under the rows in the card. */
+    readonly footer?: ReactNode
     readonly onDone: (goal: AgentWorkGoalView) => void
 }
 
@@ -21,22 +22,20 @@ interface AgentWorkGoalsProps {
 export const AgentWorkGoals = (props: AgentWorkGoalsProps) => (
     <AgentWorkRows
         words={{ label: props.label, emptyMessage: props.emptyMessage }}
-        {...(props.action === undefined ? {} : { action: props.action })}
+        emptyIcon="goal"
+        {...(props.footer === undefined ? {} : { footer: props.footer })}
+        {...(props.add === undefined ? {} : { add: props.add })}
         isLoading={props.isLoading}
         rows={props.goals.map((goal) => ({
             id: goal.id,
             title: goal.title,
             facts: [goal.detail, goal.dueLabel],
-            badges:
-                goal.statusLabel === "" ? undefined : (
-                    <Badge tone={goal.isOpen ? "accent" : "neutral"}>{goal.statusLabel}</Badge>
-                ),
-            actions:
-                props.canEdit && goal.isOpen ? (
-                    <Button intent="neutral" size="sm" isDisabled={props.isSaving} onPress={() => props.onDone(goal)}>
-                        {props.doneLabel}
-                    </Button>
-                ) : undefined,
+            ...(goal.statusLabel === ""
+                ? {}
+                : { badges: [{ label: goal.statusLabel, tone: goal.isOpen ? ("accent" as const) : ("neutral" as const) }] as const }),
+            ...(props.canEdit && goal.isOpen
+                ? { action: { label: props.doneLabel, isDisabled: props.isSaving, press: () => props.onDone(goal) } }
+                : {}),
         }))}
     />
 )

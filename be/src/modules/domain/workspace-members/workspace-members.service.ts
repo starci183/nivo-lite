@@ -9,12 +9,14 @@ import { storedAvatarAddress } from "@modules/integrations/object-storage"
 import { WorkspaceMembersError, WorkspaceMembersErrorCode } from "./errors/workspace-members.error"
 import { WorkspaceMemberEntity } from "./persistence/entities"
 import { admitMember, isManagerRole, judgeSeatChange, presentedRole } from "./role.policy"
+import { seatStatusWrite } from "./seat-status.policy"
 import type { PresentedRole } from "./role.policy"
 import type {
     AccountDirectory,
     JoinEntry,
     MemberListing,
     MemberStatus,
+    SeatNote,
     SeatPair,
     SeatRule,
     StaffOption,
@@ -178,11 +180,21 @@ export class WorkspaceMembersService {
         })
     }
 
-    /** Disables (cannot sign in to the workspace) or enables a member; never one's own account. */
-    async setStatus(actorId: string, workspaceId: string, targetId: string, status: MemberStatus): Promise<void> {
+    /** Disables (cannot sign in to the workspace, with who, when and an optional note) or enables a member; never one's own account. */
+    async setStatus(
+        actorId: string,
+        workspaceId: string,
+        targetId: string,
+        status: MemberStatus,
+        note: SeatNote = null,
+    ): Promise<void> {
         const { actor, target } = await this.seats(actorId, workspaceId, targetId, { forbidSelf: true })
         await this.apply(() =>
-            this.entityManager.update(WorkspaceMemberEntity, { workspaceId, userId: targetId }, { status }),
+            this.entityManager.update(
+                WorkspaceMemberEntity,
+                { workspaceId, userId: targetId },
+                seatStatusWrite(status, actorId, note),
+            ),
         )
         await this.events.record({
             workspaceId,

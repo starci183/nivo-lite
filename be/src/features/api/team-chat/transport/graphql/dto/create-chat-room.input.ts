@@ -1,6 +1,7 @@
 import { Field, InputType } from "@nestjs/graphql"
 import { Type } from "class-transformer"
 import { ArrayMaxSize, IsArray, IsIn, IsOptional, IsString, MaxLength, ValidateNested } from "class-validator"
+import { ChatGroupPurpose } from "./chat-group-purpose.type"
 import { ChatMemberRefInput } from "./chat-member-ref.input"
 import { ChatRoomKind } from "./chat-room-kind.type"
 
@@ -27,4 +28,17 @@ export class CreateChatRoomInput {
     @ValidateNested({ each: true })
     @Type(() => ChatMemberRefInput)
     members!: Array<ChatMemberRefInput>
+
+    /** What a group is for; a plain group when omitted. A direct room takes none. */
+    @Field(() => ChatGroupPurpose, { nullable: true })
+    @IsOptional()
+    @IsIn(["group", "common", "module"])
+    purpose: string | null = null
+
+    /** The module whose team room it is, for the purpose module. */
+    @Field(() => String, { nullable: true })
+    @IsOptional()
+    @IsString()
+    @MaxLength(200)
+    purposeModule: string | null = null
 }

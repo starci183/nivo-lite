@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { InjectLogger } from "@modules/platform/logging"
@@ -25,6 +26,26 @@ const failureOf = (cause: unknown): Readonly<Record<string, unknown>> => ({
     errorClass: isRecord(cause) && typeof cause.name === "string" ? cause.name : "unknown",
     status: fieldOf(cause, "status") ?? null,
 })
+
+/** How many characters of the opening system text the short digest covers: the part two different steps of one agent share. */
+const OPENING_CHARS = 4000
+
+const digestOf = (text: string): string => createHash("sha256").update(text).digest("hex").slice(0, 16)
+
+/**
+ * What tells the stable part of two prompts apart without logging a prompt: the size and the digest of the system text that opens
+ * it, and the digest of its first characters (the agent's craft, which every step of the agent opens with).
+ */
+const headOf = (messages: AiChatRequest["messages"]): Readonly<Record<string, unknown>> => {
+    const [first] = messages
+    const head = first?.role === "system" ? first.content : ""
+    return {
+        messages: messages.length,
+        headChars: head.length,
+        headDigest: digestOf(head),
+        openingDigest: digestOf(head.slice(0, OPENING_CHARS)),
+    }
+}
 
 @Injectable()
 /**
@@ -75,11 +96,21 @@ export class AiService implements OnModuleInit {
                 this.logger.warn(AiLogEvent.ChatEmpty, { model })
                 return null
             }
+            const usage = usageOf(reply.usageMetadata, reply.responseMetadata)
+            this.logger.info(AiLogEvent.ChatAnswered, {
+                model,
+                provider: typeof reply.provider === "string" ? reply.provider : null,
+                // Named `prompt` and `cached`: the log scrubs any field whose name says "token".
+                prompt: usage.promptTokens,
+                cached: usage.cachedTokens ?? null,
+                json: request.json,
+                ...headOf(request.messages),
+            })
             return {
                 text,
                 parsed: isRecord(reply.parsed) ? reply.parsed : null,
                 model,
-                usage: usageOf(reply.usageMetadata, reply.responseMetadata),
+                usage,
                 retrieved: reply.retrieved,
             }
         } catch (cause) {

@@ -47,4 +47,12 @@ export class WorkspaceInviteEntity extends UuidAbstractEntity {
     /** Set once revoked. */
     @Column({ name: "revoked_at", type: "timestamptz", nullable: true })
     revokedAt!: Date | null
+
+    /** Set once the invited person declined. */
+    @Column({ name: "declined_at", type: "timestamptz", nullable: true })
+    declinedAt!: Date | null
+
+    /** The Auth user who declined. */
+    @Column({ name: "declined_by", type: "uuid", nullable: true })
+    declinedBy!: string | null
 }

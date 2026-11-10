@@ -1,3 +1,4 @@
+import { GuideTarget } from "@/components/leaves/GuideTarget"
 import { AlertDialog, Button, EmptyNotice, Page, Pane, PaneGrid, PaneSection } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PaneBlank } from "@/components/composites/PaneBlank"
@@ -6,8 +7,8 @@ import { TeamDetail } from "@/components/frames/TeamDetail"
 import { TeamInviteDrawer } from "@/components/composites/TeamInviteDrawer"
 import { TeamPeopleList } from "@/components/frames/TeamPeopleList"
 import { PaneBody } from "@/components/frames/PaneBody"
-import { Icon } from "@/components/leaves/Icon"
 import type { TeamPanesBaseProps } from "@/modules/types"
+import { Icon, nivoIconSource } from "@/components/leaves/Icon"
 
 /** Derived from the panes contract. */
 type TeamPanesData = Extract<TeamPanesBaseProps["props"]["slot"], { readonly items: unknown }>["items"]
@@ -79,16 +80,19 @@ const MainPane = (props: Props) => {
         return (
             <PaneSection align="center" grow>
                 <EmptyNotice
+                    frame="frameless"
                     message={copy.forbiddenTitle}
+                    iconSource={nivoIconSource("profile", "leading")}
                     description={copy.forbiddenBody}
                     actionLabel={copy.forbiddenAction}
+                    actionEndArrow
                     onAction={props.on.goHome}
                 />
             </PaneSection>
         )
     }
     if (props.props.selectedId === null) {
-        return <PaneBlank message={copy.pickTitle} description={copy.pickBody} />
+        return <PaneBlank message={copy.pickTitle} description={copy.pickBody} frame="frameless" />
     }
     return (
         <PaneBody>
@@ -157,18 +161,22 @@ const Confirmation = (props: Props) => {
 /** The page header: the team's title and line, the Members / Permissions tabs and the one command that invites. */
 const headerOf = (props: Props) => {
     const { copy } = props.props
-    if (props.props.access !== "manager") return { title: copy.title, description: copy.description }
+    if (props.props.access !== "manager")
+        return { breadcrumbs: copy.breadcrumbs, title: copy.title, description: copy.description }
     return {
+        breadcrumbs: copy.breadcrumbs,
         title: copy.title,
         description: copy.description,
         actions: (
-            <Button
-                intent="commit"
-                startContent={<Icon props={{ name: "add", usage: "leading" }} />}
-                onPress={props.on.openInvite}
-            >
-                {copy.inviteAction}
-            </Button>
+            <GuideTarget id="team.invite">
+                <Button
+                    intent="commit"
+                    startContent={<Icon props={{ name: "add", usage: "leading" }} />}
+                    onPress={props.on.openInvite}
+                >
+                    {copy.inviteAction}
+                </Button>
+            </GuideTarget>
         ),
         tabs: {
             label: copy.tabsLabel,
@@ -216,7 +224,7 @@ export const TeamPanesBase = (props: TeamPanesBaseProps) => {
                         }}
                     />
                 </Pane>
-                <Pane area="main" scroll label={copy.detailLabel}>
+                <Pane area="main" scroll content="cards" label={copy.detailLabel}>
                     <MainPane {...props} />
                 </Pane>
             </PaneGrid>

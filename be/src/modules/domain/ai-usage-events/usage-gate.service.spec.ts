@@ -69,7 +69,7 @@ describe("UsageGateService", () => {
                 workspaceId: "ws-1",
                 kind: "relay",
                 module: "office",
-                usage: { prompt_tokens: 10, completion_tokens: 5, cached_tokens: 0, cost: 0.1, model: "m" },
+                usage: { prompt_tokens: 10, completion_tokens: 5, cached_tokens: 4, cost: 0.1, model: "m" },
                 completionChars: 42,
             })
 
@@ -80,7 +80,7 @@ describe("UsageGateService", () => {
                         kind: "relay",
                         module: "office",
                         model: "m",
-                        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, cost: 0.1 },
+                        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15, cost: 0.1, cached_tokens: 4 },
                         promptChars: 0,
                         completionChars: 42,
                     },
@@ -126,5 +126,22 @@ describe("UsageGateService, a run that reported nothing", () => {
 
             expect(usage.record.mock.calls[0]?.[0]).toMatchObject({ promptChars: 900, completionChars: 0, usage: null })
         })
+    })
+})
+
+describe("UsageGateService > a generation made for a run", () => {
+    it("books the call to the run it was made for", async () => {
+        const { gate, usage } = await build()
+
+        await gate.record({
+            workspaceId: "ws-1",
+            kind: "agent_work",
+            module: "sales",
+            usage: null,
+            completionChars: 3,
+            runId: "run-3",
+        })
+
+        expect(usage.record.mock.calls[0]?.[0]).toMatchObject({ runId: "run-3" })
     })
 })

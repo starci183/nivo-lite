@@ -16,6 +16,10 @@
       "types": "./dist/rules/chatbot/index.d.ts",
       "default": "./dist/rules/chatbot/index.js"
     },
+    "./graph": {
+      "types": "./dist/graph-cards.d.ts",
+      "default": "./dist/graph-cards.js"
+    },
     "./modules": {
       "types": "./dist/modules/index.d.ts",
       "default": "./dist/modules/index.js"
@@ -48,9 +52,10 @@
     "typecheck": "tsc --noEmit --pretty false"
   },
   "peerDependencies": {
+    "@heroicons/react": "2.2.0",
     "@heroui/react": "3.2.6",
     "@nivo-lite/agent-sdk": "*",
-    "@starci/grammar": "0.25.0",
+    "@starci/grammar": "0.37.15",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "4.6.7"

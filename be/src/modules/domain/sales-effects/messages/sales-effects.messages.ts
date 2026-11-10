@@ -8,6 +8,7 @@ export const SALES_EFFECTS_MESSAGES: MessageBundle = {
         "errors.SALES_EFFECTS_LEAD_NOT_FOUND": "Không tìm thấy khách hàng của đơn.",
         "errors.SALES_EFFECTS_ORDER_NOT_FOUND": "Không tìm thấy đơn hàng.",
         "errors.SALES_EFFECTS_WRITE_REFUSED": "Không ghi được: bản ghi vừa đổi hoặc vi phạm một quy tắc.",
+        "errors.SALES_EFFECTS_REPORT_NOT_POSTED": "Không gửi được báo cáo cuối ngày vào chat của đội.",
     },
     en: {
         "errors.SALES_EFFECTS_INVALID_PAYLOAD": "The data of this step is not in the expected shape.",
@@ -15,5 +16,6 @@ export const SALES_EFFECTS_MESSAGES: MessageBundle = {
         "errors.SALES_EFFECTS_LEAD_NOT_FOUND": "The customer of the order was not found.",
         "errors.SALES_EFFECTS_ORDER_NOT_FOUND": "The order was not found.",
         "errors.SALES_EFFECTS_WRITE_REFUSED": "The write was refused: the record just changed or broke a rule.",
+        "errors.SALES_EFFECTS_REPORT_NOT_POSTED": "The evening report could not be posted to the team chat.",
     },
 }

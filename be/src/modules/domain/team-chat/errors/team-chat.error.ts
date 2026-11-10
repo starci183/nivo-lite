@@ -35,6 +35,20 @@ export enum TeamChatErrorCode {
     FileTypeNotAllowed = "TEAM_CHAT_FILE_TYPE_NOT_ALLOWED",
     /** The file store could not be reached or is not part of this app. */
     StorageUnavailable = "TEAM_CHAT_STORAGE_UNAVAILABLE",
+    /** The message an agent graph asked to post is not of the shape the effect declares. */
+    InvalidAgentMessage = "TEAM_CHAT_INVALID_AGENT_MESSAGE",
+    /** The agent or the owner it should speak to is not of the workspace, so the message went nowhere. */
+    AgentMessageNotPosted = "TEAM_CHAT_AGENT_MESSAGE_NOT_POSTED",
+    /** A room purpose names no module, a module of more than 64 characters, or is given to a direct room. */
+    PurposeInvalid = "TEAM_CHAT_PURPOSE_INVALID",
+    /** Another room of the workspace already is the common room, or the room of that module. */
+    PurposeTaken = "TEAM_CHAT_PURPOSE_TAKEN",
+    /** The right to post is held on an agent's seat, so the agent must sit in the room first. */
+    PostRightNeedsSeat = "TEAM_CHAT_POST_RIGHT_NEEDS_SEAT",
+    /** The emoji is not one of the six the chat reacts with. */
+    ReactionInvalid = "TEAM_CHAT_REACTION_INVALID",
+    /** The reactions came too fast, or the member already tapped this emoji as often as the chat counts. */
+    ReactionRateLimited = "TEAM_CHAT_REACTION_RATE_LIMITED",
 }
 
 /** How the refusals travel over the API when a transport turns one into an error. */
@@ -55,6 +69,13 @@ export const TEAM_CHAT_ERROR_KINDS: Record<TeamChatErrorCode, ErrorKind> = {
     [TeamChatErrorCode.FileTooLarge]: "invalid",
     [TeamChatErrorCode.FileTypeNotAllowed]: "invalid",
     [TeamChatErrorCode.StorageUnavailable]: "unavailable",
+    [TeamChatErrorCode.InvalidAgentMessage]: "invalid",
+    [TeamChatErrorCode.AgentMessageNotPosted]: "not-found",
+    [TeamChatErrorCode.PurposeInvalid]: "invalid",
+    [TeamChatErrorCode.PurposeTaken]: "conflict",
+    [TeamChatErrorCode.PostRightNeedsSeat]: "conflict",
+    [TeamChatErrorCode.ReactionInvalid]: "invalid",
+    [TeamChatErrorCode.ReactionRateLimited]: "rate-limited",
 }
 
 /** The typed error of the team chat capability. */

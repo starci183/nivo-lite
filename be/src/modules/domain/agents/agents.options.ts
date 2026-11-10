@@ -2,6 +2,7 @@ import type { Type } from "@nestjs/common"
 import type {
     AgentConnectionsDirectory,
     AgentRooms,
+    ConversationChannelOwners,
     InstallationDirectory,
     KnowledgeLens,
     ModuleProfiles,
@@ -26,6 +27,8 @@ export interface AgentsPorts extends AgentsSetupPorts {
     readonly knowledge: Type<KnowledgeLens>
     /** Implements the dashboard work lists port; an existing provider of the app. */
     readonly work: Type<WorkDashboardDirectory>
+    /** Implements the conversation channel owners port (which agent of a role answers a channel); an existing provider of the app. */
+    readonly channelOwners: Type<ConversationChannelOwners>
 }
 
 /** The options of the full agents capability (the api): every port, the dashboard and the engine status. */

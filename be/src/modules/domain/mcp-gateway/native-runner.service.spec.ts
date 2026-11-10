@@ -42,6 +42,14 @@ describe("NativeRunnerService.run", () => {
         expect(cancel).toHaveBeenCalledTimes(1)
     })
 
+    it("tells the adapter when the call is a workflow step", async () => {
+        const { runner, adapter } = await build()
+
+        await runner.run(adapter, { ...CALLER, graphStep: true }, "transactions.list", 4000, {})
+
+        expect(adapter.invoke.mock.calls[0]?.[3]).toEqual({ agentId: "sales", conversationId: "conv-1", graphStep: true })
+    })
+
     it("answers an expected refusal of the adapter as a tool error with its reason", async () => {
         const { runner, cancel, adapter } = await build()
         adapter.invoke.mockRejectedValueOnce(refused({ reason: "not_connected" }))

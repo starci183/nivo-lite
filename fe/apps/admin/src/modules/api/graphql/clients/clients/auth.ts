@@ -1,0 +1,59 @@
+import { ApolloClient, ApolloLink, InMemoryCache } from "@apollo/client"
+import type { GraphQLHeaders } from "../../types"
+import {
+    createAttachAccessTokenLink,
+    createAttachLocaleLink,
+    createErrorLink,
+    createHttpLink,
+    createRefreshOnUnauthenticatedLink,
+    createRetryLink,
+    createTimeoutLink,
+    defaultOptions,
+} from "../links"
+
+/**
+ * Authenticated Apollo client for GraphQL operations.
+ *
+ * Link order (`ApolloLink.from`: first = outermost, `HttpLink` is terminal):
+ *
+ * ```text
+ *   1. RetryLink               retries transient network failures (backoff + jitter)
+ *   2. ErrorLink               on a dead session sends the person to the console sign-in
+ *   3. TimeoutLink             fails an operation that does not answer within the window
+ *   4. RefreshOnUnauth.Link    on an `unauthenticated` answer: POST /auth/refresh, then retry once
+ *   5. AttachAccessTokenLink   Authorization: Bearer <in-memory access token>
+ *   6. AttachLocaleLink        Accept-Language (locale cookie)
+ *   7. HttpLink                POST to the back end /graphql
+ * ```
+ */
+export interface CreateAuthApolloClientOptions {
+    /** `false` keeps the Apollo defaults instead of {@link defaultOptions}. */
+    cache?: boolean
+    /** Additional static headers for the HttpLink. */
+    headers?: GraphQLHeaders | undefined
+    /** Optional abort signal for every operation on this client. */
+    signal?: AbortSignal | undefined
+    /** The URI of the GraphQL endpoint; defaults to the back end api. */
+    uri?: string
+}
+
+/** Builds the authenticated Apollo client (bearer token, refresh and locale header). */
+export const createAuthApolloClient = ({
+    cache = true,
+    headers = {},
+    signal,
+    uri,
+}: CreateAuthApolloClientOptions = {}): ApolloClient =>
+    new ApolloClient({
+        link: ApolloLink.from([
+            createRetryLink(),
+            createErrorLink(),
+            createTimeoutLink(),
+            createRefreshOnUnauthenticatedLink(),
+            createAttachAccessTokenLink(),
+            createAttachLocaleLink(),
+            createHttpLink({ uri, headers, signal }),
+        ]),
+        cache: new InMemoryCache(),
+        ...(cache ? { defaultOptions } : {}),
+    })

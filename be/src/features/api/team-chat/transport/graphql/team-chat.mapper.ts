@@ -5,6 +5,7 @@ export {
     messagePageWireOf,
     messagePayloadOf,
     messagesRequestOf,
+    purposeOf,
     readPayloadOf,
     roomMemberRequestOf,
     roomOrNullWireOf,

@@ -11,7 +11,7 @@ export interface AgentRef {
 /**
  * The pictures of the installed agents of the active workspace, from the installations the app already holds. Screens that name an
  * agent without carrying its picture (owners, thread authors, approvals, the profile lists) draw it through this lookup, so a new
- * picture shows everywhere once the installations are read again. Answers null (the NIVO unicorn mascot) for an unknown agent.
+ * picture shows everywhere once the installations are read again. Answers null (the NIVO AI mark) for an unknown agent.
  */
 export const useAgentPictures = (): ((agent: AgentRef) => string | null) => {
     const { installations } = useInstallations()

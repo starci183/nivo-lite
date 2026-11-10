@@ -82,6 +82,17 @@ export interface AgentGraphCardData {
     /** The word of the rule behind it: Brain, Template, Chat, Learned, Self-corrected. */
     readonly count: string
     readonly isPlaceholder: boolean
+    /** The sub-flow the node belongs to ("consult", "care"), or empty for a node on its own. */
+    readonly group: string
+    /** What the node waits for and how long; null for a node that does not wait. */
+    readonly wait: AgentGraphWaitData | null
+}
+
+/** What a waiting node waits for: the customer's reply, a payment or something else, with the timeout and reminder as durations ("2h"). */
+export interface AgentGraphWaitData {
+    readonly kind: "reply" | "payment" | "other"
+    readonly timeout: string
+    readonly reminder: string
 }
 
 /** One node with its seven answers, none of them blank: "None" is an answer. */

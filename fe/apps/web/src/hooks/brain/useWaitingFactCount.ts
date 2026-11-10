@@ -1,7 +1,7 @@
 "use client"
 
 import { mapSlot } from "@/hooks/slot"
-import { reviewBoardOf } from "@/modules/brain"
+import { factKeysOf } from "@/modules/brain"
 import { useBrain } from "./useBrain"
 import type { DataSlot } from "@/modules/types"
 
@@ -11,8 +11,17 @@ export interface WaitingFactCountView {
     reload: () => undefined
 }
 
-/** The review-card count keeps the Brain read's own status and retry: the view tells loading from none. */
+/**
+ * How many subjects and attributes wait for the owner, counted as the inbox and the rail count them. The count keeps the Brain read's
+ * own status and retry: the view tells loading from none.
+ */
 export const useWaitingFactCount = (): WaitingFactCountView => {
     const { slot, reload } = useBrain()
-    return { slot: mapSlot(slot, (brain) => reviewBoardOf(brain.facts).cards), reload }
+    return {
+        slot: mapSlot(
+            slot,
+            (brain) => factKeysOf(brain.facts).filter((one) => one.kind === "fresh" || one.kind === "conflict").length,
+        ),
+        reload,
+    }
 }

@@ -7,8 +7,8 @@ import { AgentsCatalogPageBase } from "./component"
 
 /** The document title of the catalogue page. */
 export const agentsCatalogMetadata = async (): Promise<Metadata> => {
-    const t = await getTranslations("modulesCore")
-    return { title: t("catalogTitle") }
+    const t = await getTranslations("agentCatalog")
+    return { title: t("title") }
 }
 
 /** What the route hands the page: the workspace it is opened in. */
@@ -19,7 +19,7 @@ interface AgentsCatalogPageProps {
 /** The agents page: the trail and heading; the catalogue block under them reads the installed agents in the browser. */
 export const AgentsCatalogPage = async (props: AgentsCatalogPageProps): Promise<ReactElement> => {
     const [t, ts, tt, tm] = await Promise.all([
-        getTranslations("modulesCore"),
+        getTranslations("agentCatalog"),
         getTranslations("shell"),
         getTranslations("agentTemplates"),
         getTranslations("agentMarketplace"),
@@ -34,10 +34,10 @@ export const AgentsCatalogPage = async (props: AgentsCatalogPageProps): Promise<
                         label: ts("crumbHome"),
                         href: workspaceHref(props.workspaceId, APP_ROUTES.workspaceHome),
                     },
-                    { id: "modules", label: t("catalogTitle") },
+                    { id: "modules", label: t("title") },
                 ],
-                title: t("catalogTitle"),
-                description: t("catalogDescription"),
+                title: t("title"),
+                description: t("description"),
                 tabs: agentPageTabsOf({
                     workspaceId: props.workspaceId,
                     label: tt("tabsLabel"),

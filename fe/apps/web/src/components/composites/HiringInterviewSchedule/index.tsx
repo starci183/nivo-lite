@@ -8,14 +8,14 @@ import {
     Alert,
     Badge,
     Button,
+    Cluster,
     EmptyNotice,
     Grid,
     Section,
+    Stack,
     SurfaceCard,
     Text,
     type ListRowData,
-    Cluster,
-    Stack,
 } from "@starci/grammar/common"
 
 /** What the commands of an interview need to know. */
@@ -89,10 +89,10 @@ export const HiringInterviewSchedule = (props: HiringInterviewScheduleProps) => 
                         />
                     ))}
                 </Grid>
-                <SurfaceCard
+                <Section
                     isLoading={props.isLoading}
                     kind="list"
-                    label={copy.ivWaitingTitle}
+                    title={copy.ivWaitingTitle}
                     fact={invitationsFact}
                     items={invitations.map((row) => invitationItem(props, row))}
                     empty={<EmptyNotice message={copy.ivWaitingEmpty} description={copy.ivWaitingEmptyBody} />}
@@ -138,7 +138,7 @@ const InterviewActions = (props: InterviewActionsProps) => {
     const { on, row } = props
     return (
         <Cluster gap="inline">
-            <Button isLoading={props.isLoading} intent="dismiss" size="sm" onPress={() => on.open(row.candidateId)}>
+            <Button endArrow isLoading={props.isLoading} intent="dismiss" size="sm" onPress={() => on.open(row.candidateId)}>
                 {copy.pipeOpen}
             </Button>
             {row.isConfirmed ? (

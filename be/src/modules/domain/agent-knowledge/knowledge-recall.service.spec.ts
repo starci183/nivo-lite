@@ -290,3 +290,42 @@ describe("KnowledgeRecallService", () => {
         )
     })
 })
+
+describe("KnowledgeRecallService > waitingInView", () => {
+    it("counts the review cards of the proposals inside the view (one per key), never the ones another scope or the team keeps", async () => {
+        const { recall, facts } = await build()
+        const proposal = (id: string, overrides: Partial<FactRecord>): FactRecord => ({
+            ...fact,
+            id,
+            status: "proposed",
+            ...overrides,
+        })
+        facts.list.mockResolvedValue([
+            proposal("p1", {}),
+            proposal("p2", { scope: "internal" }),
+            proposal("p3", { installationId: "other-installation" }),
+            proposal("p4", { value: "60k" }),
+        ])
+
+        await expect(recall.waitingInView(view)).resolves.toBe(1)
+        expect(facts.list).toHaveBeenCalledWith(view.workspaceId, { statuses: ["proposed"], limit: 500 })
+    })
+})
+
+describe("KnowledgeRecallService factsToOverview", () => {
+    it("keeps the facts in force now and the waiting proposals the team view of the module could read", async () => {
+        const { recall, facts } = await build()
+        const waiting = { ...fact, id: "waiting", status: "proposed" as const }
+        const hidden = { ...waiting, id: "hidden", scope: "restricted" as const, modules: ["sales"] }
+        const own = { ...waiting, id: "own", scope: "restricted" as const, modules: ["accounting"] }
+        facts.forView.mockResolvedValue([fact])
+        facts.list.mockResolvedValue([waiting, hidden, own])
+        const team: KnowledgeView = { ...view, module: "accounting", audience: "internal" }
+
+        const found = await recall.factsToOverview(team)
+
+        expect(facts.forView).toHaveBeenCalledWith(view.workspaceId, "internal", "accounting", null, 500)
+        expect(facts.list).toHaveBeenCalledWith(view.workspaceId, { statuses: ["proposed"], limit: 500 })
+        expect(found.map((one) => one.id)).toEqual(["fact-1", "waiting", "own"])
+    })
+})

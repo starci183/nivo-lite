@@ -61,7 +61,7 @@ export const BookingDetailDialog = (props: BookingDetailDialogProps) => (
         footer={
             <>
                 {props.customerHref === undefined ? null : (
-                    <Button size="sm" intent="neutral" href={props.customerHref}>
+                    <Button endArrow size="sm" intent="neutral" href={props.customerHref}>
                         {props.customerLabel}
                     </Button>
                 )}

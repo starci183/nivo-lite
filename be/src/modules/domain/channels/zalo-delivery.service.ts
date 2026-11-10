@@ -12,9 +12,10 @@ import type { DeliveryRequest, DeliveryResult, OptionalZnsRenewal } from "./chan
 import { deliveryFailureFieldsOf } from "./delivery-failure-fields.policy"
 import { ChannelsLogEvent } from "./channels.log-events"
 import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
-import { sepayQrUrlOf } from "./qr-image.policy"
+import { picturesAfterQr, sepayQrUrlOf } from "./qr-image.policy"
 import { normaliseVnPhone } from "./vn-phone.policy"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
+import { ZaloPicturesService } from "./zalo-pictures.service"
 import { renewalTemplateData, znsRenewalOf } from "./zns-renewal.policy"
 
 /** Consultation messages are free for 48 hours after the customer's last interaction; later ones are paid or refused by Zalo. */
@@ -37,6 +38,7 @@ export class ZaloDeliveryService {
         private readonly messages: ChatMessagesService,
         private readonly credentials: ZaloCredentialsService,
         private readonly connections: ConnectionsService,
+        private readonly pictures: ZaloPicturesService,
     ) {}
 
     /**
@@ -55,7 +57,17 @@ export class ZaloDeliveryService {
             return this.outsideWindow(target, connectionId, request, "zalo_window_expired")
         const { text } = request
         return this.withToken(connectionId, (token) => this.zalo.sendCsText(token, userId, text)).then(
-            () => this.followWithQr(target, connectionId, userId, text),
+            () =>
+                this.followWithQr(target, connectionId, userId, text).then(async (sent) => {
+                    await this.pictures.send(
+                        target,
+                        sent.note === "qr_image_failed"
+                            ? (request.images ?? [])
+                            : picturesAfterQr(text, request.images ?? []),
+                        (url) => this.withToken(connectionId, (token) => this.zalo.sendCsImage(token, userId, url)),
+                    )
+                    return sent
+                }),
             (cause: unknown) => {
                 const failure = this.failed(target, cause)
                 return failure === "zalo_window_expired"

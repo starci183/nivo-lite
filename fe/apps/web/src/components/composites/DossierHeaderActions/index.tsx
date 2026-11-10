@@ -1,4 +1,4 @@
-import { Button, DropdownMenu, Icon, IconButton } from "@starci/grammar/common"
+import { Button, DropdownMenu, IconButton } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
 import type { BrainPageHeaderView } from "@/modules/types"
 
@@ -27,7 +27,6 @@ export const DossierHeaderActions = (props: DossierHeaderActionsProps) => (
             <Button
                 intent="alternative"
                 size="sm"
-                startContent={<Icon source={nivoIconSource("upload", "leading")} usage="leading" />}
                 onPress={props.importEntry.onPress}
             >
                 {props.importEntry.label}

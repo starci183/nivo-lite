@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NIVO workspace chat seed",
+  "type": "object",
+  "required": ["schema", "rooms"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "nivo/chat-seed@1" },
+    "rooms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "members", "messages"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "purpose": { "enum": ["group", "common", "module"] },
+          "module": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,39}$" },
+          "members": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/who" } },
+          "messages": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["key", "from", "day", "time", "body"],
+              "additionalProperties": false,
+              "properties": {
+                "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,39}$" },
+                "from": { "$ref": "#/$defs/who" },
+                "day": { "enum": ["today", "yesterday"] },
+                "time": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
+                "body": { "type": "string", "minLength": 1, "maxLength": 2000 },
+                "agentMessage": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "who": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["role"],
+          "additionalProperties": false,
+          "properties": { "role": { "enum": ["owner", "staff"] } }
+        },
+        {
+          "type": "object",
+          "required": ["agent"],
+          "additionalProperties": false,
+          "properties": {
+            "agent": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,39}$" },
+            "mayPost": { "type": "boolean" }
+          }
+        }
+      ]
+    }
+  }
+}

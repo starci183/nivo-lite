@@ -356,7 +356,14 @@ jobs:
           NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"
           NEXT_PUBLIC_DEVELOPER_API_URL: "https://api.nivo.vn"
           NEXT_PUBLIC_LANDING_URL: "https://nivo.vn"
+          NEXT_PUBLIC_ADMIN_URL: "https://admin.nivo.vn"
           NEXT_PUBLIC_SITE_URL: "https://app.nivo.vn"
+      - name: build fe admin
+        run: npm run build:modules --silent && npm run codegen --silent && npx --no-install turbo run build --filter=./fe/apps/admin
+        env:
+          NEXT_PUBLIC_API_URL: "https://api.nivo.vn"
+          NEXT_PUBLIC_APP_URL: "https://app.nivo.vn"
+          NEXT_PUBLIC_SITE_URL: "https://admin.nivo.vn"
       - name: build fe landing
         run: npm run build:modules --silent && npm run codegen --silent && npx --no-install turbo run build --filter=./fe/apps/landing
         env:

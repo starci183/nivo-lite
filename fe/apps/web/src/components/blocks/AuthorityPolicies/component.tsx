@@ -1,4 +1,4 @@
-import { Button, Textarea } from "@starci/grammar/common"
+import { Button, Stack, Textarea } from "@starci/grammar/common"
 import { AuthoritySection } from "@/components/frames/AuthoritySection"
 import type { AuthoritySectionView } from "@/components/frames/AuthoritySection"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -51,7 +51,11 @@ export const AuthorityPoliciesBase = (props: AuthorityPoliciesBaseProps) => {
                             {view.section.saveLabel}
                         </Button>
                     }
-                >
+                    cards={[
+                        {
+                            id: "policies",
+                            children: (
+                                <Stack gap="section">
                     <Textarea
                         isLoading={isLoading}
                         label={view.policiesLabel}
@@ -76,7 +80,11 @@ export const AuthorityPoliciesBase = (props: AuthorityPoliciesBaseProps) => {
                         value={view.brandVoice}
                         onValueChange={props.on.brandVoice}
                     />
-                </AuthoritySection>
+                                </Stack>
+                            ),
+                        },
+                    ]}
+                />
             )}
         />
     )

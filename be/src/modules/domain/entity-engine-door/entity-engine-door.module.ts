@@ -5,6 +5,7 @@ import { ENTITY_ENGINE_DOOR_JOBS } from "./entity-engine-door.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./entity-engine-door.module-definition"
 import { AgentNativeService } from "./agent-native.service"
 import { EngineDoorBindingService } from "./engine-door-binding.service"
+import { EngineWorkflowService } from "./engine-workflow.service"
 import { EngineDoorService } from "./engine-door.service"
 
 @Module({})
@@ -20,6 +21,7 @@ export class EntityEngineDoorModule extends ConfigurableModuleClass {
                 { provide: ENTITY_ENGINE_DOOR_JOBS, useValue: [syncAgentTurnsJob] },
                 EngineDoorService,
                 EngineDoorBindingService,
+                EngineWorkflowService,
                 AgentNativeService,
             ],
             exports: [EngineDoorService, AgentNativeService, ENTITY_ENGINE_DOOR_JOBS],

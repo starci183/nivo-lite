@@ -19,6 +19,8 @@ export const WORKSPACE_MEMBERS_MESSAGES: MessageBundle = {
         "errors.WORKSPACE_MEMBERS_CURRENT_SESSION":
             "\u0110\u00e2y l\u00e0 thi\u1ebft b\u1ecb b\u1ea1n \u0111ang d\u00f9ng; h\u00e3y \u0111\u0103ng xu\u1ea5t b\u00ecnh th\u01b0\u1eddng.",
         "errors.WORKSPACE_MEMBERS_ROLE_INVALID": "Vai trò không hợp lệ.",
+        "errors.WORKSPACE_MEMBERS_LAST_OWNER_LEAVE":
+            "Bạn là chủ sở hữu duy nhất của workspace này. Hãy trao quyền chủ sở hữu cho người khác hoặc xoá workspace.",
         "errors.WORKSPACE_MEMBERS_SESSION_NOT_FOUND":
             "Kh\u00f4ng t\u00ecm th\u1ea5y phi\u00ean \u0111\u0103ng nh\u1eadp n\u00e0y.",
     },
@@ -30,6 +32,8 @@ export const WORKSPACE_MEMBERS_MESSAGES: MessageBundle = {
         "errors.WORKSPACE_MEMBERS_CHANGE_NOT_ALLOWED": "You may not change this member.",
         "errors.WORKSPACE_MEMBERS_SELF_FORBIDDEN": "You cannot do this to your own account.",
         "errors.WORKSPACE_MEMBERS_LAST_OWNER": "A workspace needs at least one active owner.",
+        "errors.WORKSPACE_MEMBERS_LAST_OWNER_LEAVE":
+            "You are the only owner of this workspace. Make someone else an owner, or delete the workspace.",
         "errors.WORKSPACE_MEMBERS_CURRENT_SESSION": "This is the device you are using; sign out the usual way.",
         "errors.WORKSPACE_MEMBERS_SESSION_NOT_FOUND": "That session was not found.",
         "errors.WORKSPACE_MEMBERS_ROLE_INVALID": "That role is not a workspace role.",

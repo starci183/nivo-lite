@@ -43,7 +43,16 @@ export type {
 } from "./module-document.types"
 export { moduleDocumentSchema } from "./module-document.schema"
 export { MODULE_CHANGELOG_MAX, moduleProblems } from "./module-problems"
-export type { ModuleDeclaration, ModuleDeclarationConfig, SeedSpecProblem } from "./declaration.types"
+export type {
+    ModuleAgent,
+    ModuleAbilityDefault,
+    ModuleAbilityDefaults,
+    ModuleAgentAbilities,
+    ModuleAgentPolicy,
+    ModuleDeclaration,
+    ModuleDeclarationConfig,
+    SeedSpecProblem,
+} from "./declaration.types"
 export type { CountsReadConfig, ListReadConfig, ListReadDefinition } from "./declaration-list.types"
 export type { ActionInputResult, ReadVariablesResult } from "./declaration-input"
 export { countsRead, listRead } from "./declaration-list"

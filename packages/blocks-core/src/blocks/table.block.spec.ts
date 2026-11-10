@@ -15,8 +15,8 @@ describe("tableBlock", () => {
         expect(Object.keys(tableBlock.propsJson).length).toBeGreaterThan(0)
     })
 
-    it("lists selectParam and searchParam as the props that name a spec param", () => {
-        expect(tableBlock.params).toEqual(["selectParam", "searchParam"])
+    it("lists selectParam, searchParam and filterParam as the props that name a spec param", () => {
+        expect(tableBlock.params).toEqual(["selectParam", "searchParam", "filterParam"])
     })
 
     it("takes a search param and the words of an empty search", () => {
@@ -37,9 +37,10 @@ describe("tableBlock", () => {
         ).toBe(false)
     })
 
-    it("names a required rows read of a list and an optional open action", () => {
+    it("names a required rows read of a list, an optional counts read of the filter tabs and an optional open action", () => {
         expect(tableBlock.slots).toEqual({
             rows: { kind: "read", shape: "list", required: true },
+            counts: { kind: "read", shape: "record", required: false },
             open: { kind: "action", required: false },
         })
     })

@@ -1,9 +1,18 @@
-import { DriveConnectionPage } from "@/features/pages/DriveConnectionPage"
+import type { ReactElement } from "react"
+import { DriveRedirectPage } from "@/features/pages/DriveRedirectPage"
 
-/** The document title of this page. */
-export { driveConnectionMetadata as generateMetadata } from "@/features/pages/DriveConnectionPage"
+export { driveRedirectMetadata as generateMetadata } from "@/features/pages/DriveRedirectPage"
 
-/** Adapts the Google Drive route to its page owner. */
-const Page = () => <DriveConnectionPage />
+/** What the page receives from Next. */
+interface DriveRouteProps {
+    readonly params: Promise<{ readonly workspaceId: string }>
+    readonly searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+/** Moved: the old Drive address forwards to the Google account page. */
+const Page = async ({ params, searchParams }: DriveRouteProps): Promise<ReactElement> => {
+    const [{ workspaceId }, query] = await Promise.all([params, searchParams])
+    return <DriveRedirectPage workspaceId={workspaceId} query={query} />
+}
 
 export default Page

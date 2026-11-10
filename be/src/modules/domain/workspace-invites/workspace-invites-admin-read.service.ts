@@ -27,7 +27,7 @@ export class WorkspaceInvitesAdminReadService {
     async pendingOf(workspaceId: string, limit: number): Promise<Array<PendingInviteRow>> {
         const rows = await this.entityManager.find(WorkspaceInviteEntity, {
             select: { id: true, email: true, role: true, createdAt: true, expiresAt: true },
-            where: { workspaceId, acceptedAt: IsNull(), revokedAt: IsNull() },
+            where: { workspaceId, acceptedAt: IsNull(), revokedAt: IsNull(), declinedAt: IsNull() },
             order: { createdAt: "DESC" },
             take: limit,
         })

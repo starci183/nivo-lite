@@ -4,7 +4,7 @@ import type { SlotRead } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
-import { agentChoicesOf } from "@/hooks/connection-wizard"
+import { agentChoicesOf, useWizardPhases } from "@/hooks/connection-wizard"
 import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import { META_STEPS, metaCheckLines, useMetaWizard } from "@/hooks/meta-wizard"
 import type { AgentOption } from "@/modules/types"
@@ -33,6 +33,7 @@ interface MetaWizardProps {
 /** Facebook Pages and Instagram in the shared wizard frame: log in, pick the Page, attach the agents, then test what Meta really has. */
 export const MetaWizard = (props: MetaWizardProps) => {
     const tw = useTranslations("connectionWizard")
+    const phases = useWizardPhases("meta")
     const tc = useTranslations("connections")
     const tm = useTranslations("metaWizard")
     const slotLabelsOf = useSlotLabels()
@@ -56,6 +57,7 @@ export const MetaWizard = (props: MetaWizardProps) => {
             props={{
                 title: tw("title", { provider: tc(providerKey("meta", "title")) }),
                 stepLabel: tw("stepOf", { n: wizard.index + 1, total: META_STEPS.length }),
+                phases,
                 steps,
                 index: wizard.index,
                 step: wizard.step,

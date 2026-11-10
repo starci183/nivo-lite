@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import type { ReactElement } from "react"
 import { getTranslations } from "next-intl/server"
 import { agentPageTabsOf, agentsSubpageCrumbsOf } from "@/modules/page-header"
-import { AgentTemplatesPageBase } from "./component"
-import type { AgentTemplatesView } from "./component"
+import { APP_ROUTES, workspaceHref } from "@/modules/routes"
+import { AgentTemplatesPageBase, type AgentTemplatesView } from "./component"
 
 /** What the route hands the page: the view, and for the packaging view the installation. */
 interface AgentTemplatesPageProps {
@@ -33,28 +33,39 @@ const isTabbed = (view: AgentTemplatesView): boolean => view !== "package"
 /** The agent templates page: the trail and heading of the view, the tab line of the two list views; the block under them reads its data in the browser. */
 export const AgentTemplatesPage = async (props: AgentTemplatesPageProps): Promise<ReactElement> => {
     const words = WORDS[props.view]
-    const [t, tm, tt, ts] = await Promise.all([
+    const [t, tm, tt, ts, tc] = await Promise.all([
         getTranslations(words.ns),
         getTranslations("agentMarketplace"),
         getTranslations("agentTemplates"),
         getTranslations("shell"),
+        getTranslations("agentCatalog"),
     ])
     const tabbed = isTabbed(props.view)
-    const title = tabbed ? tt("pageTitle") : t(words.title)
+    /** The tabs are views of the one Agent page: they keep its title, its description and its trail. */
+    const title = tabbed ? tc("title") : t(words.title)
     return (
         <AgentTemplatesPageBase
             props={{
                 view: props.view,
                 installationId: props.installationId ?? "",
                 crumbLabel: ts("crumbLabel"),
-                crumbs: agentsSubpageCrumbsOf({
-                    workspaceId: props.workspaceId,
-                    home: ts("crumbHome"),
-                    agents: t("crumbAgents"),
-                    current: title,
-                }),
+                crumbs: tabbed
+                    ? [
+                          {
+                              id: "home",
+                              label: ts("crumbHome"),
+                              href: workspaceHref(props.workspaceId, APP_ROUTES.workspaceHome),
+                          },
+                          { id: "modules", label: title },
+                      ]
+                    : agentsSubpageCrumbsOf({
+                          workspaceId: props.workspaceId,
+                          home: ts("crumbHome"),
+                          agents: t("crumbAgents"),
+                          current: title,
+                      }),
                 title,
-                description: tabbed ? tt("pageDescription") : t("description"),
+                description: tabbed ? tc("description") : t("description"),
                 tabs: tabbed
                     ? agentPageTabsOf({
                           workspaceId: props.workspaceId,

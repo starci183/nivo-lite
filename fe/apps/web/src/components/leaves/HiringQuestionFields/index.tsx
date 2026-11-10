@@ -76,6 +76,7 @@ export const HiringQuestionFields = (props: HiringQuestionFieldsProps) => {
                 <Cluster gap="inline">
                     <Switch
                         label={copy.qRequired}
+                        description={copy.qRequiredHint}
                         isSelected={question.required}
                         onSelectedChange={(required) => onPatch({ required })}
                     />

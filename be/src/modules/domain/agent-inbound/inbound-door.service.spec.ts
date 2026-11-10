@@ -4,6 +4,7 @@ import { AgentRunsService } from "@modules/domain/agent-runs"
 import { AgentEventWakesService } from "@modules/domain/agent-schedules"
 import { AgentWakeService, AgentWorkAccessService } from "@modules/domain/agent-work"
 import { decodeInbound } from "@modules/domain/agent-wake-rules"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { IDS } from "@modules/platform/ids"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -48,6 +49,7 @@ interface Options {
     readonly targets?: ReadonlyArray<{ readonly agentId: string; readonly probeKey: string | null }>
     readonly written?: ReadonlyArray<string | null>
     readonly reporter?: boolean
+    readonly live?: boolean
 }
 
 const NO_REPORTER: InboundStopReporter | null = null
@@ -56,7 +58,9 @@ const build = async ({
     targets = [{ agentId: "agent-1", probeKey: null }],
     written = ["wake-1"],
     reporter = true,
+    live = true,
 }: Options = {}) => {
+    const workspaces = mock<WorkspacesService>({ isLive: jest.fn().mockResolvedValue(live) })
     const tx = fakeTransaction(mockEntityManager())
     const events = mock<AgentEventWakesService>({ agentsFor: jest.fn().mockResolvedValue(targets) })
     const access = mock<AgentWorkAccessService>({ agent: jest.fn().mockResolvedValue(undefined) })
@@ -83,6 +87,7 @@ const build = async ({
                   { provide: AgentRunsService, useValue: runs },
                   { provide: IDS, useValue: fakeIds() },
                   { provide: LOGGER, useValue: logger },
+                  { provide: WorkspacesService, useValue: workspaces },
                   { provide: INBOUND_STOP_REPORTER, useValue: stopReporter },
               ],
           })
@@ -96,6 +101,7 @@ const build = async ({
                   { provide: AgentRunsService, useValue: runs },
                   { provide: IDS, useValue: fakeIds() },
                   { provide: LOGGER, useValue: logger },
+                  { provide: WorkspacesService, useValue: workspaces },
                   { provide: INBOUND_STOP_REPORTER, useValue: NO_REPORTER },
               ],
           })
@@ -110,6 +116,7 @@ const build = async ({
         runs,
         logger,
         stopReporter,
+        workspaces,
     }
 }
 
@@ -233,6 +240,16 @@ describe("InboundDoorService.accept, a fact seen before or never wanted", () => 
         await expect(door.accept(tx, event())).resolves.toEqual({ accepted: false, agentIds: [] })
         expect(wakes.write).not.toHaveBeenCalled()
         expect(logger.info).toHaveBeenCalledWith("agent_inbound.no_target", { adapter: KEY })
+    })
+
+    it("takes in nothing for a workspace its owner deleted, and says so in the log", async () => {
+        const { door, tx, events, wakes, logger, workspaces } = await build({ live: false })
+
+        await expect(door.accept(tx, event())).resolves.toEqual({ accepted: false, agentIds: [] })
+        expect(workspaces.isLive).toHaveBeenCalledWith(event().workspaceId)
+        expect(events.agentsFor).not.toHaveBeenCalled()
+        expect(wakes.write).not.toHaveBeenCalled()
+        expect(logger.info).toHaveBeenCalledWith("agent_inbound.workspace_deleted", { adapter: KEY })
     })
 
     it("refuses an event of an adapter nobody registered, an event with no key and a payload too large to keep", async () => {

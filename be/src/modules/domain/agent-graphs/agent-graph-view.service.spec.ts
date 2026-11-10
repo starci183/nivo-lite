@@ -1,8 +1,10 @@
 import { Test } from "@nestjs/testing"
+import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { mock } from "@starci/jest-preset"
 import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
 import type { InstallationDirectory, OptionalContextVersion } from "@modules/domain/agents"
 import { BrainFactsService } from "@modules/domain/brain-facts"
+import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { MemberGrantsService } from "@modules/domain/member-grants"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
@@ -82,6 +84,22 @@ const build = async (
     const catalog = mock<MessageCatalog>({
         get: jest.fn((key: string, params?: Record<string, string | number>) => `[${key}${params?.name ?? ""}]`),
     })
+    const nodes = mock<GraphNodeRegistryService>({
+        installed: jest.fn().mockReturnValue(
+            mock<ReturnType<GraphNodeRegistryService["installed"]>>({
+                nodes: new Map([
+                    [
+                        "sales.consult",
+                        mock<NodeDefinition>({ id: "sales.consult", title: { vi: "Tu van", en: "Consult" } }),
+                    ],
+                    [
+                        "sales.consult-route",
+                        mock<NodeDefinition>({ id: "sales.consult-route", title: { key: "k.route" } }),
+                    ],
+                ]),
+            }),
+        ),
+    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentGraphViewService,
@@ -93,6 +111,7 @@ const build = async (
             { provide: BrainFactsService, useValue: brain },
             { provide: MESSAGE_CATALOG, useValue: catalog },
             { provide: AGENTS_INSTALLATIONS, useValue: directory },
+            { provide: GraphNodeRegistryService, useValue: nodes },
         ],
     }).compile()
     return { service: moduleRef.get(AgentGraphViewService), directory, brain }
@@ -259,5 +278,30 @@ describe("AgentGraphViewService.viewOf the warnings of the contracts", () => {
         const { service } = await build(stateOf())
 
         await expect(service.viewOf("ws-1", "agent-1", "en")).resolves.toMatchObject({ warnings: [] })
+    })
+})
+
+describe("AgentGraphViewService flow cards", () => {
+    it("adds a card for every node of the flow, titled in the owner's language, with its group and wait", async () => {
+        const flow = {
+            schema: "nivo/agent-graph@1",
+            moduleKey: "sales",
+            trigger: { kind: "tag", sources: ["agent"] },
+            grant: { rights: [], tools: [], effects: [] },
+            nodes: [
+                { key: "consult", kind: "output", step: "sales.consult", group: "consult", next: "route" },
+                { key: "route", kind: "condition", step: "sales.consult-route", group: "consult", routes: {} },
+                { key: "pay", kind: "execute", step: "sales.care-await", wait: { kind: "payment", reminder: "2h" } },
+            ],
+        } as const
+        const { service } = await build(stateOf({ draft: { nodes: [], rights: [], flow } }))
+
+        const view = await service.viewOf("ws-1", "agent-1", "en")
+
+        expect(view.cards.map((card) => [card.id, card.label, card.group, card.wait?.kind])).toEqual([
+            ["consult", "Consult", "consult", undefined],
+            ["route", "[k.route]", "consult", undefined],
+            ["pay", "pay", undefined, "payment"],
+        ])
     })
 })

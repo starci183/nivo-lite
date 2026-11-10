@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { runViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { AgentRunAlertsService, AgentRunsService } from "@modules/domain/agent-runs"
+import { AgentGraphFreezeGateService } from "@modules/domain/agent-graphs"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -21,7 +22,9 @@ const ALERT: ParkedFlowAlert = {
     action: "resume",
 }
 
-const build = async (options: { run?: ReturnType<typeof runViewOf> | null; installed?: boolean } = {}) => {
+const build = async (
+    options: { run?: ReturnType<typeof runViewOf> | null; installed?: boolean; frozen?: boolean } = {},
+) => {
     const engine = mock<WorkEngineService>({ runWork: jest.fn().mockResolvedValue({ id: "item-1" }) })
     const runs = mock<AgentRunsService>({
         runOf: jest.fn().mockResolvedValue(options.run === undefined ? runViewOf({ status: "dead" }) : options.run),
@@ -30,6 +33,7 @@ const build = async (options: { run?: ReturnType<typeof runViewOf> | null; insta
         ofAgent: jest.fn().mockResolvedValue(options.installed === false ? null : { moduleKey: "sales" }),
     })
     const alerts = mock<AgentRunAlertsService>()
+    const freezes = mock<AgentGraphFreezeGateService>({ stopped: jest.fn().mockResolvedValue(options.frozen === true) })
     const catalog = mock<MessageCatalog>()
     catalog.get.mockImplementation((key, _params, locale) => `${key}|${String(locale)}`)
     const moduleRef = await Test.createTestingModule({
@@ -40,9 +44,10 @@ const build = async (options: { run?: ReturnType<typeof runViewOf> | null; insta
             { provide: WorkEngineService, useValue: engine },
             { provide: InstallationRecordsService, useValue: installations },
             { provide: MESSAGE_CATALOG, useValue: catalog },
+            { provide: AgentGraphFreezeGateService, useValue: freezes },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentRunParkedAlertsService), engine, alerts }
+    return { service: moduleRef.get(AgentRunParkedAlertsService), engine, alerts, freezes }
 }
 
 describe("AgentRunParkedAlertsService registration", () => {
@@ -121,5 +126,30 @@ describe("AgentRunParkedAlertsService.raise", () => {
         await service.raise(unscoped)
 
         expect(engine.runWork).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentRunParkedAlertsService.raise for a run that froze its customer", () => {
+    it("raises no review of its own: the freeze's one item per customer stands for the run", async () => {
+        const { service, engine, freezes } = await build({ frozen: true })
+
+        await service.raise(ALERT)
+
+        expect(freezes.stopped).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            runId: "run-1",
+            code: "invalid_step_input",
+            stepKey: null,
+            trigger: null,
+        })
+        expect(engine.runWork).not.toHaveBeenCalled()
+    })
+
+    it("still raises the run's review when the freeze took nothing (no customer, not a graph run)", async () => {
+        const { service, engine } = await build({ frozen: false })
+
+        await service.raise(ALERT)
+
+        expect(engine.runWork).toHaveBeenCalledTimes(1)
     })
 })

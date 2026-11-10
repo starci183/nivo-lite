@@ -40,3 +40,10 @@ export interface FactView {
     /** The values it may hold, for a fact that is one of a few; empty for any. */
     readonly allowed: ReadonlyArray<string>
 }
+
+/**
+ * How a version came to be; `spec` is a node graph a graph spec published, which no rules-derived refresh replaces, and `copy` the
+ * version of a sibling agent of the same role a new agent started from.
+ */
+export type GraphChangeKind =
+    "seed" | "chat" | "edit" | "conflict" | "learned" | "template" | "rollback" | "spec" | "copy"

@@ -1,14 +1,15 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { ChatMessageProposeExecutorService } from "./chat-message-propose-executor.service"
+import { AuthorityRuleNodePortService } from "./authority-rule-node-port.service"
 import { ChannelSendExecutorService } from "./channel-send-executor.service"
+import { ChatLineMediaService } from "./chat-line-media.service"
+import { CustomerDraftsService } from "./customer-drafts.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./chat-node-ports.module-definition"
 import { KnowledgeNodePortService } from "./knowledge-node-port.service"
 
 @Module({})
 /**
- * What the chat serves to the graph nodes: the data port of the knowledge-document kind and the executors of `channel.send` and `chat-message.propose`, each
- * registered with the graph-nodes registry. The conversation and message kinds are served by the entity engine.
+ * What the chat serves to the graph nodes: the data port of the knowledge-document kind and the one customer send (`customer.message.send`) registered with the graph-nodes registry, with the drafts it keeps for the owner when a channel asks first. The conversation and message kinds are served by the entity engine.
  */
 export class ChatNodePortsModule extends ConfigurableModuleClass {
     /** Registers the capability in the app that runs graph nodes. */
@@ -19,8 +20,10 @@ export class ChatNodePortsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 KnowledgeNodePortService,
+                AuthorityRuleNodePortService,
+                ChatLineMediaService,
                 ChannelSendExecutorService,
-                ChatMessageProposeExecutorService,
+                CustomerDraftsService,
             ],
         }
     }

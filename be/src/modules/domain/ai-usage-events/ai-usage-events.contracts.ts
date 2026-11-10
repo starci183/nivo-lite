@@ -24,6 +24,8 @@ export interface ProviderUsage {
     readonly total_tokens?: number
     /** The provider's own cost in USD. */
     readonly cost?: number
+    /** Prompt tokens the provider served from its prompt cache; they are part of `prompt_tokens`. */
+    readonly cached_tokens?: number
 }
 
 /** One model call to record. */
@@ -42,6 +44,8 @@ export interface UsageInput {
     readonly promptChars: number
     /** Completion characters, used to estimate tokens when the provider sent no usage. */
     readonly completionChars: number
+    /** The agent run the call was made for; absent, the run in scope (a step being executed) is used, else the call belongs to no run. */
+    readonly runId?: string | undefined
 }
 
 /** The tokens and cost one call is booked with. */
@@ -50,6 +54,8 @@ export interface UsageFigures {
     readonly promptTokens: number
     /** Completion tokens. */
     readonly completionTokens: number
+    /** Prompt tokens served from the provider's prompt cache (part of the prompt tokens); zero when the provider did not say. */
+    readonly cachedTokens: number
     /** Cost in USD. */
     readonly costUsd: number
     /** True when the provider sent no usage and the tokens were estimated. */

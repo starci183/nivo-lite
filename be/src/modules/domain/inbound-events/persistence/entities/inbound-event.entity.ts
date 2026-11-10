@@ -60,4 +60,12 @@ export class InboundEventEntity extends UuidAbstractEntity {
     /** The channel's own event id. */
     @Column({ name: "event_id", type: "text", nullable: true })
     eventId!: string | null
+
+    /** The customer the input grouped under when no lead was linked yet: a phone, a channel user id or a web visitor id. */
+    @Column({ name: "customer_key", type: "text", nullable: true })
+    customerKey!: string | null
+
+    /** Where the input came from: the page, the campaign, the device. An object of short text values. */
+    @Column({ name: "source", type: "jsonb", default: () => "'{}'::jsonb" })
+    source!: Readonly<Record<string, string>>
 }

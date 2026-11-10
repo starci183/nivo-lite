@@ -1,75 +1,69 @@
 /** The tone a status chip of the Connections panes wears. */
 export type ConnectionPaneTone = "neutral" | "success" | "warning" | "danger"
 
-/** One connection as a row of the list pane: who it is, what identifies it, and how it is doing. */
+/** One connection as a row of the list: who it is, how it is doing, its last event and the agents that work through it. */
 export interface ConnectionListRow {
     readonly id: string
     readonly name: string
-    /** The one line under the name: the provider and what identifies the connection on its side. */
+    /** The one line under the name: the provider, what identifies the connection on its side, and the setup step while it is set up. */
     readonly description: string
     readonly logo: { readonly src?: string; readonly isWordmark: boolean }
     readonly status: { readonly label: string; readonly tone: ConnectionPaneTone; readonly isDot: boolean }
-    /** The page of the connection when its provider has one; else the row opens in the overview pane. */
-    readonly href: string | null
+    /** The connection's own page: its provider page, or the generic page of a provider without one. */
+    readonly href: string
     /** The filter ids this row passes besides "all". */
     readonly groups: ReadonlyArray<string>
+    /** When its last event came, as an ISO date; null when none has come yet. */
+    readonly lastEventAt: string | null
+    /** The connection stopped on a failure: the last event column says so. */
+    readonly isFailed: boolean
+    /** The agents that work through it, joined; empty when none does. */
+    readonly agents: string
 }
 
-/** One choice of the filter row of the list pane. */
+/** One choice of the filter row of the list. */
 export interface ConnectionFilterChoice {
     readonly value: string
     readonly label: string
     readonly count: number
 }
 
-/** The connection that needs the owner next, as the overview card says it. */
+/** One connection that needs the owner, as the "Needs you" card says it: what is wrong or missing, and its one action. */
 export interface ConnectionNextStep {
     readonly id: string
     readonly name: string
-    /** The title of the notice: which connection is unfinished or needs a check. */
+    /** The title of the row: which connection and what happened. */
     readonly title: string
     readonly logo: { readonly src?: string; readonly isWordmark: boolean }
     readonly status: { readonly label: string; readonly tone: ConnectionPaneTone; readonly isDot: boolean }
     /** What is wrong or still missing, and which agents it stops. */
     readonly body: string
-    /** Where the one command goes; null when the viewer may not act or the connection has no page. */
-    readonly action: { readonly label: string; readonly href: string } | null
+    /** The one command; null when the viewer may not act. `isPrimary` marks the fix of a failure. */
+    readonly action: { readonly label: string; readonly href: string; readonly isPrimary: boolean } | null
 }
 
-/** One agent with the connections it works through, as the overview reads it. */
-export interface ConnectionAgentRow {
-    readonly id: string
-    readonly name: string
-    /** The connections it works through, joined. */
-    readonly description: string
-}
-
-/** What the overview pane draws once the workspace reads are in. */
-export interface ConnectionsOverviewView {
-    /** The line under the pane title: the workspace and how many connections it holds. */
-    readonly head: string
-    /** The meta line of the agents figure: how many agents are running. */
-    readonly agentsMeta: string
-    readonly workspace: string
-    readonly count: number
-    readonly live: number
+/** The health figures of the Connections page. */
+export interface ConnectionsFigures {
+    readonly total: number
+    readonly running: number
+    readonly waiting: number
     readonly attention: number
-    readonly agentCount: number
-    readonly activeAgents: number
-    readonly next: ConnectionNextStep | null
-    /** The agents that work through at least one connection. */
-    readonly agents: ReadonlyArray<ConnectionAgentRow>
-    readonly canManage: boolean
+    readonly agentsUsing: number
+    readonly agentsTotal: number
 }
 
-/** What the list pane draws once the workspace reads are in. */
+/** What the Connections page draws once the workspace reads are in. */
 export interface ConnectionsListView {
     readonly rows: ReadonlyArray<ConnectionListRow>
     readonly filters: ReadonlyArray<ConnectionFilterChoice>
-    /** The summary line of the page head: what runs and what needs the owner. */
+    /** The summary line of the page head: what runs, what waits and what needs the owner. */
     readonly summary: string
     readonly liveCount: number
-    readonly attention: ConnectionNextStep | null
+    /** Every connection that needs the owner, failures first. */
+    readonly attention: ReadonlyArray<ConnectionNextStep>
+    readonly figures: ConnectionsFigures
+    /** The owner adds and changes connections; everyone else reads. */
+    readonly canManage: boolean
 }
 
 /** One agent of a connection with its level through it. */
@@ -90,4 +84,18 @@ export interface ConnectionGrantsView {
     readonly rows: ReadonlyArray<ConnectionGrantRowView>
     /** Agents that can work through this connection and do not yet. */
     readonly candidates: ReadonlyArray<{ readonly id: string; readonly label: string }>
+}
+
+/** The one life every connection walks: not connected, setting up, waiting for the first event, running, needing the owner, disconnected. */
+export interface ConnectionLifecycle {
+    readonly id: "unconnected" | "setup" | "waiting" | "running" | "attention" | "disconnected"
+    /** The phase of the setup (1 to 4) while it is set up or waits for its first event. */
+    readonly phase?: number
+}
+
+/** The status badge of a step of the life, worded in the one vocabulary of the Connections screens. */
+export interface ConnectionLifecycleChip {
+    readonly label: string
+    readonly tone: ConnectionPaneTone
+    readonly isDot: boolean
 }

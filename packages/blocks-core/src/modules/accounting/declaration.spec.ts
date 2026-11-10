@@ -1,6 +1,7 @@
 import { seedSpecProblems } from "@nivo-lite/agent-sdk/module"
 import { coreBlocks } from "../../blocks/core-blocks"
 import { accountingModule, paymentModule } from "./declaration"
+import { platformModule } from "../platform/declaration"
 import { accountingSpecDocument } from "./specs/accounting.spec-document"
 
 describe("accounting module", () => {
@@ -16,6 +17,9 @@ describe("accounting module", () => {
             "accounting.due-soon",
             "accounting.weekly",
             "accounting.decisions",
+            "accounting.owner-queue",
+            "accounting.recent",
+            "accounting.today",
             "accounting.open-orders",
             "accounting.question-count",
             "accounting.questions",
@@ -27,6 +31,7 @@ describe("accounting module", () => {
             "accounting.save-settings",
             "accounting.answer-question",
             "accounting.resolve-unmatched-payment",
+            "accounting.decide-owner-item",
             "accounting.repost-ledger",
         ])
         expect(accountingModule.permissions).toEqual(["accounting.view", "accounting.manage"])
@@ -41,13 +46,14 @@ describe("accounting module", () => {
 
     it("has a seed spec that the installed blocks, reads and actions accept", () => {
         expect(accountingModule.specs).toEqual([accountingSpecDocument])
-        expect(seedSpecProblems(accountingModule, coreBlocks)).toEqual([])
+        expect(seedSpecProblems(accountingModule, coreBlocks, [platformModule])).toEqual([])
         expect(seedSpecProblems(paymentModule, coreBlocks)).toEqual([])
     })
 
     it("draws figures on the overview only, the queue in the aside, a book view bound to the list, its counts and the detail, and a settings form", () => {
         const view = accountingSpecDocument.views.find((each) => each.id === "book")
         expect(accountingSpecDocument.views.map((each) => each.id)).toEqual([
+            "today",
             "overview",
             "book",
             "questions",
@@ -60,7 +66,7 @@ describe("accounting module", () => {
         expect(rootOf("book")).toBe("accounting.book")
         expect(rootOf("ledger")).toBe("accounting.ledger")
         expect(accountingSpecDocument.aside?.children?.map((node) => [node.block, node.showWhen?.is])).toEqual([
-            ["core.decision-queue", ["list", "queue"]],
+            ["core.stack", ["list", "queue"]],
             ["accounting.entry-detail", ["detail"]],
         ])
         expect(accountingSpecDocument.views.find((each) => each.id === "questions")?.root.block).toBe(
@@ -76,6 +82,11 @@ describe("accounting module", () => {
         ])
         expect(accountingSpecDocument.head).toBeUndefined()
         expect(accountingSpecDocument.views[0]?.root.children?.map((node) => node.id)).toEqual([
+            "today-figures",
+            "today-queue",
+            "today-recent",
+        ])
+        expect(accountingSpecDocument.views[1]?.root.children?.map((node) => node.id)).toEqual([
             "figures",
             "due",
             "weekly",

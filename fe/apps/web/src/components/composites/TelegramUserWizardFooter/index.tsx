@@ -1,4 +1,4 @@
-import { backAction, closeAction, nextAction, WizardFooter } from "@/components/branches/WizardFooter"
+import { backAction, closeAction, forwardAction, nextAction, WizardFooter } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
 import type { TelegramUserWizardCopy, TelegramUserLoginView } from "@/modules/types"
 
@@ -75,10 +75,10 @@ const actionsOf = (props: TelegramUserWizardFooterProps): ReadonlyArray<WizardAc
     const close = closeAction(text.close, props.onClose)
     if (!props.isConfigured) return [nextAction(text.close, props.onClose)]
     if (props.index === 0)
-        return [nextAction(text.next, () => props.onGo(1), { isDisabled: !props.valid.consent }), close]
+        return [forwardAction(text.next, () => props.onGo(1), { isDisabled: !props.valid.consent }), close]
     if (props.index === 1) return loginActionsOf(props)
     if (props.index === 2) {
-        const goOn = nextAction(text.next, () => props.onGo(3), { isDisabled: !props.canGoOn })
+        const goOn = forwardAction(text.next, () => props.onGo(3), { isDisabled: !props.canGoOn })
         const retry: WizardAction = {
             id: "retry",
             label: text.chatsRetry,

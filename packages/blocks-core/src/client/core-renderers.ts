@@ -21,9 +21,11 @@ import {
 import { boardBlock } from "../blocks/board.block"
 import { graphBlock } from "../blocks/graph.block"
 import { runTimelineBlock } from "../blocks/run-timeline.block"
+import { agentMessageBlock } from "../blocks/agent-message.block"
 import { approvalCardBlock } from "../blocks/chatbot/approval-card.block"
 import { inboxBlock } from "../blocks/chatbot/inbox.block"
 import { rulesBlock } from "../blocks/chatbot/rules.block"
+import { AgentMessageBlock } from "./agent-message/AgentMessageBlock"
 import { ApprovalCardBlock } from "./chatbot/ApprovalCardBlock"
 import { InboxBlock } from "./chatbot/InboxBlock"
 import { RulesBlock } from "./chatbot/RulesBlock"
@@ -33,7 +35,9 @@ import { BoardBlock } from "./blocks/BoardBlock"
 import { CardGridBlock } from "./blocks/CardGridBlock"
 import { FormBlock } from "./blocks/FormBlock"
 import { ListEditorBlock } from "./blocks/ListEditorBlock"
+import { linkBlock } from "../blocks/link.block"
 import { listCardBlock } from "../blocks/list-card.block"
+import { LinkBlock } from "./blocks/LinkBlock"
 import { ListCardBlock } from "./blocks/ListCardBlock"
 import { TabbedPanelBlock } from "./blocks/TabbedPanelBlock"
 import { TableBlock } from "./blocks/TableBlock"
@@ -55,6 +59,7 @@ import { salesRenderers } from "./sales/sales-renderers"
 /** The components of every core block, one per definition of the root export; the app hands them to the spec renderer. */
 export const coreBlocks: ReadonlyArray<BlockRenderer> = [
     defineRenderer(stackBlock, StackBlock),
+    defineRenderer(linkBlock, LinkBlock),
     defineRenderer(cardGridBlock, CardGridBlock),
     defineRenderer(sectionBlock, SectionBlock),
     defineRenderer(figuresBlock, FiguresBlock),
@@ -72,6 +77,7 @@ export const coreBlocks: ReadonlyArray<BlockRenderer> = [
     defineRenderer(rulesBlock, RulesBlock),
     defineRenderer(waitingBlock, WaitingBlock),
     defineRenderer(decisionQueueBlock, DecisionQueueBlock),
+    defineRenderer(agentMessageBlock, AgentMessageBlock),
     defineRenderer(dashboardCardsBlock, DashboardCardsBlock),
     defineRenderer(masterDetailBlock, MasterDetailBlock),
     defineRenderer(explanationBlock, ExplanationBlock),

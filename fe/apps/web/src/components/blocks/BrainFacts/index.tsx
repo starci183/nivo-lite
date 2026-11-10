@@ -1,15 +1,13 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useBrainFacts } from "@/hooks/brain"
+import { useBrainFacts, useBrainKnowledgeHeader } from "@/hooks/brain"
 import { usePaneCopy } from "@/hooks/paneFrame"
-import { navigation } from "@/modules/i18n"
-import { brainTabHref, workspaceHref } from "@/modules/routes"
+import { useSlotLabels } from "@/hooks/slot"
 import type { BrainPageHeading } from "@/modules/types"
 import { BrainFactsBase } from "./component"
-import { useWorkspaceId } from "@/hooks/workspaces"
 
-/** What the page hands the facts tab: the header without its tabs, and what the address asks of the fact drawer. */
+/** What the page hands the facts chip: the header without its tabs, and what the address asks of the fact drawer. */
 interface BrainFactsProps {
     readonly header: BrainPageHeading
     readonly fact: string | undefined
@@ -18,44 +16,74 @@ interface BrainFactsProps {
 }
 
 /**
- * The connected facts tab: the facts in force and the scheduled ones beside the opened fact, with a new value and a stop that asks
- * first. Owners and managers write; everyone reads.
+ * The connected facts chip of the knowledge tab: every fact, waiting or in use, grouped by subject with ticks to approve them together,
+ * the detail of one fact and the comparison of a conflict in drawers. Owners and managers decide; everyone reads.
  */
 export const BrainFacts = (props: BrainFactsProps) => {
+    const t = useTranslations("brainInbox")
     const f = useTranslations("brainFacts")
+    const m = useTranslations("brainFactMap")
     const pane = usePaneCopy()
-    const router = navigation.useRouter()
-    const workspaceId = useWorkspaceId()
-    const page = useBrainFacts({ heading: props.header, fact: props.fact, edit: props.edit, answer: props.answer })
+    const slotLabels = useSlotLabels()
+    const header = useBrainKnowledgeHeader("facts", props.header)
+    const page = useBrainFacts({ fact: props.fact, edit: props.edit, answer: props.answer })
     return (
         <BrainFactsBase
             props={{
-                header: page.header,
-                panelId: `${page.header.tabs.panelPrefix}facts`,
-                copy: {
-                    grid: f("gridLabel"),
-                    listLabel: f("listLabel"),
-                    detailLabel: f("detailLabel"),
-                    searchLabel: f("searchLabel"),
+                header: header.props,
+                slot: page.slot,
+                labels: { ...slotLabels(f("emptyTitle")), error: f("errorTitle") },
+                copy: page.copy,
+                words: {
+                    statusLabel: t("statusFilterLabel"),
+                    searchLabel: t("factsSearch"),
                     clearSearch: pane.clearSearch,
-                    filterLabel: f("filterLabel"),
-                    moreFilters: String(f.raw("moreFilters")),
-                    pickTitle: f("pickTitle"),
-                    pickBody: f("pickBody"),
-                    noMatchTitle: pane.noMatchTitle,
-                    noMatchBody: pane.noMatchBody,
-                    clearFilters: pane.clearFilters,
-                    emptyBody: f("emptyBody"),
-                    emptyAction: f("emptyAction"),
+                    groupingLabel: t("groupingLabel"),
+                    bySubject: t("bySubject"),
+                    byDocument: t("byDocument"),
                     errorBody: f("errorBody"),
-                    back: pane.backToList,
                 },
-                facts: page.view,
+                count: page.count,
+                status: page.filters.status,
+                selectedStatus: page.filters.selected,
+                query: page.filters.query,
+                grouping: page.filters.grouping,
+                canWrite: page.canWrite,
+                maintain: page.maintain,
+                bar: page.pick.bar,
+                confirm: page.pick.confirm,
+                conflict: page.conflict.view,
+                detail: page.detail.view,
                 factDrawer: page.drawer,
+                card: { title: m("cardTitle"), modeLabel: m("modeLabel"), modeList: m("modeList"), modeMap: m("modeMap") },
+                mode: page.map.mode,
+                map: page.map.view,
             }}
             on={{
+                reviewAll: header.on.reviewAll,
+                selectTab: header.on.selectTab,
                 ...page.on,
-                add: () => router.push(workspaceHref(workspaceId, brainTabHref("facts", { fact: "new" }))),
+                ...page.pick.on,
+                setMode: page.map.on.setMode,
+                map: {
+                    setView: page.map.on.setView,
+                    select: page.map.on.select,
+                    approve: page.map.on.approve,
+                    edit: page.map.on.edit,
+                    compare: page.map.on.compare,
+                },
+                open: page.detail.on.open,
+                closeDetail: page.detail.on.close,
+                edit: page.detail.on.edit,
+                approve: page.detail.on.approve,
+                reject: page.detail.on.reject,
+                menu: page.detail.on.menu,
+                confirmRetire: page.detail.on.confirmRetire,
+                cancelRetire: page.detail.on.cancelRetire,
+                compare: page.conflict.on.open,
+                closeConflict: page.conflict.on.close,
+                choose: page.conflict.on.choose,
+                confirmChoice: page.conflict.on.confirm,
             }}
         />
     )

@@ -17,11 +17,11 @@ const ProblemLine = (props: ProblemLineProps) => (
     <Stack gap="inline">
         <Text size="sm">{props.item.text}</Text>
         <Cluster gap="inline">
-            <Button intent="neutral" size="sm" onPress={() => props.onOpen(props.item.nodeKey)}>
+            <Button endArrow intent="neutral" size="sm" onPress={() => props.onOpen(props.item.nodeKey)}>
                 {props.view.openLabel}
             </Button>
             {props.item.isGrant ? (
-                <Button intent="alternative" size="sm" onPress={props.onGrants}>
+                <Button endArrow intent="alternative" size="sm" onPress={props.onGrants}>
                     {props.view.grantLabel}
                 </Button>
             ) : null}

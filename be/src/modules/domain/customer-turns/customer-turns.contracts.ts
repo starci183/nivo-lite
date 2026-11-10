@@ -119,24 +119,6 @@ export interface Escalation {
     readonly proposed: string | null
 }
 
-/** The customer's claim that they paid an open invoice. */
-export interface PaymentClaim {
-    /** The recorded payment input. */
-    readonly inboundEventId: string
-    /** What the customer wrote. */
-    readonly claim: string
-    /** The channel label. */
-    readonly channelLabel: string
-    /** The conversation it came from. */
-    readonly conversationId: string
-}
-
-/** Whether a claim opened a new check. */
-export interface ClaimStarted {
-    /** True when a new reconcile_payment item was created; false when one is already open. */
-    readonly created: boolean
-}
-
 /** What settling one part of a turn changed, and the lines it shows. */
 export interface TurnSettled {
     /** The lines to show in the workbench. */

@@ -12,10 +12,6 @@
       "types": "./dist/schema/index.d.ts",
       "default": "./dist/schema/index.js"
     },
-    "./reconcile": {
-      "types": "./dist/reconcile/index.d.ts",
-      "default": "./dist/reconcile/index.js"
-    },
     "./rights": {
       "types": "./dist/rights/index.d.ts",
       "default": "./dist/rights/index.js"
@@ -97,7 +93,7 @@
   },
   "peerDependencies": {
     "@heroui/react": "3.2.6",
-    "@starci/grammar": "0.25.0",
+    "@starci/grammar": "0.37.15",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "4.6.7"

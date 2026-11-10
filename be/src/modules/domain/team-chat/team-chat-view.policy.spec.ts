@@ -63,6 +63,8 @@ const CONTEXT: MessageViewContext = {
     approvals: new Map([
         [DECISION, { decisionId: DECISION, status: "pending", decidedByName: null, decidedAt: null, canDecide: true }],
     ]),
+    reactions: new Map(),
+    quoted: new Map(),
 }
 
 describe("message views", () => {
@@ -119,6 +121,10 @@ describe("message views", () => {
             runId: null,
             decisionId: null,
             approval: null,
+            agentMessage: null,
+            reactions: [],
+            replyTo: null,
+            forwardedFrom: null,
         })
     })
 })
@@ -134,6 +140,13 @@ describe("message views of cards and of unknown context", () => {
             subject.messageViewOf(messageOf({ kind: "approval", ref: { decision_id: DECISION } }), CONTEXT),
         ).toMatchObject({ runId: null, decisionId: DECISION, approval: { canDecide: true } })
         expect(subject.messageViewOf(messageOf({ kind: "report", ref: {} }), CONTEXT).runId).toBeNull()
+    })
+
+    it("carries the structured message of an agent line beside its words, and none for a plain line", async () => {
+        const subject = await buildSubject()
+        const json = JSON.stringify({ kind: "order.summary", intent: "notify" })
+        expect(subject.messageViewOf(messageOf({ ref: { agent_message: json } }), CONTEXT).agentMessage).toBe(json)
+        expect(subject.messageViewOf(messageOf({ ref: null }), CONTEXT).agentMessage).toBeNull()
     })
 
     it("shows empty names and addresses for what the context does not know, and no author for a system line", async () => {
@@ -176,12 +189,28 @@ describe("room views", () => {
         expect(subject.memberViewsOf([seatOf("user", "ghost")], CONTEXT.names)[0]?.name).toBe("")
     })
 
+    it("shows the right to post of an agent seat, and never one for a person", async () => {
+        const subject = await buildSubject()
+        const seats = [
+            { ...seatOf("agent", BOT), mayPost: true },
+            { ...seatOf("user", BEN), mayPost: true },
+            seatOf("user", ANA),
+        ]
+        const byName = new Map(subject.memberViewsOf(seats, CONTEXT.names).map((view) => [view.name, view.mayPost]))
+        expect(byName.get("Bot")).toBe(true)
+        expect(byName.get("Ben")).toBe(false)
+        expect(byName.get("Ana")).toBe(false)
+        expect(subject.memberViewsOf([seatOf("agent", BOT)], CONTEXT.names)[0]?.mayPost).toBe(false)
+    })
+
     it("shows a group with its name, counts, the mute of the viewer and the newest message", async () => {
         const subject = await buildSubject()
         const view = subject.roomViewOf(roomOf(), members, { ...context, viewerId: BEN })
         expect(view).toMatchObject({
             id: ROOM,
             kind: "group",
+            purpose: "group",
+            purposeModule: null,
             name: "Team",
             position: 4,
             createdBy: ANA,

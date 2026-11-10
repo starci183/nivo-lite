@@ -59,6 +59,8 @@ export enum InventoryErrorCode {
     PoNotCancellable = "INVENTORY_PO_NOT_CANCELLABLE",
     /** The order has no message to send. */
     PoMessageEmpty = "INVENTORY_PO_MESSAGE_EMPTY",
+    /** The photo of an item could not be written to the file store, or the app has none. */
+    ItemImageNotStored = "INVENTORY_ITEM_IMAGE_NOT_STORED",
     /** The starter set named in the apply call does not exist. */
     StarterUnknown = "INVENTORY_STARTER_UNKNOWN",
 }
@@ -93,6 +95,7 @@ export const INVENTORY_ERROR_KINDS: Record<InventoryErrorCode, ErrorKind> = {
     [InventoryErrorCode.ReceiptEmpty]: "invalid",
     [InventoryErrorCode.PoNotCancellable]: "conflict",
     [InventoryErrorCode.PoMessageEmpty]: "invalid",
+    [InventoryErrorCode.ItemImageNotStored]: "internal",
     [InventoryErrorCode.StarterUnknown]: "invalid",
 }
 

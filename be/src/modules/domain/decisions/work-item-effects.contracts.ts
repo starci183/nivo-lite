@@ -13,10 +13,8 @@ export interface RaisePayload {
     readonly action: string
     /** The line the owner reads. */
     readonly title: string
-    /** The facts the node holds about the work. */
+    /** What the work is about: ids of records and short words; the amount at stake is read from the records. */
     readonly payload: PayloadMembers
-    /** The amount at stake in VND, when there is one. */
-    readonly amountVnd?: number | undefined
 }
 
 /** What the undo of a recorded effect names: the record to undo. */

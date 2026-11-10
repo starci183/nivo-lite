@@ -1,10 +1,13 @@
 import { Test } from "@nestjs/testing"
 import {
     AGENT_DISPLAY_NAME_LIMITS,
+    AGENT_HANDLE_LIMITS,
     AGENT_SERIAL_RANGE,
     agentSerialOf,
+    cleanAgentHandle,
     cleanAgentName,
     defaultAgentName,
+    isAgentAvatarPreset,
     isAgentAvatarUrl,
 } from "./agent-name.policy"
 
@@ -13,6 +16,8 @@ type Subject = {
     isAgentAvatarUrl: typeof isAgentAvatarUrl
     defaultAgentName: typeof defaultAgentName
     agentSerialOf: typeof agentSerialOf
+    cleanAgentHandle: typeof cleanAgentHandle
+    isAgentAvatarPreset: typeof isAgentAvatarPreset
 }
 
 const SUBJECT = Symbol("agent-name.policy")
@@ -20,7 +25,17 @@ const SUBJECT = Symbol("agent-name.policy")
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
         providers: [
-            { provide: SUBJECT, useValue: { cleanAgentName, isAgentAvatarUrl, defaultAgentName, agentSerialOf } },
+            {
+                provide: SUBJECT,
+                useValue: {
+                    cleanAgentName,
+                    isAgentAvatarUrl,
+                    defaultAgentName,
+                    agentSerialOf,
+                    cleanAgentHandle,
+                    isAgentAvatarPreset,
+                },
+            },
         ],
     }).compile()
     return moduleRef.get<Subject>(SUBJECT)
@@ -69,5 +84,32 @@ describe("agent name policy", () => {
         expect(subject.agentSerialOf("ffffffff-ffff-4fff-bfff-ffffffffffff")).toBe(
             AGENT_SERIAL_RANGE.min + (0xffffffff % 90_000),
         )
+    })
+
+    it("cleans a typed handle into lowercase letters, digits and single hyphens, folding the Vietnamese marks", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.cleanAgentHandle("@sales-lan")).toBe("sales-lan")
+        expect(subject.cleanAgentHandle("  Sales L\u00e2n  ")).toBe("sales-lan")
+        expect(subject.cleanAgentHandle("\u0110\u1ee9c  ban__hang")).toBe("duc-ban-hang")
+        expect(subject.cleanAgentHandle("a".repeat(AGENT_HANDLE_LIMITS.max))).toHaveLength(32)
+    })
+
+    it("refuses a handle that is too short, too long or does not start with a letter", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.cleanAgentHandle("@")).toBeNull()
+        expect(subject.cleanAgentHandle("x")).toBeNull()
+        expect(subject.cleanAgentHandle("9sales")).toBeNull()
+        expect(subject.cleanAgentHandle("a".repeat(AGENT_HANDLE_LIMITS.max + 1))).toBeNull()
+    })
+
+    it("offers only the listed preset pictures", async () => {
+        const subject = await buildSubject()
+
+        expect(subject.isAgentAvatarPreset("nivo-ai")).toBe(true)
+        expect(subject.isAgentAvatarPreset("role")).toBe(true)
+        expect(subject.isAgentAvatarPreset("initials")).toBe(true)
+        expect(subject.isAgentAvatarPreset("dragon")).toBe(false)
     })
 })

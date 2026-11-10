@@ -47,7 +47,7 @@ export const DossierMapDetail = (props: DossierMapDetailProps) => {
     return (
         <>
             <PaneHead title={detail.title} headingLevel={2} isLoading={props.isWaiting} />
-            <PaneSection gap="section">
+            <PaneSection gap="row">
                 {detail.badges.length === 0 ? null : (
                     <Cluster gap="inline">
                         {detail.badges.map((badge) => (
@@ -63,7 +63,7 @@ export const DossierMapDetail = (props: DossierMapDetailProps) => {
                     </Text>
                 ))}
                 {detail.action === null ? null : (
-                    <Button intent="commit" width="fill" href={detail.action.href}>
+                    <Button endArrow intent="commit" width="fill" href={detail.action.href}>
                         {detail.action.label}
                     </Button>
                 )}

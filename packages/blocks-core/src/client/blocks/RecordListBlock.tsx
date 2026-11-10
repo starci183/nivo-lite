@@ -37,6 +37,14 @@ const clearSearchOf = (
 ): Partial<{ emptyAction: { label: string; onAction: () => void } }> =>
     searched === null ? {} : { emptyAction: { label, onAction: clear } }
 
+/** The link under the rows of a card the spec declares, with its path resolved to an address; absent when it declares none. */
+const footerOf = (
+    link: RenderOf<typeof recordListBlock>["props"]["footerLink"],
+    words: ReturnType<typeof useBlockWords>,
+    href: (path: string) => string,
+): { readonly label: string; readonly href: string } | undefined =>
+    link === undefined ? undefined : { label: words(link.label), href: href(link.path) }
+
 /** Bound records as a card with an action on each row, or as a selectable list that writes the chosen row to a param. */
 export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactNode => {
     const host = useBlockHost()
@@ -93,6 +101,7 @@ export const RecordListBlock = (props: RenderOf<typeof recordListBlock>): ReactN
                         hasAvatar={props.props.avatar === true}
                         isCard={isCard}
                         action={open.isAllowed ? { label: open.label, press: openRow } : null}
+                        footer={footerOf(props.props.footerLink, words, host.navigation.href)}
                     />
                 ) : (
                     <Framed isCard={isCard} label={label}>

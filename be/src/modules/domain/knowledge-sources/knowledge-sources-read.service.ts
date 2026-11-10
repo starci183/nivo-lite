@@ -5,6 +5,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import type { SourceBrief } from "./knowledge-sources.contracts"
 import type {
     ChangedPublicSource,
+    InstanceDocument,
     OriginSource,
     PublicSourceExcerpt,
     PublicSourceText,
@@ -12,6 +13,9 @@ import type {
     SourceState,
 } from "./knowledge-sources-read.contracts"
 import { KnowledgeSourceEntity } from "./persistence/entities"
+
+/** The most documents one copy of an instance reads. */
+const INSTANCE_DOCUMENTS_MAX = 500
 
 const isChangedPublicSource = (value: unknown): value is ChangedPublicSource =>
     typeof value === "object" &&
@@ -192,5 +196,24 @@ export class KnowledgeSourcesReadService {
                 module,
             })
             .andWhere("s.installation_id IS NULL")
+    }
+
+    /** The ready documents kept for one agent instance alone (never the shared ones), with their text, oldest first: what a copy of the instance takes. */
+    async readyOfInstance(workspaceId: string, installationId: string): Promise<ReadonlyArray<InstanceDocument>> {
+        const rows = await this.entityManager.find(KnowledgeSourceEntity, {
+            select: { id: true, kind: true, title: true, content: true, topic: true, tags: true, visibility: true },
+            where: { workspaceId, installationId, status: "ready" },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: INSTANCE_DOCUMENTS_MAX,
+        })
+        return rows.map((row) => ({
+            id: row.id,
+            kind: row.kind,
+            title: row.title,
+            content: row.content,
+            topic: row.topic,
+            tags: row.tags,
+            visibility: row.visibility,
+        }))
     }
 }

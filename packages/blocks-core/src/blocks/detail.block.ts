@@ -10,6 +10,7 @@ import { labelsProp } from "./labels-prop"
 import { paramName } from "./param-name"
 import type { ParamNameSchema } from "./param-name"
 import type { LabelsSchema } from "./labels-prop"
+import { RECORD_SURFACES } from "./record-surface"
 import type { EnumSchema, OptionalAction, RequiredRead, TextSchema } from "./schema-types"
 
 /** The most titled groups of facts one detail holds. */
@@ -61,6 +62,7 @@ const props: z.ZodObject<{
     pinsPrimary: z.ZodOptional<z.ZodBoolean>
     primaryWhen: z.ZodOptional<z.ZodString>
     secondaryWhen: z.ZodOptional<z.ZodString>
+    surface: z.ZodOptional<EnumSchema<(typeof RECORD_SURFACES)[number]>>
 }> = z.object({
     label: specText,
     idle: specText.optional(),
@@ -76,6 +78,7 @@ const props: z.ZodObject<{
     pinsPrimary: z.boolean().optional(),
     primaryWhen: z.string().max(PATH_MAX).optional(),
     secondaryWhen: z.string().max(PATH_MAX).optional(),
+    surface: z.enum(RECORD_SURFACES).optional(),
 })
 /** The slots of the detail block: the record it shows, and the two actions it may offer on that record. */
 type Slots = {

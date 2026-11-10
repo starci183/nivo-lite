@@ -42,6 +42,21 @@ describe("CatalogueSeedService > run", () => {
     )
 })
 
+describe("CatalogueSeedService > photos", () => {
+    it("hands the photo of an item to the inventory seed as bytes", async () => {
+        const { service, inventory } = await build()
+        const image = { contentType: "image/jpeg", base64: Buffer.from("jpeg-bytes").toString("base64") }
+        const text = `${JSON.stringify({ documents: [{ path: "data/catalogue.json", document: { schema: CATALOGUE_SEED_SCHEMA, items: [{ ...ITEM, image }] } }] })}\n`
+
+        await service.run(text, "NIVO")
+
+        expect(inventory.ensureItem).toHaveBeenCalledWith("ws-1", {
+            ...ITEM,
+            image: { contentType: "image/jpeg", bytes: Buffer.from("jpeg-bytes") },
+        })
+    })
+})
+
 describe("CatalogueSeedService > refusals", () => {
     it.each([
         ["no workspace of that name", []],

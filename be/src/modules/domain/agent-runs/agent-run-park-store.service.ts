@@ -10,7 +10,9 @@ import { AgentRunRecordsService } from "./agent-run-records.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { stepViewOf } from "./agent-runs.mapper"
+import type { RunRecord } from "./agent-runs-records.contracts"
 import { jsonValueOf } from "./policies/json-value.policy"
+import { parkAgeSeconds, resumeGapSeconds, servesCustomer, supersededBy } from "./policies/park-ladder.policy"
 import { RESUMABLE_RUN, UNDONE_STEP } from "./policies/run-status.policy"
 import { subjectOfRun } from "./policies/run-subject.policy"
 import type {
@@ -25,6 +27,12 @@ import type {
 
 /** The most parked runs one read looks at before the filters that need their steps cut it to the pass limit. */
 const CANDIDATES_MAX = 100
+
+/** The most of the agent's newest finished runs a parked chat run is checked against. */
+const SUPERSEDE_LOOKBACK = 20
+
+/** Why a parked run the machine will not resume was closed: a newer run already answered its conversation. */
+export const SUPERSEDED = "superseded"
 
 const MS = 1000
 
@@ -89,6 +97,7 @@ export class AgentRunParkStoreService {
         const failed = steps.find((step) => step.status === "failed")
         if (failed === undefined) return { kind: "no_failed_step" }
         if (request.auto && run.resumeAttempts >= request.max) return { kind: "exhausted" }
+        if (request.auto && (await this.superseded(scoped, run))) return this.closeSuperseded(scoped, run)
         const now = this.clock.now()
         const read = request.input === undefined ? null : jsonValueOf(request.input)
         const input = read?.valid === true ? read.json : undefined
@@ -115,7 +124,13 @@ export class AgentRunParkStoreService {
             ...(request.auto
                 ? {
                       resumeNotBefore: new Date(
-                          now.getTime() + request.backoffSeconds * MS * 2 ** fresh.resumeAttempts,
+                          now.getTime() +
+                              MS *
+                                  resumeGapSeconds({
+                                      chat: servesCustomer(fresh.context),
+                                      resumes: fresh.resumeAttempts,
+                                      baseSeconds: request.backoffSeconds,
+                                  }),
                       ).toISOString(),
                   }
                 : {}),
@@ -129,7 +144,10 @@ export class AgentRunParkStoreService {
         }
     }
 
-    /** The parked runs of a workspace a machine may run again, oldest first, at most `limit`. */
+    /**
+     * The parked runs of a workspace a machine may run again, oldest first, at most `limit`. With `ladder` a run that serves a customer
+     * conversation is due after the rung of its resumes so far (about a minute, then five, then half an hour), any other after `minAgeSeconds`.
+     */
     parked(query: ParkedQuery): Promise<ReadonlyArray<ParkedRef>> {
         return this.store.at(query.workspaceId, undefined, async (scoped) => {
             const now = this.clock.now()
@@ -147,7 +165,7 @@ export class AgentRunParkStoreService {
                 (run) =>
                     run.resumeAttempts < query.max &&
                     (run.resumeNotBefore === null || run.resumeNotBefore.getTime() < now.getTime()) &&
-                    (run.endedAt === null || run.endedAt.getTime() < now.getTime() - query.minAgeSeconds * MS) &&
+                    (run.endedAt === null || run.endedAt.getTime() < now.getTime() - this.ageOf(run, query) * MS) &&
                     (!query.byBuild || run.parkedBuild !== query.build),
             )
             const found: Array<ParkedRef> = []
@@ -158,6 +176,42 @@ export class AgentRunParkStoreService {
                     found.push({ runId: run.id, workspaceId: query.workspaceId })
             })
             return found
+        })
+    }
+
+    /** Whether a newer run of the agent already finished in the run's customer conversation; only a chat run can be superseded. */
+    private async superseded(scoped: ScopedTx, run: RunRecord): Promise<boolean> {
+        if (!servesCustomer(run.context)) return false
+        const newer = await this.records.runsOf(
+            scoped,
+            "done",
+            { op: "eq", field: "agentId", value: run.agentId },
+            [
+                ["endedAt", "desc"],
+                ["id", "desc"],
+            ],
+            SUPERSEDE_LOOKBACK,
+        )
+        return supersededBy(run, newer)
+    }
+
+    /** Takes a superseded run off the machine's list: it is closed as dead with why, its owner item stands, a person may still resume it. */
+    private async closeSuperseded(scoped: ScopedTx, run: RunRecord): Promise<ResumeAnswer> {
+        await this.store.patchRunWith(scoped, run.id, (fresh) =>
+            fresh.status === "parked"
+                ? { status: "dead", error: { code: SUPERSEDED }, endedAt: this.clock.now().toISOString() }
+                : null,
+        )
+        return { kind: "superseded" }
+    }
+
+    /** How long a parked run must have waited before this pass resumes it, seconds. */
+    private ageOf(run: RunRecord, query: ParkedQuery): number {
+        if (query.ladder !== true) return query.minAgeSeconds
+        return parkAgeSeconds({
+            chat: servesCustomer(run.context),
+            resumes: run.resumeAttempts,
+            baseSeconds: query.minAgeSeconds,
         })
     }
 

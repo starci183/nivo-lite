@@ -8,7 +8,7 @@ import {
 } from "@modules/domain/workspace-members"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import { isAssignableRole, mayAssign, mayTag, ownerCardOf, resolveOwners, rolesOf } from "./agent-ownership.policy"
+import { isAssignableRole, mayAssign, mayManage, mayTag, ownerCardOf, resolveOwners, rolesOf } from "./agent-ownership.policy"
 import type { AgentOwners, AgentOwnership, OwnershipChange } from "./agents.contracts"
 import type { TagGrants } from "./agent-tag-grants.contracts"
 import { InjectAgentRooms } from "./agents.decorators"
@@ -124,6 +124,23 @@ export class AgentOwnershipService {
             memberRooms: rooms.map((room) => room.key),
         }
         return mayAssign(context)
+    }
+
+    /** Whether the account of a workspace manages an agent: by role or by a seat in a room the agent is open to, paused or not. */
+    async canManage(workspaceId: string, userId: string, agentId: string): Promise<boolean> {
+        const agent = await this.entityManager.findOne(AgentEntity, { where: { id: agentId, workspaceId } })
+        if (agent === null) return false
+        const member = await this.seats.activeSeatOfUser(workspaceId, userId)
+        if (member === null) return false
+        const rooms = await this.seatRooms(workspaceId, [userId])
+        return mayManage({
+            role: member.role,
+            memberStatus: member.status,
+            agentStatus: agent.status,
+            assignableRoles: agent.assignableRoles,
+            assignableRooms: agent.assignableRooms,
+            memberRooms: rooms.map((room) => room.key),
+        })
     }
 
     /** The member id (workspace_members.id) of a signed-in account; the account must belong to the workspace. */

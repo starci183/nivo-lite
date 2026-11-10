@@ -16,14 +16,19 @@ import {
     InternalGatewayToolsService,
 } from "@modules/domain/agent-turns"
 import { AGENT_PROFILE_ERROR_KINDS, AGENT_PROFILE_MESSAGES, AgentProfileModule } from "@modules/domain/agent-profile"
+import {
+    AGENT_INSTANCES_ERROR_KINDS,
+    AGENT_INSTANCES_MESSAGES,
+    AgentInstancesModule,
+    ConversationOwnersService,
+} from "@modules/domain/agent-instances"
 import { McpCallLogModule } from "@modules/domain/mcp-call-log"
-import { AGENTS_SYNC_FRESH_MS, AgentDirectoryService, AgentsModule, AgentsService } from "@modules/domain/agents"
+import { AGENTS_SYNC_FRESH_MS, AgentDirectoryService, AgentOwnershipService, AgentsModule, AgentsService } from "@modules/domain/agents"
 import {
     AI_GENERATIONS_ERROR_KINDS,
     AI_GENERATIONS_MESSAGES,
     AI_GENERATIONS_POLL_MS,
     AiGenerationsModule,
-    TextGeneratorService,
 } from "@modules/domain/ai-generations"
 import { WorkItemsActivityService } from "@modules/domain/work-items"
 import { ApprovalRequestsModule } from "@modules/domain/approval-requests"
@@ -50,7 +55,6 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
     AiTasksModule.register({
         isGlobal: true,
         ...options.aiTasks,
-        generator: TextGeneratorService,
         recall: AgentKnowledgeLensService,
         meter: UsageGateService,
     }),
@@ -63,12 +67,17 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
             work: WorkItemsActivityService,
             knowledge: AgentKnowledgeLensService,
             modules: ModuleProfilesService,
+            channelOwners: ConversationOwnersService,
         },
         syncFreshMs: AGENTS_SYNC_FRESH_MS,
     }),
     ChatRoomDirectoryModule.register({ isGlobal: true, rooms: teamChatEntities[0], seats: teamChatEntities[1] }),
     AgentProfileModule.register({ isGlobal: true }),
-    AgentConnectionsModule.register({ isGlobal: true, ports: { agents: AgentDirectoryService } }),
+    AgentConnectionsModule.register({
+        isGlobal: true,
+        ports: { agents: AgentDirectoryService, managers: AgentOwnershipService },
+    }),
+    AgentInstancesModule.register({ isGlobal: true }),
     AiGenerationsModule.register({
         isGlobal: true,
         usage: UsageGateService,
@@ -103,6 +112,7 @@ export const agentsErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>
     REMOTE_FILES_ERROR_KINDS,
     MODULES_ERROR_KINDS,
     AGENT_PROFILE_ERROR_KINDS,
+    AGENT_INSTANCES_ERROR_KINDS,
 ]
 
 /** The message bundles of the capabilities this group registers, in registration order. */
@@ -118,4 +128,5 @@ export const agentsMessages: ReadonlyArray<MessageBundle> = [
     REMOTE_FILES_MESSAGES,
     MODULES_MESSAGES,
     AGENT_PROFILE_MESSAGES,
+    AGENT_INSTANCES_MESSAGES,
 ]

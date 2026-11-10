@@ -5,7 +5,9 @@ import type {
     Attachment,
     ChatMemberRef,
     ChatRoomView,
+    GroupPurpose,
     LinePosted,
+    MessageRef,
     ReportPosted,
     RoomKind,
     StoredMention,
@@ -61,6 +63,8 @@ export interface NewRoom {
     readonly directKey: string | null
     /** The members who join besides the creator. */
     readonly others: ReadonlyArray<ChatMemberRef>
+    /** What a group is for; a plain group when omitted. A direct room is always `direct`. */
+    readonly purpose?: GroupPurpose | undefined
 }
 
 /** A text message of a person to store. */
@@ -79,6 +83,10 @@ export interface NewText {
     readonly mentions: ReadonlyArray<StoredMention>
     /** The checked files it carries. */
     readonly attachments: ReadonlyArray<Attachment>
+    /** The message of the room it answers; omitted for none. */
+    readonly replyTo?: string | null
+    /** What the row keeps in `ref`: whose words a forwarded message carries; omitted for none. */
+    readonly ref?: MessageRef | null
 }
 
 /** What kind of engine card a message is. */
@@ -112,6 +120,8 @@ export interface NewLine {
     readonly body: string
     /** The retry key; null when the line has none. */
     readonly key: string | null
+    /** The structured message the line carries as JSON text, or null for a plain line. */
+    readonly agentMessage?: string | null
 }
 
 /** A card the store holds: its message and whether this write made it. */

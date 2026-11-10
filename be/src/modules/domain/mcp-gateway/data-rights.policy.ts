@@ -10,7 +10,7 @@ import type {
 
 /**
  * The kind of data each native connector's read tools reach. A connector with no kind here reads nothing the store holds, and a
- * governed agent is refused its read (`no_kind`): the provider-neutral `payment` and `bank` capabilities read the same payments as the
+ * governed agent is refused its read (`no_kind`): the provider-neutral `bank` capability reads the same payments as the
  * `sepay` status tools, so they are named here too.
  */
 const KIND_OF_CONNECTOR: Readonly<Record<string, DataKind>> = {
@@ -18,7 +18,6 @@ const KIND_OF_CONNECTOR: Readonly<Record<string, DataKind>> = {
     dossier: "customers",
     drive: "documents",
     sepay: "payments",
-    payment: "payments",
     bank: "payments",
     zalo: "channels",
     telegram: "channels",

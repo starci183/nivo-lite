@@ -53,3 +53,19 @@ export type {
     ToolGraphVerdict,
 } from "./mcp-gateway.contracts"
 export { NodeToolDoorService } from "./node-tool-door.service"
+export { CONVERSATION_LEADS_GATE } from "./mcp-gateway.decorators"
+export type { ConversationLeadsGate, GatewayRun } from "./mcp-gateway.contracts"
+export { ProviderAbilitiesService } from "./provider-abilities.service"
+export type {
+    AbilityView,
+    AttachmentChangeResult,
+    AttachmentRefusal,
+    AttachmentWish,
+    ProposedAttachment,
+    ProviderBoard,
+    ProviderView,
+    TemplateCandidate,
+} from "./provider-abilities.service"
+export { PROVIDER_CATALOGUE, isAbilityTool, providerOfChannel } from "./provider-abilities.policy"
+export type { AbilityVerdict, ProviderAbility, ProviderKind, ProviderSpec } from "./provider-abilities.policy"
+export type { AbilityLabel } from "./messages/provider-abilities.labels"

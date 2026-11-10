@@ -15,6 +15,8 @@ export interface SetupSideGate {
     readonly statusLabel: string
     readonly statusTone: "neutral" | "warning" | "success"
     readonly evidence: string
+    /** What the agent does about this item: on its own, only after asking, or never. */
+    readonly group: "auto" | "ask" | "never"
 }
 
 /** The checklist, its progress, the apply command and what the last apply said. */
@@ -33,6 +35,8 @@ export interface SetupSideGates {
     readonly editLabel: string
     readonly editSaveLabel: string
     readonly editCancelLabel: string
+    /** "NIVO understood:", before what NIVO took from the chat for an item. */
+    readonly understoodLabel: string
     readonly isApplying: boolean
     readonly canApply: boolean
     readonly applyTone: "idle" | "applied"
@@ -40,47 +44,10 @@ export interface SetupSideGates {
     readonly applyText: string
 }
 
-/** The draft being built in the chat. */
-export interface SetupSideDraft {
-    readonly title: string
-    readonly summary: string
-    readonly emptyText: string
-    readonly factsTitle: string
-    readonly facts: ReadonlyArray<{ readonly key: string; readonly text: string }>
-}
-
-/** The knowledge the module runs on. */
-export interface SetupSideKnowledge {
-    readonly title: string
-    readonly businessLine: string
-    readonly publicLine: string
-    readonly emptyHint: string
-    readonly knowledgeHref: string
-    readonly knowledgeLabel: string
-    readonly nivoHref: string
-    readonly nivoLabel: string
-}
-
-/** The applied versions of the context. */
-export interface SetupSideVersions {
-    readonly title: string
-    readonly emptyText: string
-    readonly inUseLabel: string
-    readonly versions: ReadonlyArray<{
-        readonly id: string
-        readonly line: string
-        readonly detail: string
-        readonly isActive: boolean
-    }>
-}
-
-/** Everything the side column of the Setup tab draws once the setup is in. */
+/** Everything the side column of the Setup tab draws once the setup is in; the versions are the ones of the graph, the one source of the running version. */
 export interface SetupSideView {
     readonly unmet: SetupSideNotice | null
-    readonly draft: SetupSideDraft
     readonly gates: SetupSideGates
-    readonly knowledge: SetupSideKnowledge
-    readonly versions: SetupSideVersions
 }
 
 /** What the gates card draws and does: the checklist, its skeleton, the last gate failure and the commands. */
@@ -94,6 +61,13 @@ export interface SetupGatesCardProps extends Omit<SetupSideGates, "applyTone"> {
     readonly onStartEdit: (gateKey: string, evidence: string) => void
     readonly onStopEdit: () => void
     readonly onApply: () => void
+}
+
+/** One item NIVO filled and the owner did not confirm yet, as the chat proposes it ("Item 4 - ..."). */
+export interface AgentSetupProposal {
+    readonly key: string
+    readonly title: string
+    readonly evidence: string
 }
 
 /** The words of the panes that do not come from a slot. */
@@ -110,4 +84,26 @@ export interface AgentSetupCopy {
     readonly suggestionsLabel: string
     /** "NIVO is asking in the chat", under the current gate. */
     readonly askingLabel: string
+    readonly sideTitle: string
+    readonly understandingTitle: string
+    readonly groupLabels: Readonly<Record<"auto" | "ask" | "never", string>>
+    readonly understandingEmpty: string
+    readonly versionNone: string
+    readonly mapTitle: string
+    readonly mapNote: string
+    readonly nivoName: string
+    readonly mapModeLabel: string
+    readonly mapOpen: string
+    readonly mapClose: string
+    readonly chatSubtitle: string
+    readonly versionsTitle: string
+    readonly versionsEmpty: string
+    readonly inUseLabel: string
+    readonly mapEmptyTitle: string
+    readonly mapEmptyBody: string
+    readonly proposalFrom: string
+    readonly applyLabel: string
+    readonly cancelLabel: string
+    readonly proposedLabel: string
+    readonly confirmedLabel: string
 }

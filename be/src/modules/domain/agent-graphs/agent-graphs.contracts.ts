@@ -2,10 +2,10 @@ import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { ApprovalPolicy, ApproverGroup } from "@modules/domain/authority-rules"
 import type { IntentBusiness } from "@modules/domain/intent-contracts"
 import type { DataRight } from "@modules/domain/mcp-gateway"
-import type { FactSpec, FactView, TriggerMatch } from "./agent-graphs-contract.contracts"
+import type { FactSpec, FactView, GraphChangeKind, TriggerMatch } from "./agent-graphs-contract.contracts"
 import type { UnheldRule } from "./policies/unheld-rules.policy"
 
-export type { FactSpec, FactView }
+export type { FactSpec, FactView, GraphChangeKind }
 
 /** The most nodes one graph may hold. */
 export const MAX_GRAPH_NODES = 60
@@ -271,6 +271,20 @@ export interface GraphNodeCard {
     readonly count: string
     /** The is placeholder. */
     readonly isPlaceholder: boolean
+    /** The visible group (sub-flow) the node belongs to in the graph view, from the `group` of its spec node; absent for a node on its own. */
+    readonly group?: string | undefined
+    /** Set on a node that waits (for the customer's reply, for payment): what it waits for and the timeout and reminder, as durations like "2h". */
+    readonly wait?: GraphNodeWait | undefined
+}
+
+/** What a waiting node waits for and how long, for the graph view. */
+export interface GraphNodeWait {
+    /** What the node waits for. */
+    readonly kind: "reply" | "payment" | "other"
+    /** How long it waits before it gives up, as a duration like "24h"; absent for no timeout. */
+    readonly timeout?: string | undefined
+    /** When it nudges the other side, as a duration like "2h"; absent for no reminder. */
+    readonly reminder?: string | undefined
 }
 
 /** One finding of `graphProblems`. */
@@ -402,9 +416,6 @@ export interface GraphDiff {
     /** The changes. */
     readonly changes: ReadonlyArray<DiffChange>
 }
-
-/** How a version came to be; `spec` is a node graph a graph spec published, which no rules-derived refresh replaces. */
-export type GraphChangeKind = "seed" | "chat" | "edit" | "conflict" | "learned" | "template" | "rollback" | "spec"
 
 /** Where a proposal stands: waiting for a person, taken, turned down, or overtaken by a newer change. */
 export type ProposalStatus = "open" | "confirmed" | "declined" | "superseded"

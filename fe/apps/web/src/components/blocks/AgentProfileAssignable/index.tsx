@@ -3,17 +3,19 @@
 import { useTranslations } from "next-intl"
 import { useAgentProfile } from "@/hooks/agentProfile"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentProfileAssignableBase } from "./component"
-import type { AssignerRow } from "./component"
+import { AgentProfileAssignableBase, type AssignerChip } from "./component"
 
-/** The agent whose assigners the card shows. */
+/** The agent whose assigners the field shows. */
 type AgentProfileAssignableProps = {
     readonly agentId: string
 }
 
-const PLACEHOLDER: ReadonlyArray<AssignerRow> = [{ id: "roles", term: "-", description: "-" }]
+const PLACEHOLDER: ReadonlyArray<AssignerChip> = [
+    { id: "a", label: "-----------" },
+    { id: "b", label: "-------" },
+]
 
-/** The connected "Ai duoc giao viec cho agent" card: the roles and rooms that may hand the agent work. */
+/** The connected "Ai duoc giao viec" field: the roles and rooms that may hand the agent work. */
 export const AgentProfileAssignable = (props: AgentProfileAssignableProps) => {
     const t = useTranslations("agentProfile")
     const slotLabels = useSlotLabels()
@@ -24,25 +26,9 @@ export const AgentProfileAssignable = (props: AgentProfileAssignableProps) => {
                 title: t("assignableTitle"),
                 description: t("assignableDesc"),
                 read: {
-                    slot: mapSlot(slot, (agent): ReadonlyArray<AssignerRow> => [
-                        ...(agent.assignableRoles.length === 0
-                            ? []
-                            : [
-                                  {
-                                      id: "roles",
-                                      term: t("assignableRole"),
-                                      description: agent.assignableRoles.map((role) => t(`role_${role}`)).join(", "),
-                                  },
-                              ]),
-                        ...(agent.assignableRooms.length === 0
-                            ? []
-                            : [
-                                  {
-                                      id: "rooms",
-                                      term: t("assignableRoom"),
-                                      description: agent.assignableRooms.join(", "),
-                                  },
-                              ]),
+                    slot: mapSlot(slot, (agent): ReadonlyArray<AssignerChip> => [
+                        ...agent.assignableRoles.map((role) => ({ id: `role:${role}`, label: t(`role_${role}`) })),
+                        ...agent.assignableRooms.map((room) => ({ id: `room:${room}`, label: room })),
                     ]),
                     placeholder: PLACEHOLDER,
                     labels: slotLabels(t("assignableEmpty")),

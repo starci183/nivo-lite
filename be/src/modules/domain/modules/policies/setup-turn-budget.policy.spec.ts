@@ -79,6 +79,5 @@ describe("isTransient", () => {
         expect(isTransient("timeout")).toBe(true)
         expect(isTransient("quota")).toBe(false)
         expect(isTransient("not_configured")).toBe(false)
-        expect(isTransient("engine_offline")).toBe(false)
     })
 })

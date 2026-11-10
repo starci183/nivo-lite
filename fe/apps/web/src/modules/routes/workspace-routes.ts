@@ -24,3 +24,6 @@ export const workspaceRenewalPaymentPath = (workspaceId: string, orderId: string
 
 /** The credits and plan view of the selected workspace. */
 export const creditsPath = (): string => "/billing"
+
+/** The plan change of the selected workspace: the plans side by side and the priced change. */
+export const billingPlanPath = (): string => "/billing/plan"

@@ -7,7 +7,7 @@ type PersonAvatarProps = {
     readonly isLoading?: boolean
     readonly name: string
     readonly src?: string | null | undefined
-    /** A stable seed (the person's id): without a picture the avatar draws the generated mark of this seed instead of initials. */
+    /** A stable seed (the person's id): without a picture the avatar draws the generated mark of this seed (a sprout). */
     readonly seed?: string | undefined
     /** `xs` renders the grammar's smallest plate (`sm`, 32px): the grammar publishes no 24px avatar. */
     readonly size?: "xs" | "sm" | "md" | "lg" | undefined
@@ -20,13 +20,16 @@ const AVATAR_SIZE: Record<NonNullable<PersonAvatarProps["size"]>, AvatarSize> = 
     lg: "lg",
 }
 
-/** A person's avatar: the picture, else Grammar's generated initials of the name (a bracketed note is not part of the name). */
-export const PersonAvatar = (props: PersonAvatarProps) => (
-    <Avatar
-        {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
-        name={withoutParentheses(props.name).trim()}
-        {...(props.src ? { src: props.src } : {})}
-        {...(props.seed === undefined ? {} : { seed: props.seed })}
-        size={AVATAR_SIZE[props.size ?? "md"]}
-    />
-)
+/** A person's avatar: the picture, else Grammar's generated mark of the name (a bracketed note is not part of the name). */
+export const PersonAvatar = (props: PersonAvatarProps) => {
+    const name = withoutParentheses(props.name).trim()
+    return (
+        <Avatar
+            {...(props.isLoading === undefined ? {} : { isLoading: props.isLoading })}
+            name={name}
+            {...(props.src ? { src: props.src } : {})}
+            {...(props.seed === undefined ? {} : { seed: props.seed })}
+            size={AVATAR_SIZE[props.size ?? "md"]}
+        />
+    )
+}

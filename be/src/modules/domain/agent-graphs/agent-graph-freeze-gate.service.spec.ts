@@ -1,0 +1,186 @@
+import { Test } from "@nestjs/testing"
+import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
+import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { AgentRunsService } from "@modules/domain/agent-runs"
+import { AgentWorkHandlersService } from "@modules/domain/agent-work"
+import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { stateOf } from "@tests/fixtures/builders/agent-graph.builder"
+import { runViewOf } from "@tests/fixtures/builders/agent-runs.builder"
+import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
+import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
+import { AgentGraphCallGuardService } from "./agent-graph-call-guard.service"
+import { AgentGraphFreezeGateService } from "./agent-graph-freeze-gate.service"
+import type { FlowFreezePort } from "./agent-graph-freeze-gate.service"
+import { GRAPH_FLOW_TRIGGER_MESSAGES } from "./agent-graphs.decorators"
+import type { FlowTriggerMessages } from "./agent-graphs.port"
+import { AgentGraphsService } from "./agent-graphs.service"
+
+const STOP = { workspaceId: "ws-1", runId: "run-1", code: "x", stepKey: null, trigger: null }
+
+const FLOW: GraphSpec = {
+    schema: "nivo/agent-graph@1",
+    moduleKey: "sales",
+    trigger: { kind: "tag", sources: ["agent"] },
+    grant: { rights: [], tools: [], effects: [] },
+    nodes: [{ key: "end", kind: "output", step: "stop" }],
+}
+
+const TURN = agentTurnViewOf({ source: "tag", context: { authorAgentId: "agent-2", text: "order" } })
+
+const buildGate = async (bindMessages: boolean) => {
+    const messages = mock<FlowTriggerMessages>({
+        messagesOf: jest.fn().mockResolvedValue([{ id: "m-1", text: "hi", at: "t", attachments: [] }]),
+    })
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AgentGraphFreezeGateService,
+            ...(bindMessages ? [{ provide: GRAPH_FLOW_TRIGGER_MESSAGES, useValue: messages }] : []),
+        ],
+    }).compile()
+    return { gate: moduleRef.get(AgentGraphFreezeGateService), messages }
+}
+
+/** What waits for the founder for the customer of the specs: the step a frozen workflow stopped on, and since when. */
+const WAITING = [{ step: "Mark paid", since: "2026-11-10T04:00:00.000Z" }]
+
+const portOf = (held: boolean): FlowFreezePort => ({
+    hold: jest.fn().mockResolvedValue(held),
+    stopped: jest.fn().mockResolvedValue(held),
+    frozen: jest.fn().mockResolvedValue(held),
+    waitingOf: jest.fn().mockResolvedValue(held ? WAITING : []),
+})
+
+describe("AgentGraphFreezeGateService", () => {
+    it("holds nothing and freezes nothing while no capability keeps freezes", async () => {
+        const { gate } = await buildGate(false)
+        await expect(gate.hold(TURN, {})).resolves.toBe(false)
+        await expect(gate.stopped(STOP)).resolves.toBe(false)
+        await expect(gate.frozen("ws-1", { leadId: "lead-1" })).resolves.toBe(false)
+        await expect(gate.waitingOf("ws-1", { leadId: "lead-1" })).resolves.toEqual([])
+    })
+
+    it("asks the freezes whether a workflow of a customer is frozen and what waits for the founder, recording nothing itself", async () => {
+        const { gate } = await buildGate(false)
+        const port = portOf(true)
+        gate.set(port)
+        const trigger = { conversationId: "c-1", workflowId: "wf-consult" }
+
+        await expect(gate.frozen("ws-1", trigger)).resolves.toBe(true)
+        await expect(gate.waitingOf("ws-1", trigger)).resolves.toEqual(WAITING)
+
+        expect(port.frozen).toHaveBeenCalledWith("ws-1", trigger)
+        expect(port.waitingOf).toHaveBeenCalledWith("ws-1", trigger)
+        expect(port.hold).not.toHaveBeenCalled()
+    })
+
+    it("asks the freezes registered last", async () => {
+        const { gate } = await buildGate(false)
+        const first = portOf(false)
+        const last = portOf(true)
+        gate.set(first)
+        gate.set(last)
+
+        await expect(gate.hold(TURN, { leadId: "lead-1" })).resolves.toBe(true)
+        await expect(gate.stopped(STOP)).resolves.toBe(true)
+
+        expect(last.hold).toHaveBeenCalledWith(TURN, { leadId: "lead-1" })
+        expect(last.stopped).toHaveBeenCalledWith(STOP)
+        expect(first.hold).not.toHaveBeenCalled()
+    })
+
+    it("tells a node step of a graph apart, and reads the lines of a conversation when the app binds them", async () => {
+        const bound = await buildGate(true)
+        expect(bound.gate.isNodeStep("graph_node")).toBe(true)
+        expect(bound.gate.isNodeStep("tool")).toBe(false)
+        await expect(bound.gate.linesOf("ws-1", "c-1", ["m-1"])).resolves.toHaveLength(1)
+        expect(bound.messages.messagesOf).toHaveBeenCalledWith("ws-1", "c-1", ["m-1"])
+
+        const bare = await buildGate(false)
+        await expect(bare.gate.linesOf("ws-1", "c-1", ["m-1"])).resolves.toEqual([])
+    })
+})
+
+describe("AgentGraphFreezeGateService at the start of a run", () => {
+    const buildFlows = async (held: boolean, refusal: string | null = null, waiting: typeof WAITING = []) => {
+        const gate = mock<AgentGraphFreezeGateService>({
+            hold: jest.fn().mockResolvedValue(held),
+            waitingOf: jest.fn().mockResolvedValue(waiting),
+        })
+        const calls = mock<AgentGraphCallGuardService>({ refusalOf: jest.fn().mockResolvedValue(refusal) })
+        const graphs = mock<AgentGraphsService>({
+            stateOfAgent: jest
+                .fn()
+                .mockResolvedValue(
+                    stateOf({ activeVersionId: "version-1", active: { nodes: [], rights: [], flow: FLOW } }),
+                ),
+        })
+        const runs = mock<AgentRunsService>({
+            open: jest.fn().mockResolvedValue(runViewOf({ id: "run-1" })),
+            append: jest.fn().mockResolvedValue(undefined),
+        })
+        const nodes = mock<GraphNodeRegistryService>({ installed: jest.fn().mockReturnValue({ nodes: new Map() }) })
+        const handlers = mock<AgentWorkHandlersService>()
+        const tx = fakeTransaction(mockEntityManager())
+        const moduleRef = await Test.createTestingModule({
+            providers: [
+                AgentGraphFlowRunsService,
+                { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+                { provide: AgentGraphsService, useValue: graphs },
+                { provide: AgentRunsService, useValue: runs },
+                { provide: AgentWorkHandlersService, useValue: handlers },
+                { provide: GraphNodeRegistryService, useValue: nodes },
+                { provide: AgentGraphFreezeGateService, useValue: gate },
+                { provide: AgentGraphCallGuardService, useValue: calls },
+            ],
+        }).compile()
+        return { flows: moduleRef.get(AgentGraphFlowRunsService), runs, gate }
+    }
+
+    it("is asked before any run opens: a held wake opens no run and writes no step, it ends held as a pending event", async () => {
+        const { flows, runs, gate } = await buildFlows(true)
+
+        await expect(flows.run(TURN)).resolves.toEqual({ status: "held", reason: "lead_frozen", outcome: null })
+
+        expect(gate.hold).toHaveBeenCalledWith(TURN, expect.objectContaining({ text: "order", origin: "agent" }))
+        expect(runs.open).not.toHaveBeenCalled()
+        expect(runs.append).not.toHaveBeenCalled()
+    })
+
+    it("asks about the workflow the wake runs, so a freeze of another workflow of the customer does not hold it", async () => {
+        const { flows, gate } = await buildFlows(false)
+
+        await flows.run(TURN)
+
+        // The agent's own graph is no workflow: the wake is asked about with no workflow, and only a freeze of the whole customer holds it.
+        expect(gate.hold).toHaveBeenCalledWith(TURN, expect.objectContaining({ text: "order", workflowId: null }))
+    })
+
+    it("tells the first step what of the customer waits for the founder, and nothing of the kind when nothing waits", async () => {
+        const waited = await buildFlows(false, null, WAITING)
+        await waited.flows.run(TURN)
+        const [first] = waited.runs.append.mock.calls[0]?.[3] ?? []
+
+        expect(waited.gate.waitingOf).toHaveBeenCalledWith("ws-1", expect.objectContaining({ text: "order" }))
+        expect(first?.input).toMatchObject({ trigger: { text: "order", waitingOnFounder: WAITING } })
+
+        const plain = await buildFlows(false)
+        await plain.flows.run(TURN)
+        const [bare] = plain.runs.append.mock.calls[0]?.[3] ?? []
+
+        expect(bare?.input.trigger).not.toHaveProperty("waitingOnFounder")
+    })
+
+    it("lets the run open as before when the customer is not frozen", async () => {
+        const { flows, runs } = await buildFlows(false)
+        await expect(flows.run(TURN)).resolves.toMatchObject({ status: "done" })
+        expect(runs.open).toHaveBeenCalledTimes(1)
+        expect(runs.append).toHaveBeenCalledTimes(1)
+    })
+
+    it("starts no run of a call the engine's guards refuse: the wake is skipped with why", async () => {
+        const { flows, runs } = await buildFlows(false, "call_duplicate")
+        await expect(flows.run(TURN)).resolves.toEqual({ status: "skipped", reason: "call_duplicate", outcome: null })
+        expect(runs.open).not.toHaveBeenCalled()
+    })
+})

@@ -1,8 +1,14 @@
 import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
-import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
+import { CONNECTION_PAGE_VIEW_PARAM, connectionPageTabOf } from "@/modules/connection-page"
 import { SepayConnectionPageBase } from "./component"
+
+/** What the route supplies: its awaited-by-the-owner path. */
+interface SepayConnectionPageProps {
+    readonly params: Promise<{ readonly id: string }>
+    readonly searchParams?: Promise<Record<string, string | string[] | undefined>>
+}
 
 /** The document title of the SePay connection page. */
 export const sepayConnectionMetadata = async (): Promise<Metadata> => {
@@ -10,24 +16,16 @@ export const sepayConnectionMetadata = async (): Promise<Metadata> => {
     return { title: t("title") }
 }
 
-/** What the route hands the page: the connection id. */
-type SepayConnectionPageProps = {
-    readonly workspaceId: string
-    readonly connectionId: string
-}
-
-/** /connections/sepay/[id]: a server shell; the bands read their own data in the browser. */
+/**
+ * The page of one SePay connection (owner | manager): a server shell that picks the tab the address opens. The band, the setup, the
+ * details, the agents and the live webhook events each read their own data in the browser.
+ */
 export const SepayConnectionPage = async (props: SepayConnectionPageProps): Promise<ReactElement> => {
-    const t = await getTranslations("sepayConnection")
+    const { id } = await props.params
+    const query = (await props.searchParams) ?? {}
     return (
         <SepayConnectionPageBase
-            props={{
-                connectionId: props.connectionId,
-                hubHref: workspaceHref(props.workspaceId, CONSOLE_ROUTES.connections),
-                gridLabel: t("title"),
-                mainLabel: t("mainLabel"),
-                rail: { label: t("eventsTitle"), closeLabel: t("eventsClose") },
-            }}
+            props={{ connectionId: id, tab: connectionPageTabOf(query[CONNECTION_PAGE_VIEW_PARAM]) }}
         />
     )
 }

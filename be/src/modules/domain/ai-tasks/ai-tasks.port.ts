@@ -1,11 +1,5 @@
 import type { Locale } from "@modules/platform/i18n"
-import type { MeterEntry, OptionalQuotaNotice, RecalledPassage, RecallRequest, TextRequest } from "./ai-tasks.contracts"
-
-/** The OpenClaw door to the text AI: the app root binds it to the generations capability. It is used while AI is unavailable (no key). */
-export interface AiTaskTextGenerator {
-    /** Runs a prompt and answers the text; fails with a typed error when the model cannot answer. */
-    generate(request: TextRequest): Promise<string>
-}
+import type { MeterEntry, OptionalQuotaNotice, RecalledPassage, RecallRequest } from "./ai-tasks.contracts"
 
 /** The plan allowance and the usage meter a prompt run on the AI endpoint goes through; the app root binds it to the usage gate. */
 export interface AiTaskMeter {

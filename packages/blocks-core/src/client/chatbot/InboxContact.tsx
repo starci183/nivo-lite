@@ -1,10 +1,9 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { SpecText } from "@nivo-lite/agent-sdk/schema"
-import { Avatar, Badge, Cluster, DescriptionList, Heading, Link, Stack, Text } from "@starci/grammar/common"
+import { Link, Stack, Sublabel, SurfaceCard } from "@starci/grammar/common"
 import type { inboxBlock } from "../../blocks/chatbot/inbox.block"
-import { contactOf, leadFactsOf } from "../../rows/chatbot/contact"
-import type { ContactView } from "../../rows/chatbot/contact"
+import { contactOf, leadFactsOf, type ContactView } from "../../rows/chatbot/contact"
 import { derivedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
@@ -18,74 +17,78 @@ interface ContactBodyProps {
 /** Resolves a text of the module in the viewer's language. */
 type Words = (text: SpecText) => string
 
-/** What the facts of the lead are given. */
+/** What the facts of the conversation are given. */
 interface LeadFactsProps {
     readonly contact: ContactView
     readonly words: Words
 }
 
-/** The facts of the customer as a lead: the stage, the need and the phone, each only when known. */
-const LeadFacts = (props: LeadFactsProps): ReactNode => {
-    const facts = leadFactsOf(props.contact)
-    if (facts.length === 0) return <Badge tone="neutral">{props.words({ key: "inbox_lead_none" })}</Badge>
+/** The facts of the conversation: who the customer is, the channel and, when the customer was captured as a lead, what is known of them. */
+const ChatFacts = (props: LeadFactsProps): ReactNode => {
+    const { contact, words } = props
+    const lead = leadFactsOf(contact).map((fact) => ({
+        id: fact.id,
+        title: words({ key: `fact_${fact.id}` }),
+        value: fact.id === "stage" ? words({ key: `stage_${fact.text}` }) : fact.text,
+    }))
     return (
-        <DescriptionList
-            layout="columns"
-            isDivided
-            items={facts.map((fact) => ({
-                id: fact.id,
-                term: props.words({ key: `fact_${fact.id}` }),
-                description: fact.id === "stage" ? props.words({ key: `stage_${fact.text}` }) : fact.text,
-            }))}
+        <SurfaceCard
+            kind="list"
+            layout="keyValue"
+            ariaLabel={words({ key: "inbox_chat_label" })}
+            items={[
+                { id: "customer", title: words({ key: "inbox_fact_customer" }), value: contact.name },
+                ...(contact.channelName === ""
+                    ? []
+                    : [
+                          {
+                              id: "channel",
+                              title: words({ key: "inbox_fact_channel" }),
+                              value: contact.channelName,
+                          },
+                      ]),
+                ...lead,
+            ]}
+            empty={null}
         />
     )
 }
 
-/** The contact of the open conversation: who the customer is, who answers them, and what is known of them as a lead. */
+/** The side of the open conversation: which agent answers (and whether a person holds it), the facts of the conversation and the way to the customer's record. */
 const ContactBody = (props: ContactBodyProps): ReactNode => {
     const host = useBlockHost()
     const words = useBlockWords()
     const { contact } = props
     return (
         <Stack gap="region">
-            <Cluster gap="inline" wrap={false} align="center">
-                <Avatar
-                    name={contact.name}
-                    {...(contact.avatar === "" ? {} : { src: contact.avatar })}
-                    size="md"
-                    isDecorative
-                />
-                <Stack gap="inline">
-                    <Heading level={3} isLoading={props.isLoading}>
-                        {contact.name}
-                    </Heading>
-                    {contact.channelName === "" ? null : (
-                        <Text size="sm" tone="muted">
-                            {`${words({ key: "inbox_channel_prefix" })} ${contact.channelName}`}
-                        </Text>
-                    )}
-                </Stack>
-            </Cluster>
             <Stack gap="row">
-                <Heading level={3}>{words({ key: "inbox_who_answers" })}</Heading>
-                <Text size="sm" tone="muted">
-                    {contact.handledBy === ""
-                        ? words({ key: "inbox_who_ai" })
-                        : `${contact.handledBy}${words({ key: "inbox_who_person_suffix" })}`}
-                </Text>
+                <Sublabel>{words({ key: "inbox_agent_label" })}</Sublabel>
+                <SurfaceCard
+                    kind="list"
+                    ariaLabel={words({ key: "inbox_agent_label" })}
+                    items={[
+                        {
+                            id: "agent",
+                            title: words({ key: "inbox_agent_name" }),
+                            description:
+                                contact.handledBy === ""
+                                    ? words({ key: "inbox_agent_handle" })
+                                    : `${contact.handledBy}${words({ key: "inbox_who_person_suffix" })}`,
+                            leading: { avatar: { name: words({ key: "inbox_agent_name" }) } },
+                        },
+                    ]}
+                    empty={null}
+                    isLoading={props.isLoading}
+                />
             </Stack>
             <Stack gap="row">
-                <Cluster gap="row" wrap={false} justify="between" align="center">
-                    <Heading level={3}>{words({ key: "inbox_lead_title" })}</Heading>
-                    {contact.leadId === "" ? null : (
-                        <Link
-                            href={host.navigation.href(`/w/sales/pipeline?lead=${encodeURIComponent(contact.leadId)}`)}
-                        >
-                            {words({ key: "inbox_open_lead" })}
-                        </Link>
-                    )}
-                </Cluster>
-                <LeadFacts contact={contact} words={words} />
+                <Sublabel>{words({ key: "inbox_chat_label" })}</Sublabel>
+                <ChatFacts contact={contact} words={words} />
+                {contact.leadId === "" ? null : (
+                    <Link href={host.navigation.href(`/w/sales/pipeline?lead=${encodeURIComponent(contact.leadId)}`)}>
+                        {words({ key: "inbox_open_lead" })}
+                    </Link>
+                )}
             </Stack>
         </Stack>
     )

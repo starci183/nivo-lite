@@ -9,6 +9,7 @@ import { BoundRead } from "./BoundRead"
 import { MISSING_READ, UNBOUND_ACTION, UNBOUND_READ } from "./inert"
 import { NodeBoundary } from "./NodeBoundary"
 import type { SpecContext } from "./renderer.types"
+import { isShownFor } from "./show-when"
 
 type SlotValue = ReadHandle | ActionHandle
 type SlotValues = Readonly<Record<string, SlotValue>>
@@ -91,7 +92,7 @@ export const SpecNode = (props: SpecNodeProps): ReactNode => {
     const renderer = props.context.renderers.get(props.node.block.id)
     if (!canSee) return null
     const showWhen = props.node.showWhen
-    if (showWhen !== null && !showWhen.is.includes(props.context.params.value(showWhen.param) ?? "")) return null
+    if (showWhen !== null && !isShownFor(showWhen, props.context.params.value(showWhen.param))) return null
     if (renderer === undefined) return <EmptyNotice message={text({ key: "renderer.unavailable" })} />
     const draw = (values: SlotValues): ReactNode =>
         props.node.forbidden === "hide" && hasForbidden(values) ? null : (

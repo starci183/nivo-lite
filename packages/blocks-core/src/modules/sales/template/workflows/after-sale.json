@@ -1,0 +1,177 @@
+{
+    "id": "sales.after-sale",
+    "moduleKey": "sales",
+    "primary": false,
+    "seedActive": true,
+    "name": {
+        "vi": "Cảm ơn sau mua",
+        "en": "Thank after sale"
+    },
+    "summary": {
+        "vi": "Cảm ơn khách khi Kế toán xác nhận đã nhận tiền",
+        "en": "Thanks the customer once Accounting confirms the money arrived"
+    },
+    "requires": [],
+    "shops": 0,
+    "versions": [
+        {
+            "version": 3,
+            "publishedAt": "2026-11-10T14:00:00.000Z",
+            "changes": [
+                {
+                    "vi": "Thuần nghiệp vụ: Cảm ơn khách (AI tự viết, xác nhận giao hàng, không hỏi giờ giao nữa vì bước tư vấn đã chốt), Hẹn chăm sóc, Đã cảm ơn",
+                    "en": "Pure business steps: Thank the customer (the AI writes it and confirms the delivery; it no longer asks for the time, the consult settled it), Plan the care, Thanked"
+                }
+            ],
+            "graph": {
+                "schema": "nivo/agent-graph@1",
+                "moduleKey": "sales",
+                "contract": {
+                    "inputs": [
+                        {
+                            "name": "orderId",
+                            "type": "string",
+                            "required": true
+                        },
+                        {
+                            "name": "leadId",
+                            "type": "string",
+                            "required": false
+                        }
+                    ]
+                },
+                "triggers": [
+                    {
+                        "key": "call",
+                        "source": {
+                            "kind": "workflow",
+                            "connectionId": null
+                        }
+                    }
+                ],
+                "outcomes": [
+                    {
+                        "key": "thanked",
+                        "label": "Đã cảm ơn",
+                        "outputs": [
+                            {
+                                "name": "orderId",
+                                "type": "string"
+                            }
+                        ]
+                    }
+                ],
+                "entry": {
+                    "openTo": "any"
+                },
+                "trigger": {
+                    "kind": "tag",
+                    "sources": [
+                        "agent"
+                    ],
+                    "burst": {
+                        "agent": {
+                            "window": "0s"
+                        }
+                    }
+                },
+                "grant": {
+                    "rights": [
+                        {
+                            "kind": "order",
+                            "access": "read",
+                            "scope": "workspace",
+                            "fields": [
+                                "id",
+                                "orderNo",
+                                "amountVnd",
+                                "status",
+                                "items",
+                                "leadId",
+                                "shippedAt",
+                                "confirmedAt",
+                                "recipientName",
+                                "recipientPhone",
+                                "deliveryAddress",
+                                "deliveryAt",
+                                "note"
+                            ]
+                        },
+                        {
+                            "kind": "sales-lead",
+                            "access": "read",
+                            "scope": "workspace",
+                            "fields": [
+                                "id",
+                                "contactName",
+                                "consultFacts"
+                            ]
+                        },
+                        {
+                            "kind": "message",
+                            "access": "write",
+                            "scope": "turn",
+                            "fields": [
+                                "body"
+                            ]
+                        },
+                        {
+                            "kind": "sales-lead",
+                            "access": "write",
+                            "scope": "turn",
+                            "fields": [
+                                "consultStage",
+                                "consultFacts"
+                            ]
+                        }
+                    ],
+                    "tools": [],
+                    "effects": [
+                        "customer.message.send",
+                        "lead.update",
+                        "customer.care.schedule"
+                    ]
+                },
+                "nodes": [
+                    {
+                        "key": "thank",
+                        "kind": "output",
+                        "step": "sales.after-sale",
+                        "params": {
+                            "orderId": {
+                                "$ref": "trigger.orderId"
+                            },
+                            "locale": "vi"
+                        },
+                        "next": "plan"
+                    },
+                    {
+                        "key": "plan",
+                        "kind": "output",
+                        "step": "sales.care-plan",
+                        "params": {
+                            "occasionLeadDays": 7,
+                            "orderId": {
+                                "$ref": "trigger.orderId"
+                            }
+                        },
+                        "next": "thanked"
+                    },
+                    {
+                        "key": "thanked",
+                        "kind": "output",
+                        "step": "core.outcome",
+                        "params": {
+                            "outcome": "thanked",
+                            "outputs": {
+                                "orderId": {
+                                    "$ref": "trigger.orderId"
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

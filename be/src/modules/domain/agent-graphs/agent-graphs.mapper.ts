@@ -33,6 +33,7 @@ const CHANGE_KINDS: ReadonlyArray<GraphChangeKind> = [
     "template",
     "rollback",
     "spec",
+    "copy",
 ]
 const PROPOSAL_KINDS: ReadonlyArray<ProposalKind> = ["conflict", "learned", "template_update", "gap", "contract"]
 const PROPOSAL_STATUSES: ReadonlyArray<ProposalStatus> = ["open", "confirmed", "declined", "superseded"]

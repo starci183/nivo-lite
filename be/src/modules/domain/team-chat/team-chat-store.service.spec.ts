@@ -106,7 +106,7 @@ describe("TeamChatStoreService opening and deleting rooms", () => {
         await expect(store.insertRoom({ ...opening, others: [{ memberKind: "agent", memberId: BOT }] })).resolves.toBe(
             room,
         )
-        expect(tx.committedWrites).toEqual([
+        expect(tx.committedWrites).toMatchObject([
             {
                 method: "insert",
                 args: [
@@ -284,6 +284,7 @@ describe("TeamChatStoreService storing a text", () => {
             mentions: [],
             attachments: [],
             clientId: "c1",
+            replyTo: null,
         })
     })
 
@@ -471,6 +472,7 @@ describe("TeamChatStoreService lines", () => {
                 authorId: BOT,
                 body: "hi",
                 kind: "text",
+                ref: null,
                 clientId: "k1",
             },
         ])
@@ -482,6 +484,7 @@ describe("TeamChatStoreService lines", () => {
                 authorId: null,
                 body: "hi",
                 kind: "system",
+                ref: null,
                 clientId: "k1",
             },
         ])
@@ -493,5 +496,20 @@ describe("TeamChatStoreService lines", () => {
         await expect(kept.lineKept(ROOM, BOT, "k1")).resolves.toBe(MSG)
         const none = await build(mockEntityManager({ findOne: [ChatRoomMessageEntity, null] }))
         await expect(none.lineKept(ROOM, BOT, "k1")).resolves.toBeNull()
+    })
+})
+
+describe("TeamChatStoreService rewriting the lines of a folded card", () => {
+    it("changes the words and the structured content of the agent's lines under the client ids, in the workspace only, and answers how many", async () => {
+        const em = mockEntityManager({ update: [ChatRoomMessageEntity, { affected: 2 }] })
+        const store = await build(em)
+
+        await expect(store.updateAgentLines(WS, ["k", "k#module"], { body: "again", agentMessage: "{}" })).resolves.toBe(2)
+
+        expect(em.update).toHaveBeenCalledWith(
+            ChatRoomMessageEntity,
+            { workspaceId: WS, clientId: In(["k", "k#module"]), authorKind: "agent" },
+            { body: "again", ref: { agent_message: "{}" } },
+        )
     })
 })

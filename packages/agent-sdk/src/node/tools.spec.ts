@@ -5,7 +5,7 @@ import { EXAMPLE_TURN, nodeExampleMismatches } from "../tests/fixtures/node-exam
 import { scriptedNodePorts } from "../tests/fixtures/node-ports"
 import type { ToolDefinition } from "./effect.types"
 import { defineDataKind, defineTool } from "./effect"
-import { runNode } from "./host"
+import { callDigestOf, runNode } from "./host"
 import type { NodeRunRequest } from "./host.types"
 import { defineNode } from "./node"
 import type { NodeDefinition } from "./node.types"
@@ -17,7 +17,7 @@ import { trusted } from "../schema/trusted"
 const READ: DataRight = { kind: "order", access: "read", scope: "turn", fields: ["id"] }
 
 const instruction = defineTool({
-    id: "payment.instruction",
+    id: "payment.quote",
     title: { key: "i" },
     args: z.object({ orderNo: z.string().max(200) }),
     result: z.object({ qrUrl: z.string().max(200) }),
@@ -38,18 +38,18 @@ const caller = trusted<NodeDefinition>(
         output: z.object({ qrUrl: z.string().max(200) }),
         rights: [],
         effects: [],
-        tools: ["payment.instruction", "payment.charge", "payment.ghost"],
+        tools: ["payment.quote", "payment.charge", "payment.ghost"],
         run: (input, context) =>
             context.tools.call<{ qrUrl: string }>(trusted<"a.b">(input.tool), { orderNo: input.orderNo }),
         examples: [
             {
                 name: "asks",
                 params: {},
-                input: { tool: "payment.instruction", orderNo: "A1" },
+                input: { tool: "payment.quote", orderNo: "A1" },
                 output: { qrUrl: "q" },
                 effects: [],
                 tools: [{ qrUrl: "q" }],
-                grant: { rights: [READ], tools: ["payment.instruction"] },
+                grant: { rights: [READ], tools: ["payment.quote"] },
             },
         ],
     }),
@@ -67,7 +67,7 @@ const requestOf = (tool: string, overrides: Partial<NodeRunRequest> = {}): NodeR
     params: {},
     input: { tool, orderNo: "A1" },
     turn: EXAMPLE_TURN,
-    grant: { rights: [READ], tools: ["payment.instruction", "payment.charge"] },
+    grant: { rights: [READ], tools: ["payment.quote", "payment.charge"] },
     effects: new Map(),
     tools,
     key: "run-1:step",
@@ -85,12 +85,16 @@ describe("defineTool", () => {
 describe("runNode tools", () => {
     it("calls a declared, installed, granted tool with parsed args and a keyed call", async () => {
         const fake = scriptedNodePorts({ tools: [{ qrUrl: "q" }] })
-        await expect(runNode(requestOf("payment.instruction"), fake.ports)).resolves.toEqual({
+        await expect(runNode(requestOf("payment.quote"), fake.ports)).resolves.toEqual({
             output: { qrUrl: "q" },
             effects: [],
         })
         expect(fake.toolCalls).toEqual([
-            { id: "payment.instruction", args: { orderNo: "A1" }, key: "run-1:step:tool:0" },
+            {
+                id: "payment.quote",
+                args: { orderNo: "A1" },
+                key: `run-1:step:tool:${callDigestOf("payment.quote", { orderNo: "A1" })}`,
+            },
         ])
     })
 
@@ -98,16 +102,16 @@ describe("runNode tools", () => {
         const { ports } = scriptedNodePorts({ tools: [{ qrUrl: "q" }] })
         await expect(runNode(requestOf("payment.other"), ports)).rejects.toThrow(ToolUndeclaredError)
         const toolless = trusted<NodeDefinition>({ ...caller, tools: undefined })
-        await expect(runNode(requestOf("payment.instruction", { node: toolless }), ports)).rejects.toThrow(
+        await expect(runNode(requestOf("payment.quote", { node: toolless }), ports)).rejects.toThrow(
             ToolUndeclaredError,
         )
         await expect(runNode(requestOf("payment.ghost"), ports)).rejects.toThrow("TOOL_UNKNOWN")
         const unnamed = { rights: [READ] }
-        await expect(runNode(requestOf("payment.instruction", { grant: unnamed }), ports)).rejects.toThrow(
+        await expect(runNode(requestOf("payment.quote", { grant: unnamed }), ports)).rejects.toThrow(
             RightsDeniedError,
         )
-        const rightless = { rights: [], tools: ["payment.instruction"] }
-        await expect(runNode(requestOf("payment.instruction", { grant: rightless }), ports)).rejects.toThrow(
+        const rightless = { rights: [], tools: ["payment.quote"] }
+        await expect(runNode(requestOf("payment.quote", { grant: rightless }), ports)).rejects.toThrow(
             RightsDeniedError,
         )
     })
@@ -115,7 +119,7 @@ describe("runNode tools", () => {
     it("refuses bad args, a bad answer, an unscripted call, and a mutating tool from a condition", async () => {
         await expect(
             runNode(
-                requestOf("payment.instruction", { input: { tool: "payment.instruction", orderNo: 1 } }),
+                requestOf("payment.quote", { input: { tool: "payment.quote", orderNo: 1 } }),
                 scriptedNodePorts().ports,
             ),
         ).rejects.toThrow("TOOL_ARGS_INVALID")
@@ -170,7 +174,7 @@ describe("tool problems", () => {
             { code: "NODE_TOOL_UNKNOWN", at: "payment.caller:payment.ghost" },
             { code: "NODE_CONDITION_MUTATES", at: "payment.check:payment.charge" },
             { code: "NODE_TOOL_UNKNOWN", at: "payment.check:payment.ghost" },
-            { code: "RIGHT_KIND_UNKNOWN", at: "payment.instruction:order" },
+            { code: "RIGHT_KIND_UNKNOWN", at: "payment.quote:order" },
         ])
         expect(nodeListProblems({ nodes: [], effects: [], tools: [instruction], dataKinds: [order] })).toEqual([])
     })
@@ -178,7 +182,7 @@ describe("tool problems", () => {
     it("asks the grant to name each tool and cover its rights", () => {
         const index = nodeIndexOf({ nodes: [caller], effects: [], tools: [instruction], dataKinds: [order] })
         const ref = { key: "k", kind: "execute", step: "payment.caller" }
-        const all = ["payment.instruction", "payment.charge", "payment.ghost"]
+        const all = ["payment.quote", "payment.charge", "payment.ghost"]
         expect(graphNodeProblems(ref, index, { rights: [READ], tools: all })).toEqual([])
         expect(graphNodeProblems(ref, index, { rights: [], tools: all })).toEqual([
             { code: "NODE_RIGHTS_UNGRANTED", at: "k" },

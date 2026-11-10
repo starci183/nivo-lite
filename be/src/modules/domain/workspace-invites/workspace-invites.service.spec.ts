@@ -89,6 +89,7 @@ describe("WorkspaceInvitesService listPending", () => {
                 workspaceId: "ws-1",
                 acceptedAt: IsNull(),
                 revokedAt: IsNull(),
+                declinedAt: IsNull(),
                 expiresAt: MoreThan(new Date(NOW)),
             },
             order: { createdAt: "DESC" },
@@ -122,7 +123,7 @@ describe("WorkspaceInvitesService create", () => {
         expect(revoke?.callsOf("set")).toEqual([[{ revokedAt: new Date(NOW) }]])
         expect(revoke?.callsOf("where")).toEqual([
             [
-                "workspace_id = :workspaceId AND lower(email) = :email AND accepted_at IS NULL AND revoked_at IS NULL",
+                "workspace_id = :workspaceId AND lower(email) = :email AND accepted_at IS NULL AND revoked_at IS NULL AND declined_at IS NULL",
                 { workspaceId: "ws-1", email: "an@example.test" },
             ],
         ])
@@ -157,12 +158,14 @@ describe("WorkspaceInvitesService create", () => {
         await expect(
             service.create("owner-1", "ws-1", { email: "an@example.test", role: "staff", staffId: "staff-1" }),
         ).resolves.toMatchObject({ delivery: "none" })
-
         expect(held?.callsOf("where")).toEqual([
             ["i.workspace_id = :workspaceId AND i.staff_id = :staffId", { workspaceId: "ws-1", staffId: "staff-1" }],
         ])
         expect(held?.callsOf("andWhere")).toEqual([
-            ["i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > :now", { now: new Date(NOW) }],
+            [
+                "i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.declined_at IS NULL AND i.expires_at > :now",
+                { now: new Date(NOW) },
+            ],
             ["lower(i.email) <> :email", { email: "an@example.test" }],
         ])
         expect(held?.callsOf("limit")).toEqual([[1]])
@@ -347,13 +350,18 @@ describe("preview", () => {
 describe("WorkspaceInvitesService accept", () => {
     const acceptor = { id: "user-2", email: "an@example.test" }
 
+    it("accepts by the invitation's id as by its link", async () => {
+        const { service, accounts } = await build(mockEntityManager(foundStubs(WorkspaceInviteEntity, inviteRowOf())))
+        accounts.accountOf.mockResolvedValue(ok(accountOf()))
+        await expect(service.acceptById(acceptor, "invite-1")).resolves.toEqual({ workspaceId: "ws-1" })
+    })
+
     it("joins the signed-in person to the workspace and answers its id", async () => {
         const em = mockEntityManager(foundStubs(WorkspaceInviteEntity, inviteRowOf({ staff_id: "staff-1" })))
         const { service, members, events, accounts } = await build(em)
         accounts.accountOf.mockResolvedValue(ok(accountOf()))
 
         await expect(service.accept(acceptor, TOKEN)).resolves.toEqual({ workspaceId: "ws-1" })
-
         expect(em.findOne).toHaveBeenCalledWith(WorkspaceInviteEntity, { where: { tokenHash: HASH } })
         expect(members.join).toHaveBeenCalledWith({
             workspaceId: "ws-1",

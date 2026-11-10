@@ -65,6 +65,8 @@ describe("the internal nivo agent of a workspace", () => {
             { tool: "agent.turn", mode: "auto" },
             { tool: "chat.profile", mode: "auto" },
             { tool: "chat.send", mode: "auto" },
+            { tool: "ledger.append", mode: "auto" },
+            { tool: "ledger.status", mode: "auto" },
         ])
     })
 

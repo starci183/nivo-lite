@@ -121,6 +121,7 @@ export class AgentDrainService {
         const exhausted = turn.attempts >= turn.maxAttempts
         if (exhausted) this.logger.warn(AgentWorkLogEvent.WakeDead, { agentId: turn.agentId, wakeId: turn.wakeId })
         const immediate = modelDown && awaitsAnswer(turn.source)
+        if ((immediate || exhausted) && (await this.toldByFlow(turn, failed.errorCode ?? failed.reason ?? "error"))) return failed
         const handler = this.handlers.of(turn.source)
         if (handler === undefined || !(immediate || exhausted)) return failed
         try {
@@ -129,6 +130,24 @@ export class AgentDrainService {
         } catch (holdCause) {
             this.logger.error(AgentWorkLogEvent.TurnFailed, holdCause, { agentId: turn.agentId, wakeId: turn.wakeId })
             return failed
+        }
+    }
+
+    /**
+     * True when the wake is the flow's (an agent that runs on workflows) and the flow told its people about the failure: no handler
+     * then speaks for it, so no reply item of the turn path is opened and no coded line is written. A flow that cannot be asked or
+     * cannot tell leaves the wake to its handler, as before.
+     */
+    private async toldByFlow(turn: AgentTurnView, code: string): Promise<boolean> {
+        const flow = this.handlers.flowOf()
+        if (flow === undefined) return false
+        try {
+            if (!(await flow.takes(turn))) return false
+            await flow.stuck(turn, code)
+            return true
+        } catch (cause) {
+            this.logger.error(AgentWorkLogEvent.TurnFailed, cause, { agentId: turn.agentId, wakeId: turn.wakeId })
+            return false
         }
     }
 

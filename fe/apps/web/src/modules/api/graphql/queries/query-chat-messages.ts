@@ -48,6 +48,19 @@ const query1: Document = gql`
                     decidedAt
                     canDecide
                 }
+                agentMessage
+                reactions {
+                    emoji
+                    count
+                    mine
+                    mineCount
+                }
+                replyTo {
+                    messageId
+                    authorName
+                    body
+                }
+                forwardedFrom
             }
             pageInfo {
                 hasNextPage

@@ -1,6 +1,5 @@
 import { ChatConversationsService, ChatMessagesService } from "@modules/domain/chat-records"
 import { ChannelSendExecutorService } from "../../../modules/domain/chat-node-ports/channel-send-executor.service"
-import { ChatNodePortsErrorCode } from "../../../modules/domain/chat-node-ports/errors/chat-node-ports.error"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import { persistGraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
 import type { GraphTenant } from "../../fixtures/builders/agent-graph-world.builder"
@@ -97,15 +96,17 @@ describe("the channel.send step: store the message, deliver it, settle it", () =
         expect(await sentLines(conversationId)).toBe(1)
     })
 
-    it("keeps a message that cannot leave in the conversation and fails the step, so the run engine parks the run for the owner instead of ending it done", async () => {
+    it("keeps a message that cannot leave in the conversation and answers the refusal, so the step's required send did not succeed", async () => {
         const { conversationId, turn } = await conversationOn("zalo", "import-cuong:1730000000")
         const key = `reply:${turn.turnId}`
 
-        await expect(send(turn, conversationId, key)).rejects.toMatchObject({
-            code: ChatNodePortsErrorCode.RecipientUnreachable,
+        await expect(send(turn, conversationId, key)).resolves.toMatchObject({
+            kind: "refused",
+            id: "recipient_not_linked",
         })
-        await expect(send(turn, conversationId, key)).rejects.toMatchObject({
-            code: ChatNodePortsErrorCode.RecipientUnreachable,
+        await expect(send(turn, conversationId, key)).resolves.toMatchObject({
+            kind: "refused",
+            id: "recipient_not_linked",
         })
 
         expect(await sentLines(conversationId)).toBe(1)

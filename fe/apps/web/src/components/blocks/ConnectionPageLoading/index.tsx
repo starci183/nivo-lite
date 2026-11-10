@@ -1,8 +1,8 @@
-import { DescriptionList, EmptyNotice, PaneSection, Section, Stepper } from "@starci/grammar/common"
-import { PaneHead } from "@/components/composites/PaneHead"
-import { ConnectionPaneFrame } from "@/components/frames/ConnectionPaneFrame"
+import type { ReactElement } from "react"
+import { EmptyNotice, Grid, Section, Stack, Stepper, SurfaceCard } from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
-/** The words of a connection page while it loads: the title, the step titles and the rail heading are real. */
+/** The words of a connection page while its tab loads: the phase names and the rail heading are real. */
 export interface ConnectionPageLoadingProps {
     readonly props: {
         readonly title: string
@@ -13,46 +13,43 @@ export interface ConnectionPageLoadingProps {
     }
 }
 
-const TILES = ["token", "followers", "agents"].map((id) => ({ id, term: "-", description: "-" }))
+const FACTS = ["a", "b", "c", "d"].map((id) => ({ id, term: "-", description: "-" }))
 
 /**
- * STATE-8: a provider connection page with no data yet, inside the Connections frame - the head band over the main pane and the
- * rail; the step titles and the rail heading are real, the name, the facts, the tiles and the events are inert geometry.
+ * STATE-8: the overview of a connection page with no data yet, under the band its layout draws - the setup phases, the facts and the
+ * rail; the phase names and the rail heading are real, the rest is inert geometry.
  */
-export const ConnectionPageLoading = (props: ConnectionPageLoadingProps) => {
+export const ConnectionPageLoading = (props: ConnectionPageLoadingProps): ReactElement => {
     const { railLabel } = props.props
-    return (
-        <ConnectionPaneFrame
-            gridLabel={props.props.title}
-            mainLabel={props.props.mainLabel}
-            head={<PaneHead title={props.props.title} headingLevel={1} isLoading />}
-            {...(railLabel === undefined
-                ? {}
-                : {
-                      rail: { label: railLabel, closeLabel: railLabel },
-                      aside: (
-                          <PaneSection isLoading>
-                              <Section
-                                  title={railLabel}
-                                  kind="list"
-                                  items={[]}
-                                  empty={<EmptyNotice message={railLabel} />}
-                              />
-                          </PaneSection>
-                      ),
-                  })}
-        >
-            <PaneSection>
-                <DescriptionList layout="columns" isDivided isLoading items={TILES} />
-            </PaneSection>
-            <PaneSection isLoading>
+    const main = (
+        <Stack gap="region">
+            <SurfaceCard label={props.props.title} isLoading>
                 <Stepper
                     label={props.props.mainLabel}
-                    orientation="vertical"
                     currentStepId=""
+                    isLoading
                     steps={props.props.steps.map((step) => ({ id: step.id, label: step.title }))}
                 />
-            </PaneSection>
-        </ConnectionPaneFrame>
+            </SurfaceCard>
+            <SurfaceCard kind="details" label={props.props.mainLabel} isLoading items={FACTS} />
+        </Stack>
+    )
+    if (railLabel === undefined) return main
+    return (
+        <Grid
+            kind="main-rail"
+            railWidth="medium"
+            align="start"
+            primary={main}
+            rail={
+                <Section
+                    kind="list"
+                    title={railLabel}
+                    isLoading
+                    items={[]}
+                    empty={<EmptyNotice message={railLabel} iconSource={nivoIconSource("link", "leading")} />}
+                />
+            }
+        />
     )
 }

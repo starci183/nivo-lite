@@ -137,3 +137,20 @@ export interface AccountOverview {
     /** The devices signed in, the current one first. */
     readonly sessions: ReadonlyArray<DeviceSession>
 }
+
+/** The note left when a seat is switched off; absent or null leaves none. */
+export type SeatNote = string | null | undefined
+
+/** What a status change writes on a seat; `disabledAt` is the database clock when the seat is switched off. */
+export interface SeatStatusWrite {
+    /** The new status. */
+    readonly status: MemberStatus
+    /** When it was switched off: the database's `now()`, or null when it is on. */
+    readonly disabledAt: (() => string) | null
+    /** Who switched it off, or null when it is on. */
+    readonly disabledBy: string | null
+    /** The note, or null. */
+    readonly disabledNote: string | null
+    /** Always false: a person's change is never the deletion of the workspace. */
+    readonly disabledByDeletion: false
+}

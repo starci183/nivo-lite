@@ -1,11 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { sepayQrUrlOf } from "./qr-image.policy"
+import { picturesAfterQr, sepayQrUrlOf } from "./qr-image.policy"
 
 const SUBJECT = Symbol("qr-image.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { sepayQrUrlOf } }],
+        providers: [{ provide: SUBJECT, useValue: { picturesAfterQr, sepayQrUrlOf } }],
     }).compile()
     return moduleRef.get<typeof import("./qr-image.policy")>(SUBJECT)
 }
@@ -41,5 +41,22 @@ describe("sepayQrUrlOf", () => {
         const subject = await build()
 
         expect(subject.sepayQrUrlOf(text)).toBeNull()
+    })
+})
+
+describe("picturesAfterQr", () => {
+    // The live payment request of 2026-11-09 carried the QR in its words and as its picture: Zalo sent the text, the QR the text links
+    // to, then the same QR again from the pictures. The QR goes once.
+    const qrPicture = { url: QR, caption: "INV2026100001" }
+    const photo = { url: "https://api/1.jpg", caption: "Item 1" }
+
+    it("leaves out the picture that is the QR the text links to", async () => {
+        const subject = await build()
+        expect(subject.picturesAfterQr(`QR: ${QR}`, [qrPicture, photo])).toEqual([photo])
+    })
+
+    it("keeps every picture of a text that links no QR", async () => {
+        const subject = await build()
+        expect(subject.picturesAfterQr("Hello", [qrPicture, photo])).toEqual([qrPicture, photo])
     })
 })

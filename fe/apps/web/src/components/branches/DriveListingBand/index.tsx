@@ -1,4 +1,5 @@
 import { Alert, Button, CheckboxGroup, EmptyNotice, Section, type PresentationState } from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
 /** One file the owner can tick: its name, the line under it, and whether NIVO can read it at all. */
 interface DriveFileChoice {
     readonly value: string
@@ -64,7 +65,7 @@ export const DriveListingBand = (props: DriveListingBandProps) => {
                     onValueChange={props.on.select}
                 />
             ) : (
-                <EmptyNotice message={listing.empty.message} description={listing.empty.description} />
+                <EmptyNotice message={listing.empty.message} iconSource={nivoIconSource("document", "leading")} description={listing.empty.description} />
             )}
             {listing.notices.map((notice) => (
                 <Alert

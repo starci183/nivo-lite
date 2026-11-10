@@ -84,10 +84,10 @@ describe("ParkedJobResumerService resume", () => {
                     "module_jobs",
                     "module-jobs.run",
                     JSON.stringify({ workspaceId: WS, job: "sales.notice" }),
-                    "key-j-1-r2",
+                    "key-j-1:r2",
                 ],
             ],
-            [ENQUEUE_SQL, [null, "module_jobs", "module-jobs.run", "{}", "key-j-2-r2"]],
+            [ENQUEUE_SQL, [null, "module_jobs", "module-jobs.run", "{}", "key-j-2:r2"]],
         ])
         expect(em.update).toHaveBeenNthCalledWith(
             1,

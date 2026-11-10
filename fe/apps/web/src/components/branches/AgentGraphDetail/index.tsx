@@ -110,7 +110,7 @@ export const AgentGraphDetail = (props: AgentGraphDetailProps) => (
             </Button>
         )}
         {props.view.runsLabel === "" ? null : (
-            <Button intent="neutral" size="sm" isLoading={props.isLoading === true} onPress={props.onRuns}>
+            <Button endArrow intent="neutral" size="sm" isLoading={props.isLoading === true} onPress={props.onRuns}>
                 {props.view.runsLabel}
             </Button>
         )}

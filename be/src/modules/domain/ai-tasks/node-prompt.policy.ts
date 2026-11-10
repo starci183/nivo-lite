@@ -14,15 +14,40 @@ const instructionsOf = (ask: NodeAsk, schema: TaskSchema | null): string =>
         ? ask.instructions
         : `${ask.instructions}\n\nAnswer with one JSON object that matches this JSON Schema exactly (member names, types and allowed values):\n${answerSchemaOf(schema)}`
 
-/** The messages of a graph node's call: its instructions (with the answer's JSON Schema for a structured call), then its input as JSON. */
-export const nodeMessagesOf = (ask: NodeAsk, schema: TaskSchema | null = null): ReadonlyArray<ChatMessage> => [
-    { role: "system", content: instructionsOf(ask, schema) },
-    {
-        role: "user",
-        content: JSON.stringify(ask.input ?? null),
-        ...(ask.images === undefined || ask.images.length === 0 ? {} : { images: ask.images }),
-    },
-]
+/**
+ * The two parts of a graph node's call, for the provider's prompt cache. `stable` is the prefix a provider caches: the node's
+ * instructions (the agent's craft and tool set, the shop's policy values, the step) with the answer's JSON Schema for a structured
+ * call; it is the same text, byte for byte, for the same agent, shop and step. `volatile` is what changes from call to call: the
+ * words that hold for this call only, then the input as JSON (with the pictures).
+ */
+export interface NodePrompt {
+    /** The stable part: one system message. THE END OF THE STABLE PART is the end of this list. */
+    readonly stable: ReadonlyArray<ChatMessage>
+    /** The volatile part, sent after the stable one. */
+    readonly volatile: ReadonlyArray<ChatMessage>
+}
+
+/** A graph node's call laid out stable part first. A model that takes cache markers gets its marker at the end of `stable`, nowhere else. */
+export const nodePromptOf = (ask: NodeAsk, schema: TaskSchema | null = null): NodePrompt => {
+    const words = (ask.volatile ?? "").trim()
+    return {
+        stable: [{ role: "system", content: instructionsOf(ask, schema) }],
+        volatile: [
+            ...(words === "" ? [] : [{ role: "system" as const, content: words }]),
+            {
+                role: "user",
+                content: JSON.stringify(ask.input ?? null),
+                ...(ask.images === undefined || ask.images.length === 0 ? {} : { images: ask.images }),
+            },
+        ],
+    }
+}
+
+/** The messages of a graph node's call: the stable part (instructions, answer schema), then the volatile one (this call's words, the input as JSON). */
+export const nodeMessagesOf = (ask: NodeAsk, schema: TaskSchema | null = null): ReadonlyArray<ChatMessage> => {
+    const prompt = nodePromptOf(ask, schema)
+    return [...prompt.stable, ...prompt.volatile]
+}
 
 /** How a graph node's call is metered: engine work of the namespace its purpose starts with (`order` of `order.record:extract`). */
 export const nodeMetaOf = (ask: NodeAsk): CallMeta => ({ kind: "engine", module: ask.purpose.split(".", 1).join("") })

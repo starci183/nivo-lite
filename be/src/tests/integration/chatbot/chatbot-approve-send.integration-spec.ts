@@ -3,7 +3,7 @@ import type { EntitiesApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { DoorApi, DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { eachInOrder } from "@modules/platform/primitives"
-import { ChatMessageProposeExecutorService } from "@modules/domain/chat-node-ports"
+import { CustomerDraftsService } from "@modules/domain/chat-node-ports"
 import { EntityEngineService, EntityPortsService, ModuleJobRunnerService } from "@modules/domain/entity-engine"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import type { SceneWorkspace } from "../../fixtures/builders/accounting-scene.builder"
@@ -76,7 +76,7 @@ const openScene = async (): Promise<Scene> => {
     return { ...workspace, entities, conversationId: made.row.id }
 }
 
-/** The AI drafts a reply, as the node `chatbot.draft-reply` does through its effect. */
+/** The AI drafts a reply, as the customer send does when the channel asks the owner first. */
 const propose = (scene: Scene, text: string) => {
     const turn: NodeTurn = {
         turnId: world.id(),
@@ -87,8 +87,8 @@ const propose = (scene: Scene, text: string) => {
         locale: "vi",
     }
     return world
-        .resolve(ChatMessageProposeExecutorService)
-        .proposeReply(turn, { conversationId: scene.conversationId, text, asked: ASKED })
+        .resolve(CustomerDraftsService)
+        .propose(turn, { conversationId: scene.conversationId, text, key: world.id() })
 }
 
 /** Runs the delivery jobs the outbox holds, as the module-jobs processor would. */
@@ -121,7 +121,7 @@ describe("a proposed reply is approved, sent once and recorded, as the back-end 
         const scene = await openScene()
         const first = await propose(scene, "Draft one")
         const second = await propose(scene, ANSWER)
-        expect(second).toEqual(first)
+        expect(second.id).toBe(first.id)
         expect(await proof.read(scene, "chatbot.proposals", { threadId: scene.conversationId })).toMatchObject({
             id: first.id,
             text: ANSWER,

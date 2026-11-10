@@ -12,12 +12,12 @@ interface ZaloConnectionNoticesProps {
     readonly connectionId: string
 }
 
-/** The connected notices of a Zalo OA page: why the OA cannot send, a refused command, the first message it still waits for. */
+/** The connected notices of a Zalo OA page: why the OA cannot send, a refused command, (the first message it waits for is said by the setup card). */
 export const ZaloConnectionNotices = (props: ZaloConnectionNoticesProps) => {
     const t = useTranslations("zaloConnection")
     const slotLabels = useSlotLabels()
     const router = navigation.useRouter()
-    const { head, notice, statusKind } = useZaloHead(props.connectionId)
+    const { head, notice } = useZaloHead(props.connectionId)
     const refusal = useConnectionRefusal()
     const banner = ("items" in head ? head.items : undefined)?.banner ?? ""
     return (
@@ -28,16 +28,6 @@ export const ZaloConnectionNotices = (props: ZaloConnectionNoticesProps) => {
                 notices: [
                     ...(banner === "" ? [] : [{ id: "banner", tone: "negative" as const, title: banner }]),
                     ...(notice === "" ? [] : [{ id: "notice", tone: "negative" as const, title: notice }]),
-                    ...(statusKind === "waiting"
-                        ? [
-                              {
-                                  id: "waiting",
-                                  tone: "informative" as const,
-                                  title: t("waitingTitle"),
-                                  description: t("waitingBody"),
-                              },
-                          ]
-                        : []),
                 ],
                 ...(refusal === undefined ? {} : { refusal }),
             }}

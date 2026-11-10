@@ -70,7 +70,17 @@ const build = async (
             { provide: AgentRunResumeService, useValue: resume },
         ],
     }).compile()
-    return { service: container.get(AgentRunStepsService), ledger, store, compensation, deadLetter, resume, logger, tx }
+    return {
+        service: container.get(AgentRunStepsService),
+        handler,
+        ledger,
+        store,
+        compensation,
+        deadLetter,
+        resume,
+        logger,
+        tx,
+    }
 }
 
 describe("AgentRunStepsService.execute", () => {
@@ -365,5 +375,77 @@ describe("AgentRunStepsService.fail when the claim moved on", () => {
         expect(store.route).not.toHaveBeenCalled()
         expect(compensation.run).not.toHaveBeenCalled()
         expect(deadLetter.tell).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentRunStepsService side steps", () => {
+    const pass = {
+        result: { output: null, failed: "handler_threw", passedOver: true },
+        next: [stepSpecOf({ stepKey: "after" })],
+    }
+
+    it("records a side step that failed past its tries with its failure, writes the steps that follow and tells a person", async () => {
+        const { service, handler, ledger, store, deadLetter, logger } = await build(new Error("relation check"))
+        handler.passOver = jest.fn().mockResolvedValue(pass)
+        handler.sideFailed = jest.fn().mockResolvedValue(undefined)
+
+        await expect(service.execute(stepViewOf({ attempt: 1 }), SIGNAL)).resolves.toEqual({
+            kind: "done",
+            result: pass.result,
+        })
+
+        expect(ledger.commitIn).toHaveBeenCalledWith(expect.anything(), expect.anything(), { kind: "done", ...pass })
+        expect(store.route).not.toHaveBeenCalled()
+        expect(deadLetter.tell).not.toHaveBeenCalled()
+        expect(handler.sideFailed).toHaveBeenCalledWith(expect.objectContaining({ stepKey: "turn" }), "handler_threw")
+        expect(logger.warn).toHaveBeenCalledWith(AgentRunsLogEvent.StepPassedOver, expect.anything())
+    })
+
+    it("tries a side step again while it has tries, without asking to go past it", async () => {
+        const { service, handler, ledger } = await build(Object.assign(new Error("reset"), { code: "ECONNRESET" }))
+
+        await service.execute(stepViewOf({ attempt: 1 }), SIGNAL)
+
+        expect(handler.passOver).not.toHaveBeenCalled()
+        expect(ledger.commitIn).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.anything(),
+            expect.objectContaining({ kind: "retry" }),
+        )
+    })
+
+    it("stops the run as any other when the handler cannot say how to go past the step", async () => {
+        const { service, handler, store, logger } = await build(new Error("boom"))
+        handler.passOver = jest.fn().mockRejectedValue(new Error("graph gone"))
+
+        await expect(service.execute(stepViewOf({ attempt: 1 }), SIGNAL)).resolves.toEqual({
+            kind: "failed",
+            code: "handler_threw",
+        })
+
+        expect(logger.error).toHaveBeenCalledWith(
+            AgentRunsLogEvent.PassOverFailed,
+            expect.any(Error),
+            expect.anything(),
+        )
+        expect(store.route).toHaveBeenCalledWith(
+            "ws-1",
+            "run-1",
+            expect.objectContaining({ to: "parked" }),
+            expect.anything(),
+        )
+    })
+
+    it("goes on even when telling the person fails", async () => {
+        const { service, handler, logger } = await build(new Error("boom"))
+        handler.passOver = jest.fn().mockResolvedValue(pass)
+        handler.sideFailed = jest.fn().mockRejectedValue(new Error("no items"))
+
+        await expect(service.execute(stepViewOf({ attempt: 1 }), SIGNAL)).resolves.toMatchObject({ kind: "done" })
+        expect(logger.error).toHaveBeenCalledWith(
+            AgentRunsLogEvent.SideTellFailed,
+            expect.any(Error),
+            expect.anything(),
+        )
     })
 })

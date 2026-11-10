@@ -1,5 +1,5 @@
 import type { ParkedFlowAlert } from "@modules/platform/jobs"
-import type { DoorApi } from "@nivo-lite/agent-sdk/mutation"
+import type { DoorApi, WorkflowApi } from "@nivo-lite/agent-sdk/mutation"
 import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import type { ScopedTx } from "./policies/scoped-tx.contracts"
 
@@ -35,6 +35,20 @@ export interface JobDoorBinding {
 export interface EngineDoorProvider {
     /** The door handle of one job run. */
     doorApi(binding: JobDoorBinding): DoorApi
+}
+
+/** What a job run tells the provider of its workflow port about itself. */
+export interface JobWorkflowBinding {
+    /** The workspace the job runs for. */
+    readonly workspaceId: string
+    /** Whether an engine scope (an open transaction) is open now; a start is refused while it is. */
+    readonly scopeOpen: () => boolean
+}
+
+/** The provider of the `workflow` port of declared jobs: the app root binds it, so the engine never imports the agent work. */
+export interface EngineWorkflowProvider {
+    /** The workflow handle of one job run. */
+    workflowApi(binding: JobWorkflowBinding): WorkflowApi
 }
 
 /** Where the engine tells the owner of a job it parked; the app root binds it, so the engine names no capability that files the owner's items. */

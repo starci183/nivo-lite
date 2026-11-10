@@ -17,6 +17,7 @@ export interface WorkspaceRow {
     readonly billedMonthlyVnd: string | null
     readonly displayName: string | null
     readonly logoUrl: string | null
+    readonly deletedAt: Date | null
 }
 
 type WorkspaceRowShape = {
@@ -35,6 +36,7 @@ type WorkspaceRowShape = {
     readonly billedMonthlyVnd?: string | null
     readonly displayName?: string | null
     readonly logoUrl?: string | null
+    readonly deletedAt?: Date | null
 }
 
 /** Workspace `ws-1`, the cafe Quan Ca Phe owned by `owner-1`; the arguments of a case change what it needs. */
@@ -54,6 +56,7 @@ export const workspaceRow: (changes?: WorkspaceRowShape) => WorkspaceRow = entit
     billedMonthlyVnd: null,
     displayName: null,
     logoUrl: null,
+    deletedAt: null,
 })
 
 /** A workspace the person owns, by id and status. */

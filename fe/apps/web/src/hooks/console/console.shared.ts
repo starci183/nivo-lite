@@ -10,6 +10,7 @@ export const ROLE_LABELS = { owner: "roleOwner", manager: "roleManager", staff: 
 export type ConsoleDestination = {
     readonly key: string
     readonly label:
+        | "navOverview"
         | "navAuthority"
         | "navInbox"
         | "navChat"
@@ -31,6 +32,7 @@ export type ConsoleDestination = {
 
 /** The Brain owns the business memory, so its documents are no separate destination. */
 export const DESTINATIONS: ReadonlyArray<ConsoleDestination> = [
+    { key: "overview", label: "navOverview", route: "/overview", icon: "overview", group: "work", managerOnly: true },
     { key: "inbox", label: "navInbox", route: "/inbox", icon: "email", group: "work" },
     { key: "chat", label: "navChat", route: "/chat", icon: "chat", group: "work" },
     { key: "brain", label: "navBrain", route: "/brain", icon: "brain", group: "operate", also: ["/knowledge"] },

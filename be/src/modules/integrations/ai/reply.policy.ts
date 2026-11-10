@@ -20,7 +20,9 @@ const firstNumber = (...candidates: ReadonlyArray<unknown>): number | null =>
 
 /**
  * What a call used, read from LangChain: tokens from the message `usage_metadata` (input, output, total) or the `tokenUsage` of the
- * response metadata, the cost from the raw usage object the endpoint sent (OpenRouter and the gateway report `cost`).
+ * response metadata, the cost from the raw usage object the endpoint sent (OpenRouter and the gateway report `cost`), and the
+ * prompt tokens the provider served from its cache: LangChain's `input_token_details.cache_read`, else the raw usage's
+ * `prompt_tokens_details.cached_tokens` (OpenAI and OpenRouter) or `prompt_cache_hit_tokens` (DeepSeek's own name).
  */
 export const usageOf = (usageMetadata: unknown, responseMetadata: unknown): AiUsage => {
     const tokenUsage = fieldOf(responseMetadata, "tokenUsage")
@@ -30,6 +32,11 @@ export const usageOf = (usageMetadata: unknown, responseMetadata: unknown): AiUs
         completionTokens: firstNumber(fieldOf(usageMetadata, "output_tokens"), fieldOf(tokenUsage, "completionTokens")),
         totalTokens: firstNumber(fieldOf(usageMetadata, "total_tokens"), fieldOf(tokenUsage, "totalTokens")),
         costUsd: numberOf(fieldOf(raw, "cost")),
+        cachedTokens: firstNumber(
+            fieldOf(fieldOf(usageMetadata, "input_token_details"), "cache_read"),
+            fieldOf(fieldOf(raw, "prompt_tokens_details"), "cached_tokens"),
+            fieldOf(raw, "prompt_cache_hit_tokens"),
+        ),
     }
 }
 
@@ -70,12 +77,14 @@ export const notesBlock = (passages: ReadonlyArray<ContextPassage>): string => {
     return `${NOTES_HEADING}\n${lines.join("\n")}`
 }
 
-/** The prompt with the notes block appended to its system message (or opening it as one); unchanged when the block is empty. */
+/**
+ * The prompt with the notes block as a system message of its own, right after the system messages that open the prompt and before
+ * the dialogue; unchanged when the block is empty. The notes depend on the question, so they change from call to call: they never
+ * enter the system text that opens the prompt, which stays the same text and so stays the prefix a provider caches.
+ */
 export const withNotes = (messages: ReadonlyArray<AiMessage>, block: string): Array<AiMessage> => {
     if (block === "") return [...messages]
-    const index = messages.findIndex((message) => message.role === "system")
-    if (index < 0) return [{ role: "system", content: block }, ...messages]
-    return messages.map((message, at) =>
-        at === index ? { role: message.role, content: `${message.content}\n\n${block}` } : message,
-    )
+    const dialogue = messages.findIndex((message) => message.role !== "system")
+    const opening = dialogue < 0 ? messages.length : dialogue
+    return [...messages.slice(0, opening), { role: "system", content: block }, ...messages.slice(opening)]
 }

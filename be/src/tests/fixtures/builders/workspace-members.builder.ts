@@ -17,6 +17,11 @@ export interface SeatRow {
     readonly staffId: string | null
     readonly displayName: string
     readonly status: "active" | "disabled"
+    readonly lastOpenedAt: Date | null
+    readonly disabledAt: Date | null
+    readonly disabledBy: string | null
+    readonly disabledNote: string | null
+    readonly disabledByDeletion: boolean
     readonly createdAt: Date
     readonly updatedAt: Date
 }
@@ -29,6 +34,11 @@ const baseSeat = builder<SeatRow>({
     staffId: null,
     displayName: "An",
     status: "active",
+    lastOpenedAt: null,
+    disabledAt: null,
+    disabledBy: null,
+    disabledNote: null,
+    disabledByDeletion: false,
     createdAt: new Date("2026-10-01T00:00:00.000Z"),
     updatedAt: new Date("2026-10-01T00:00:00.000Z"),
 })
@@ -41,6 +51,14 @@ export const seatRowOf = (
     displayName = "An",
     staffId: string | null = null,
 ): SeatRow => baseSeat({ role, status, userId, displayName, staffId })
+
+/** A seat the owner Chu (user-9) switched off with a note. */
+export const SWITCHED_OFF_SEAT: SeatRow = baseSeat({
+    status: "disabled",
+    disabledAt: new Date("2026-10-12T11:40:00.000Z"),
+    disabledBy: "user-9",
+    disabledNote: "Left the shop",
+})
 
 /** The owner Chu who changes seats. */
 export const CHU_OWNER_SEAT: SeatRow = seatRowOf("owner", "active", "user-1", "Chu")

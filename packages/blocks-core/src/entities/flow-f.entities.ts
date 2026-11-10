@@ -10,6 +10,8 @@ import { agentGraphProposalEntity } from "./agent/graph-proposal.entity"
 import { agentGraphSourceEntity } from "./agent/graph-source.entity"
 import { agentGraphVersionEntity } from "./agent/graph-version.entity"
 import { agentGraphEntity } from "./agent/graph.entity"
+import { agentWorkflowVersionEntity } from "./agent/workflow-version.entity"
+import { agentWorkflowEntity } from "./agent/workflow.entity"
 import { loyaltyMemberEntity } from "./loyalty/member.entity"
 import { loyaltyLedgerEntryEntity } from "./loyalty/ledger-entry.entity"
 import { loyaltyRewardEntity } from "./loyalty/reward.entity"
@@ -19,6 +21,10 @@ import { loyaltyDecisionEntity } from "./loyalty/decision.entity"
 import { agentNodeEffectEntity } from "./agent/node-effect.entity"
 import { agentRunStepEntity } from "./agent/run-step.entity"
 import { agentRunEntity } from "./agent/run.entity"
+import { agentRunWorkflowEntity } from "./agent/run-workflow.entity"
+import { agentLeadFreezeEntity } from "./agent/lead-freeze.entity"
+import { agentConversationHoldEntity } from "./agent/conversation-hold.entity"
+import { agentLeadMemoryEntity } from "./agent/lead-memory.entity"
 import { turnEntity } from "./agent/turn.entity"
 import { conversationEntity } from "./chat/conversation.entity"
 import { messageEntity } from "./chat/message.entity"
@@ -60,5 +66,11 @@ export const FLOW_F_ENTITIES: ReadonlyArray<AnyEntityDefinition> = [
     agentGraphSourceEntity,
     agentGraphProposalEntity,
     agentGraphDecisionEntity,
+    agentWorkflowEntity,
+    agentWorkflowVersionEntity,
+    agentRunWorkflowEntity,
+    agentLeadFreezeEntity,
+    agentConversationHoldEntity,
+    agentLeadMemoryEntity,
     workspaceSettingsEntity,
 ]

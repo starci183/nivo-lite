@@ -31,7 +31,9 @@ import { InjectAiGenerationsOptions, InjectUsage } from "./ai-generations.decora
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import type { AiGenerationsOptions } from "./ai-generations.options"
 import type { UsageGate } from "./ai-generations.port"
-import { EngineStatusService, PauseClient } from "@modules/domain/agents"
+import { PauseClient } from "@modules/domain/agents"
+import { InjectAi } from "@modules/integrations/ai"
+import type { AiService } from "@modules/integrations/ai"
 import { AiGenerationsError, AiGenerationsErrorCode } from "./errors/ai-generations.error"
 import { isRequestableKind } from "./request-kind.policy"
 import {
@@ -59,15 +61,15 @@ const record = (value: unknown): Record<string, unknown> => (isPlainObject(value
 
 @Injectable()
 /**
- * OpenClaw is the only text-generating AI in NIVO. This is the one door for every text the app writes outside customer chat (setup
- * chat, owner chat, Office replies, lead classification, automation drafts): it writes an `ai_generations` row and its job in one
- * transaction, then looks at the row until the job (run by `GenerationRunnerService`) fills it in or the caller's deadline passes. It
- * never calls a model itself. A failure says why (`reason`) with a sentence in the request language; background callers decide for
+ * The one door for every text the app writes as a queued generation (the floating assistant, setup chat, content, video scripts,
+ * brain lessons, hiring / shifts / inventory texts): it writes an `ai_generations` row and its job in one transaction, then looks at
+ * the row until the job (run by `GenerationRunnerService` on the AI endpoint) fills it in or the caller's deadline passes. It never
+ * calls a model itself, and it refuses only for the quota or a missing AI endpoint. A failure says why (`reason`) with a sentence in the request language; background callers decide for
  * themselves (retry, skip, hand to a person).
  */
 export class GenerationsService {
     constructor(
-        private readonly engine: EngineStatusService,
+        @InjectAi() private readonly ai: AiService,
         @InjectLogger() private readonly logger: Logger,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         @InjectUsage() private readonly usage: UsageGate,
@@ -79,14 +81,12 @@ export class GenerationsService {
         private readonly members: WorkspaceMembersService,
     ) {}
 
-    /** Why a text cannot be written now: the quota of the workspace is used up, or the engine is off; null when it can. */
+    /** Why a text cannot be written now: the quota of the workspace is used up, or the AI endpoint is not configured; null when it can. */
     async refusalOf(params: GenerateParams): Promise<OptionalGenerationFailure> {
         const locale = params.locale ?? "vi"
         const blocked = await this.usage.blockedBy(params.workspaceId, params.kind, locale)
         if (blocked !== null) return failure("quota", blocked.message)
-        const availability = this.engine.availability()
-        if (availability === "ready") return null
-        return failure(availability === "offline" ? "engine_offline" : "not_configured", this.busyText(params))
+        return this.ai.available() ? null : failure("not_configured", this.busyText(params))
     }
 
     /** The sentence shown when a text could not be written, in the language of the request. */
@@ -120,8 +120,7 @@ export class GenerationsService {
     ): Promise<GenerationEnqueued> {
         const locale = params.locale ?? "vi"
         const blocked = await this.usage.blockedBy(params.workspaceId, params.kind, locale)
-        const availability = this.engine.availability()
-        if (blocked !== null || availability !== "ready") {
+        if (blocked !== null || !this.ai.available()) {
             throw new AiGenerationsError({
                 code: blocked !== null ? AiGenerationsErrorCode.QuotaBlocked : AiGenerationsErrorCode.EngineUnavailable,
             })
@@ -247,7 +246,7 @@ export class GenerationsService {
     /** Prepares a generation for a fenced job that will run it itself, without starting a second job or waiting for a slot. */
     async prepare(params: GenerateParams, tx: EntityManager): Promise<PreparedGenerationId> {
         const blocked = await this.usage.blockedBy(params.workspaceId, params.kind, params.locale ?? "vi")
-        if (blocked !== null || this.engine.availability() !== "ready") return null
+        if (blocked !== null || !this.ai.available()) return null
         return this.store(params, inputJsonOf(params, clampTimeout(params.timeoutMs)), tx)
     }
 

@@ -9,6 +9,7 @@ import { ConfigurableModuleClass, OPTIONS_TYPE } from "./workspace-seed.module-d
 import { ProfileActivationService } from "./profile-activation.service"
 import { WorkspaceProfileService } from "./workspace-profile.service"
 import { WorkspaceSeedService } from "./workspace-seed.service"
+import { WorkflowResetService } from "./workflow-reset.service"
 
 @Module({})
 /**
@@ -37,8 +38,9 @@ export class WorkspaceSeedModule extends ConfigurableModuleClass {
                 ProfileActivationService,
                 OfficeSeedService,
                 GraphSeedService,
+                WorkflowResetService,
             ],
-            exports: [WorkspaceSeedService, WorkspaceProfileService, OfficeSeedService, GraphSeedService],
+            exports: [WorkspaceSeedService, WorkspaceProfileService, OfficeSeedService, GraphSeedService, WorkflowResetService],
         }
     }
 }

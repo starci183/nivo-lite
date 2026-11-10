@@ -1,6 +1,7 @@
 import type { AgentAccess, AgentPurpose } from "./agents-connections.contracts"
 import type { DashboardLine } from "./agents-reads.contracts"
 import type { AskAsAgentInput, AskedPassage } from "./agent-ask.contracts"
+import type { LensOverview } from "./agent-knowledge-overview.contracts"
 import type {
     AgentAudience,
     LensCounts,
@@ -135,12 +136,16 @@ export interface KnowledgeLens {
     countsFor(workspaceId: string, module: string, installationId: OptionalId): Promise<LensCounts>
     /** Tries a question as an agent: the passages its view reads, then the confirmed facts of the same view. */
     ask(userId: string, workspaceId: string, input: AskAsAgentInput): Promise<ReadonlyArray<AskedPassage>>
+    /** What the knowledge tab of an agent shows: layers, documents, waiting facts and the facts of this agent alone. */
+    overviewFor(workspaceId: string, module: string, installationId: OptionalId): Promise<LensOverview>
     /** Which kinds of knowledge the view of the module reads. */
     lanesOf(module: string): LensLanes
     /** Which kinds of knowledge the public's view reads. */
     customerLanes(): LensLanes
     /** Up to `limit` open gaps of the module, most asked first; null when the gaps are not kept. */
     openGapsOf(workspaceId: string, module: string, limit: number): Promise<OptionalOpenGaps>
+    /** How many proposed facts wait for the owner inside the view of the module (and instance): what its lens reads once approved. */
+    waitingFactsOf(workspaceId: string, module: string, installationId: OptionalId): Promise<number>
 }
 
 /**
@@ -178,10 +183,24 @@ export interface BoundConnectionView {
     readonly purpose: AgentPurpose
 }
 
+/** One grant as the catalog reads it: the agent that holds it and the connection it may use. */
+export interface AgentGrantView {
+    /** The agent that holds the grant. */
+    readonly agentId: string
+    /** The connection with the access and purpose of the grant. */
+    readonly connection: BoundConnectionView
+}
+
 /** The connections bound to agents: the port the agent-connections capability implements for the agents dashboard. */
 export interface AgentConnectionsDirectory {
     /** The connections an agent is bound to for the purposes, oldest connection first. */
     connectionsFor(agentId: string, purposes: ReadonlyArray<AgentPurpose>): Promise<ReadonlyArray<BoundConnectionView>>
+    /** Every grant of the given agents of the workspace in one read, whatever the purpose; any member may look. */
+    connectionsOfAgents(
+        userId: string,
+        workspaceId: string,
+        agentIds: ReadonlyArray<string>,
+    ): Promise<ReadonlyArray<AgentGrantView>>
 }
 
 /** The scope of one dashboard list of a department's work items. */
@@ -230,4 +249,18 @@ export interface AgentSeatRoom {
     readonly userId: string
     /** The room id. */
     readonly key: string
+}
+
+/** The agent that answers a conversation's channel for a role, or null when none does. */
+export type OptionalOwnerAgentId = string | null
+
+/** Which agent of a role answers a conversation's channel: the port the agent-instances capability implements for hand-offs. */
+export interface ConversationChannelOwners {
+    /** The agent of `module` that answers the channel the conversation came in on; null when it came in on none or no agent of the role answers it. */
+    ownerAgentOf(workspaceId: string, conversationId: string, module: string): Promise<OptionalOwnerAgentId>
+    /**
+     * The agent of `module` that answers the channel of the customer's newest conversation that came in on a connection; null when the
+     * customer has none or no agent of the role answers it. For a tag that names a customer but no conversation (a payment event).
+     */
+    ownerAgentOfLead(workspaceId: string, leadId: string, module: string): Promise<OptionalOwnerAgentId>
 }

@@ -36,6 +36,7 @@ import {
     withSetting,
 } from "./policies/instance.policy"
 import type { SettingValue } from "./policies/instance.policy"
+import { handleBaseOf } from "./policies/agent-handle.policy"
 
 const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 
@@ -263,7 +264,7 @@ export class ModuleInstallService {
         const siblings = await this.installations.instanceNames(workspaceId, module.key, null)
         const taken = siblings.map((sibling) => sibling.name)
         const typeName = module.name[locale]
-        const name = wanted ?? nextInstanceName(typeName, taken)
+        const name = wanted ?? request.agent?.name ?? nextInstanceName(typeName, taken)
         if (taken.some((other) => instanceNameKey(other) === instanceNameKey(name))) {
             throw new ModulesError({ code: ModulesErrorCode.InstanceNameTaken })
         }
@@ -309,11 +310,14 @@ export class ModuleInstallService {
     ): Promise<string> {
         const { workspaceId, locale } = request
         const used = new Set((await this.agents.list(principalId, workspaceId)).map((agent) => agent.handle))
+        const chosen = request.agent
+        const named = chosen?.name ?? wanted
+        const handle = chosen?.handle ?? freeHandle(handleBaseOf(chosen?.name, module.agent.handle), used)
         const created = await this.agents.create(principalId, {
             workspaceId,
             module: module.key,
-            name: wanted === null ? { label: module.agent.label[locale] } : agentNameOf(wanted),
-            handle: freeHandle(module.agent.handle, used),
+            name: named === null ? { label: module.agent.label[locale] } : agentNameOf(named),
+            handle,
             role: module.agent.role[locale],
             instructions: module.agent.instructions[locale],
         })

@@ -6,8 +6,9 @@
 #
 # Topology: this stack publishes NO port. The VPS has ONE shared ingress (its own stack, `starci app stack ingress create`) that owns 80/443 and the
 # certificates, serves every tenant and routes nivo's hosts to the aliases below over the external overlay nivo-edge-swarm; nivo's routes are published
-# into the shared dynamic directory by `starci app stack ingress publish` (infra/swarm/edge/routes.yml). TLS covers nivo.vn, www.nivo.vn, app.nivo.vn, api.nivo.vn.
+# into the shared dynamic directory by `starci app stack ingress publish` (infra/swarm/edge/routes.yml). TLS covers nivo.vn, www.nivo.vn, app.nivo.vn, admin.nivo.vn, api.nivo.vn.
 #   nivo-landing   the Next.js landing on nivo.vn / www.nivo.vn, reached as nivo-landing:3000 on the edge network
+#   nivo-admin     the Next.js platform-admin app on admin.nivo.vn (the NIVO team only), reached as nivo-admin:3000 on the edge network
 #   nivo-web-app   the Next.js console on app.nivo.vn, reached as nivo-web-swarm:3000 on the edge network (its own alias: nivo-web still names the old compose container until it is retired)
 #   nivo-api       the Nest api: GraphQL, webhooks, the BullMQ workers and outbox relay, the job alert monitor; reached as nivo-api:8787 on the edge network
 #                  The api process also serves the AI gateway (AiRouterGatewayModule) on 8788 (api port + offset 1), reachable as nivo-api:8788 on `agents` only
@@ -72,6 +73,38 @@ services:
     networks:
       edge:
         aliases: [nivo-landing]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health/live',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+    deploy:
+      replicas: 1
+      resources: { limits: { memory: 300M } }
+      update_config:
+        { parallelism: 1, order: start-first, failure_action: rollback, monitor: 30s, max_failure_ratio: 0, delay: 5s }
+      rollback_config: { parallelism: 1, order: start-first, monitor: 30s }
+      restart_policy: { condition: any, delay: 5s }
+
+  nivo-admin:
+    image: ghcr.io/starci183/nivo-lite-admin@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    environment:
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      NODE_OPTIONS: --max-old-space-size=256
+    networks:
+      edge:
+        aliases: [nivo-admin]
     healthcheck:
       test:
         [

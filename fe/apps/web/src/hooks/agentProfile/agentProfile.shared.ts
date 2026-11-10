@@ -1,5 +1,4 @@
-import { authorityModeOf } from "@/modules/authority"
-import type { AuthorityMode } from "@/modules/authority"
+import { authorityModeOf, type AuthorityMode } from "@/modules/authority"
 
 /** The length of an agent's display name after trimming; the server refuses others. */
 export const AGENT_NAME_LIMITS = { min: 2, max: 40 } as const

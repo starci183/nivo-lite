@@ -4,10 +4,18 @@ import { CurrentPrincipal } from "@modules/domain/identity"
 import { WorkspaceId } from "@modules/domain/workspace-members"
 import { InjectQueryBus } from "@modules/platform/cqrs"
 import type { Principal } from "@modules/platform/cqrs"
+import { ReadAgentWorkLogQuery } from "../../application/read-agent-work-log.query"
 import { ReadAgentWorkQuery } from "../../application/read-agent-work.query"
 import { ReadWorkspaceAgentWorkQuery } from "../../application/read-workspace-agent-work.query"
-import { toAgentWorkType, toReadAgentWorkRequest, toWorkspaceAgentWorkType } from "./agent-work.mapper"
+import {
+    toAgentWorkLogTypes,
+    toAgentWorkType,
+    toReadAgentWorkLogRequest,
+    toReadAgentWorkRequest,
+    toWorkspaceAgentWorkType,
+} from "./agent-work.mapper"
 import { AgentWorkInstanceInput } from "./dto/agent-work-instance.input"
+import { AgentWorkLogLineType } from "./dto/agent-work-log.type"
 import { AgentWorkType } from "./dto/agent-work.type"
 import { WorkspaceAgentWorkType } from "./dto/workspace-agent-work.type"
 
@@ -27,6 +35,19 @@ export class AgentWorkResolver {
             new ReadAgentWorkQuery({ request: toReadAgentWorkRequest(workspaceId, input), principal }),
         )
         return toAgentWorkType(result)
+    }
+
+    /** The work log of one agent: its newest work items with the connection, level, evidence and steps of each. */
+    @Query(() => [AgentWorkLogLineType], { name: "agentWorkLog" })
+    async agentWorkLog(
+        @CurrentPrincipal() principal: Principal,
+        @WorkspaceId() workspaceId: string,
+        @Args("input") input: AgentWorkInstanceInput,
+    ): Promise<Array<AgentWorkLogLineType>> {
+        const lines = await this.queryBus.execute(
+            new ReadAgentWorkLogQuery({ request: toReadAgentWorkLogRequest(workspaceId, input), principal }),
+        )
+        return toAgentWorkLogTypes(lines)
     }
 
     /** The switch of the whole workspace with the counts beside it. */

@@ -1,6 +1,7 @@
 import type { DefaultRule } from "@modules/domain/authority-rules"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import type { ModuleDefinition } from "../modules.contracts"
+import { workingHoursOf, workingHoursTextOf } from "./working-hours.policy"
 
 const NAME_MAX = 80
 const NAME_SEARCH_LIMIT = 1000
@@ -62,9 +63,16 @@ export type SettingValue = string | number | null
 /** One setting of an installation a change writes: the name and the value (null removes it). */
 export interface SettingChange {
     /** The setting. */
-    readonly name: "openclawTimeoutSec" | "holdingMessage"
+    readonly name: "openclawTimeoutSec" | "holdingMessage" | "workingHours"
     /** The value; null removes the setting. */
     readonly value: SettingValue
+}
+
+/** The working hours as the setting keeps them (the web's JSON text, normalized); null or an empty text removes them. */
+const workingHoursSettingOf = (value: SettingValue): SettingChange | null => {
+    if (value === null || value === "") return { name: "workingHours", value: null }
+    const hours = workingHoursOf(value)
+    return hours === null ? null : { name: "workingHours", value: workingHoursTextOf(hours) }
 }
 
 /** The setting a name and a raw value stand for, or null when the value is outside its limits. */
@@ -73,6 +81,7 @@ export const settingOf = (name: string, value: SettingValue): SettingChange | nu
         const seconds = Math.round(Number(value))
         return seconds >= TIMEOUT_RANGE.min && seconds <= TIMEOUT_RANGE.max ? { name, value: seconds } : null
     }
+    if (name === "workingHours") return workingHoursSettingOf(value)
     if (name !== "holdingMessage" || typeof value !== "string") return null
     const text = value.trim().slice(0, HOLDING_MAX)
     return { name, value: text === "" ? null : text }

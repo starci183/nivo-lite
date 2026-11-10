@@ -28,6 +28,10 @@ export class AiUsageEventEntity extends UuidAbstractEntity {
     @Column({ name: "completion_tokens", type: "integer", default: () => "0" })
     completionTokens!: number
 
+    /** The tokens of the prompt the provider served from its prompt cache: a part of `promptTokens`, zero when it did not say. */
+    @Column({ name: "cached_tokens", type: "integer", default: () => "0" })
+    cachedTokens!: number
+
     /** The cost of the call in USD. */
     @Column({ name: "cost_usd", type: "numeric", precision: 14, scale: 8, default: () => "0" })
     costUsd!: string
@@ -35,4 +39,8 @@ export class AiUsageEventEntity extends UuidAbstractEntity {
     /** True when the figures were estimated from the text length. */
     @Column({ name: "estimated", type: "boolean", default: () => "false" })
     estimated!: boolean
+
+    /** The agent run the call was made for, or null when it belongs to none. */
+    @Column({ name: "run_id", type: "uuid", nullable: true })
+    runId!: string | null
 }

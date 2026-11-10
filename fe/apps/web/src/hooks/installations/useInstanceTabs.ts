@@ -6,11 +6,23 @@ import { agentHref } from "@/modules/installations"
 import type { AgentTab } from "@/modules/installations"
 import { workspaceHref } from "@/modules/routes"
 
-const ALL_TABS: ReadonlyArray<AgentTab> = ["setup", "workbench", "work", "chat", "performance", "settings"]
+const ALL_TABS: ReadonlyArray<AgentTab> = [
+    "workbench",
+    "work",
+    "graph",
+    "workflows",
+    "chat",
+    "performance",
+    "connections",
+    "knowledge",
+    "setup",
+]
 
 /** The agent types that have the Performance tab: the AI Marketing (content) agent reads its weekly report there. */
 const PERFORMANCE_MODULES: ReadonlySet<ModuleKey> = new Set<ModuleKey>(["content"])
-const FIRST_TAB: AgentTab = "setup"
+const SETUP_TAB: AgentTab = "setup"
+/** The tab the landing path of an instance shows while it decides where to go. */
+const LANDING_TAB: AgentTab = "workbench"
 
 /** The view `useInstanceTabs` returns. */
 export interface InstanceTabsView {
@@ -27,9 +39,9 @@ export const useInstanceTabs = (module: ModuleKey, installationId: string): Inst
     const workspaceId = useWorkspaceId()
     const pathname = navigation.usePathname()
     const tabs = ALL_TABS.filter(
-        (tab) => (tab !== FIRST_TAB || isManager(member)) && (tab !== "performance" || PERFORMANCE_MODULES.has(module)),
+        (tab) => (tab !== SETUP_TAB || isManager(member)) && (tab !== "performance" || PERFORMANCE_MODULES.has(module)),
     )
-    const selected = tabs.find((tab) => tab !== FIRST_TAB && pathname.endsWith(`/${tab}`)) ?? FIRST_TAB
+    const selected = tabs.find((tab) => pathname.endsWith(`/${tab}`) || pathname.includes(`/${tab}/`)) ?? LANDING_TAB
     const open = (id: string) => {
         const tab = ALL_TABS.find((entry) => entry === id)
         if (tab !== undefined) router.push(workspaceHref(workspaceId, agentHref(module, installationId, tab)))

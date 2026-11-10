@@ -14,7 +14,6 @@ slots:
   - { id: node, path: src/node/** }
   - { id: port, path: src/port/** }
   - { id: query, path: src/query/** }
-  - { id: reconcile, path: src/reconcile/** }
   - { id: rights, path: src/rights/** }
   - { id: schema, path: src/schema/** }
   - { id: slot, path: src/slot/** }

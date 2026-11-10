@@ -1,4 +1,5 @@
 import type { ModuleIconName } from "@/modules/types"
+import { pictureUrlOf } from "@/modules/agentAvatar"
 import { MODULE_REGISTRY, isModuleKey } from "@/modules/catalog"
 import type { ModuleKey } from "@/modules/catalog"
 import { agentHref, agentListHref, displayNameOf, installationLifecycleOf, instancesOf } from "@/modules/installations"
@@ -15,6 +16,7 @@ interface InstallationWire {
     readonly agentId?: string | null
     readonly agentName: string
     readonly agentAvatarUrl?: string | null
+    readonly agentAvatarPreset?: string | null
     readonly agentHandle: string
     readonly status: string
     readonly lifecycle: string
@@ -60,7 +62,12 @@ const toInstallation = (row: InstallationWire): Installation | null =>
               name: displayNameOf(row),
               isMulti: row.isMulti,
               agentId: row.agentId ?? null,
-              agentAvatarUrl: row.agentAvatarUrl ?? null,
+              agentAvatarUrl: pictureUrlOf({
+                  avatarUrl: row.agentAvatarUrl,
+                  avatarPreset: row.agentAvatarPreset,
+                  moduleKey: row.moduleKey,
+              }),
+              agentAvatarPreset: row.agentAvatarPreset ?? null,
               agentHandle: row.agentHandle,
               status: statusOf(row.status),
               lifecycle: installationLifecycleOf(row.lifecycle),

@@ -94,6 +94,22 @@
       "indexes": ["records_accounting_settings_scope", "records_accounting_settings_scope_key"]
     },
     {
+      "entity": "agent.conversation-hold",
+      "partition": "records_agent_conversation_hold",
+      "view": "v_records_agent_conversation_hold",
+      "checks": [
+        "records_agent_conversation_hold_agent_id_chk",
+        "records_agent_conversation_hold_conversation_id_chk",
+        "records_agent_conversation_hold_held_at_chk",
+        "records_agent_conversation_hold_run_id_chk",
+        "records_agent_conversation_hold_workflow_id_chk"
+      ],
+      "indexes": [
+        "records_agent_conversation_hold_conversation_key",
+        "records_agent_conversation_hold_conversation_lookup"
+      ]
+    },
+    {
       "entity": "agent.graph",
       "partition": "records_agent_graph",
       "view": "v_records_agent_graph",
@@ -203,6 +219,71 @@
       "indexes": ["records_agent_graph_version_agent_version", "records_agent_graph_version_agent_version_key"]
     },
     {
+      "entity": "agent.lead-freeze",
+      "partition": "records_agent_lead_freeze",
+      "view": "v_records_agent_lead_freeze",
+      "checks": [
+        "records_agent_lead_freeze_agent_id_chk",
+        "records_agent_lead_freeze_conversation_id_chk",
+        "records_agent_lead_freeze_customer_name_chk",
+        "records_agent_lead_freeze_episode_chk",
+        "records_agent_lead_freeze_failures_chk",
+        "records_agent_lead_freeze_frozen_at_chk",
+        "records_agent_lead_freeze_frozen_reason_chk",
+        "records_agent_lead_freeze_frozen_run_id_chk",
+        "records_agent_lead_freeze_held_by_chk",
+        "records_agent_lead_freeze_key_chk",
+        "records_agent_lead_freeze_lead_id_chk",
+        "records_agent_lead_freeze_pending_chk",
+        "records_agent_lead_freeze_release_reason_chk",
+        "records_agent_lead_freeze_released_at_chk",
+        "records_agent_lead_freeze_released_by_chk",
+        "records_agent_lead_freeze_status_chk",
+        "records_agent_lead_freeze_step_key_chk",
+        "records_agent_lead_freeze_step_title_chk",
+        "records_agent_lead_freeze_work_item_id_chk"
+      ],
+      "indexes": [
+        "records_agent_lead_freeze_freeze_key",
+        "records_agent_lead_freeze_key_lookup",
+        "records_agent_lead_freeze_lead",
+        "records_agent_lead_freeze_run",
+        "records_agent_lead_freeze_status_frozen"
+      ]
+    },
+    {
+      "entity": "agent.lead-memory",
+      "partition": "records_agent_lead_memory",
+      "view": "v_records_agent_lead_memory",
+      "checks": [
+        "records_agent_lead_memory_agent_id_chk",
+        "records_agent_lead_memory_closed_at_chk",
+        "records_agent_lead_memory_conversation_id_chk",
+        "records_agent_lead_memory_entry_key_chk",
+        "records_agent_lead_memory_error_chk",
+        "records_agent_lead_memory_expires_at_chk",
+        "records_agent_lead_memory_kind_chk",
+        "records_agent_lead_memory_lead_id_chk",
+        "records_agent_lead_memory_namespace_chk",
+        "records_agent_lead_memory_node_key_chk",
+        "records_agent_lead_memory_output_chk",
+        "records_agent_lead_memory_run_id_chk",
+        "records_agent_lead_memory_step_chk",
+        "records_agent_lead_memory_subject_key_chk",
+        "records_agent_lead_memory_version_id_chk",
+        "records_agent_lead_memory_workflow_id_chk",
+        "records_agent_lead_memory_written_at_chk"
+      ],
+      "indexes": [
+        "records_agent_lead_memory_conversation",
+        "records_agent_lead_memory_entry_key",
+        "records_agent_lead_memory_expires",
+        "records_agent_lead_memory_lead",
+        "records_agent_lead_memory_run_node",
+        "records_agent_lead_memory_subject"
+      ]
+    },
+    {
       "entity": "agent.node-effect",
       "partition": "records_agent_node_effect",
       "checks": [
@@ -220,6 +301,8 @@
       "view": "v_records_agent_run",
       "checks": [
         "records_agent_run_agent_id_chk",
+        "records_agent_run_cancelled_at_chk",
+        "records_agent_run_cancelled_by_chk",
         "records_agent_run_context_chk",
         "records_agent_run_dead_lettered_at_chk",
         "records_agent_run_ended_at_chk",
@@ -290,6 +373,24 @@
       ]
     },
     {
+      "entity": "agent.run-workflow",
+      "partition": "records_agent_run_workflow",
+      "view": "v_records_agent_run_workflow",
+      "checks": [
+        "records_agent_run_workflow_agent_id_chk",
+        "records_agent_run_workflow_run_id_chk",
+        "records_agent_run_workflow_started_at_chk",
+        "records_agent_run_workflow_workflow_id_chk",
+        "records_agent_run_workflow_workflow_version_chk",
+        "records_agent_run_workflow_workflow_version_id_chk"
+      ],
+      "indexes": [
+        "records_agent_run_workflow_agent_workflow_started",
+        "records_agent_run_workflow_key",
+        "records_agent_run_workflow_run_key"
+      ]
+    },
+    {
       "entity": "agent.turn",
       "partition": "records_agent_turn",
       "checks": [
@@ -302,6 +403,51 @@
         "records_agent_turn_turn_index_chk"
       ],
       "indexes": ["records_agent_turn_recent", "records_agent_turn_session_turn_key"]
+    },
+    {
+      "entity": "agent.workflow",
+      "partition": "records_agent_workflow",
+      "view": "v_records_agent_workflow",
+      "checks": [
+        "records_agent_workflow_active_version_id_chk",
+        "records_agent_workflow_agent_id_chk",
+        "records_agent_workflow_created_by_chk",
+        "records_agent_workflow_key_chk",
+        "records_agent_workflow_latest_number_chk",
+        "records_agent_workflow_name_chk",
+        "records_agent_workflow_position_chk",
+        "records_agent_workflow_primary_chk",
+        "records_agent_workflow_status_chk",
+        "records_agent_workflow_template_id_chk",
+        "records_agent_workflow_template_version_chk"
+      ],
+      "indexes": ["records_agent_workflow_agent_key", "records_agent_workflow_agent_position"]
+    },
+    {
+      "entity": "agent.workflow-version",
+      "partition": "records_agent_workflow_version",
+      "view": "v_records_agent_workflow_version",
+      "checks": [
+        "records_agent_workflow_version_agent_id_chk",
+        "records_agent_workflow_version_author_id_chk",
+        "records_agent_workflow_version_author_kind_chk",
+        "records_agent_workflow_version_change_kind_chk",
+        "records_agent_workflow_version_document_chk",
+        "records_agent_workflow_version_document_hash_chk",
+        "records_agent_workflow_version_from_number_chk",
+        "records_agent_workflow_version_graph_version_id_chk",
+        "records_agent_workflow_version_note_chk",
+        "records_agent_workflow_version_number_chk",
+        "records_agent_workflow_version_published_at_chk",
+        "records_agent_workflow_version_template_id_chk",
+        "records_agent_workflow_version_template_version_chk",
+        "records_agent_workflow_version_workflow_id_chk"
+      ],
+      "indexes": [
+        "records_agent_workflow_version_agent_graph_version",
+        "records_agent_workflow_version_workflow_number",
+        "records_agent_workflow_version_workflow_number_key"
+      ]
     },
     {
       "entity": "chat.conversation",
@@ -355,7 +501,9 @@
         "records_chat_message_conversation_id_chk",
         "records_chat_message_delivery_error_chk",
         "records_chat_message_delivery_status_chk",
+        "records_chat_message_files_chk",
         "records_chat_message_in_reply_to_chk",
+        "records_chat_message_order_card_chk",
         "records_chat_message_role_chk",
         "records_chat_message_sent_at_chk",
         "records_chat_message_sent_by_chk",
@@ -365,7 +513,9 @@
       "indexes": [
         "records_chat_message_channel_ref",
         "records_chat_message_channel_ref_key",
+        "records_chat_message_conversation_role_sent",
         "records_chat_message_conversation_sent",
+        "records_chat_message_conversation_status_created",
         "records_chat_message_conversation_status_sent",
         "records_chat_message_one_proposal_key",
         "records_chat_message_reply_of",
@@ -582,6 +732,8 @@
         "records_sales_lead_channel_chk",
         "records_sales_lead_closed_reason_chk",
         "records_sales_lead_company_chk",
+        "records_sales_lead_consult_facts_chk",
+        "records_sales_lead_consult_stage_chk",
         "records_sales_lead_contact_name_chk",
         "records_sales_lead_context_summary_chk",
         "records_sales_lead_email_chk",
@@ -623,11 +775,15 @@
         "records_sales_order_carrier_chk",
         "records_sales_order_confirmed_at_chk",
         "records_sales_order_confirmed_by_chk",
+    "records_sales_order_delivery_address_chk",
+    "records_sales_order_delivery_at_chk",
         "records_sales_order_items_chk",
         "records_sales_order_items_text_chk",
         "records_sales_order_lead_id_chk",
         "records_sales_order_note_chk",
         "records_sales_order_order_no_chk",
+    "records_sales_order_recipient_name_chk",
+    "records_sales_order_recipient_phone_chk",
         "records_sales_order_shipped_at_chk",
         "records_sales_order_status_chk",
         "records_sales_order_tracking_code_chk"

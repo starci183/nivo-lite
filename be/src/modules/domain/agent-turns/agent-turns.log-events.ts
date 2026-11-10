@@ -10,4 +10,6 @@ export enum AgentTurnsLogEvent {
     TurnFailed = "agent_turns.turn_failed",
     /** The runtime agent of a turn could not be synced, so the turn ran on the workspace's internal agent. */
     AgentSyncFailed = "agent_turns.agent_sync_failed",
+    /** The run of a turn's wake could not be read, so the credit of the call was booked to no run. */
+    RunLookupFailed = "agent_turns.run_lookup_failed",
 }

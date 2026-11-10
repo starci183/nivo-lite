@@ -23,10 +23,12 @@ export const AppNotFoundBase = (props: AppNotFoundBaseProps) => (
             <Pane area="main" label={props.props.grid}>
                 <PaneSection align="center" grow>
                     <EmptyNotice
+                        frame="frameless"
                         message={props.props.title}
                         description={props.props.text}
                         iconSource={nivoIconSource("explore", "leading")}
                         actionLabel={props.props.homeLabel}
+                        actionEndArrow
                         onAction={props.on.goHome}
                     />
                 </PaneSection>

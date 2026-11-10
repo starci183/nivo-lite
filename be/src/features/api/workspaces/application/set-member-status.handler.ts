@@ -21,6 +21,7 @@ export class SetMemberStatusHandler extends ICQRSHandler<SetMemberStatusCommand,
             command.params.request.workspaceId,
             command.params.request.userId,
             command.params.request.status,
+            command.params.request.note,
         )
     }
 }

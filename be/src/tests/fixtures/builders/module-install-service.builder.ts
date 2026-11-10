@@ -7,6 +7,7 @@ export const INSTALL_VIEWED = {
     agentName: "Chatbot",
     agentHandle: "chatbot",
     agentAvatarUrl: null,
+    agentAvatarPreset: null,
     activeVersion: 1,
     connectionNeeds: [],
     lifecycle: "ready",

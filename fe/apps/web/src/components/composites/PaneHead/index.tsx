@@ -9,14 +9,14 @@ export interface PanePrimary {
     readonly label: string
     readonly onPress: () => void
     readonly isPending?: boolean
+    /** A glyph before the label, drawn only by the phone button (md); the sm button of the head band takes no icon. */
+    readonly startContent?: ReactNode
 }
 
 /** The outlined command that stands before the primary one from the medium width and is absent on a phone. */
 interface PaneSecondary {
     readonly label: string
     readonly onPress: () => void
-    /** A glyph before the label. */
-    readonly startContent?: ReactNode
 }
 
 /** What a pane head band draws: the head, and the pane's one primary command when it has one. */
@@ -51,9 +51,6 @@ export const PaneHead = (props: PaneHeadProps) => {
                                               intent="alternative"
                                               size="sm"
                                               onPress={secondary.onPress}
-                                              {...(secondary.startContent === undefined
-                                                  ? {}
-                                                  : { startContent: secondary.startContent })}
                                           >
                                               {secondary.label}
                                           </Button>

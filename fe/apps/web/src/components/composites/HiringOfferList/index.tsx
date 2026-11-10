@@ -39,7 +39,7 @@ export const HiringOfferList = (props: HiringOfferListProps) => {
                     ? {}
                     : {
                           labelEnd: (
-                              <Button isLoading={props.isLoading} intent="commit" href={decisionsHref}>
+                              <Button endArrow isLoading={props.isLoading} intent="commit" href={decisionsHref}>
                                   {approveLabel}
                               </Button>
                           ),

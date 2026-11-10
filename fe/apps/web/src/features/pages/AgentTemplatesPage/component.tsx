@@ -1,9 +1,11 @@
-import { Page } from "@starci/grammar/common"
-import type { BreadcrumbItem, PageHeaderContent } from "@starci/grammar/common"
+import { Page, Stack, type BreadcrumbItem, type PageHeaderContent } from "@starci/grammar/common"
 import type { ReactElement } from "react"
+import { AgentCreateAction } from "@/components/blocks/AgentCreateAction"
+import { AgentCreateDialog } from "@/components/blocks/AgentCreateDialog"
 import { AgentMarketplace } from "@/components/blocks/AgentMarketplace"
 import { AgentTemplatePackage } from "@/components/blocks/AgentTemplatePackage"
 import { AgentTemplatesHub } from "@/components/blocks/AgentTemplatesHub"
+import { AgentWorkflowTemplates } from "@/components/blocks/AgentWorkflowTemplates"
 
 /** Which of the three views of the agent templates the route shows. */
 export type AgentTemplatesView = "templates" | "marketplace" | "package"
@@ -25,7 +27,13 @@ export interface AgentTemplatesPageBaseProps {
 
 /** The block of one view. */
 const BodyOf = (props: AgentTemplatesPageBaseProps["props"]): ReactElement => {
-    if (props.view === "marketplace") return <AgentMarketplace />
+    if (props.view === "marketplace")
+        return (
+            <Stack gap="section">
+                <AgentMarketplace />
+                <AgentWorkflowTemplates />
+            </Stack>
+        )
     if (props.view === "package") return <AgentTemplatePackage installationId={props.installationId} />
     return <AgentTemplatesHub />
 }
@@ -38,9 +46,10 @@ export const AgentTemplatesPageBase = (props: AgentTemplatesPageBaseProps): Reac
             title: props.props.title,
             description: props.props.description,
             breadcrumbs: { label: props.props.crumbLabel, items: props.props.crumbs },
-            ...(props.props.tabs === null ? {} : { tabs: props.props.tabs }),
+            ...(props.props.tabs === null ? {} : { tabs: props.props.tabs, actions: <AgentCreateAction /> }),
         }}
     >
         <BodyOf {...props.props} />
+        {props.props.tabs === null ? null : <AgentCreateDialog />}
     </Page>
 )

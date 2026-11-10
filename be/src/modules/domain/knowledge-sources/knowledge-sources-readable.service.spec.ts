@@ -121,3 +121,28 @@ describe("KnowledgeSourcesReadableService", () => {
         ])
     })
 })
+
+describe("KnowledgeSourcesReadableService summaries", () => {
+    it("lists the documents of the scope without their text, newest change first, whatever the audience reads", async () => {
+        const { service, fakes } = await build({
+            getRawMany: [
+                readableRowOf(),
+                readableRowOf({ id: "private", visibility: "internal" }),
+                readableRowOf({ id: "other-module", module: "sales" }),
+            ],
+        })
+
+        const found = await service.summariesFor(
+            { workspaceId: WS, module: "chatbot", installationId: null, audience: "internal" },
+            50,
+        )
+
+        expect(found.map((one) => [one.id, one.visibility])).toEqual([
+            ["shared", "public"],
+            ["private", "internal"],
+        ])
+        expect(found[0]).not.toHaveProperty("content")
+        expect(fakes[0]?.callsOf("orderBy")).toEqual([["ks.updatedAt", "DESC"]])
+        expect(fakes[0]?.callsOf("limit")).toEqual([[50]])
+    })
+})

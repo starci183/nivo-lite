@@ -1,13 +1,12 @@
-import type { DataSlot, SlotLabels, AgentStepView, WizardNote } from "@/modules/types"
+import type { DataSlot, SlotLabels, AgentStepView, WizardNote, WizardPhases } from "@/modules/types"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Stack, Alert, Input, Select, Text, Textarea } from "@starci/grammar/common"
-
 import { OpenApiAuthStep } from "@/components/composites/OpenApiAuthStep"
 import { OpenApiPullsStep } from "@/components/composites/OpenApiPullsStep"
 import { OpenApiTestStep } from "@/components/composites/OpenApiTestStep"
 import { OpenApiToolsStep } from "@/components/composites/OpenApiToolsStep"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { backAction, closeAction, nextAction, WizardFooter } from "@/components/branches/WizardFooter"
+import { backAction, closeAction, forwardAction, nextAction, WizardFooter } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
 import { WizardFrame } from "@/components/frames/WizardFrame"
 
@@ -40,6 +39,7 @@ export interface OpenApiWizardBaseProps {
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
+        readonly phases: WizardPhases
         readonly index: number
         readonly step: "source" | "auth" | "pulls" | "tools" | "schedule" | "test" | "agent"
         readonly isPending: boolean
@@ -142,7 +142,7 @@ const actionsOf = ({ props, on }: OpenApiWizardBaseProps): ReadonlyArray<WizardA
     const { text, isPending, index } = props
     const back = backAction(text.back, isPending || props.isTesting, () => on.go(index - 1))
     const next = (isDisabled: boolean) =>
-        nextAction(text.next, () => on.go(index + 1), { isDisabled: isDisabled || isPending })
+        forwardAction(text.next, () => on.go(index + 1), { isDisabled: isDisabled || isPending })
     if (props.step === "source") {
         const goOn = props.source.isUnchanged ? () => on.go(1) : on.loadSpec
         const label = props.source.isUnchanged ? text.next : text.loadSpec
@@ -232,6 +232,7 @@ const renderOpenApiWizard = (props: OpenApiWizardBaseProps, isLoading: boolean) 
             title={view.title}
             stepLabel={view.stepLabel}
             steps={view.steps}
+            phases={view.phases}
             index={view.index}
             footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
         >

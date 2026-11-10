@@ -9,8 +9,8 @@ import type {
     PageRow,
     RecordRow,
 } from "@nivo-lite/agent-sdk/entity/port"
-import { doorPort, outboxPort } from "@nivo-lite/agent-sdk/mutation"
-import type { DoorApi, OutboxApi } from "@nivo-lite/agent-sdk/mutation"
+import { doorPort, outboxPort, workflowPort } from "@nivo-lite/agent-sdk/mutation"
+import type { DoorApi, OutboxApi, WorkflowApi } from "@nivo-lite/agent-sdk/mutation"
 import { unprovided } from "@nivo-lite/agent-sdk/port"
 import type { PortDefinition, PortProvider } from "@nivo-lite/agent-sdk/port"
 import { queryProblems } from "@nivo-lite/agent-sdk/query"
@@ -257,7 +257,8 @@ const memberDirectory = (world: MemoryWorld): MemberDirectory => ({
     get: (memberId) => Promise.resolve(world.members.get(memberId) ?? null),
 })
 
-const outbox = (world: MemoryWorld): OutboxApi => ({
+/** The outbox of a world: every job enqueued is kept in `world.jobs`, for a spec to read. */
+export const outbox = (world: MemoryWorld): OutboxApi => ({
     enqueue: (job, input, options) => {
         world.jobs.push({ job: job.name, input, dedupeKey: options?.dedupeKey })
         return Promise.resolve()
@@ -269,6 +270,16 @@ export const doorApi = (world: MemoryWorld): DoorApi => ({
     call: (tool, input) => {
         world.calls.push({ tool, input })
         return Promise.resolve(world.answers.get(tool) ?? { ok: false, reason: "unknown_tool", message: tool })
+    },
+})
+
+/** The workflow port over a world: records each start once per dedupe key, as the engine wakes the workflow once per key. */
+export const workflowApi = (world: MemoryWorld): WorkflowApi => ({
+    start: (request) => {
+        if (world.starts.some((start) => start.dedupeKey === request.dedupeKey))
+            return Promise.resolve({ started: false, reason: "duplicate" })
+        world.starts.push(request)
+        return Promise.resolve({ started: true })
     },
 })
 
@@ -290,6 +301,7 @@ const portsOf = (world: MemoryWorld): ReadonlyArray<readonly [string, unknown]> 
     [membersPort.id, memberDirectory(world)],
     [outboxPort.id, outbox(world)],
     [doorPort.id, doorApi(world)],
+    [workflowPort.id, workflowApi(world)],
 ]
 
 /** The implementation of each port of the module over a world; a port outside the module is unprovided. */

@@ -57,6 +57,7 @@ import { eventsEntities } from "@modules/domain/events"
 import { hiringEntities } from "@modules/domain/hiring"
 import { identityEntities } from "@modules/domain/identity"
 import { inboundEventsEntities } from "@modules/domain/inbound-events"
+import { inboxLeadsEntities } from "@modules/domain/inbox-leads"
 import { inventoryEntities } from "@modules/domain/inventory"
 import { invoicesEntities } from "@modules/domain/invoices"
 import { knowledgeChunksEntities } from "@modules/domain/knowledge-chunks"
@@ -179,6 +180,7 @@ export const PRIMARY_ENTITIES: DatabaseOptions["entities"] = [
     ...hiringEntities,
     ...identityEntities,
     ...inboundEventsEntities,
+    ...inboxLeadsEntities,
     ...inventoryEntities,
     ...invoicesEntities,
     ...knowledgeChunksEntities,

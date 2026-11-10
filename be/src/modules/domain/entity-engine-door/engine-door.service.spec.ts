@@ -56,6 +56,7 @@ describe("EngineDoorService", () => {
                 conversationId: null,
                 workItemId: null,
                 audience: "internal",
+                engine: true,
                 opKey: `job-1:ai.agent.turn:${argsHashOf({ to: "a" })}`,
             },
             "agent.turn",

@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
-import type { EngineResult, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
+import type { AggregateRow, EngineResult, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { MutationValues } from "@nivo-lite/agent-sdk/mutation"
 import type { FilterExpr, OrderBy, Query } from "@nivo-lite/agent-sdk/query"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
@@ -32,7 +32,10 @@ const RUN_SELECT: ReadonlyArray<string> = [
     "resumeAttempts",
     "resumeNotBefore",
     "endedAt",
+    "startedAt",
     "stepSeq",
+    "cancelledAt",
+    "cancelledBy",
 ]
 
 const STEP_SELECT: ReadonlyArray<string> = [
@@ -55,6 +58,12 @@ const STEP_SELECT: ReadonlyArray<string> = [
     "compAttempts",
     "errorCode",
 ]
+
+/** The fields of a step the run page reads beyond the engine's own: its moments, its door calls and its error. */
+const STEP_VIEW_SELECT: ReadonlyArray<string> = [...STEP_SELECT, "startedAt", "endedAt", "durationMs", "doorCalls", "error"]
+
+/** The most runs one list of an agent holds. */
+const RUNS_PAGE = 50
 
 const rejected = (): AgentRunsError => new AgentRunsError({ code: AgentRunsErrorCode.ResultRejected })
 
@@ -85,6 +94,70 @@ export class AgentRunRecordsService {
             page: { size: 1 },
         })
         return rows.map(runRecordOf).at(0) ?? null
+    }
+
+    /** The newest runs of one agent, newest first, at most `limit` (the index of the agent and its start). */
+    async runsOfAgent(tx: ScopedTx, agentId: string, limit: number): Promise<ReadonlyArray<RunRecord>> {
+        const rows = await this.rows(tx, {
+            from: RUN,
+            select: RUN_SELECT,
+            where: { op: "eq", field: "agentId", value: agentId },
+            order: [
+                ["startedAt", "desc"],
+                ["id", "desc"],
+            ],
+            page: { size: Math.min(limit, RUNS_PAGE) },
+        })
+        return rows.map(runRecordOf)
+    }
+
+    /** How many steps each run holds, how many are done, how many have begun or failed: one grouped read for the runs given. */
+    stepCountsOf(tx: ScopedTx, runIds: ReadonlyArray<string>): Promise<ReadonlyArray<AggregateRow>> {
+        if (runIds.length === 0) return Promise.resolve([])
+        return this.engine.aggregate(tx, {
+            from: STEP,
+            where: { op: "in", field: "runId", values: runIds },
+            groupBy: ["runId"],
+            measures: {
+                total: { kind: "count" },
+                done: { kind: "count", where: { op: "in", field: "status", values: ["done", "compensated"] } },
+                begun: { kind: "count", where: { op: "ne", field: "status", value: "pending" } },
+                failed: { kind: "count", where: { op: "eq", field: "status", value: "failed" } },
+            },
+            limit: runIds.length,
+        })
+    }
+
+    /** The work item each run's steps are about: one row per run and item, for the runs given. */
+    workItemsOf(tx: ScopedTx, runIds: ReadonlyArray<string>): Promise<ReadonlyArray<AggregateRow>> {
+        if (runIds.length === 0) return Promise.resolve([])
+        return this.engine.aggregate(tx, {
+            from: STEP,
+            where: {
+                op: "and",
+                of: [
+                    { op: "in", field: "runId", values: runIds },
+                    { op: "notNull", field: "workItemId" },
+                ],
+            },
+            groupBy: ["runId", "workItemId"],
+            measures: { steps: { kind: "count" } },
+            limit: runIds.length * 2,
+        })
+    }
+
+    /** The rows of the steps of a run in order, with the moments, the door calls and the error the run page draws. */
+    stepRowsOf(tx: ScopedTx, runId: string): Promise<ReadonlyArray<RecordRow>> {
+        return this.rows(tx, {
+            from: STEP,
+            select: STEP_VIEW_SELECT,
+            where: { op: "eq", field: "runId", value: runId },
+            order: [
+                ["ordinal", "asc"],
+                ["id", "asc"],
+            ],
+            page: { size: STEPS_MAX },
+        })
     }
 
     /** The runs of one status that `where` narrows, in the order of an index, at most `limit`. */

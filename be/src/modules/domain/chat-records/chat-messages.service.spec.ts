@@ -3,6 +3,7 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { CHAT_WORKSPACE, addConversation, fakeChat } from "../../../tests/fixtures/builders/chat-records.builder"
 import type { FakeChat } from "../../../tests/fixtures/builders/chat-records.builder"
+import { HOLDING_LINE_KEY_PREFIX } from "./chat-lines.policy"
 import { ChatEntitiesService } from "./chat-entities.service"
 import { ChatMessagesService } from "./chat-messages.service"
 import { CHAT_DELIVERY_UNKNOWN } from "./delivery.policy"
@@ -296,5 +297,78 @@ describe("ChatMessagesService: delivery", () => {
         await expect(service.markDelivery(CHAT_WORKSPACE, id, true)).rejects.toMatchObject(NOT_STORED)
         chat.api.update = INVALID
         await expect(service.markDelivery(CHAT_WORKSPACE, id, true)).rejects.toMatchObject(NOT_STORED)
+    })
+})
+
+describe("ChatMessagesService: what is still unanswered", () => {
+    it("counts as unanswered only what the customer said after the agent's LAST reply, never what an earlier reply answered", async () => {
+        const { chat, service, conversation } = await setup()
+        const insert = chat.api.insert
+        let tick = 0
+        chat.api.insert = (entity, values, links) => {
+            tick += 1
+            return insert(entity, { ...values, sentAt: `2026-11-08T20:00:0${tick}.000Z` }, links)
+        }
+        const reply = (key: string) =>
+            service.storeAgentLine({ workspaceId: CHAT_WORKSPACE, conversationId: conversation.id, body: key, key })
+        await service.storeCustomer(CHAT_WORKSPACE, conversation.id, "order a basket", null, null)
+        await reply("first")
+        await service.storeCustomer(CHAT_WORKSPACE, conversation.id, "order again", null, null)
+        await reply("second")
+        await service.storeCustomer(CHAT_WORKSPACE, conversation.id, "I want flowers", null, null)
+
+        const unanswered = await service.unansweredLinesOf(CHAT_WORKSPACE, conversation.id, 10)
+        expect(unanswered.map((line) => line.body)).toEqual(["I want flowers"])
+
+        await reply(`${HOLDING_LINE_KEY_PREFIX}run-1`)
+        await service.storeCustomer(CHAT_WORKSPACE, conversation.id, "a red one", null, null)
+        const past = await service.unansweredLinesOf(CHAT_WORKSPACE, conversation.id, 10)
+        expect(past.map((line) => line.body)).toEqual(["I want flowers", "a red one"])
+    })
+})
+
+describe("ChatMessagesService: the payment request answers the customer", () => {
+    // The live Zalo order of 2026-11-09: the old "Toi muon mua hoa" lines only ever got holding lines, then the consult, the order and the
+    // QR went out; the customer wrote "da chuyen" and that run held too. Only "da chuyen" is still unanswered: the QR line is a reply.
+    it("stops the unanswered lines at the payment-request line, past the holding lines", async () => {
+        const { chat, service, conversation } = await setup()
+        const insert = chat.api.insert
+        let tick = 0
+        chat.api.insert = (entity, values, links) => {
+            tick += 1
+            return insert(entity, { ...values, sentAt: `2026-11-09T05:5${String(tick)}:00.000Z` }, links)
+        }
+        const reply = (key: string, body = key) =>
+            service.storeAgentLine({ workspaceId: CHAT_WORKSPACE, conversationId: conversation.id, body, key })
+        await service.storeCustomer(CHAT_WORKSPACE, conversation.id, "Toi muon mua hoa", null, null)
+        await reply(`${HOLDING_LINE_KEY_PREFIX}run-old`)
+        await service.storeCustomer(CHAT_WORKSPACE, conversation.id, "dong y", null, null)
+        await reply("payment-request:order-1", "Don cua ban da duoc xac nhan ... quet ma QR")
+        await service.storeCustomer(CHAT_WORKSPACE, conversation.id, "da chuyen", null, null)
+        await reply(`${HOLDING_LINE_KEY_PREFIX}run-claim`)
+
+        const unanswered = await service.unansweredLinesOf(CHAT_WORKSPACE, conversation.id, 10)
+        expect(unanswered.map((line) => line.body)).toEqual(["da chuyen"])
+    })
+})
+
+describe("ChatMessagesService: the media of a line", () => {
+    it("stores the pictures and the order card a line carries, and nothing for a plain line", async () => {
+        const { chat, service, conversation } = await setup()
+        const order = {
+            orderNo: "DH-1",
+            lines: [{ name: "Basket", qty: 1, amountText: "2.000", imageUrl: "https://api/p/1/image" }],
+            amountText: "2.000",
+            address: "25 Nguyen Hue",
+            paid: true,
+        }
+        const files = [{ id: "file-1", url: "https://api/p/1/image", name: "Basket", contentType: "image/jpeg" }]
+        const base = { workspaceId: CHAT_WORKSPACE, conversationId: conversation.id }
+
+        const rich = await service.storeAgentLine({ ...base, body: "x", key: "rich", files, order })
+        const plain = await service.storeAgentLine({ ...base, body: "y", key: "plain" })
+
+        expect(dataOf(chat, "chat.message", rich.id)).toMatchObject({ files: { items: files }, orderCard: order })
+        expect(dataOf(chat, "chat.message", plain.id)).toMatchObject({ files: null, orderCard: null })
     })
 })

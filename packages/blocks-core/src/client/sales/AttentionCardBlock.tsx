@@ -5,11 +5,9 @@ import type { ActionHandle, ReadHandle } from "@nivo-lite/agent-sdk/block"
 import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import type { salesAttentionCardBlock } from "../../blocks/sales/attention-card.block"
-import { countedWords } from "../../rows/counted-words"
 import { recordsView } from "../../rows/rows"
 import { cellContextOf, formatValue } from "../../rows/cell-format"
 import {
-    ATTENTION_COUNT_KEY,
     ATTENTION_KINDS,
     ATTENTION_KIND_VIEWS,
     attentionEntriesOf,
@@ -55,6 +53,36 @@ const wordsOf = (
     title: item.titleKey === undefined ? item.title : word(item.titleKey),
     description: item.descriptionKey === undefined ? item.description : word(item.descriptionKey),
 })
+
+/** What the list of the card takes. */
+interface AttentionListProps {
+    readonly label: string
+    readonly empty: string
+    /** The line under the empty message that says what will show here. */
+    readonly emptyHint: string
+    /** How many entries wait; null while unknown. */
+    readonly count: number | null
+    readonly isLoading: boolean
+    readonly items: ReadonlyArray<ListRowData>
+}
+
+/** The list card with its count of what waits; once read and empty, the same card in the same place holds the empty notice, so the card never comes and goes. */
+const AttentionList = (props: AttentionListProps): ReactNode =>
+    props.count === 0 && !props.isLoading ? (
+        <SurfaceCard label={props.label} headingLevel={3}>
+            <EmptyNotice frame="frameless" message={props.empty} description={props.emptyHint} />
+        </SurfaceCard>
+    ) : (
+        <SurfaceCard
+            kind="list"
+            label={props.label}
+            headingLevel={3}
+            {...(props.count === null || props.count === 0 ? {} : { count: props.count, isAttention: true })}
+            isLoading={props.isLoading}
+            items={props.items}
+            empty={<EmptyNotice message={props.empty} />}
+        />
+    )
 
 /**
  * What needs the owner on the Sales "needs attention" view: customers waiting for a reply, deals past their next step, questions the
@@ -125,14 +153,13 @@ export const AttentionCardBlock = (props: Props): ReactNode => {
                 </SurfaceCard>
             )}
             render={(items, isLoading) => (
-                <SurfaceCard
-                    kind="list"
+                <AttentionList
                     label={words(props.props.label)}
-                    headingLevel={3}
-                    {...(count === null ? {} : { fact: countedWords(word(ATTENTION_COUNT_KEY), count) })}
+                    empty={labels.empty}
+                    emptyHint={word("attention_empty_hint")}
+                    count={count}
                     isLoading={isLoading}
                     items={items.map(rowOf)}
-                    empty={<EmptyNotice message={labels.empty} />}
                 />
             )}
         />

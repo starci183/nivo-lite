@@ -1,34 +1,34 @@
 import { Injectable } from "@nestjs/common"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
+import { dataKindOfTool } from "@modules/domain/mcp-gateway"
 import type { DataRight, DataRightsGate, OptionalDataRights } from "@modules/domain/mcp-gateway"
 import { AgentGraphsService } from "./agent-graphs.service"
 
-/** The data kind a right of a flow's grant gives the agent's tools to read; a right of another kind reaches no stored data a tool reads. */
-const KIND_OF_FLOW_RIGHT: Readonly<Record<string, DataRight["kind"]>> = { "payment-account": "payments" }
-
 /**
- * What the flow an agent runs reads through its tools, as data rights: the node that asks `payment.instruction` is granted the
- * `payment-account` read, and the gateway judges that tool as a read of payments. Without it a governed agent whose flow is its
- * graph (no hand-drawn rights) would be refused every tool its own grant names. Narrowed to the conversation, as an agent that faces
- * customers always is; a kind the graph already holds is not repeated.
+ * The rights of a graph with the ones its flow implies: a flow whose grant declares a NIVO MCP tool that reads a kind of data
+ * (`brain.search` reads the Brain) holds the right on that kind, the narrowest one (the conversation the call serves, nothing hidden or
+ * masked: what a seed gives), unless the graph already states a right on the kind, which then decides. Without it a flow that declares
+ * a read could never run it: a published spec carries no right of its own. A kind no declared tool reads stays a deny.
  */
-const flowRightsOf = (flow: GraphSpec | undefined, held: ReadonlyArray<DataRight>): ReadonlyArray<DataRight> => {
-    const kinds = new Set(held.map((right) => right.kind))
-    const given = (flow?.grant.rights ?? [])
-        .filter((right) => right.access === "read")
-        .flatMap((right) => {
-            const kind = KIND_OF_FLOW_RIGHT[right.kind]
-            return kind === undefined || kinds.has(kind) ? [] : [kind]
-        })
-    return [...new Set(given)].map((kind) => ({ kind, scope: "conversation" as const, hide: [], mask: [] }))
+export const rightsWithFlow = (rights: ReadonlyArray<DataRight>, flow: GraphSpec | undefined): ReadonlyArray<DataRight> => {
+    const held = new Set(rights.map((right) => right.kind))
+    const implied = (flow?.grant.tools ?? []).flatMap((tool) => {
+        const kind = dataKindOfTool(tool)
+        return kind === null || held.has(kind) ? [] : [kind]
+    })
+    return [
+        ...rights,
+        ...[...new Set(implied)].map((kind): DataRight => ({ kind, scope: "conversation", hide: [], mask: [] })),
+    ]
 }
 
 @Injectable()
 /**
  * The data rights of an agent, held in the graph so the owner sees and edits them, for the gateway to enforce on every native read.
  * Default deny holds on every graph, the seed and a graph imported from a template included, in shadow or enforced: an agent reads only
- * what its active version grants (no right is a deny, even with no rights at all). The seed carries the grant of its module's kind
- * of agent, and a template carries none, so its buyer turns each right on. Only an agent with no graph version at all is not governed.
+ * what its active version grants (no right is a deny, even with no rights at all): the rights it states, and for a version that holds
+ * a flow the kinds the tools of the flow's grant read (`rightsWithFlow`). The seed carries the grant of its module's kind of agent, and
+ * a template carries none, so its buyer turns each right on. Only an agent with no graph version at all is not governed.
  */
 export class AgentDataRightsService implements DataRightsGate {
     constructor(private readonly graphs: AgentGraphsService) {}
@@ -38,6 +38,6 @@ export class AgentDataRightsService implements DataRightsGate {
         const state = await this.graphs.stateOfAgent(workspaceId, agentId)
         const active = state?.active
         if (active === null || active === undefined) return null
-        return [...active.rights, ...flowRightsOf(active.flow, active.rights)]
+        return rightsWithFlow(active.rights, active.flow)
     }
 }

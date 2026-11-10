@@ -97,7 +97,10 @@ export class DoorPortsService {
     private agentConnections(run: DoorRun, port: PortDefinition<unknown>): AgentConnections | never {
         const regions = this.regions
         if (regions === undefined) return unprovided(port)
-        return { of: (agentId, locale = run.locale) => regions.connectionsOf(agentId, locale) }
+        return {
+            of: (agentId, locale = run.locale) =>
+                regions.connectionsWithCandidatesOf(run.workspaceId, agentId, locale),
+        }
     }
 
     private agentKnowledge(run: DoorRun, port: PortDefinition<unknown>): AgentKnowledge | never {

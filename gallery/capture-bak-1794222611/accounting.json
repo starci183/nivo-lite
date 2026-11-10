@@ -1,0 +1,3079 @@
+{
+ "agent": "accounting",
+ "at": "2026-11-09T11:01:43.515Z",
+ "blockedMutations": 0,
+ "pages": [
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    },
+    {
+     "label": "Hôm nay",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 70,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=today"
+    },
+    {
+     "label": "Tổng quan kỳ",
+     "box": {
+      "x": 338,
+      "y": 229,
+      "w": 111,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=overview"
+    },
+    {
+     "label": "Chứng từ",
+     "box": {
+      "x": 448,
+      "y": 229,
+      "w": 84,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=book"
+    },
+    {
+     "label": "Sổ",
+     "box": {
+      "x": 532,
+      "y": 229,
+      "w": 40,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=ledger",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=ledger"
+    },
+    {
+     "label": "Quy tắc",
+     "box": {
+      "x": 572,
+      "y": 229,
+      "w": 73,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=settings",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=settings"
+    },
+    {
+     "label": "Cũng có trong Đầu vào",
+     "box": {
+      "x": 873,
+      "y": 426,
+      "w": 171,
+      "h": 21
+     },
+     "href": "/inbox",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/inbox",
+     "url": "/inbox"
+    },
+    {
+     "label": "Khớp",
+     "box": {
+      "x": 328,
+      "y": 532,
+      "w": 50,
+      "h": 32
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "hint": "Gán khoản tiền vào đơn"
+    },
+    {
+     "label": "Khớp",
+     "box": {
+      "x": 328,
+      "y": 645,
+      "w": 50,
+      "h": 32
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "hint": "Gán khoản tiền vào đơn"
+    },
+    {
+     "label": "Khớp",
+     "box": {
+      "x": 328,
+      "y": 758,
+      "w": 50,
+      "h": 32
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "hint": "Gán khoản tiền vào đơn"
+    },
+    {
+     "label": "Xem cả ở Công việc",
+     "box": {
+      "x": 895,
+      "y": 840,
+      "w": 149,
+      "h": 21
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Quản lý kết nối",
+     "box": {
+      "x": 1307,
+      "y": 288,
+      "w": 121,
+      "h": 20
+     },
+     "href": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/agents/accounting/<id>/connections",
+     "url": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Cấp quyền",
+     "box": {
+      "x": 1082,
+      "y": 496,
+      "w": 86,
+      "h": 32
+     },
+     "href": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/agents/accounting/<id>/connections",
+     "url": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Mở Tri thức",
+     "box": {
+      "x": 1331,
+      "y": 579,
+      "w": 97,
+      "h": 20
+     },
+     "href": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/agents/accounting/<id>/knowledge",
+     "url": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/work",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/work",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    },
+    {
+     "label": "Việc đang làm",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 102,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Lượt chạy",
+     "box": {
+      "x": 370,
+      "y": 229,
+      "w": 86,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work?view=runs",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work?view=runs"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/work?view=runs",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/work?view=runs",
+   "inPageControls": 2,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    },
+    {
+     "label": "Việc đang làm",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 102,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Lượt chạy",
+     "box": {
+      "x": 370,
+      "y": 229,
+      "w": 86,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Tất cả 0",
+     "box": {
+      "x": 288,
+      "y": 338,
+      "w": 77,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Đang chạy 0",
+     "box": {
+      "x": 369,
+      "y": 338,
+      "w": 114,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Xếp hàng 0",
+     "box": {
+      "x": 486,
+      "y": 338,
+      "w": 107,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Chờ bạn 0",
+     "box": {
+      "x": 597,
+      "y": 338,
+      "w": 100,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Xong 0",
+     "box": {
+      "x": 701,
+      "y": 338,
+      "w": 80,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Lỗi 0",
+     "box": {
+      "x": 785,
+      "y": 338,
+      "w": 66,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    },
+    {
+     "label": "Đối soát tiền về từ mẫu Đối soát tiền về v4 Chưa có Chưa có ",
+     "box": {
+      "x": 268,
+      "y": 386,
+      "w": 1160,
+      "h": 57
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows/reconcile",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows/reconcile"
+    },
+    {
+     "label": "Khách báo đã chuyển từ mẫu Khách báo đã chuyển v1 Chưa có Ch",
+     "box": {
+      "x": 268,
+      "y": 443,
+      "w": 1160,
+      "h": 57
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows/payment-claim",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows/payment-claim"
+    },
+    {
+     "label": "Báo cáo cuối ngày từ mẫu Báo cáo cuối ngày v2 Chưa có Chưa c",
+     "box": {
+      "x": 268,
+      "y": 500,
+      "w": 1160,
+      "h": 56
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows/reports",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows/reports"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    },
+    {
+     "label": "Mở danh sách",
+     "box": {
+      "x": 1321,
+      "y": 247,
+      "w": 107,
+      "h": 32
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+   "inPageControls": 2,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    },
+    {
+     "label": "Đã ghim",
+     "box": {
+      "x": 1340,
+      "y": 243,
+      "w": 40,
+      "h": 40
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "hint": "Đã ghim"
+    },
+    {
+     "label": "Thành viên",
+     "box": {
+      "x": 1388,
+      "y": 243,
+      "w": 40,
+      "h": 40
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "hint": "Thành viên"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 288,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 377,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Thêm kết nối",
+     "box": {
+      "x": 1225,
+      "y": 132,
+      "w": 135,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/connections"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 288,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 380,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 466,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 529,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 613,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 706,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 810,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 923,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 288,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 377,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 288,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 380,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 466,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 529,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 613,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 706,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 810,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 923,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "self",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    },
+    {
+     "label": "Hướng dẫn",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 84,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Chung",
+     "box": {
+      "x": 352,
+      "y": 229,
+      "w": 66,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup/general",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup/general"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/setup/general",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/setup/general",
+   "inPageControls": 7,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    },
+    {
+     "label": "Hướng dẫn",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 84,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    },
+    {
+     "label": "Chung",
+     "box": {
+      "x": 352,
+      "y": 229,
+      "w": 66,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    },
+    {
+     "label": "Hôm nay",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 70,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Tổng quan kỳ",
+     "box": {
+      "x": 338,
+      "y": 229,
+      "w": 111,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=overview"
+    },
+    {
+     "label": "Chứng từ",
+     "box": {
+      "x": 448,
+      "y": 229,
+      "w": 84,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=book"
+    },
+    {
+     "label": "Sổ",
+     "box": {
+      "x": 532,
+      "y": 229,
+      "w": 40,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=ledger",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=ledger"
+    },
+    {
+     "label": "Quy tắc",
+     "box": {
+      "x": 572,
+      "y": 229,
+      "w": 73,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=settings",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=settings"
+    },
+    {
+     "label": "Cũng có trong Đầu vào",
+     "box": {
+      "x": 873,
+      "y": 426,
+      "w": 171,
+      "h": 21
+     },
+     "href": "/inbox",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/inbox",
+     "url": "/inbox"
+    },
+    {
+     "label": "Khớp",
+     "box": {
+      "x": 328,
+      "y": 532,
+      "w": 50,
+      "h": 32
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today",
+     "hint": "Gán khoản tiền vào đơn"
+    },
+    {
+     "label": "Khớp",
+     "box": {
+      "x": 328,
+      "y": 645,
+      "w": 50,
+      "h": 32
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today",
+     "hint": "Gán khoản tiền vào đơn"
+    },
+    {
+     "label": "Khớp",
+     "box": {
+      "x": 328,
+      "y": 758,
+      "w": 50,
+      "h": 32
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today",
+     "hint": "Gán khoản tiền vào đơn"
+    },
+    {
+     "label": "Xem cả ở Công việc",
+     "box": {
+      "x": 895,
+      "y": 840,
+      "w": 149,
+      "h": 21
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Quản lý kết nối",
+     "box": {
+      "x": 1307,
+      "y": 288,
+      "w": 121,
+      "h": 20
+     },
+     "href": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/agents/accounting/<id>/connections",
+     "url": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Cấp quyền",
+     "box": {
+      "x": 1082,
+      "y": 496,
+      "w": 86,
+      "h": 32
+     },
+     "href": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/agents/accounting/<id>/connections",
+     "url": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Mở Tri thức",
+     "box": {
+      "x": 1331,
+      "y": 579,
+      "w": 97,
+      "h": 20
+     },
+     "href": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/agents/accounting/<id>/knowledge",
+     "url": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=overview",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=overview",
+   "inPageControls": 0,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    },
+    {
+     "label": "Hôm nay",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 70,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=today"
+    },
+    {
+     "label": "Tổng quan kỳ",
+     "box": {
+      "x": 338,
+      "y": 229,
+      "w": 111,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Chứng từ",
+     "box": {
+      "x": 448,
+      "y": 229,
+      "w": 84,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=book"
+    },
+    {
+     "label": "Sổ",
+     "box": {
+      "x": 532,
+      "y": 229,
+      "w": 40,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=ledger",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=ledger"
+    },
+    {
+     "label": "Quy tắc",
+     "box": {
+      "x": 572,
+      "y": 229,
+      "w": 73,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=settings",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=settings"
+    },
+    {
+     "label": "Mở Kết nối",
+     "box": {
+      "x": 950,
+      "y": 446,
+      "w": 94,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/connections"
+    },
+    {
+     "label": "Tháng này",
+     "box": {
+      "x": 816,
+      "y": 668,
+      "w": 98,
+      "h": 32
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Tháng trước",
+     "box": {
+      "x": 914,
+      "y": 668,
+      "w": 110,
+      "h": 32
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=overview&period=last",
+     "hint": "query"
+    },
+    {
+     "label": "Quản lý kết nối",
+     "box": {
+      "x": 1307,
+      "y": 288,
+      "w": 121,
+      "h": 20
+     },
+     "href": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/agents/accounting/<id>/connections",
+     "url": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Cấp quyền",
+     "box": {
+      "x": 1082,
+      "y": 496,
+      "w": 86,
+      "h": 32
+     },
+     "href": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/agents/accounting/<id>/connections",
+     "url": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Mở Tri thức",
+     "box": {
+      "x": 1331,
+      "y": 579,
+      "w": 97,
+      "h": 20
+     },
+     "href": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/agents/accounting/<id>/knowledge",
+     "url": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    }
+   ]
+  },
+  {
+   "key": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book",
+   "url": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book",
+   "inPageControls": 1,
+   "links": [
+    {
+     "label": "Tổng quan",
+     "box": {
+      "x": 268,
+      "y": 96,
+      "w": 69,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/overview"
+    },
+    {
+     "label": "Agent",
+     "box": {
+      "x": 357,
+      "y": 96,
+      "w": 39,
+      "h": 20
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents"
+    },
+    {
+     "label": "Bàn làm việc",
+     "box": {
+      "x": 268,
+      "y": 188,
+      "w": 92,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench"
+    },
+    {
+     "label": "Công việc",
+     "box": {
+      "x": 360,
+      "y": 188,
+      "w": 86,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/work",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/work"
+    },
+    {
+     "label": "Graph",
+     "box": {
+      "x": 446,
+      "y": 188,
+      "w": 63,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/graph"
+    },
+    {
+     "label": "Quy trình",
+     "box": {
+      "x": 509,
+      "y": 188,
+      "w": 84,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workflows"
+    },
+    {
+     "label": "Trò chuyện",
+     "box": {
+      "x": 593,
+      "y": 188,
+      "w": 93,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/chat"
+    },
+    {
+     "label": "Kết nối 1",
+     "box": {
+      "x": 686,
+      "y": 188,
+      "w": 104,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Tri thức 73",
+     "box": {
+      "x": 790,
+      "y": 188,
+      "w": 113,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    },
+    {
+     "label": "Thiết lập",
+     "box": {
+      "x": 903,
+      "y": 188,
+      "w": 79,
+      "h": 40
+     },
+     "href": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/setup"
+    },
+    {
+     "label": "Hôm nay",
+     "box": {
+      "x": 268,
+      "y": 229,
+      "w": 70,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=today"
+    },
+    {
+     "label": "Tổng quan kỳ",
+     "box": {
+      "x": 338,
+      "y": 229,
+      "w": 111,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=overview",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=overview"
+    },
+    {
+     "label": "Chứng từ",
+     "box": {
+      "x": 448,
+      "y": 229,
+      "w": 84,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Sổ",
+     "box": {
+      "x": 532,
+      "y": 229,
+      "w": 40,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=ledger",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=ledger"
+    },
+    {
+     "label": "Quy tắc",
+     "box": {
+      "x": 572,
+      "y": 229,
+      "w": 73,
+      "h": 40
+     },
+     "href": null,
+     "kind": "page",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=settings",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=settings"
+    },
+    {
+     "label": "Tất cả 2",
+     "box": {
+      "x": 288,
+      "y": 505,
+      "w": 77,
+      "h": 40
+     },
+     "href": null,
+     "kind": "tab",
+     "clicked": true,
+     "toKey": null
+    },
+    {
+     "label": "Thu nhập 2",
+     "box": {
+      "x": 369,
+      "y": 505,
+      "w": 107,
+      "h": 40
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=book&status=paid",
+     "hint": "query"
+    },
+    {
+     "label": "Phải thu 0",
+     "box": {
+      "x": 479,
+      "y": 505,
+      "w": 99,
+      "h": 40
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=book&status=open",
+     "hint": "query"
+    },
+    {
+     "label": "Chi phí 0",
+     "box": {
+      "x": 582,
+      "y": 505,
+      "w": 91,
+      "h": 40
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=book&status=expense",
+     "hint": "query"
+    },
+    {
+     "label": "Cần xem lại 0",
+     "box": {
+      "x": 678,
+      "y": 505,
+      "w": 120,
+      "h": 40
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=book&status=review",
+     "hint": "query"
+    },
+    {
+     "label": "09/11 DH-20261109-0003 2.000 ₫ Đã thu",
+     "box": {
+      "x": 268,
+      "y": 579,
+      "w": 776,
+      "h": 38
+     },
+     "href": null,
+     "kind": "overlay",
+     "clicked": true,
+     "toKey": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book",
+     "url": "/workspaces/e7527a43-bdca-4cbf-8e4f-2d96835fb219/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/workbench?tab=book&entry=14525ba8-b0ed-4346-a123-9b0a5377817f&pane=detail",
+     "hint": "query"
+    },
+    {
+     "label": "Quản lý kết nối",
+     "box": {
+      "x": 1307,
+      "y": 288,
+      "w": 121,
+      "h": 20
+     },
+     "href": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/agents/accounting/<id>/connections",
+     "url": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Cấp quyền",
+     "box": {
+      "x": 1082,
+      "y": 496,
+      "w": 86,
+      "h": 32
+     },
+     "href": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/agents/accounting/<id>/connections",
+     "url": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/connections"
+    },
+    {
+     "label": "Mở Tri thức",
+     "box": {
+      "x": 1331,
+      "y": 579,
+      "w": 97,
+      "h": 20
+     },
+     "href": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge",
+     "kind": "page",
+     "clicked": false,
+     "toKey": "/agents/accounting/<id>/knowledge",
+     "url": "/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630/knowledge"
+    }
+   ]
+  }
+ ],
+ "skipped": [
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+   "label": "Thêm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+   "label": "Thêm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workbench",
+   "label": "Thêm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/work",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/work",
+   "label": "Thêm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/work",
+   "label": "Thêm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/work?view=runs",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/work?view=runs",
+   "label": "Xóa tìm kiếm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workflows",
+   "label": "Tạo quy trình"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/graph",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+   "label": "Có việc nào đang chờ tôi duyệt?"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+   "label": "Bạn đang trả lời dựa trên nguồn nào?"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/chat",
+   "label": "Gửi"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/connections",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/knowledge",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/setup",
+   "label": "Thử lại"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/setup/general",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/setup/general",
+   "label": "Huỷ"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/setup/general",
+   "label": "Lưu"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today",
+   "label": "Thêm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today",
+   "label": "Thêm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today",
+   "label": "Thêm"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=overview",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book",
+   "label": "Thêm thao tác"
+  },
+  {
+   "page": "/workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book",
+   "label": "Xoá tìm kiếm"
+  }
+ ]
+}

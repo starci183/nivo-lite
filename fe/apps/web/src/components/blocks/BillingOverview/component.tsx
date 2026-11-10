@@ -133,7 +133,7 @@ export const BillingOverviewBase = (props: BillingOverviewBaseProps) => (
 /** Draws the SurfaceCard section of the BillingOverview view. */
 const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: BillingPlanView, isLoading: boolean) => (
     <SurfaceCard label={props.props.planLabel} headingLevel={2} isLoading={isLoading}>
-        <Stack gap="section">
+        <Stack gap="row">
             <DescriptionList
                 layout="columns"
                 isDivided
@@ -169,7 +169,7 @@ const renderCurrentBillingPlan = (props: BillingOverviewBaseProps, plan: Billing
                 ]}
             />
             {plan.canRenew ? (
-                <Cluster gap="row">
+                <Cluster gap="inline">
                     <BillingRenewal
                         props={{ label: props.props.renewalLabel, isPending: props.props.isRenewing }}
                         on={{ renew: props.on.renew }}

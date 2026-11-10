@@ -14,6 +14,11 @@ import type { EnumSchema, TextSchema, RequiredRead, OptionalAction } from "./sch
 const TONE_VALUE_MAX = 64
 const TONES_MAX = 20
 
+type FooterLinkSchema = z.ZodObject<{ label: TextSchema; path: z.ZodString }>
+
+/** A link under the rows of a card: its words and the path it opens, an app path or one relative to the page (`./work`). */
+const footerLink: FooterLinkSchema = z.object({ label: specText, path: z.string().min(1).max(PATH_MAX) })
+
 const props: z.ZodObject<{
     label: TextSchema
     empty: TextSchema
@@ -23,6 +28,7 @@ const props: z.ZodObject<{
     badgePath: z.ZodOptional<z.ZodString>
     metaPath: z.ZodOptional<z.ZodString>
     chipPaths: z.ZodOptional<z.ZodArray<z.ZodString>>
+    logoPath: z.ZodOptional<z.ZodString>
     badgeTones: z.ZodOptional<z.ZodRecord<z.ZodString, EnumSchema<(typeof CELL_TONES)[number]>>>
     avatar: z.ZodOptional<z.ZodBoolean>
     surface: z.ZodOptional<z.ZodEnum<{ plain: "plain"; card: "card" }>>
@@ -30,6 +36,7 @@ const props: z.ZodObject<{
     emptySearch: z.ZodOptional<TextSchema>
     selectParam: z.ZodOptional<ParamNameSchema>
     searchParam: z.ZodOptional<ParamNameSchema>
+    footerLink: z.ZodOptional<FooterLinkSchema>
 }> = z.object({
     label: specText,
     empty: specText,
@@ -39,6 +46,7 @@ const props: z.ZodObject<{
     badgePath: z.string().max(PATH_MAX).optional(),
     metaPath: z.string().max(PATH_MAX).optional(),
     chipPaths: z.array(z.string().max(PATH_MAX)).max(CHIPS_MAX).optional(),
+    logoPath: z.string().max(PATH_MAX).optional(),
     badgeTones: z
         .record(z.string().max(TONE_VALUE_MAX), z.enum(CELL_TONES))
         .refine((tones) => Object.keys(tones).length <= TONES_MAX)
@@ -49,6 +57,7 @@ const props: z.ZodObject<{
     emptySearch: specText.optional(),
     selectParam: paramName.optional(),
     searchParam: paramName.optional(),
+    footerLink: footerLink.optional(),
 })
 /** The slots of the record list block: the rows read and the action a row may run. */
 type Slots = {

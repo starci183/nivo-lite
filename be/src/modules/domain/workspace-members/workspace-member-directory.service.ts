@@ -4,11 +4,13 @@ import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { WorkspaceMemberEntity } from "./persistence/entities"
 import type {
+    ActiveMemberCount,
+    LobbySeat,
     MemberDirectoryEntry,
+    SeatDisabler,
     OptionalAccountId,
     OptionalMemberDirectoryEntry,
 } from "./workspace-member-directory.contracts"
-import type { WorkspaceMember } from "./workspace-members.contracts"
 
 const DIRECTORY_COLUMNS = { id: true, displayName: true, role: true } as const
 
@@ -29,13 +31,14 @@ const toDirectoryMember = (row: WorkspaceMemberEntity): MemberDirectoryEntry => 
 export class WorkspaceMemberDirectoryService {
     constructor(@InjectPrimaryEntityManager() private readonly entityManager: EntityManager) {}
 
-    /** Every seat the person holds, in any workspace and status, oldest first. */
-    async seatsOf(userId: string, limit: number): Promise<Array<WorkspaceMember>> {
+    /** Every seat the person holds, in any workspace and status, oldest first, with when they last opened each workspace. */
+    async seatsOf(userId: string, limit: number): Promise<Array<LobbySeat>> {
         const rows = await this.entityManager.find(WorkspaceMemberEntity, {
             where: { userId },
             order: { createdAt: "ASC", id: "ASC" },
             take: limit,
         })
+        const disablers = await this.disablersOf(rows)
         return rows.map((row) => ({
             userId: row.userId,
             workspaceId: row.workspaceId,
@@ -43,6 +46,49 @@ export class WorkspaceMemberDirectoryService {
             staffId: row.staffId,
             displayName: row.displayName,
             status: row.status,
+            lastOpenedAt: row.lastOpenedAt === null ? null : row.lastOpenedAt.toISOString(),
+            disabledAt: row.disabledAt === null ? null : row.disabledAt.toISOString(),
+            disabledBy: disablers.get(`${row.workspaceId}:${row.disabledBy ?? ""}`) ?? null,
+            disabledNote: row.disabledNote,
+            disabledByDeletion: row.disabledByDeletion,
+        }))
+    }
+
+    /** The seats of the members who switched the given seats off, keyed by workspace and account, bounded by the seats. */
+    private async disablersOf(rows: ReadonlyArray<WorkspaceMemberEntity>): Promise<Map<string, SeatDisabler>> {
+        const wanted = rows.flatMap((row) =>
+            row.disabledBy === null ? [] : [{ workspaceId: row.workspaceId, userId: row.disabledBy }],
+        )
+        if (wanted.length === 0) return new Map()
+        const found = await this.entityManager.find(WorkspaceMemberEntity, {
+            select: { workspaceId: true, userId: true, displayName: true, role: true },
+            where: wanted,
+            take: wanted.length,
+        })
+        return new Map(
+            found.map((seat) => [
+                `${seat.workspaceId}:${seat.userId}`,
+                { displayName: seat.displayName, role: seat.role },
+            ]),
+        )
+    }
+
+    /** How many active members, and of them owners, each of the workspaces has; a workspace with none is missing. */
+    async activeCountsOf(workspaceIds: ReadonlyArray<string>): Promise<Array<ActiveMemberCount>> {
+        if (workspaceIds.length === 0) return []
+        const rows = await this.entityManager
+            .createQueryBuilder(WorkspaceMemberEntity, "m")
+            .select("m.workspaceId", "workspace_id")
+            .addSelect("count(*)::int", "count")
+            .addSelect("count(*) FILTER (WHERE m.role = 'owner')::int", "owners")
+            .where("m.workspaceId IN (:...workspaceIds) AND m.status = 'active'", { workspaceIds: [...workspaceIds] })
+            .groupBy("m.workspaceId")
+            .limit(workspaceIds.length)
+            .getRawMany<{ readonly workspace_id: string; readonly count: number; readonly owners: number }>()
+        return rows.map((row) => ({
+            workspaceId: row.workspace_id,
+            count: Number(row.count),
+            owners: Number(row.owners),
         }))
     }
 

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { BeforeApplicationShutdown } from "@nestjs/common"
-import { InjectLogger } from "@modules/platform/logging"
+import { InjectLogger, withRunScope } from "@modules/platform/logging"
 import { InjectTimer } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
 import type { Logger } from "@modules/platform/logging"
@@ -42,10 +42,10 @@ export class AgentRunInflightService implements BeforeApplicationShutdown {
         return this.stopped
     }
 
-    /** Runs a claimed step's try and remembers it until it ends. */
+    /** Runs a claimed step's try, in the scope of its run so a model call it makes is booked to the run, and remembers it until it ends. */
     async track<T>(step: StepView, work: () => Promise<T>): Promise<T> {
         const key = `${step.runId}:${step.stepKey}`
-        const done = work()
+        const done = withRunScope(step.runId, work)
         this.running.set(key, { step, done })
         try {
             return await done

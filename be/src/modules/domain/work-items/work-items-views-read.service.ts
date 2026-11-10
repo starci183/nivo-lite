@@ -45,6 +45,16 @@ export class WorkItemsViewsReadService {
         return this.withCursors(select.orderBy("w.createdAt", "DESC").addOrderBy("w.id", "DESC").limit(query.limit))
     }
 
+    /** The newest work items of one agent instance, newest first, at most `limit`: what an agent's work log lists. */
+    async ofInstallation(workspaceId: string, installationId: string, limit: number): Promise<Array<WorkItem>> {
+        const rows = await this.entityManager.find(WorkItemEntity, {
+            where: { workspaceId, installationId },
+            order: { createdAt: "DESC", id: "DESC" },
+            take: limit,
+        })
+        return rows.map((row) => toWorkItem(toWorkItemRecord(row)))
+    }
+
     /** The accounting work waiting for a decision, oldest first, at most `limit`. */
     async waitingAccounting(workspaceId: string, limit: number): Promise<Array<WorkItem>> {
         const rows = await this.entityManager.find(WorkItemEntity, {

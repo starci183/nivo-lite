@@ -4,6 +4,7 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const INVENTORY_MESSAGES: MessageBundle = {
     vi: {
         "errors.INVENTORY_ITEM_NOT_FOUND": "Không tìm thấy mặt hàng.",
+        "errors.INVENTORY_ITEM_IMAGE_NOT_STORED": "Không lưu được ảnh của mặt hàng.",
         "errors.INVENTORY_ITEM_NAME_REQUIRED": "Nhập tên hàng.",
         "errors.INVENTORY_ITEM_SKU_TAKEN": "Mã hàng {{sku}} đã có, đặt mã khác.",
         "errors.INVENTORY_SUPPLIER_NAME_REQUIRED": "Nhập tên nhà cung cấp.",
@@ -150,6 +151,7 @@ export const INVENTORY_MESSAGES: MessageBundle = {
     },
     en: {
         "errors.INVENTORY_ITEM_NOT_FOUND": "The item was not found.",
+        "errors.INVENTORY_ITEM_IMAGE_NOT_STORED": "The photo of the item could not be stored.",
         "errors.INVENTORY_ITEM_NAME_REQUIRED": "Enter the item name.",
         "errors.INVENTORY_ITEM_SKU_TAKEN": "The code {{sku}} is already used, pick another.",
         "errors.INVENTORY_SUPPLIER_NAME_REQUIRED": "Enter the supplier name.",

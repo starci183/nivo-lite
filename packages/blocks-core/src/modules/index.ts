@@ -31,3 +31,15 @@ export type {
     RunStanding,
 } from "./platform"
 export { REGISTERED_MODULE_KEYS } from "./registered-module-keys"
+export { MINDSET_HEADER, hasMindset, mindsetBrief, mindsetOf } from "./mindset"
+export { agentGuidanceOf } from "./agent-guidance"
+export type { MindsetDocument, MindsetModule } from "./mindset"
+export {
+    WORKFLOW_TEMPLATES,
+    latestTemplateVersion,
+    templateVersionOf,
+    templateVersionsAfter,
+    workflowTemplateOf,
+    workflowTemplatesOf,
+} from "./workflow-templates"
+export type { WorkflowTemplate, WorkflowTemplateConnection, WorkflowTemplateVersion } from "./workflow-templates"

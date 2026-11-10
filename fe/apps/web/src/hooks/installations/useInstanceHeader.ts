@@ -15,10 +15,17 @@ import {
     type InstallationConnectionNeed,
 } from "@/modules/installations"
 import { agentProfileHref, workspaceHref } from "@/modules/routes"
-import { useInstanceChannels } from "./useInstanceChannels"
+import { useInstanceCounts } from "./useInstanceCounts"
+import type { InstanceCounts } from "./useInstanceCounts"
 import { useInstanceGuard } from "./useInstanceGuard"
 import { useInstallations } from "./useInstallations"
 import type { DataSlot } from "@/modules/types"
+
+/** The accounts the header names: none while they load, a soft "none yet" once the read says there are none. */
+const namesOf = (names: ReadonlyArray<string> | undefined, none: string): ReadonlyArray<string> => {
+    if (names === undefined) return []
+    return names.length === 0 ? [none] : names
+}
 
 /** The view `useInstanceHeader` returns. */
 export interface InstanceHeaderViewShape {
@@ -33,7 +40,7 @@ export interface InstanceHeaderViewShape {
         isEarly: boolean
         lifecycle: AgentLifecycle
         statusTone: "success" | "neutral" | "warning" | "accent"
-        channels: readonly string[]
+        counts: InstanceCounts
         connectionNeeds: readonly InstallationConnectionNeed[]
         profileHref: string | null
     }>
@@ -46,13 +53,13 @@ export interface InstanceHeaderViewShape {
     isEarly: boolean
     lifecycle: AgentLifecycle
     statusTone: "success" | "neutral" | "warning" | "accent"
-    channels: readonly string[]
+    counts: InstanceCounts
     connectionNeeds: readonly InstallationConnectionNeed[]
     profileHref: string | null
 }
 
 /**
- * The header of one agent instance: the person (name, handle, avatar seed), the role, the lifecycle and the channels; skeleton
+ * The header of one agent instance: the person (name, handle), the role, the lifecycle, the accounts it was granted and the counts of the tabs; skeleton
  * data until the instance is known. If the installed agents cannot be read the header stops waiting and names the role.
  */
 export const useInstanceHeader = (module: ModuleKey, installationId: string): InstanceHeaderViewShape => {
@@ -66,10 +73,9 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string): In
     const def = MODULE_REGISTRY[module]
     const catalog = useModuleCatalog()
     const copy = catalog.modules[module]
-    const channelsOf = useInstanceChannels()
+    const counts = useInstanceCounts(installation?.agentId ?? null)
     const fallbackName = catalog.read.data === undefined && catalog.read.error !== undefined ? module : ""
     const lifecycle = agentLifecycleOf(installation)
-    const channels = channelsOf(installation?.agentId ?? null)
     const typeName = copy === undefined ? fallbackName : pickCopy(copy.name, locale)
     const unknownName = isFailed ? typeName : ""
     const view = {
@@ -81,12 +87,12 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string): In
         subtitle: agentSubtitleOf({
             handle: installation?.agentHandle ?? "",
             roleName: typeName,
-            channels: channels.length === 0 ? [t("headerNoChannels")] : channels,
+            channels: namesOf(counts.grantedNames, t("headerNoGrants")),
         }),
         isEarly: def.status === "early",
         lifecycle,
         statusTone: agentLifecycleTone(lifecycle),
-        channels,
+        counts,
         connectionNeeds: installation?.connectionNeeds ?? [],
         profileHref:
             installation?.agentId == null ? null : workspaceHref(workspaceId, agentProfileHref(installation.agentId)),

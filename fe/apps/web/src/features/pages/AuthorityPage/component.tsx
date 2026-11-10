@@ -1,4 +1,5 @@
 import { Page, Pane, PaneGrid } from "@starci/grammar/common"
+import type { PageHeaderBreadcrumbs } from "@starci/grammar/common"
 import { AuthorityGoals } from "@/components/blocks/AuthorityGoals"
 import { AuthorityLimits } from "@/components/blocks/AuthorityLimits"
 import { AuthorityMainHead } from "@/components/blocks/AuthorityMainHead"
@@ -15,6 +16,8 @@ import type { PaneGridLayout } from "@/modules/types"
 /** What the authority page is told: its words, the arrangement of its panes and the section that is open. */
 export interface AuthorityPageBaseProps {
     readonly props: {
+        /** The trail: the dashboard, then the authority page. */
+        readonly breadcrumbs: PageHeaderBreadcrumbs
         readonly title: string
         readonly description: string
         readonly gridLabel: string
@@ -32,7 +35,7 @@ export interface AuthorityPageBaseProps {
 export const AuthorityPageBase = (props: AuthorityPageBaseProps) => {
     const view = props.props
     return (
-        <Page chrome="panes" header={{ title: view.title, description: view.description }}>
+        <Page chrome="panes" header={{ breadcrumbs: view.breadcrumbs, title: view.title, description: view.description }}>
             <PaneGrid label={view.gridLabel} areas={view.grid.areas} columns={view.grid.columns} rows={view.grid.rows}>
                 <Pane area="listHead" surface>
                     <PaneHead title={view.listTitle} />
@@ -45,7 +48,7 @@ export const AuthorityPageBase = (props: AuthorityPageBaseProps) => {
                 <Pane area="head" surface>
                     <AuthorityMainHead section={view.open} />
                 </Pane>
-                <Pane area="main" scroll label={view.detailLabel}>
+                <Pane area="main" scroll content="cards" label={view.detailLabel}>
                     <PaneBody>
                         <AuthorityReadOnly />
                         {view.open === "goals" ? <AuthorityGoals /> : null}

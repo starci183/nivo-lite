@@ -10,7 +10,6 @@ import { DriveNativeService } from "./drive-native.service"
 import { LedgerNativeService } from "./ledger-native.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./native-tools.module-definition"
 import { NativeViewService } from "./native-view.service"
-import { PaymentNativeService } from "./payment-native.service"
 import { ProviderToolsService } from "./provider-tools.service"
 import { SepayStatusNativeService } from "./sepay-status-native.service"
 import { TelegramNativeService } from "./telegram-native.service"
@@ -18,7 +17,7 @@ import { ZaloNativeService } from "./zalo-native.service"
 
 /**
  * The native tools NIVO builds, as the classes an app passes to the gateway's `natives` option: the Brain, the dossiers, Google
- * Drive, Telegram, Zalo OA and SePay with its status, plus the two provider-neutral capabilities `payment.instruction` and `bank.transactions`. The SePay one takes the place of the gateway's own SePay adapter.
+ * Drive, Telegram, Zalo OA and SePay with its status, plus the provider-neutral capability `bank.transactions`. The SePay one takes the place of the gateway's own SePay adapter.
  */
 export const NATIVE_TOOL_ADAPTERS: ReadonlyArray<Type<NativeAdapter>> = [
     BrainNativeService,
@@ -27,7 +26,6 @@ export const NATIVE_TOOL_ADAPTERS: ReadonlyArray<Type<NativeAdapter>> = [
     TelegramNativeService,
     ZaloNativeService,
     SepayStatusNativeService,
-    PaymentNativeService,
     BankNativeService,
     LedgerNativeService,
 ]

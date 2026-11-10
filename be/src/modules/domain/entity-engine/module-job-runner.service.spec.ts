@@ -3,8 +3,8 @@ import { builder, mock, mockEntityManager } from "@starci/jest-preset"
 import { JOB_CLAIMS } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims } from "@modules/platform/jobs"
 import { Secret } from "@modules/platform/config"
-import type { DoorApi, JobDefinition } from "@nivo-lite/agent-sdk/mutation"
-import type { EngineDoorProvider, EngineFailureAlerts } from "./entity-engine.contracts"
+import type { DoorApi, JobDefinition, WorkflowApi } from "@nivo-lite/agent-sdk/mutation"
+import type { EngineDoorProvider, EngineFailureAlerts, EngineWorkflowProvider } from "./entity-engine.contracts"
 import { ENGINE_FAILURE_ALERTS, ENTITY_ENGINE_OPTIONS } from "./entity-engine.decorators"
 import type { EntityEngineOptions } from "./entity-engine.options"
 import { EntityEngineService } from "./entity-engine.service"
@@ -42,6 +42,14 @@ const build = async (buildId?: string, withDoor = true) => {
         input: callingInput,
         ports: { door: { entry: "port", id: "engine.door" } },
     })
+    const startingInput = mock<JobDefinition["input"]>()
+    const starting = mock<JobDefinition>({
+        name: "sales.startFlow",
+        input: startingInput,
+        ports: { workflow: { entry: "port", id: "engine.workflow" } },
+    })
+    startingInput.safeParse.mockReturnValue({ success: true, data: { orderId: "o-1" } })
+    starting.run.mockResolvedValue(undefined)
     plainInput.safeParse.mockReturnValue({ success: true, data: { orderId: "o-1" } })
     callingInput.safeParse.mockReturnValue({ success: true, data: { orderId: "o-1" } })
     plain.run.mockResolvedValue(undefined)
@@ -62,7 +70,7 @@ const build = async (buildId?: string, withDoor = true) => {
                 provide: ENTITY_ENGINE_OPTIONS,
                 useValue: builder<EntityEngineOptions>({
                     entities: [],
-                    jobs: [plain, calling],
+                    jobs: [plain, calling, starting],
                     cursorKey: new Secret("a2V5"),
                 })(buildId === undefined ? {} : { buildId }),
             },
@@ -79,6 +87,7 @@ const build = async (buildId?: string, withDoor = true) => {
         plain,
         plainInput,
         calling,
+        starting,
         claims,
         alerts,
         door,
@@ -123,6 +132,24 @@ describe("ModuleJobRunnerService", () => {
         const binding = door.doorApi.mock.calls[0]?.[0]
         expect([binding?.workspaceId, binding?.effectKey("send")]).toEqual([WS, "j-1:send"])
         expect(calling.run).toHaveBeenCalledTimes(1)
+    })
+
+    it("hands a job that starts a workflow the handle of the workflow provider, bound to the workspace, outside any transaction", async () => {
+        const { runner, engine, ports, starting } = await build()
+        const handle = mock<WorkflowApi>()
+        const provider = mock<EngineWorkflowProvider>()
+        provider.workflowApi.mockReturnValue(handle)
+        runner.bindWorkflow(provider)
+
+        await runner.run(claimed(payloadOf("sales.startFlow")))
+
+        expect(engine.scoped).not.toHaveBeenCalled()
+        expect(ports.portsFor.mock.calls[0]?.[2]).toEqual({})
+        expect(provider.workflowApi.mock.calls[0]?.[0].workspaceId).toBe(WS)
+        expect(starting.run.mock.calls[0]?.slice(0, 2)).toEqual([
+            { handle: "ports", workflow: handle },
+            { orderId: "o-1" },
+        ])
     })
 
     it("tells the door an engine scope is open only while a port call runs in one", async () => {

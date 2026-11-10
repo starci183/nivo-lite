@@ -91,7 +91,10 @@ export const runRecordOf = (over: Partial<RunRecord> = {}): RunRecord => ({
     resumeAttempts: 0,
     resumeNotBefore: null,
     endedAt: null,
+    startedAt: null,
     stepSeq: 0,
+    cancelledAt: null,
+    cancelledBy: null,
     ...over,
 })
 

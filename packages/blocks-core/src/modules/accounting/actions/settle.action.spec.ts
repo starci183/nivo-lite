@@ -11,7 +11,9 @@ import {
 import type { OrderRecord, TransactionRecord } from "../../../rules/accounting/accounting.types"
 import {
     SYSTEM_CONTEXT,
+    entityApi,
     memoryProvider,
+    outbox,
     memoryWorld,
     putClaim,
     putOrder,
@@ -20,7 +22,8 @@ import {
     withEntity,
 } from "../fixtures/accounting.memory"
 import type { MemoryWorld } from "../fixtures/accounting.memory"
-import { settleAction } from "./settle.action"
+import { settleAction, settleOnOrder } from "./settle.action"
+import type { SettlePorts } from "./settle.action"
 
 const payload = { transactionId: TRANSACTION.id, orderId: ORDER.id }
 
@@ -58,6 +61,9 @@ const answering =
     () =>
         Promise.resolve(result)
 
+/** The amounts of the clean case: the 5,000,000 transfer pays the 5,000,000 order exactly. */
+const EXACT = { expectedVnd: 5_000_000, receivedVnd: 5_000_000, differenceVnd: 0 }
+
 describe("payment.settle", () => {
     it("is a transactional action of the payment permission that the graph runs", () => {
         expect(settleAction.id).toBe("payment.settle")
@@ -68,7 +74,7 @@ describe("payment.settle", () => {
 
     it("ties the transaction to the order, pays it and enqueues the ledger line, the book entry and the notice", async () => {
         const world = worldOf()
-        await expect(run(world, payload)).resolves.toEqual({ ok: true, data: { result: "paid", orderId: ORDER.id } })
+        await expect(run(world, payload)).resolves.toEqual({ ok: true, data: { result: "paid", orderId: ORDER.id, ...EXACT } })
         expect(dataOf(world, "payment.transaction", TRANSACTION.id)).toMatchObject({
             status: "matched",
             orderId: ORDER.id,
@@ -96,6 +102,26 @@ describe("payment.settle", () => {
             { job: "payment.confirm-notice", input: { orderId: ORDER.id }, dedupeKey: `notice:${ORDER.id}` },
         ])
         expect(world.calls).toEqual([])
+    })
+
+    it("settles without the notice and the ledger jobs when the workflow does both (the payment.mark-paid executor), and twice is once", async () => {
+        const world = worldOf()
+        const ports: SettlePorts = {
+            transactions: entityApi(world, "payment.transaction"),
+            orders: entityApi(world, "sales.order"),
+            claims: entityApi(world, "payment.claim"),
+            outbox: outbox(world),
+        }
+        await expect(settleOnOrder(ports, payload, { notice: false, ledger: false })).resolves.toEqual({
+            ok: true,
+            data: { result: "paid", orderId: ORDER.id, ...EXACT },
+        })
+        await expect(settleOnOrder(ports, payload, { notice: false, ledger: false })).resolves.toEqual({
+            ok: true,
+            data: { result: "already-paid", orderId: ORDER.id },
+        })
+        expect(world.jobs.map((job) => job.job)).toEqual(["accounting.book-project"])
+        expect(dataOf(world, "sales.order", ORDER.id)).toMatchObject({ status: "paid" })
     })
 
     it("settles the claim that started it", async () => {
@@ -128,21 +154,22 @@ describe("payment.settle", () => {
     })
 
     it("refuses what is not clean as data, naming the reason, and writes nothing", async () => {
-        const cases: ReadonlyArray<readonly [Setup, string]> = [
-            [{ transaction: null }, "transaction_missing"],
-            [{ order: null }, "order_missing"],
-            [{ order: orderOf({ status: "paid" }) }, "order_not_open"],
-            [{ order: orderOf({ amountVnd: 4_000_000 }) }, "amount_differs"],
-            [{ transaction: transactionOf({ orderId: "00000000-0000-4000-8000-0000000000b9" }) }, "transaction_used"],
+        const amounts = { receivedVnd: 5_000_000, orderAmountVnd: 5_000_000 }
+        const used = "00000000-0000-4000-8000-0000000000b9"
+        const cases: ReadonlyArray<readonly [Setup, string, Readonly<Record<string, unknown>>]> = [
+            [{ transaction: null }, "transaction_missing", {}],
+            [{ order: null }, "order_missing", {}],
+            [{ order: orderOf({ status: "paid" }) }, "order_not_open", { ...amounts, status: "paid" }],
+            [{ transaction: transactionOf({ orderId: used }) }, "transaction_used", { ...amounts, paidOrderId: used }],
         ]
-        for (const [setup, reason] of cases) {
+        for (const [setup, reason, facts] of cases) {
             const world = worldOf(setup)
             const before = snapshotOf(world)
             await expect(run(world, payload)).resolves.toEqual({
                 ok: false,
                 reason: "refused",
                 message: { key: `settle_${reason}` },
-                data: { reason },
+                data: { reason, ...facts },
             })
             expect(snapshotOf(world)).toBe(before)
             expect(world.jobs).toEqual([])

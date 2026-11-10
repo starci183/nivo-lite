@@ -20,7 +20,7 @@ import { AiTasksService } from "@modules/domain/ai-tasks"
 import { NodeToolDoorService } from "@modules/domain/mcp-gateway"
 import { FLOW_F_ENTITIES } from "@nivo-lite/blocks-core/entities"
 import { MODULE_JOBS } from "@nivo-lite/blocks-core/modules"
-import { coreDataKinds, coreEffects, coreNodes, coreTools } from "@nivo-lite/blocks-core"
+import { coreDataKinds, coreEffects, coreNodes, coreTools, modelWordsOf } from "@nivo-lite/blocks-core"
 import {
     CHAT_NODE_PORTS_ERROR_KINDS,
     CHAT_NODE_PORTS_MESSAGES,
@@ -45,6 +45,7 @@ const installedNodes: NodeInstall = {
     effects: coreEffects,
     tools: coreTools,
     dataKinds: coreDataKinds,
+    words: modelWordsOf,
 }
 
 /** The agent work area of the API: the store that lets an agent be woken by an event or a clock and run one turn at a time per scope, the durable run of each wake, and the clock that wakes it. */

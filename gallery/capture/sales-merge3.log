@@ -1,0 +1,5 @@
+STOPPED locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByText('Agent', { exact: true }).first()[22m
+
+    at D:\starci-lanes\nivo-auth-ux\gallery\scripts\capture-links.cjs:83:55

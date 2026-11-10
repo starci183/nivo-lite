@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In, MoreThan } from "typeorm"
+import { In, IsNull, MoreThan, Raw } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager, advisoryXactLock } from "@modules/platform/database"
@@ -17,6 +17,8 @@ import type {
 } from "./workspaces.contracts"
 import type { WorkspacesOptions } from "./workspaces.options"
 import { FIRST_WORKSPACE_NAME } from "./workspaces.templates"
+import { toLobbyMembership } from "./workspace-lobby.mapper"
+import { RESTORE_DAYS } from "./workspaces.contracts"
 import { InjectWorkspacesOptions } from "./workspaces.port"
 
 /** The most memberships one person reads. */
@@ -40,32 +42,36 @@ export class WorkspacesService {
         return row?.name ?? ""
     }
 
-    /** Every workspace the person belongs to, with their membership in it, oldest first. */
+    /**
+     * Every workspace the person belongs to, with their membership in it and its lobby facts, oldest first. A deleted workspace shows only
+     * to its owners and only while it can still be restored.
+     */
     async memberships(userId: string): Promise<ReadonlyArray<WorkspaceMembership>> {
         const seats = await this.members.seatsOf(userId, MEMBERSHIPS_MAX)
         if (seats.length === 0) return []
-        const found = await this.entityManager.find(WorkspaceEntity, {
-            where: { id: In(seats.map((seat) => seat.workspaceId)) },
-            take: seats.length,
-        })
+        const ids = seats.map((seat) => seat.workspaceId)
+        const [found, counts] = await Promise.all([
+            this.entityManager.find(WorkspaceEntity, {
+                where: [
+                    { id: In(ids), deletedAt: IsNull() },
+                    { id: In(ids), deletedAt: Raw((column) => `${column} > now() - interval '${RESTORE_DAYS} days'`) },
+                ],
+                take: seats.length,
+            }),
+            this.members.activeCountsOf(ids),
+        ])
         const byId = new Map(found.map((workspace) => [workspace.id, workspace]))
-        return seats.flatMap((member) => {
-            const workspace = byId.get(member.workspaceId)
-            if (workspace === undefined) return []
-            return [
-                {
-                    member,
-                    workspace: {
-                        id: workspace.id,
-                        name: workspace.name,
-                        status: workspace.status,
-                        ownerId: workspace.ownerId,
-                        createdAt: workspace.createdAt.toISOString(),
-                        businessType: workspace.businessType,
-                    },
-                },
-            ]
+        const countOf = new Map(counts.map((entry) => [entry.workspaceId, entry]))
+        return seats.flatMap((seat) => {
+            const workspace = byId.get(seat.workspaceId)
+            if (workspace === undefined || (workspace.deletedAt !== null && seat.role !== "owner")) return []
+            return [toLobbyMembership(seat, workspace, countOf.get(workspace.id))]
         })
+    }
+
+    /** Whether the workspace exists and its owner has not deleted it: a deleted workspace takes in no event. */
+    isLive(workspaceId: string): Promise<boolean> {
+        return this.entityManager.exists(WorkspaceEntity, { where: { id: workspaceId, deletedAt: IsNull() } })
     }
 
     /** Every workspace by id, bounded: its id and name; with `after`, only those whose id sorts after it. */
@@ -116,7 +122,7 @@ export class WorkspacesService {
             await advisoryXactLock(tx, `workspace-first:${userId}`)
             const found = await tx.find(WorkspaceEntity, {
                 select: { id: true, status: true },
-                where: { ownerId: userId, name },
+                where: { ownerId: userId, name, deletedAt: IsNull() },
                 take: 2,
             })
             if (found.length > 1) throw new WorkspacesError({ code: WorkspacesErrorCode.NameAmbiguous })

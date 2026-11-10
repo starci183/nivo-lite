@@ -4,6 +4,8 @@ import type { SetAgentAvatarRequest } from "../../application/set-agent-avatar.c
 import type { AgentAvatarUploadType } from "./dto/agent-avatar-upload.type"
 import type { RequestAgentAvatarUploadInput } from "./dto/request-agent-avatar-upload.input"
 import type { SetAgentAvatarInput } from "./dto/set-agent-avatar.input"
+import type { SetAgentAvatarPresetRequest } from "../../application/set-agent-avatar-preset.contracts"
+import type { SetAgentAvatarPresetInput } from "./dto/set-agent-avatar-preset.input"
 
 /** Maps the picture of the GraphQL input, with the workspace it names, to the upload request. */
 export const toRequestAgentAvatarUploadRequest = (
@@ -20,3 +22,9 @@ export const toSetAgentAvatarRequest = (workspaceId: string, input: SetAgentAvat
     agentId: input.agentId,
     path: input.path,
 })
+
+/** Maps the GraphQL input, with the workspace it names, to the preset request. */
+export const toSetAgentAvatarPresetRequest = (
+    workspaceId: string,
+    input: SetAgentAvatarPresetInput,
+): SetAgentAvatarPresetRequest => ({ workspaceId, agentId: input.agentId, preset: input.preset })

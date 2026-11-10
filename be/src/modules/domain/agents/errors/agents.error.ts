@@ -21,10 +21,14 @@ export enum AgentsErrorCode {
     NameInvalid = "AGENTS_NAME_INVALID",
     /** The picture address is not an HTTPS address. */
     AvatarInvalid = "AGENTS_AVATAR_INVALID",
+    /** The preset picture is not one an agent may wear. */
+    AvatarPresetInvalid = "AGENTS_AVATAR_PRESET_INVALID",
     /** An agent.tag effect names no agent, or a module the workspace runs no agent for; `params.refusal` is the node refusal it reports. */
     TagTargetMissing = "AGENTS_TAG_TARGET_MISSING",
     /** The tag rights refuse an agent.tag effect, or the tag door refused it for another reason; `params.refusal` is the node refusal it reports. */
     TagRefused = "AGENTS_TAG_REFUSED",
+    /** A care.schedule effect names a step no schedule can hold (an unknown step, a moment that is not an instant or is too far away); `params.refusal` is the node refusal it reports. */
+    CareScheduleInvalid = "AGENTS_CARE_SCHEDULE_INVALID",
 }
 
 /** How each agents code travels. */
@@ -38,8 +42,10 @@ export const AGENTS_ERROR_KINDS: Record<AgentsErrorCode, ErrorKind> = {
     [AgentsErrorCode.OwnershipInvalid]: "invalid",
     [AgentsErrorCode.NameInvalid]: "invalid",
     [AgentsErrorCode.AvatarInvalid]: "invalid",
+    [AgentsErrorCode.AvatarPresetInvalid]: "invalid",
     [AgentsErrorCode.TagTargetMissing]: "invalid",
     [AgentsErrorCode.TagRefused]: "forbidden",
+    [AgentsErrorCode.CareScheduleInvalid]: "invalid",
 }
 
 /** The one error class of the agents capability. */

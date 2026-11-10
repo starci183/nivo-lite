@@ -14,4 +14,6 @@ export enum AgentSchedulesLogEvent {
     TriggersSeeded = "agent_schedules.triggers_seeded",
     /** The minute sweep ended one pass. */
     SweepDone = "agent_schedules.sweep_done",
+    /** A care step of the Sales agent fell due and its agent was tagged: the agent and the step, never the customer. */
+    CareWoken = "agent_schedules.care_woken",
 }

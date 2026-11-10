@@ -126,17 +126,65 @@ export const postAdjustment = (adjustment: AdjustmentRecord): BookEntryValues =>
         null,
     )
 
-/** The line of the business ledger (the sheet behind the door) of a transaction that paid an order. */
+/** The longest transfer content a ledger line keeps as its description. */
+const DESCRIPTION_MAX = 200
+
+const descriptionOf = (transaction: TransactionRecord): string => (transaction.reference ?? "").slice(0, DESCRIPTION_MAX)
+
+/** An amount as the shop's book writes it: `1.000đ`. */
+const bookVnd = (amountVnd: number): string => `${new Intl.NumberFormat("vi-VN").format(amountVnd)}đ`
+
+/**
+ * The note of a line whose money differs from what the order was due (the books keep what really arrived): `Đơn 1.000đ, nhận 2.000đ,
+ * dư 1.000đ`, or `thiếu`; empty when the two agree or the order has no total.
+ */
+export const differenceNoteOf = (receivedVnd: number, dueVnd: number | null): string => {
+    if (dueVnd === null || dueVnd === receivedVnd) return ""
+    const gap = receivedVnd - dueVnd
+    return `Đơn ${bookVnd(dueVnd)}, nhận ${bookVnd(receivedVnd)}, ${gap > 0 ? "dư" : "thiếu"} ${bookVnd(Math.abs(gap))}`
+}
+
+/**
+ * The line of the business ledger (the sheet behind the door) of a transaction that paid an order: money in, the order number as the
+ * document, the transfer content as the description, the customer (else the payer) as the counterpart, and a sale as the category.
+ */
 export const ledgerLineOf = (
     transaction: TransactionRecord,
     order: OrderRecord,
     leadName: string | null,
-): LedgerEntry => ({
+): LedgerEntry => {
+    const customer = leadName ?? transaction.payer ?? ""
+    return {
+        date: shopDayOf(transaction.occurredAt),
+        orderNo: order.orderNo,
+        customer,
+        amountVnd: transaction.amountVnd,
+        transactionId: transaction.id,
+        status: "paid",
+        note: differenceNoteOf(transaction.amountVnd, order.amountVnd),
+        direction: "in",
+        documentNo: order.orderNo,
+        description: descriptionOf(transaction),
+        counterpart: customer,
+        category: "sale",
+    }
+}
+
+/**
+ * The line of the business ledger of money in that the owner classified as other income (no order): the bank reference is the document,
+ * the payer is the counterpart, and the category is other income. Its order number is empty.
+ */
+export const otherIncomeLineOf = (transaction: TransactionRecord): LedgerEntry => ({
     date: shopDayOf(transaction.occurredAt),
-    orderNo: order.orderNo,
-    customer: leadName ?? transaction.payer ?? "",
+    orderNo: "",
+    customer: transaction.payer ?? "",
     amountVnd: transaction.amountVnd,
     transactionId: transaction.id,
     status: "paid",
     note: "",
+    direction: "in",
+    documentNo: transaction.externalRef ?? transaction.id,
+    description: descriptionOf(transaction),
+    counterpart: transaction.payer ?? "",
+    category: "other-income",
 })

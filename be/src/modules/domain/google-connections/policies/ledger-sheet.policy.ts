@@ -1,6 +1,6 @@
 import type { ConnectionRecord } from "@modules/domain/connections"
 import type { BusinessLedgerEntry } from "@modules/domain/provider-registry"
-import { GoogleError } from "@modules/integrations/google"
+import { GoogleError, ledgerCategoryText, ledgerHeader, ledgerTab, ledgerVoidText } from "@modules/integrations/google"
 import type { SheetCell } from "@modules/integrations/google"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "../errors/google-connections.error"
 import { CONSENT_PREFIX } from "./consent-reason.policy"
@@ -23,16 +23,14 @@ export const HEADER_WRITTEN = "written"
 /** The offset of Vietnam from UTC, in milliseconds: the day an entry belongs to is the day on the shop's wall. */
 const VIETNAM_OFFSET_MS = 7 * 3_600_000
 
-/** The first row of a ledger sheet, written once before the first entry. */
-export const LEDGER_HEADER: ReadonlyArray<SheetCell> = [
-    "Ngay",
-    "Ma don",
-    "Khach",
-    "So tien",
-    "Ma GD",
-    "Trang thai",
-    "Ghi chu",
-]
+/** The meta value that marks a ledger sheet laid out as the cash book tab: the tab, the header and the columns of this version. */
+export const LEDGER_LAYOUT = "v2"
+
+/** The tab of the spreadsheet the ledger is written to. */
+export const LEDGER_TAB: string = ledgerTab()
+
+/** The first row of the ledger tab, written once before the first entry: date, document, description, in, out, counterpart, category, balance. */
+export const LEDGER_HEADER: ReadonlyArray<SheetCell> = ledgerHeader()
 
 /** True when Google did not say which scopes it granted, or the spreadsheets scope is among them. */
 export const grantsSheets = (scope: string | null): boolean => !scope || SHEETS_SCOPE_PATTERN.test(scope)
@@ -43,29 +41,53 @@ export const spreadsheetIdOf = (text: string): string => {
     return SHEET_LINK.exec(trimmed)?.[1] ?? (SHEET_ID.test(trimmed) ? trimmed : "")
 }
 
-/** The row of a ledger entry: the values as they are, in the order of the header. */
-export const ledgerRowOf = (entry: BusinessLedgerEntry): ReadonlyArray<SheetCell> => [
-    entry.date,
-    entry.orderNo,
-    entry.customer,
-    entry.amountVnd,
-    entry.transactionId,
-    entry.status === "void" ? "VOID" : "PAID",
-    entry.note,
-]
+/**
+ * The running balance of a row, written as a formula that reads its own row number: the money in so far minus the money out so far. The
+ * same text is right on every row, so a row written later never needs the one before it read back.
+ */
+export const BALANCE_FORMULA = '=SUM(D$2:INDIRECT("D"&ROW()))-SUM(E$2:INDIRECT("E"&ROW()))'
+
+/**
+ * A text cell that stays text. The sheet takes what is written as a person would type it (so the date is a date and the balance runs),
+ * which would also run a formula a stranger wrote into a transfer content or turn a number with a leading zero into another number;
+ * a leading apostrophe makes the cell text and is not shown.
+ */
+const textCell = (value: string): SheetCell => (value === "" ? "" : `'${value}`)
+
+/**
+ * The row of a ledger entry, in the order of the header: date, document (the order number, else the bank reference), description,
+ * money in, money out, counterpart, category and the running balance. A void entry puts the amount on the other side, so it takes the
+ * original back and the balance follows.
+ */
+export const ledgerRowOf = (entry: BusinessLedgerEntry): ReadonlyArray<SheetCell> => {
+    const takenBack = entry.status === "void"
+    const out = ((entry.direction ?? "in") === "out") !== takenBack
+    const words = [takenBack ? ledgerVoidText() : "", entry.description ?? "", entry.note].filter((part) => part !== "")
+    return [
+        entry.date,
+        textCell(entry.documentNo ?? entry.orderNo),
+        textCell(words.join(" · ")),
+        out ? "" : entry.amountVnd,
+        out ? entry.amountVnd : "",
+        textCell(entry.counterpart ?? entry.customer),
+        textCell(ledgerCategoryText(entry.category ?? "sale")),
+        BALANCE_FORMULA,
+    ]
+}
 
 /** The day (`YYYY-MM-DD`) an instant belongs to on the shop's wall. */
 export const dayOf = (now: Date): string => new Date(now.getTime() + VIETNAM_OFFSET_MS).toISOString().slice(0, 10)
 
-/** The row that takes one transaction back: its key and the status only, so the earlier row stays as it was written. */
+/** The row that takes one transaction back by its key alone: the day, the key and the word for a reversal, with no amount. */
 export const voidRowOf = (transactionId: string, day: string): ReadonlyArray<SheetCell> => [
     day,
+    textCell(transactionId),
+    textCell(ledgerVoidText()),
     "",
     "",
     "",
-    transactionId,
-    "VOID",
-    "Hoan tac",
+    "",
+    BALANCE_FORMULA,
 ]
 
 /** True when the connection gave the spreadsheets access and is still in use. */

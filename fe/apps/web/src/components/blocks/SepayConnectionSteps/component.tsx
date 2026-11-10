@@ -90,7 +90,7 @@ export const SepayConnectionStepsBase = (props: SepayConnectionStepsBaseProps) =
     }
     const actions = {
         paste: (
-            <Button intent="neutral" href={props.props.openSepay.href} target="_blank" rel="noreferrer">
+            <Button endArrow intent="neutral" href={props.props.openSepay.href} target="_blank" rel="noreferrer">
                 {props.props.openSepay.label}
             </Button>
         ),

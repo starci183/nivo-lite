@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
-import { LOGGER } from "@modules/platform/logging"
+import { LOGGER, runInScope } from "@modules/platform/logging"
 import { TIMER } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
 import type { Logger } from "@modules/platform/logging"
@@ -40,6 +40,15 @@ const build = async (expires = true) => {
 }
 
 describe("AgentRunInflightService", () => {
+    it("runs the work in the scope of the step's run, so a model call it makes is booked to the run", async () => {
+        const { service } = await build()
+
+        await expect(service.track(stepViewOf({ runId: "run-4" }), () => Promise.resolve(runInScope()))).resolves.toBe(
+            "run-4",
+        )
+        expect(runInScope()).toBeNull()
+    })
+
     it("answers the result of the work it tracks and forgets the step when it ends", async () => {
         const { service, released } = await build()
 

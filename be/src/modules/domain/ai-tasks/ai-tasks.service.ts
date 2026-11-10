@@ -23,10 +23,10 @@ import type {
     ProposedResponsibility,
     TextRequest,
 } from "./ai-tasks.contracts"
-import { InjectAiTaskMeter, InjectAiTasksOptions, InjectAiTaskTextGenerator } from "./ai-tasks.decorators"
+import { InjectAiTaskMeter, InjectAiTasksOptions } from "./ai-tasks.decorators"
 import { AiTasksLogEvent } from "./ai-tasks.log-events"
 import type { AiTasksOptions } from "./ai-tasks.options"
-import type { AiTaskMeter, AiTaskTextGenerator } from "./ai-tasks.port"
+import type { AiTaskMeter } from "./ai-tasks.port"
 import {
     AUTHORITY_SCHEMA,
     CLASSIFICATION_SCHEMA,
@@ -85,14 +85,13 @@ const JSON_AGAIN = "Answer again with ONLY the JSON object described above. No p
 @Injectable()
 /**
  * The prompt library of NIVO. This client talks to no model provider itself: it builds the prompts of the app (summaries, lead
- * classification, drafts, the authority chat) and runs each one through the LangChain client once a key is set (metered against
- * the workspace allowance), and through the OpenClaw text generator port while it is not. Every call names its workspace and
- * language explicitly.
+ * classification, drafts, the authority chat) and runs each one through the LangChain client, metered against the workspace
+ * allowance. There is no second door: without the AI endpoint (`AI_BASE_URL`, `STARCI_AI_KEY`) every call fails as unavailable.
+ * Every call names its workspace and language explicitly.
  */
 export class AiTasksService {
     constructor(
         @InjectAiTasksOptions() private readonly options: AiTasksOptions,
-        @InjectAiTaskTextGenerator() private readonly generator: AiTaskTextGenerator,
         @InjectAi() private readonly ai: AiService,
         @InjectAiTaskMeter() private readonly meter: AiTaskMeter,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
@@ -364,7 +363,7 @@ Current rules: ${currentRules}`,
         return (await this.run(scope, messages, json, meta, options)).text
     }
 
-    /** One generation for the workspace of the scope, on the AI endpoint when a key is set, through the OpenClaw door when not. */
+    /** One generation for the workspace of the scope on the AI endpoint; without the endpoint the call fails as unavailable. */
     private async run(
         scope: AiTaskScope,
         messages: ReadonlyArray<ChatMessage>,
@@ -372,47 +371,45 @@ Current rules: ${currentRules}`,
         meta: CallMeta,
         options: CallOptions,
     ): Promise<Ran> {
+        if (!this.ai.available()) throw new AiTasksError({ code: AiTasksErrorCode.Unavailable })
         const request: TextRequest = {
             workspaceId: scope.workspaceId,
-            purpose: `${meta.module}:${meta.kind}`,
             messages,
             json,
             kind: scope.kind ?? meta.kind,
             module: scope.module ?? meta.module,
         }
-        if (!this.ai.available())
-            return { text: await this.generator.generate(this.withoutImages(request, scope)), parsed: null }
         return this.metered(scope, request, options)
     }
 
     /**
-     * The request for the fallback path, which reads no pictures: they are taken out and the model is told it cannot see them, so it
-     * never answers about a picture as if it had looked. Logged, never silent.
+     * The same call once more, for a call the endpoint gave no answer to (it timed out, failed or answered nothing). The model had
+     * not answered, so nothing was done and nothing was metered: asking again repeats no effect. Once only: a second silence is
+     * the caller's failure to report ("the AI is down"), never a loop.
      */
-    private withoutImages(request: TextRequest, scope: AiTaskScope): TextRequest {
-        const count = request.messages.reduce((sum, message) => sum + (message.images?.length ?? 0), 0)
-        if (count === 0) return request
-        this.logger.warn(AiTasksLogEvent.ImagesUnsupported, { workspaceId: request.workspaceId, images: count })
-        const messages = request.messages.map(({ images: _images, ...message }) => message)
-        return {
-            ...request,
-            messages: [...messages, { role: "system", content: this.phrase("imagesUnsupported", scope.locale) }],
-        }
+    private again(request: TextRequest, call: Parameters<AiService["chat"]>[0]): ReturnType<AiService["chat"]> {
+        this.logger.warn(AiTasksLogEvent.Retried, { workspaceId: request.workspaceId, module: request.module })
+        return this.ai.chat(call)
     }
 
-    /** One prompt on the AI endpoint: refused when the workspace is over its allowance, metered once it answered. */
+    /**
+     * One prompt on the AI endpoint: refused when the workspace is over its allowance, asked once more when the endpoint gave no
+     * answer, metered once it answered.
+     */
     private async metered(scope: AiTaskScope, request: TextRequest, options: CallOptions): Promise<Ran> {
         const notice = await this.meter.blockedBy(request.workspaceId, request.kind, scope.locale)
         if (notice !== null) {
             throw new AiTasksError({ code: AiTasksErrorCode.QuotaBlocked, params: { message: notice.message } })
         }
-        const answer = await this.ai.chat({
+        const call = {
             messages: request.messages,
             json: request.json,
             schema: request.json ? options.schema : null,
             timeoutMs: this.options.timeoutMs,
             context: this.notes.contextOf(scope, options.question),
-        })
+            affinity: request.workspaceId,
+        }
+        const answer = (await this.ai.chat(call)) ?? (await this.again(request, call))
         if (answer === null) throw new AiTasksError({ code: AiTasksErrorCode.Unavailable })
         await this.meter.record({
             workspaceId: request.workspaceId,
@@ -421,7 +418,7 @@ Current rules: ${currentRules}`,
             usage: {
                 prompt_tokens: answer.usage.promptTokens ?? 0,
                 completion_tokens: answer.usage.completionTokens ?? 0,
-                cached_tokens: 0,
+                cached_tokens: answer.usage.cachedTokens ?? 0,
                 cost: answer.usage.costUsd ?? 0,
                 model: answer.model,
             },

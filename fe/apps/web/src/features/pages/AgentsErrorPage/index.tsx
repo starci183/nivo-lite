@@ -9,7 +9,7 @@ import { AgentsErrorPageBase } from "./component"
 
 /** Where in the agents area the failure happened. */
 type AgentsErrorScope =
-    "catalog" | "frame" | "list" | "setup" | "settings" | "workbench" | "performance" | "work" | "chat"
+    "catalog" | "frame" | "list" | "setup" | "connections" | "knowledge" | "workbench" | "performance" | "work" | "graph" | "chat"
 
 type AgentsErrorPageProps = {
     readonly scope: AgentsErrorScope
@@ -32,11 +32,13 @@ export const AgentsErrorPage = (props: AgentsErrorPageProps) => {
         frame: t("catalogTitle"),
         list: typeName,
         setup: t("tab_setup"),
-        settings: t("tab_settings"),
+        connections: t("tab_connections"),
+        knowledge: t("tab_knowledge"),
         workbench: t("tab_workbench"),
         performance: t("tab_performance"),
         work: t("tab_work"),
         chat: t("tab_chat"),
+        graph: t("tab_graph"),
     }
     const tab = { id: "module", label: typeName, href: workspaceHref(workspaceId, agentHref(known ?? "chatbot", null)) }
     const crumbs = {
@@ -44,11 +46,13 @@ export const AgentsErrorPage = (props: AgentsErrorPageProps) => {
         frame: [home, agents],
         list: [home, agents, { id: "module", label: typeName }],
         setup: [home, agents, tab],
-        settings: [home, agents, tab],
+        connections: [home, agents, tab],
+        knowledge: [home, agents, tab],
         workbench: [home, agents, tab],
         performance: [home, agents, tab],
         work: [home, agents, tab],
         chat: [home, agents, tab],
+        graph: [home, agents, tab],
     }
     return (
         <AgentsErrorPageBase

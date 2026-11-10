@@ -1,5 +1,6 @@
 import type { EffectDefinition, ToolDefinition } from "../../node/effect.types"
 import { runNode } from "../../node/host"
+import { isBusinessFailure } from "../../node/memory"
 import type { NodeDefinition, NodeExample, NodeExampleEffect, TurnRef } from "../../node/node.types"
 import { canonicalJson } from "../../template/canonical"
 import type { FakeExecuted } from "./node-ports"
@@ -40,7 +41,12 @@ export const nodeExampleMismatches = async (
     effects: ReadonlyArray<EffectDefinition>,
     tools: ReadonlyArray<ToolDefinition> = [],
 ): Promise<ReadonlyArray<string>> => {
-    const fake = scriptedNodePorts({ store: example.store, model: example.model, tools: example.tools })
+    const fake = scriptedNodePorts({
+        store: example.store,
+        model: example.model,
+        tools: example.tools,
+        answers: example.answers,
+    })
     try {
         const run = await runNode(
             {
@@ -55,9 +61,12 @@ export const nodeExampleMismatches = async (
             },
             fake.ports,
         )
+        if (example.failure !== undefined) return [`expected failure ${example.failure}`]
         const output = canonicalJson(run.output) === canonicalJson(example.output) ? [] : ["output differs"]
         return [...output, ...effectMismatches(example.effects, fake.executed)]
     } catch (cause) {
+        if (isBusinessFailure(cause) && cause.failure.code === example.failure)
+            return effectMismatches(example.effects, fake.executed)
         return [`threw ${cause instanceof Error ? cause.message : String(cause)}`]
     }
 }

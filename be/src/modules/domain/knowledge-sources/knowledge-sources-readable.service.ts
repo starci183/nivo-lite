@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { Brackets, In } from "typeorm"
 import type { EntityManager, SelectQueryBuilder } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import type { DocumentVisibility, ReadableScope, ReadableSource } from "./knowledge-sources.contracts"
+import type { DocumentVisibility, ReadableScope, ReadableSource, ReadableSummary } from "./knowledge-sources.contracts"
 import { KnowledgeSourceEntity } from "./persistence/entities"
 import type { ReadableSourceProjection } from "./persistence/knowledge-source.projection"
 
@@ -41,6 +41,36 @@ export class KnowledgeSourcesReadableService {
                 visibility: row.visibility === "public" ? "public" : "internal",
                 updatedAt: row.updatedAt,
                 content: row.content ?? "",
+            }))
+    }
+
+    /** The indexed documents the scope applies to, newest change first, without their text: what a list of the documents needs. */
+    async summariesFor(scope: ReadableScope, limit: number): Promise<ReadonlyArray<ReadableSummary>> {
+        const rows = await this.readable(scope)
+            .select("ks.id", "id")
+            .addSelect("ks.title", "title")
+            .addSelect("ks.topic", "topic")
+            .addSelect("ks.kind", "kind")
+            .addSelect("ks.visibility", "visibility")
+            .addSelect("ks.module", "module")
+            .addSelect("ks.installationId", "installationId")
+            .addSelect("ks.updated_at::text", "updatedAt")
+            .orderBy("ks.updatedAt", "DESC")
+            .limit(limit)
+            .getRawMany<Omit<ReadableSourceProjection, "content">>()
+        return rows
+            .filter(
+                (row) =>
+                    (row.module === null || row.module === scope.module) &&
+                    (row.installationId === null || row.installationId === scope.installationId),
+            )
+            .map((row) => ({
+                id: row.id,
+                title: row.title,
+                topic: row.topic,
+                kind: row.kind,
+                visibility: row.visibility === "public" ? "public" : "internal",
+                updatedAt: row.updatedAt,
             }))
     }
 

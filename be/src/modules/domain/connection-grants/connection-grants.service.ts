@@ -65,13 +65,25 @@ export class ConnectionGrantsService {
         if (agent === undefined) {
             throw new ConnectionsError({ code: ConnectionsErrorCode.NotFound, params: { id: agentId } })
         }
+        return this.candidatesOf(workspaceId, agentId, agent.module)
+    }
+
+    /**
+     * The same list for a caller that has already proved who may look (a screen of the workbench door): no membership check, the agent
+     * is named by its module. A disconnected connection is left out.
+     */
+    async candidatesOf(
+        workspaceId: string,
+        agentId: string,
+        module: string,
+    ): Promise<ReadonlyArray<ConnectionCandidate>> {
         const [listed, grants] = await Promise.all([
             this.connections.list(workspaceId),
             this.bindings.grantsOfAgent(workspaceId, agentId),
         ])
         const accessOf = new Map(grants.map((row) => [row.connectionId, storedLevel(row.access)]))
         return listed.flatMap((connection) => {
-            const purpose = purposeFor(agent.module, connection.provider)
+            const purpose = purposeFor(module, connection.provider)
             if (purpose === null || connection.status === "disconnected") return []
             return [
                 {

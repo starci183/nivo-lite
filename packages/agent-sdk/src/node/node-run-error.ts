@@ -12,6 +12,7 @@ export type NodeRunErrorCode =
     | "TOOL_MUTATES"
     | "TOOL_ARGS_INVALID"
     | "TOOL_RESULT_INVALID"
+    | "TOOL_NOT_OFFERED"
 
 /** Thrown by the node host: a stable code and the node or effect it is about (`at`). */
 export class NodeRunError extends SdkError<NodeRunErrorCode> {}

@@ -13,6 +13,8 @@ export enum SalesEffectsErrorCode {
     OrderNotFound = "SALES_EFFECTS_ORDER_NOT_FOUND",
     /** The engine did not make the write: the record moved under it, or a rule of its entity refused it. */
     WriteRefused = "SALES_EFFECTS_WRITE_REFUSED",
+    /** The close report's card could not be written to the team chat: the agent or the owner is not of the workspace. */
+    ReportNotPosted = "SALES_EFFECTS_REPORT_NOT_POSTED",
 }
 
 /** How each sales-effects code travels. */
@@ -22,6 +24,7 @@ export const SALES_EFFECTS_ERROR_KINDS: Record<SalesEffectsErrorCode, ErrorKind>
     [SalesEffectsErrorCode.LeadNotFound]: "not-found",
     [SalesEffectsErrorCode.OrderNotFound]: "not-found",
     [SalesEffectsErrorCode.WriteRefused]: "conflict",
+    [SalesEffectsErrorCode.ReportNotPosted]: "conflict",
 }
 
 /** The one error class of the sales-effects capability. */

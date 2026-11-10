@@ -224,6 +224,19 @@ describe("settingOf", () => {
         expect(subject.settingOf("openclawTimeoutSec", null)).toBeNull()
     })
 
+    it("keeps the working hours as the web stores them, normalized, removes them on an empty text and refuses another shape", async () => {
+        const { subject } = await buildSubject()
+        const days = [[["13:00", "20:00"], ["08:00", "13:00"]], [], [], [], [], [], []]
+
+        expect(subject.settingOf("workingHours", JSON.stringify({ v: 1, afterHours: false, days }))).toEqual({
+            name: "workingHours",
+            value: JSON.stringify({ v: 1, afterHours: false, days: [[["08:00", "20:00"]], [], [], [], [], [], []] }),
+        })
+        expect(subject.settingOf("workingHours", "")).toEqual({ name: "workingHours", value: null })
+        expect(subject.settingOf("workingHours", null)).toEqual({ name: "workingHours", value: null })
+        expect(subject.settingOf("workingHours", "{\"v\":1,\"days\":[]}")).toBeNull()
+    })
+
     it("keeps a holding message, clipped to 400 characters", async () => {
         const { subject } = await buildSubject()
 

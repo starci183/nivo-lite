@@ -1,98 +1,62 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
 import type { ReactNode } from "react"
-import { URL_PARAMS } from "@/hooks/connections"
-import { useSlotLabels } from "@/hooks/slot"
-import { useConnectionsList, visibleRowsOf } from "@/hooks/connectionsPanes"
-import { connectionsGridOf } from "@/hooks/connectionsRoute"
-import { usePaneCopy } from "@/hooks/paneFrame"
-import { navigation } from "@/modules/i18n"
+import { useSearchParams } from "next/navigation"
+import { useConsoleCrumbs } from "@/hooks/pageCrumbs"
+import { CATALOG, CONNECTION_GROUPS, FOLDED_CONNECTORS, asGroup, groupOfEntry } from "@/hooks/connection-catalog"
+import { useConnectionsList } from "@/hooks/connectionsPanes"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { ConnectionsFrameBase } from "./component"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
-/** What the routed page hands the frame: the page that sits beside the list. */
+/** What the page hands the frame: the tab's page. */
 interface ConnectionsFrameProps {
-    readonly children: ReactNode
+    readonly children?: ReactNode
 }
 
 /**
- * The connected frame of the Connections pages: reads the workspace's connections and the viewer's role, keeps the search and the
- * filter of the list, and draws the page band and the list beside whichever page the route is. The open connection comes from the
- * address, so a refresh and a shared link keep it.
+ * The connected band of the Connections page: reads the workspace's connections for the summary and the tab counts, and the viewer's
+ * role for "Add connection". The tab comes from the address, so a refresh and a shared link keep it.
  */
 export const ConnectionsFrame = (props: ConnectionsFrameProps) => {
     const t = useTranslations("connections")
-    const shell = useTranslations("shell")
-    const pane = usePaneCopy()
-    const router = navigation.useRouter()
     const workspaceId = useWorkspaceId()
     const hubHref = workspaceHref(workspaceId, CONSOLE_ROUTES.connections)
-    const labels = useSlotLabels()
+    const breadcrumbs = useConsoleCrumbs(t("title"))
     const list = useConnectionsList()
-    const [text, setText] = useState("")
-    const [filter, setFilter] = useState("all")
+    const selectedGroup = asGroup(useSearchParams().get("group") ?? "all")
+    const entries = CATALOG.filter((entry) => !FOLDED_CONNECTORS.has(entry.id))
+    const libraryHref = `${hubHref}?tab=library`
+    const categories = {
+        label: t("libFilter"),
+        selectedKey: selectedGroup,
+        items: [
+            { id: "all", label: t("group_all"), count: entries.length, href: libraryHref },
+            ...CONNECTION_GROUPS.map((id) => ({
+                id,
+                label: t(`group_${id}`),
+                count: entries.filter((entry) => groupOfEntry(entry) === id).length,
+                href: `${libraryHref}&group=${id}`,
+            })).filter((item) => item.count > 0),
+        ],
+    }
     const view = "items" in list.slot ? list.slot.items : undefined
-    const rows = view === undefined ? [] : visibleRowsOf(view.rows, filter, text)
     return (
         <ConnectionsFrameBase
             props={{
-                copy: {
-                    grid: t("title"),
-                    listLabel: t("listLabel"),
-                    title: t("title"),
-                    crumbLabel: shell("crumbLabel"),
-                    tabsLabel: t("title"),
-                    tabLibrary: t("tabLibrary"),
-                    errorBody: pane.errorBody,
-                    noMatchTitle: pane.noMatchTitle,
-                    noMatchBody: pane.noMatchBody,
-                    clearFilters: pane.clearFilters,
-                },
-                crumbs: [
-                    {
-                        id: "home",
-                        label: shell("crumbHome"),
-                        href: workspaceHref(workspaceId, CONSOLE_ROUTES.workspaceHome),
-                    },
-                    list.openName === null
-                        ? { id: "connections", label: t("title") }
-                        : { id: "connections", label: t("title"), href: hubHref },
-                    ...(list.openName === null ? [] : [{ id: "open", label: list.openName }]),
-                ],
+                breadcrumbs,
+                copy: { title: t("title"), tabsLabel: t("title"), addLabel: t("add") },
                 tab: list.tab,
-                connectedLabel: view === undefined ? t("tabConnected") : `${t("tabConnected")} · ${view.rows.length}`,
+                summary: view?.summary ?? t("title"),
+                connectedLabel: t("tabConnected"),
+                libraryLabel: t("tabLibrary"),
+                categories,
+                connectedCount: view?.rows.length,
+                libraryCount: CATALOG.filter((entry) => !FOLDED_CONNECTORS.has(entry.id)).length,
                 tabHrefs: { connected: hubHref, library: `${hubHref}?tab=library` },
-                slot: list.slot,
-                labels: labels(t("connectedEmpty")),
-                search: {
-                    label: t("libSearch"),
-                    placeholder: t("libSearch"),
-                    clearLabel: t("libClear"),
-                    value: text,
-                    onChange: setText,
-                },
-                choice: {
-                    label: t("filterLabel"),
-                    value: filter,
-                    onChange: setFilter,
-                    moreLabel: pane.moreFilters,
-                },
-                rows,
-                openId: list.openId,
-                isRecordOpen: !list.isRoot,
-                grid: connectionsGridOf({ hasList: view === undefined || view.liveCount > 0, isRoot: list.isRoot }),
-            }}
-            on={{
-                open: (row) => router.push(row.href ?? `${hubHref}?${URL_PARAMS.open}=${row.id}`),
-                retry: list.retry,
-                continueSetup: (href) => router.push(href),
-                clearFilters: () => {
-                    setText("")
-                    setFilter("all")
-                },
+                canAdd: view?.canManage === true,
+                isLoading: "isLoading" in list.slot,
             }}
             children={props.children}
         />

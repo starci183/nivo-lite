@@ -6,7 +6,7 @@ import type { OutboxApi } from "@nivo-lite/agent-sdk/mutation"
 import { z } from "zod"
 import { SOURCE_TRANSACTION } from "../../../rules/accounting/posting"
 import { settleDecision } from "../../../rules/accounting/settle"
-import type { SettleRefusal } from "../../../rules/accounting/settle"
+import type { SettleFacts, SettleRefusal } from "../../../rules/accounting/settle"
 import { claimById, orderById, transactionById } from "../accounting-data"
 import { bookProjectJob } from "../jobs/book-project.job"
 import { confirmNoticeJob } from "../jobs/confirm-notice.job"
@@ -26,11 +26,11 @@ const input: z.ZodObject<{
 
 const ports = { transactions: TRANSACTIONS, orders: ORDERS, claims: CLAIMS, outbox: outboxPort }
 
-const refused = (reason: SettleRefusal): ActionResult => ({
+const refused = (reason: SettleRefusal, facts: SettleFacts = {}): ActionResult => ({
     ok: false,
     reason: "refused",
     message: textOf(`settle_${reason}`),
-    data: { reason },
+    data: { reason, ...facts },
 })
 
 /** What each refusal of a write means for the row it wrote: a second link the database refused, or the row being gone. */
@@ -74,10 +74,25 @@ export interface SettleGiven {
     readonly claimId?: string | null | undefined
 }
 
+/** How a settlement ends beyond its writes. */
+export interface SettleOptions {
+    /**
+     * Whether the settlement enqueues the notice to the customer (`payment.confirm-notice`). In the reconcile workflow the customer is
+     * thanked once, by the after-sale workflow it calls, so the `TOOL.paymentMarkPaid` executor settles without it.
+     */
+    readonly notice: boolean
+    /**
+     * Whether the settlement enqueues the ledger line (`accounting.ledger-append`); true when absent. The reconcile workflow writes the
+     * line in its own step (`accounting.post-payment`), so the `TOOL.paymentMarkPaid` executor settles without it.
+     */
+    readonly ledger?: boolean | undefined
+}
+
 /** Ties a payment to the order it paid in the transaction the caller opened; what it writes and refuses is described on `payment.settle`. */
 export const settleOnOrder = async (
     { transactions, orders, claims, outbox }: SettlePorts,
     given: SettleGiven,
+    options: SettleOptions = { notice: true },
 ): Promise<ActionResult> => {
     const claimId = given.claimId ?? null
     const [transaction, order, claim] = await Promise.all([
@@ -86,7 +101,7 @@ export const settleOnOrder = async (
         claimId === null ? Promise.resolve(null) : claimById(claims, claimId),
     ])
     const decision = settleDecision({ transaction, order, claim }, claimId)
-    if (decision.kind === "refuse") return refused(decision.reason)
+    if (decision.kind === "refuse") return refused(decision.reason, decision.facts)
     if (decision.kind === "already") return { ok: true, data: { result: "already-paid", orderId: given.orderId } }
     const matched = await transactions.update(decision.transaction.id, decision.transaction.version, {
         status: "matched",
@@ -105,18 +120,24 @@ export const settleOnOrder = async (
         if (!answered.ok) return failureOf(answered, CLAIM_REFUSALS)
     }
     const transactionId = decision.transaction.id
-    await outbox.enqueue(
-        ledgerAppendJob,
-        { transactionId, orderId: decision.order.id },
-        { dedupeKey: `ledger:${transactionId}` },
-    )
+    if (options.ledger ?? true)
+        await outbox.enqueue(
+            ledgerAppendJob,
+            { transactionId, orderId: decision.order.id },
+            { dedupeKey: `ledger:${transactionId}` },
+        )
     await outbox.enqueue(
         bookProjectJob,
         { sourceEntity: SOURCE_TRANSACTION, sourceId: transactionId },
         { dedupeKey: `book:${SOURCE_TRANSACTION}:${transactionId}` },
     )
-    await outbox.enqueue(confirmNoticeJob, { orderId: decision.order.id }, { dedupeKey: `notice:${decision.order.id}` })
-    return { ok: true, data: { result: "paid", orderId: decision.order.id } }
+    if (options.notice)
+        await outbox.enqueue(
+            confirmNoticeJob,
+            { orderId: decision.order.id },
+            { dedupeKey: `notice:${decision.order.id}` },
+        )
+    return { ok: true, data: { result: "paid", orderId: decision.order.id, ...decision.facts } }
 }
 
 /**
@@ -124,8 +145,9 @@ export const settleOnOrder = async (
  * and the claim settled (when a customer's word started it), and enqueues the three jobs that follow: the ledger line (the sheet
  * behind the door), the book entry and the notice to the customer. It never calls the door itself. Each row is written with the
  * version it was read at, and the database refuses a second link of a transaction or an order, so a double settle answers
- * `conflict` or `refused`, never pays twice. Whatever is not clean is refused as data (`refused`, `data.reason`), never marked paid;
- * the graph turns the refusal into a question for the owner. A transaction that already paid the order changes nothing.
+ * `conflict` or `refused`, never pays twice. Whatever is not clean (an unknown record, money out, an order that no longer waits or has no total, a
+ * transaction that already paid another order) is refused as data (`refused`, `data.reason` with the true numbers beside it), never marked
+ * paid. The amount is never refused: a short or an over credit pays the order and the true numbers ride beside the answer. A transaction that already paid the order changes nothing.
  * It refreshes no read of its own module (the `payment` module has none): the graph runs it, not a screen. The door rolls the
  * transaction back on any `ok: false` after the first write.
  */

@@ -50,6 +50,7 @@ export class ModuleReadinessService {
             agentName: identity?.name ?? "",
             agentHandle: identity?.handle ?? record.moduleKey,
             agentAvatarUrl: identity?.avatarUrl ?? null,
+            agentAvatarPreset: identity?.avatarPreset ?? null,
             activeVersion: version?.version ?? null,
             connectionNeeds,
             lifecycle: lifecycleOf(record, connectionNeeds.length, setupProgress.confirmed),

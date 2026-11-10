@@ -1,5 +1,17 @@
 import { Test } from "@nestjs/testing"
-import { customerLineOf, lineOf, linesOf, replyOf, storedMessageOf, transcriptOf } from "./chat-lines.policy"
+import {
+    HOLDING_LINE_KEY_PREFIX,
+    answersCustomer,
+    customerLineOf,
+    filesFieldOf,
+    lineOf,
+    lineRefOf,
+    linesOf,
+    orderFieldOf,
+    replyOf,
+    storedMessageOf,
+    transcriptOf,
+} from "./chat-lines.policy"
 
 /** The members of the subject under test. */
 interface Subject {
@@ -9,6 +21,10 @@ interface Subject {
     readonly customerLineOf: typeof customerLineOf
     readonly replyOf: typeof replyOf
     readonly transcriptOf: typeof transcriptOf
+    readonly answersCustomer: typeof answersCustomer
+    readonly lineRefOf: typeof lineRefOf
+    readonly filesFieldOf: typeof filesFieldOf
+    readonly orderFieldOf: typeof orderFieldOf
 }
 
 const SUBJECT = Symbol("chat-lines.policy")
@@ -19,7 +35,18 @@ const build = async (): Promise<Subject> => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: { lineOf, linesOf, storedMessageOf, customerLineOf, replyOf, transcriptOf },
+                useValue: {
+                    lineOf,
+                    linesOf,
+                    storedMessageOf,
+                    customerLineOf,
+                    replyOf,
+                    transcriptOf,
+                    answersCustomer,
+                    lineRefOf,
+                    filesFieldOf,
+                    orderFieldOf,
+                },
             },
         ],
     }).compile()
@@ -73,5 +100,47 @@ describe("chat lines", () => {
             { role: "user", body: "a" },
             { role: "agent", body: "c" },
         ])
+    })
+})
+
+describe("answersCustomer", () => {
+    const agent = (channelRef: string | null) =>
+        lineOf(record({ conversationId: "c1", role: "agent", text: "x", sentAt: user.sentAt, channelRef }))
+
+    it("counts every agent line as a reply but a run's honest holding line", async () => {
+        const policy = await build()
+        const reply = agent(policy.lineRefOf("graph-run:r1:reply"))
+        const plain = agent(null)
+        const holding = agent(policy.lineRefOf(`${HOLDING_LINE_KEY_PREFIX}r1`))
+        expect(reply !== null && policy.answersCustomer(reply)).toBe(true)
+        expect(plain !== null && policy.answersCustomer(plain)).toBe(true)
+        expect(holding !== null && policy.answersCustomer(holding)).toBe(false)
+    })
+})
+
+describe("the media fields of a stored line", () => {
+    it("keeps the pictures in an object and an absent or empty list as null", async () => {
+        const policy = await build()
+        expect(policy.filesFieldOf(undefined)).toBeNull()
+        expect(policy.filesFieldOf([])).toBeNull()
+        expect(
+            policy.filesFieldOf([{ id: "file-1", url: "https://x/1", name: "One", contentType: "image/png" }]),
+        ).toEqual({ items: [{ id: "file-1", url: "https://x/1", name: "One", contentType: "image/png" }] })
+    })
+
+    it("keeps the order snapshot without the members it lacks, and no order as null", async () => {
+        const policy = await build()
+        const lines = [
+            { name: "Pot", qty: 2, imageUrl: null },
+            { name: "Basket", qty: 1, unitText: "1 d" },
+        ]
+        expect(policy.orderFieldOf(undefined)).toBeNull()
+        expect(policy.orderFieldOf({ orderNo: "DH-1", lines, amountText: "", address: "", paid: false })).toEqual({
+            orderNo: "DH-1",
+            lines,
+            amountText: "",
+            address: "",
+            paid: false,
+        })
     })
 })

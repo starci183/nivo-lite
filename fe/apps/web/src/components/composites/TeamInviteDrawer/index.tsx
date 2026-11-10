@@ -12,6 +12,7 @@ import {
 } from "@starci/grammar/common"
 import { InviteLink } from "@/components/branches/InviteLink"
 import type { TeamPanesBaseProps } from "@/modules/types"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** Derived from the panes contract. */
 type TeamInviteDrawerView = TeamPanesBaseProps["props"]["invite"]
@@ -117,8 +118,10 @@ const InviteBody = (props: TeamInviteDrawerProps) => {
         return (
             <EmptyNotice
                 message={props.view.individual.title}
+                iconSource={nivoIconSource("account", "leading")}
                 description={props.view.individual.body}
                 actionLabel={props.view.individual.actionLabel}
+                actionEndArrow
                 onAction={props.on.goTeamPlan}
             />
         )

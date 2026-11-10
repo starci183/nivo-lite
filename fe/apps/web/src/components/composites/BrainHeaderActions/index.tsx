@@ -53,6 +53,6 @@ export const brainHeaderTabs = (input: BrainHeaderTabsInput): NonNullable<PageHe
     items: input.tabs.items,
     selectedKey: input.tabs.selectedKey,
     labelVisibility: "always",
-    panelId: (key) => `${input.tabs.panelPrefix}${key}`,
+    panelId: input.tabs.panelId,
     onSelect: input.onSelect,
 })

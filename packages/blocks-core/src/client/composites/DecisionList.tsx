@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { waitingChipOf } from "../../rows/count-chip"
 import { EmptyNotice, Link, Section, SurfaceCard } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import type { DecisionQueueView, DecisionRowView } from "../../views/views.types"
@@ -32,6 +33,13 @@ interface DecisionListProps {
     readonly onCommand: (rowId: string, commandId: string) => void
 }
 
+/** What leads a row: the logo of its connection, else the initials of the name it gives; nothing when it gives neither. */
+const leadingOf = (row: DecisionRowView): Pick<ListRowData, "leading"> => {
+    if (row.logo !== undefined && row.logo !== "")
+        return { leading: { avatar: { name: row.leading ?? row.title, src: row.logo } } }
+    return row.leading === undefined || row.leading === "" ? {} : { leading: { avatar: { name: row.leading } } }
+}
+
 /** The collection owns native row metadata; the row owns the decision detail. */
 const listRowOf = (row: DecisionRowView, props: DecisionListProps): ListRowData => {
     const [first, second] = row.badges
@@ -39,7 +47,7 @@ const listRowOf = (row: DecisionRowView, props: DecisionListProps): ListRowData 
         id: row.id,
         title: row.title,
         description: row.description,
-        ...(row.leading === undefined || row.leading === "" ? {} : { leading: { avatar: { name: row.leading } } }),
+        ...leadingOf(row),
         ...(first === undefined ? {} : { badges: second === undefined ? [first] : [first, second] }),
         detail: (
             <DecisionRow
@@ -64,8 +72,17 @@ export const DecisionList = (props: DecisionListProps): ReactNode => {
         return (
             <SurfaceCard
                 kind="list"
-                label={props.queue.count === null ? props.words.label : `${props.words.label} · ${props.queue.count}`}
-                {...(more === null ? {} : { footers: [{ kind: "more", label: more.label, href: more.href }] })}
+                label={props.words.label}
+                {...waitingChipOf(props.queue.count)}
+                {...(more === null
+                    ? {}
+                    : {
+                          labelEnd: (
+                              <Link variant="head" href={more.href}>
+                                  {more.label}
+                              </Link>
+                          ),
+                      })}
                 isLoading={props.isLoading}
                 items={rows}
                 empty={empty}

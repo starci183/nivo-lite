@@ -15,6 +15,7 @@ const RUN_STATUSES: ReadonlyArray<AgentRunStatus> = [
     "dead",
     "compensating",
     "compensated",
+    "cancelled",
 ]
 
 const STEP_STATUSES: ReadonlyArray<AgentStepStatus> = [
@@ -110,7 +111,10 @@ export const runRecordOf = (row: RecordRow): RunRecord => ({
     resumeAttempts: intOf(row.data, "resumeAttempts"),
     resumeNotBefore: dateOrNull(row.data, "resumeNotBefore"),
     endedAt: dateOrNull(row.data, "endedAt"),
+    startedAt: dateOrNull(row.data, "startedAt"),
     stepSeq: intOf(row.data, "stepSeq"),
+    cancelledAt: dateOrNull(row.data, "cancelledAt"),
+    cancelledBy: textOrNull(row.data, "cancelledBy"),
 })
 
 /** A step record read from the engine's row. */

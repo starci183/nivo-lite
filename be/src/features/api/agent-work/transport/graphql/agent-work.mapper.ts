@@ -6,7 +6,9 @@ import type {
     AgentWorkView,
     WorkspaceAgentWorkView,
 } from "@modules/domain/agent-work"
+import type { WorkLogLine } from "../../application/read-agent-work-log.contracts"
 import type { CloseAgentTaskRequest } from "../../application/close-agent-task.contracts"
+import type { ReadAgentWorkLogRequest } from "../../application/read-agent-work-log.contracts"
 import type { ReadAgentWorkRequest } from "../../application/read-agent-work.contracts"
 import type { RemoveAgentTriggerRequest } from "../../application/remove-agent-trigger.contracts"
 import type { SaveAgentGoalRequest } from "../../application/save-agent-goal.contracts"
@@ -15,6 +17,7 @@ import type { SetAgentWorkRequest } from "../../application/set-agent-work.contr
 import type { SetWorkspaceAgentWorkRequest } from "../../application/set-workspace-agent-work.contracts"
 import type { AgentGoalType } from "./dto/agent-goal.type"
 import type { AgentTriggerType } from "./dto/agent-trigger.type"
+import type { AgentWorkLogLineType } from "./dto/agent-work-log.type"
 import type { AgentWorkAckType } from "./dto/agent-work-ack.type"
 import type { AgentWorkInstanceInput } from "./dto/agent-work-instance.input"
 import type { AgentWorkStateType } from "./dto/agent-work-state.type"
@@ -124,3 +127,18 @@ export const toWorkspaceSwitchType = (settings: AgentWorkSettingsRecord): Worksp
     pendingWakes: 0,
     heldWakes: 0,
 })
+
+/** Maps the instance of the GraphQL input, with the workspace it names, to the request that reads its work log. */
+export const toReadAgentWorkLogRequest = (
+    workspaceId: string,
+    input: AgentWorkInstanceInput,
+): ReadAgentWorkLogRequest => ({ workspaceId, installationId: input.installationId })
+
+/** Maps the lines of the work log to the GraphQL type. */
+export const toAgentWorkLogTypes = (lines: ReadonlyArray<WorkLogLine>): Array<AgentWorkLogLineType> =>
+    lines.map((line) => ({
+        ...line,
+        connection: line.connection === null ? null : { ...line.connection },
+        evidence: line.evidence.map((entry) => ({ ...entry })),
+        steps: line.steps.map((step) => ({ ...step })),
+    }))

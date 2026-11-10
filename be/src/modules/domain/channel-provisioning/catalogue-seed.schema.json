@@ -17,7 +17,21 @@
           "sku": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9-]{0,39}$" },
           "name": { "type": "string", "minLength": 1 },
           "unit": { "type": "string", "minLength": 1 },
-          "sellPriceVnd": { "type": "integer", "minimum": 0 }
+          "sellPriceVnd": { "type": "integer", "minimum": 0 },
+          "imageOf": {
+            "type": "string",
+            "pattern": "^[A-Z0-9][A-Z0-9-]{0,39}$",
+            "description": "The sku of another item of the seed that carries a photo; this item shows the same photo (a demo shop that has one photo for several flowers of one kind)."
+          },
+          "image": {
+            "type": "object",
+            "required": ["contentType", "base64"],
+            "additionalProperties": false,
+            "properties": {
+              "contentType": { "enum": ["image/jpeg", "image/png", "image/webp"] },
+              "base64": { "type": "string", "minLength": 1, "maxLength": 2000000 }
+            }
+          }
         }
       }
     }

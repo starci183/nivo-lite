@@ -17,7 +17,7 @@ export const AgentWorkbenchPageBase = (props: AgentWorkbenchPageBaseProps) => (
             <PaneSection align="center" grow>
                 <Stack gap="row">
                     <EmptyNotice message={props.props.title} description={props.props.body} />
-                    <Button intent="neutral" href={props.props.setupHref}>
+                    <Button endArrow intent="neutral" href={props.props.setupHref}>
                         {props.props.setupLabel}
                     </Button>
                 </Stack>

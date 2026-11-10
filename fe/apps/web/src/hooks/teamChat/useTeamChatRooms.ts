@@ -81,7 +81,7 @@ export const useTeamChatRooms = (target: TeamChatTarget): TeamChatRoomsView => {
         room,
         roomId,
         isMuted: room?.muted === true,
-        other: room === undefined ? null : otherPartyOf(room, viewerId),
+        other: room === undefined ? null : otherPartyOf(room, viewerId, words),
         viewerId,
         refresh,
         toggleMute: async () => {

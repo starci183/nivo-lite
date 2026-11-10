@@ -20,7 +20,10 @@ export interface ConsoleLayoutBaseProps {
     readonly children: ReactNode
 }
 
-/** Draws the authenticated console frame with Grammar owning its compact navigation drawer. */
+/**
+ * Draws the authenticated console frame with Grammar owning its compact navigation drawer. Below the wide breakpoint the opener row names its
+ * button (the open-menu words beside the round button), so the row is never a lone glyph.
+ */
 export const ConsoleLayoutBase = (props: ConsoleLayoutBaseProps) => (
     <WorkspaceShell
         viewport="fixed"
@@ -38,6 +41,7 @@ export const ConsoleLayoutBase = (props: ConsoleLayoutBaseProps) => (
             source: ConsoleDrawerIcon,
             defaultOpen: false,
             content: <ConsoleDrawerContent />,
+            rowTitle: props.props.drawer.openLabel,
         }}
         primaryLabel={props.props.workspaceLabel}
         primary={

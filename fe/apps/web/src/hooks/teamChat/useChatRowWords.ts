@@ -1,7 +1,11 @@
 "use client"
 
 import { useFormatter, useNow, useTranslations } from "next-intl"
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
+import { useInstallations } from "@/hooks/installations"
+import { useWorkspaceId } from "@/hooks/workspaces"
+import { workspaceHref } from "@/modules/routes"
+import { messagesCopyOf } from "./teamChat.copy"
 import type { ChatRowWords } from "./teamChat.shared"
 
 /** How often the clock of the rows is read again (milliseconds). */
@@ -12,6 +16,13 @@ export const useChatRowWords = (): ChatRowWords => {
     const t = useTranslations("teamChat")
     const format = useFormatter()
     const now = useNow({ updateInterval: CLOCK_REFRESH_MS })
+    const { installations } = useInstallations()
+    const workspaceId = useWorkspaceId()
+    const pictureOf = useCallback(
+        (name: string): string | null =>
+            installations?.find((installation) => installation.name === name)?.agentAvatarUrl ?? null,
+        [installations],
+    )
     return useMemo(
         () => ({
             now,
@@ -23,8 +34,12 @@ export const useChatRowWords = (): ChatRowWords => {
             today: t("dayToday"),
             yesterday: t("dayYesterday"),
             noMessage: t("noMessageYet"),
+            you: t("previewYou"),
             attachment: t("attachmentLine"),
+            pictureOf,
+            copy: messagesCopyOf(t),
+            hrefOf: (path: string) => workspaceHref(workspaceId, path),
         }),
-        [format, now, t],
+        [format, now, pictureOf, t, workspaceId],
     )
 }

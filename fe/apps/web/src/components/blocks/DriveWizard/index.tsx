@@ -5,6 +5,7 @@ import type { SlotRead } from "@/hooks/slot"
 import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
+import { useWizardPhases } from "@/hooks/connection-wizard"
 import { useSearchParams } from "next/navigation"
 import { providerKey } from "@/hooks/connection-providers"
 import { driveFailureKeyOf, DRIVE_WIZARD_PATH, useDriveChooserView, useDrivePage } from "@/hooks/drive"
@@ -36,6 +37,7 @@ export const DriveWizard = (props: DriveWizardProps) => {
     const slotLabels = useSlotLabels()
     const t = useTranslations("driveWizard")
     const tw = useTranslations("connectionWizard")
+    const phases = useWizardPhases("drive")
     const tc = useTranslations("connections")
     const params = useSearchParams()
     const drive = useDriveGrant()
@@ -53,6 +55,7 @@ export const DriveWizard = (props: DriveWizardProps) => {
                 slotLabels: slotLabels(""),
                 title: tw("title", { provider: tc(providerKey("google_drive", "title")) }),
                 stepLabel: tw("stepOf", { n: index + 1, total: steps.length }),
+                phases,
                 steps,
                 index,
                 refusal: failed ? t(driveFailureKeyOf(params.get("reason") ?? "")) : null,

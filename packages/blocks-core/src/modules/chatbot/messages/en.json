@@ -70,5 +70,8 @@
   "customers_section": "Customers in progress",
   "unanswered_section": "Unanswered",
   "tab_rules": "Rules",
-  "action_save_settings": "Save rules"
+  "action_save_settings": "Save rules",
+  "col_customer": "Customer",
+  "col_status": "Status",
+  "col_channel": "Channel"
 }

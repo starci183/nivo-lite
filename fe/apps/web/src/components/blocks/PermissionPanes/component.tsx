@@ -1,5 +1,5 @@
 import { Badge, Button, Page, Pane, PaneGrid, Text } from "@starci/grammar/common"
-import type { BadgeTone, ListBoxSection } from "@starci/grammar/common"
+import type { BadgeTone, ListBoxSection, PageHeaderBreadcrumbs } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { PermissionGrantsFields } from "@/components/branches/PermissionGrantsFields"
 import type { PermissionGrantsFieldsProps } from "@/components/branches/PermissionGrantsFields"
@@ -28,6 +28,8 @@ export interface PermissionRowView {
 /** The words of the permission panes, resolved once by the connected block. */
 export interface PermissionPanesCopy {
     readonly grid: string
+    /** The trail of the page: the dashboard, the team, then the permissions. */
+    readonly breadcrumbs: PageHeaderBreadcrumbs
     readonly title: string
     readonly description: string
     readonly tabsLabel: string
@@ -139,7 +141,7 @@ const ListBody = (props: ListBodyProps) => {
 /** The main pane: the form of the open rule with its approval limits, or the blank that asks for a choice. */
 const MainBody = (props: Props) => {
     const form = props.props.form
-    if (form === null) return <PaneBlank message={props.props.copy.pickTitle} description={props.props.copy.pickBody} />
+    if (form === null) return <PaneBlank message={props.props.copy.pickTitle} description={props.props.copy.pickBody} frame="frameless" />
     return (
         <PaneBody>
             <PermissionRuleForm
@@ -171,6 +173,7 @@ const MainBody = (props: Props) => {
 const headerOf = (props: Props) => {
     const { copy } = props.props
     return {
+        breadcrumbs: copy.breadcrumbs,
         title: copy.title,
         description: copy.description,
         actions: (
@@ -221,7 +224,7 @@ export const PermissionPanesBase = (props: PermissionPanesBaseProps) => {
                         back={{ label: copy.back, onPress: props.on.close }}
                     />
                 </Pane>
-                <Pane area="main" scroll label={copy.detailLabel}>
+                <Pane area="main" scroll content="cards" label={copy.detailLabel}>
                     <MainBody {...props} />
                 </Pane>
             </PaneGrid>

@@ -5,6 +5,7 @@ import { WORKSPACES_OPTIONS } from "./workspaces.port"
 import { WorkspacePruneService } from "./workspace-prune.service"
 import { WorkspaceBillingService } from "./workspace-billing.service"
 import { WorkspaceShellService } from "./workspace-shell.service"
+import { WorkspaceLobbyService } from "./workspace-lobby.service"
 import { WorkspacesService } from "./workspaces.service"
 import { WorkspaceAdminReadService } from "./workspace-admin-read.service"
 import { WorkspaceBusinessTypeReadService } from "./workspace-business-type-read.service"
@@ -26,6 +27,7 @@ export class WorkspacesModule extends ConfigurableModuleClass {
                 WorkspaceBillingService,
                 WorkspacePruneService,
                 WorkspaceShellService,
+                WorkspaceLobbyService,
             ],
             exports: [
                 WorkspaceAdminReadService,
@@ -34,6 +36,7 @@ export class WorkspacesModule extends ConfigurableModuleClass {
                 WorkspaceBillingService,
                 WorkspacePruneService,
                 WorkspaceShellService,
+                WorkspaceLobbyService,
             ],
         }
     }

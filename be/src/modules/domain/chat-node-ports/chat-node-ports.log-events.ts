@@ -2,10 +2,14 @@
 export enum ChatNodePortsLogEvent {
     /** A message was stored in a conversation whose customer has no linked recipient on the channel, so nothing was pushed. */
     Undelivered = "chat_node_ports.undelivered",
-    /** The channel refused a reply because the plan of the connection does not allow it; the message stays failed and the step fails. */
-    PlanBlocked = "chat_node_ports.plan_blocked",
-    /** A channel.send step ended with the channel having taken the message: the conversation, the channel and the stored message, never the words. */
+    /** A customer send was pushed: the turn, the stored message and the channel's verdict, never the words. */
     Sent = "chat_node_ports.sent",
-    /** A channel.send step ended with an error: the conversation, the channel and the code, never the words. */
+    /** A customer send was refused by a rule or by the channel: the turn and the reason, never the words. */
+    Refused = "chat_node_ports.refused",
+    /** A customer send hit a channel that is not taking messages for now, so the step is tried again: the turn and the reason. */
     SendFailed = "chat_node_ports.send_failed",
+    /** A customer send was stored as a draft for the owner (the channel's access mode is "ask"): the turn and the draft. */
+    Drafted = "chat_node_ports.drafted",
+    /** The catalogue could not be read for the photos of an order card, so the card was stored without them: the turn, never the words. */
+    OrderPhotosUnavailable = "chat_node_ports.order_photos_unavailable",
 }

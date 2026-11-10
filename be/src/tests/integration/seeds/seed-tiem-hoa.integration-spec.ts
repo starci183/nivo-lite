@@ -17,7 +17,7 @@ const [, , InventoryItemEntity] = inventoryEntities
 
 /** The stack seed data of the demo flower shop, read from disk as the seed steps of the dev stack read them. */
 const DATA = path.resolve(__dirname, "../../../../../.starcistacks/dev/seeds/data")
-/** The most rows one read takes: the seed holds six documents, thirteen items and one settings record. */
+/** The most rows one read takes: the seed holds seven documents, nineteen items and one settings record. */
 const ROWS = 50
 
 /** The envelope the stack seed step writes to the command's stdin: the file's own text is the document, never parsed here. */
@@ -37,6 +37,9 @@ const shop = async () => {
     return ids
 }
 
+/** A file store that takes every photo, as the media bucket does; the seed only needs it to accept the write. */
+const photoStore = { upload: () => Promise.resolve({ error: null }), download: () => Promise.reject(new Error("unused")) }
+
 /** The three seed steps, built over the real services of the world (the cli app composes the same ones). */
 const steps = () => {
     const printed: Array<string> = []
@@ -52,7 +55,7 @@ const steps = () => {
     return {
         printed,
         brain: new BrainSeedService(options, sources, workspaces),
-        catalogue: new CatalogueSeedService(options, new InventorySeedService(world.db.primary), workspaces),
+        catalogue: new CatalogueSeedService(options, new InventorySeedService(world.db.primary, photoStore), workspaces),
         records: new RecordsSeedService(
             options,
             world.resolve(EntityEngineService),
@@ -74,10 +77,10 @@ describe("the seed of the demo flower shop", () => {
         await run.brain.run(envelopeOf("brain-tiem-hoa.json"), name)
         const shown = await world.resolve(KnowledgeSourcesReadService).ofOrigin(workspaceId, "seed:tiem-hoa", ROWS)
 
-        expect(shown.filter((source) => source.visibility === "public")).toHaveLength(4)
+        expect(shown.filter((source) => source.visibility === "public")).toHaveLength(5)
         expect(shown.filter((source) => source.visibility === "internal")).toHaveLength(2)
         expect(shown.every((source) => source.status === "queued")).toBe(true)
-        expect(run.printed).toHaveLength(6)
+        expect(run.printed).toHaveLength(7)
         expect(run.printed.every((line) => line.endsWith(" inserted"))).toBe(true)
 
         const again = steps()
@@ -86,10 +89,10 @@ describe("the seed of the demo flower shop", () => {
         expect(again.printed.every((line) => line.endsWith(" unchanged"))).toBe(true)
         expect(
             await world.resolve(KnowledgeSourcesReadService).ofOrigin(workspaceId, "seed:tiem-hoa", ROWS),
-        ).toHaveLength(6)
+        ).toHaveLength(7)
     })
 
-    it("seeds the catalogue where Sales reads products, at the prices of the price list, with the 5.000 and 2.000 items", async () => {
+    it("seeds the catalogue where Sales reads products, at the prices of the price list, with the 5.000 and 2.000 flowers", async () => {
         const { workspaceId, name } = await shop()
         const run = steps()
 
@@ -109,9 +112,10 @@ describe("the seed of the demo flower shop", () => {
             return found === undefined ? undefined : Number(found.sellPriceVnd)
         }
 
-        expect(items).toHaveLength(14)
+        expect(items).toHaveLength(19)
+        expect(items.filter((item) => item.imagePath?.startsWith("catalogue-public/") === true)).toHaveLength(6)
         expect(items.every((item) => item.active)).toBe(true)
-        expect(priceOf("CHAU-HOA")).toBe(5_000)
+        expect(priceOf("BO-HONG-MINI")).toBe(5_000)
         expect(priceOf("GIO-HOA-NHO")).toBe(2_000)
         expect(prices.every((price) => price >= 1_000 && price <= 10_000)).toBe(true)
         expect(new Set(prices).size).toBe(prices.length)

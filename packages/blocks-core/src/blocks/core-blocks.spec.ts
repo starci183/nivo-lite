@@ -1,3 +1,4 @@
+import { agentMessageBlock } from "./agent-message.block"
 import { asideDetailBlock } from "./aside-detail.block"
 import { accountingBlocks } from "./accounting/accounting-blocks"
 import { chatbotBlocks } from "./chatbot/chatbot-blocks"
@@ -21,6 +22,7 @@ import { figuresBlock } from "./figures.block"
 import { masterDetailBlock } from "./master-detail.block"
 import { recordListBlock } from "./record-list.block"
 import { sectionBlock } from "./section.block"
+import { linkBlock } from "./link.block"
 import { STACK_GAPS, stackBlock } from "./stack.block"
 import { waitingBlock } from "./waiting.block"
 
@@ -47,7 +49,7 @@ describe("coreBlocks", () => {
     it("lists every block once: the core ones under the core namespace, those of each module under its own", () => {
         const ids = coreBlocks.map((block) => block.id)
         expect(new Set(ids).size).toBe(ids.length)
-        expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(20)
+        expect(ids.filter((id) => id.startsWith("core."))).toHaveLength(22)
         expect(ids.filter((id) => id.startsWith("chatbot."))).toHaveLength(chatbotBlocks.length)
         expect(ids.filter((id) => id.startsWith("accounting."))).toHaveLength(accountingBlocks.length)
     })
@@ -59,6 +61,7 @@ describe("coreBlocks", () => {
     it("holds the blocks a client draws, in the order a palette shows them", () => {
         expect(coreBlocks).toEqual([
             stackBlock,
+            linkBlock,
             cardGridBlock,
             sectionBlock,
             figuresBlock,
@@ -74,6 +77,7 @@ describe("coreBlocks", () => {
             ...chatbotBlocks,
             waitingBlock,
             decisionQueueBlock,
+            agentMessageBlock,
             dashboardCardsBlock,
             masterDetailBlock,
             explanationBlock,

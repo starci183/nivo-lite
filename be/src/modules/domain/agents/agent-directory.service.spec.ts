@@ -227,10 +227,10 @@ describe("AgentDirectoryService > handle, module count and identities", () => {
             const em = mockEntityManager({ find: [AgentEntity, [agentEntityOf()]] })
 
             await expect((await build(em)).identitiesOf("w1", ["a1", "a1"])).resolves.toEqual([
-                { id: "a1", name: "Bot", handle: "bot", avatarUrl: null },
+                { id: "a1", name: "Bot", handle: "bot", avatarUrl: null, avatarPreset: null },
             ])
             expect(em.find).toHaveBeenCalledWith(AgentEntity, {
-                select: { id: true, name: true, handle: true, avatarUrl: true },
+                select: { id: true, name: true, handle: true, avatarUrl: true, avatarPreset: true },
                 where: { workspaceId: "w1", id: In(["a1"]) },
                 take: 1,
             })

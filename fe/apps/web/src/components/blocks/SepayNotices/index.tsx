@@ -1,18 +1,17 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useConnectionRefusal, wizardQuery } from "@/hooks/connections"
+import { useConnectionRefusal } from "@/hooks/connections"
 import { useSepayConnection, useSepayLiveSwitch } from "@/hooks/sepayConnection"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { SepayNoticesBase } from "./component"
 
-/** What the page hands the notices: the connection of the url and the Connections page the reconnect leads to. */
+/** What the page hands the notices: the connection of the url. */
 type SepayNoticesProps = {
     readonly connectionId: string
-    readonly hubHref: string
 }
 
-/** The connected notices of a SePay page: a failed read, the last failed delivery, and the way back from a disconnected connection. */
+/** The connected notices of a SePay page: a failed read, the last failed delivery, the offer of real money, and a disconnected connection. */
 export const SepayNotices = (props: SepayNoticesProps) => {
     const t = useTranslations("sepayConnection")
     const slotLabels = useSlotLabels()
@@ -45,14 +44,7 @@ export const SepayNotices = (props: SepayNoticesProps) => {
                     isPending: liveSwitch.isPending,
                 },
                 ...(connection?.status === "disconnected"
-                    ? {
-                          reconnect: {
-                              title: t("disconnectedTitle"),
-                              description: t("disconnectedBody"),
-                              label: t("reconnect"),
-                              href: `${props.hubHref}?${wizardQuery("sepay")}`,
-                          },
-                      }
+                    ? { disconnected: { title: t("disconnectedTitle"), description: t("disconnectedBody") } }
                     : {}),
             }}
             on={{ retry, askLive: liveSwitch.ask, confirmLive: liveSwitch.confirm, dismiss: liveSwitch.dismiss }}

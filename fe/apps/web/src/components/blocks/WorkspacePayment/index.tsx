@@ -3,6 +3,7 @@
 import { useFormatter, useLocale, useTranslations } from "next-intl"
 import { useWorkspacePayment } from "@/hooks/billing"
 import type { WorkspacePaymentSelectors } from "@/hooks/billing"
+import type { CelebrationFact } from "@/components/composites/CelebrationPanel"
 import { AUTH_ROUTES } from "@/modules/routes"
 import { WorkspacePaymentBase } from "./component"
 import type { WorkspacePaymentBaseProps } from "./component"
@@ -25,6 +26,23 @@ const phaseOf = (state: ReturnType<typeof useWorkspacePayment>): WorkspacePaymen
     if (state.error && !state.payment) return "error"
     if (state.expired) return "expired"
     return "pending"
+}
+
+/** The facts of a paid order: the plan, the amount, the workspace and the transfer code, each only when known. */
+const paidFactsOf = (
+    state: ReturnType<typeof useWorkspacePayment>,
+    locale: string,
+    t: ReturnType<typeof useTranslations<"onboarding">>,
+    money: (amount: number) => string,
+): ReadonlyArray<CelebrationFact> => {
+    const plan = locale === "vi" ? state.plan?.nameVi : state.plan?.nameEn
+    const facts: Array<CelebrationFact | undefined> = [
+        plan ? { id: "plan", term: t("paidFactPlan"), description: plan } : undefined,
+        state.payment ? { id: "amount", term: t("amount"), description: money(state.payment.amountVnd) } : undefined,
+        state.workspace ? { id: "workspace", term: t("paidFactWorkspace"), description: state.workspace.name } : undefined,
+        state.payment ? { id: "code", term: t("content"), description: state.payment.orderCode } : undefined,
+    ]
+    return facts.filter((fact): fact is CelebrationFact => fact !== undefined)
 }
 
 /** Connects the payment step to workspace, plan, request-progress and order queries. */
@@ -50,6 +68,11 @@ export const WorkspacePayment = (props: WorkspacePaymentProps) => {
                 creatingLabel: t("paymentCreating"),
                 paidTitle: t("paidTitle"),
                 paidText: t("paidText"),
+                paidBadge: t("paidBadge"),
+                paidFactsLabel: t("paidFactsLabel"),
+                paidFacts: paidFactsOf(state, locale, t, (amount) =>
+                    formatter.number(amount, { style: "currency", currency: "VND", maximumFractionDigits: 0 }),
+                ),
                 expiredTitle: t("expiredTitle"),
                 expiredText: t("expiredText"),
                 regenerateLabel: t("regenerate"),

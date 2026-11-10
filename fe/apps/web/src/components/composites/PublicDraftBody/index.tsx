@@ -1,4 +1,4 @@
-import { Alert, Form, Input, Stack, Text, Textarea } from "@starci/grammar/common"
+import { Alert, Badge, Form, Input, Stack, Text, Textarea } from "@starci/grammar/common"
 import type { PublicBrainCopy, PublicDraftView, PublicFormView } from "@/modules/types"
 
 /** What the body of the open public document draws and calls. */
@@ -22,6 +22,9 @@ export const PublicDraftBody = (props: PublicDraftBodyProps) => {
     return (
         <Form label={copy.titleLabel} onSubmit={props.onSubmit} isPending={form.isBusy}>
             <Stack gap="section">
+                <Badge tone={draft.badge.tone} isLoading={props.isLoading}>
+                    {draft.badge.label}
+                </Badge>
                 {draft.note === null ? null : (
                     <Alert
                         tone={draft.note.tone}

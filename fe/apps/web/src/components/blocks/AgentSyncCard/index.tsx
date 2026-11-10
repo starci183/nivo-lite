@@ -24,44 +24,35 @@ export const AgentSyncCard = (props: AgentSyncCardProps) => {
     const locale = useLocale()
     const { canEdit } = useAgentRights()
     const { status, isKnown, resync, isQueuing } = useAgentSync(props.installationId)
+    const tg = useTranslations("agentGeneral")
     const never = t("syncNever")
-    const when = status.checkedAt === null ? "" : "{time}"
     const line = (() => {
-        if (!isKnown) return { text: "…", tone: "neutral" as const }
-        if (status.state === "syncing") return { text: t("syncing"), tone: "neutral" as const }
-        if (status.state === "none") return { text: t("syncNone"), tone: "warning" as const }
-        if (status.state === "error") {
-            return { text: t("syncError", { reason: t(reasonKeyOf(status.error)) }), tone: "danger" as const }
-        }
+        if (!isKnown) return { text: "...", at: null }
+        if (status.state === "syncing") return { text: t("syncing"), at: null }
+        if (status.state === "none") return { text: t("syncNone"), at: null }
+        if (status.state === "error") return { text: t("syncError", { reason: t(reasonKeyOf(status.error)) }), at: null }
         if (status.syncedVersion !== status.activeVersion) {
             return {
                 text: t("syncDrift", { active: status.activeVersion ?? never, synced: status.syncedVersion ?? never }),
-                tone: "warning" as const,
+                at: status.checkedAt,
             }
         }
-        // Green only when the copy runs a version the owner applied; a synced copy with no version yet is not a success to celebrate.
-        if (status.syncedVersion === null) {
-            return { checkedAt: status.checkedAt, text: t("syncOkNone", { ago: when }), tone: "neutral" as const }
-        }
-        return {
-            checkedAt: status.checkedAt,
-            text: t("syncOk", { version: status.syncedVersion, ago: when }),
-            tone: "success" as const,
-        }
+        if (status.syncedVersion === null) return { text: tg("syncNoVersion"), at: status.checkedAt }
+        return { text: tg("syncVersion", { version: status.syncedVersion }), at: status.checkedAt }
     })()
     if (!canEdit) return null
     return (
         <AgentSyncCardBase
             props={{
-                title: t("syncTitle"),
-                lineText: line.text,
-                lineCheckedAt: "checkedAt" in line ? line.checkedAt : null,
+                title: tg("syncRowTitle"),
+                lead: line.text,
+                checkedAt: line.at,
+                checkedTemplate: String(tg.raw("syncAgo")),
+                autoNote: tg("syncAuto"),
                 locale,
-                lineTone: line.tone,
                 resyncLabel: t("resync"),
                 isResyncDisabled: isQueuing || status.state === "syncing",
                 isQueuing,
-                help: t("syncHelp"),
             }}
             on={{ resync: () => void resync() }}
         />

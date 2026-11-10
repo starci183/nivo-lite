@@ -13,6 +13,7 @@ export const agentEntityOf: (overrides?: Partial<AgentEntity>) => AgentEntity = 
     module: "chatbot",
     name: "Bot",
     serial: null,
+    pausedByDeletion: false,
     handle: "bot",
     role: "Front desk",
     instructions: "Be kind",
@@ -27,6 +28,7 @@ export const agentEntityOf: (overrides?: Partial<AgentEntity>) => AgentEntity = 
     assignableRooms: [],
     canTagAgentIds: [],
     avatarUrl: null,
+    avatarPreset: null,
     updatedAt: new Date("2026-10-01T00:00:00.000Z"),
 })
 

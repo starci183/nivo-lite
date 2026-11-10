@@ -47,6 +47,12 @@ export const mayAssign = (context: AssignContext): boolean => {
     )
 }
 
+/**
+ * Whether a member manages an agent: an active member who qualifies by role or by a seat in one of the rooms the agent is open to.
+ * The agent's own status does not matter, so a paused agent can still be set up before it is resumed.
+ */
+export const mayManage = (context: AssignContext): boolean => mayAssign({ ...context, agentStatus: "active" })
+
 /** Whether an agent may pass work to another: two different active agents of one workspace, the second on the first's list. */
 export const mayTag = (context: TagContext): boolean =>
     !context.sameAgent &&

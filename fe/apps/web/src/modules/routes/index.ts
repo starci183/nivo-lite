@@ -2,7 +2,7 @@
 export const APP_ROUTES = {
     home: "/",
     login: "/login",
-    workspaceHome: "/agents",
+    workspaceHome: "/overview",
     account: "/account",
     profile: "/profile",
     workspaceNew: "/workspaces/new",
@@ -19,11 +19,11 @@ export {
     termsHref,
     workspacesPath,
 } from "./auth-routes"
-export { ADMIN_ROUTES, adminListPath, adminWorkspacePath } from "./admin-routes"
 export { pathInWorkspace, workspaceHref } from "./workspace-href"
 export { openWorkspaceId, workspaceIdOfAddress } from "./workspace-address"
 export {
     creditsPath,
+    billingPlanPath,
     workspaceChannelsPath,
     workspaceHandoverPath,
     workspacePaymentPath,
@@ -49,14 +49,16 @@ export {
     BRAIN_PARTS,
     BRAIN_PART_TABS,
     BRAIN_STRIP_TABS,
-    BRAIN_TABS,
     DEFAULT_BRAIN_TAB,
+    FIRST_PAGE,
+    KNOWLEDGE_CHIPS,
     KNOWLEDGE_ROUTES,
     LEGACY_BRAIN_TABS,
     brainDossierHref,
     brainStripTabOf,
     brainTabHref,
+    brainTabOfAddress,
     brainUploadHref,
     knowledgeSourceHref,
 } from "./knowledge-routes"
-export type { BrainPart, BrainStripTab, BrainTab } from "./knowledge-routes"
+export type { BrainPart, BrainStripTab, BrainTab, KnowledgeChip } from "./knowledge-routes"

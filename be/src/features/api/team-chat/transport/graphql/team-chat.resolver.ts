@@ -15,6 +15,8 @@ import { MarkChatRoomReadCommand } from "../../application/mark-chat-room-read.c
 import { PinChatMessageCommand } from "../../application/pin-chat-message.command"
 import { RemoveChatRoomMemberCommand } from "../../application/remove-chat-room-member.command"
 import { RequestChatFileUploadCommand } from "../../application/request-chat-file-upload.command"
+import { SetChatRoomPostRightCommand } from "../../application/set-chat-room-post-right.command"
+import { SetChatRoomPurposeCommand } from "../../application/set-chat-room-purpose.command"
 import { SetChatRoomMutedCommand } from "../../application/set-chat-room-muted.command"
 import { SendChatMessageCommand } from "../../application/send-chat-message.command"
 import { UnpinChatMessageCommand } from "../../application/unpin-chat-message.command"
@@ -37,6 +39,8 @@ import { MarkChatRoomReadInput } from "./dto/mark-chat-room-read.input"
 import { RequestChatFileUploadInput } from "./dto/request-chat-file-upload.input"
 import { SendChatMessageInput } from "./dto/send-chat-message.input"
 import { SetChatRoomMutedInput } from "./dto/set-chat-room-muted.input"
+import { SetChatRoomPostRightInput } from "./dto/set-chat-room-post-right.input"
+import { SetChatRoomPurposeInput } from "./dto/set-chat-room-purpose.input"
 import {
     createRoomRequestOf,
     decideRequestOf,
@@ -44,6 +48,7 @@ import {
     messagePageWireOf,
     messagePayloadOf,
     messagesRequestOf,
+    purposeOf,
     readPayloadOf,
     roomMemberRequestOf,
     roomOrNullWireOf,
@@ -229,6 +234,44 @@ export class TeamChatResolver {
             await this.commandBus.execute(
                 new SetChatRoomMutedCommand({
                     request: { workspaceId, roomId: input.roomId, muted: input.muted },
+                    principal,
+                }),
+            ),
+        )
+    }
+
+    /** Gives a group its purpose; only who manages the group may, and a purpose another room holds is refused. */
+    @Mutation(() => ChatRoomPayloadType, { name: "setTeamRoomPurpose" })
+    async setTeamRoomPurpose(
+        @CurrentPrincipal() principal: Principal,
+        @WorkspaceId() workspaceId: string,
+        @Args("input") input: SetChatRoomPurposeInput,
+    ): Promise<ChatRoomPayloadType> {
+        return roomPayloadOf(
+            await this.commandBus.execute(
+                new SetChatRoomPurposeCommand({
+                    request: {
+                        workspaceId,
+                        roomId: input.roomId,
+                        purpose: purposeOf(input.purpose, input.purposeModule),
+                    },
+                    principal,
+                }),
+            ),
+        )
+    }
+
+    /** Grants or revokes an agent's right to post in a group; only who manages the group may, and the agent must sit in it. */
+    @Mutation(() => ChatRoomPayloadType, { name: "setTeamRoomPostRight" })
+    async setTeamRoomPostRight(
+        @CurrentPrincipal() principal: Principal,
+        @WorkspaceId() workspaceId: string,
+        @Args("input") input: SetChatRoomPostRightInput,
+    ): Promise<ChatRoomPayloadType> {
+        return roomPayloadOf(
+            await this.commandBus.execute(
+                new SetChatRoomPostRightCommand({
+                    request: { workspaceId, roomId: input.roomId, agentId: input.agentId, mayPost: input.mayPost },
                     principal,
                 }),
             ),

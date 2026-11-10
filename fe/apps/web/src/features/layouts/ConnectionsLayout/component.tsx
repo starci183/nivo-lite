@@ -1,13 +1,13 @@
 import type { ReactNode } from "react"
 import { ConnectionsFrame } from "@/components/blocks/ConnectionsFrame"
 
-/** What the layout supplies: the routed page. */
+/** What the layout supplies: the routed tab. */
 export interface ConnectionsLayoutBaseProps {
-    /** The page drawn beside the list of connections. */
+    /** The tab's body drawn under the band. */
     readonly children?: ReactNode
 }
 
-/** Draws the frame of the Connections pages: the one connected block that holds the page band, the list and the routed page. */
+/** Draws the Connections page: the connected band (title, summary, "Add connection", the tabs) around the routed tab. */
 export const ConnectionsLayoutBase = (props: ConnectionsLayoutBaseProps) => (
     <ConnectionsFrame>{props.children}</ConnectionsFrame>
 )

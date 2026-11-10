@@ -5,6 +5,7 @@ import {
     DescriptionList,
     EmptyNotice,
     Grid,
+    Section,
     Stack,
     SurfaceCard,
     Text,
@@ -108,7 +109,7 @@ const Report = (props: ReportProps) => {
                 }))}
             />
             <Grid kind="cards" columns={2}>
-                <SurfaceCard label={words.chartTitle} note={words.chartNote}>
+                <Section title={words.chartTitle} caption={words.chartNote} headingLevel={2} isLoading={isLoading}>
                     <BarChart
                         label={words.chartTitle}
                         isLoading={isLoading}
@@ -120,7 +121,7 @@ const Report = (props: ReportProps) => {
                             valueLabel: String(day.total),
                         }))}
                     />
-                </SurfaceCard>
+                </Section>
                 <Stack gap="section">
                     {view.channels.length === 0 ? null : (
                         <SurfaceCard label={words.channelsTitle}>

@@ -13,6 +13,7 @@ import { AgentEndedWakesService } from "./agent-ended-wakes.service"
 import { AgentWakeInterruptionService } from "./agent-wake-interruption.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
+import { HEARTBEAT_MS, LEASE_SECONDS } from "./agent-work.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type { AgentTurnUsage } from "./agent-work.contracts"
 import type { AgentTurnExecutor, AgentTurnPlan, AgentWorkFlow, AgentWorkHandler } from "./agent-work.port"
@@ -104,6 +105,43 @@ describe("AgentDrainService.drain, a wake its agent's graph runs", () => {
             turn(),
             finished({ status: "done", reason: null, outcome: { ran: "graph" } }),
         )
+    })
+
+    it("gives up a wake of the flow through the flow, never through a handler: no hold-over, no reply item, the wake fails", async () => {
+        const { service, turns, handler, handlers } = await build()
+        const last = turn({ attempts: 3, maxAttempts: 3 })
+        turns.begin.mockResolvedValue({ result: "begun", turn: last, ended: [] })
+        const flow = mock<AgentWorkFlow>({
+            takes: jest.fn().mockResolvedValue(true),
+            run: jest.fn().mockRejectedValue(new Error("routing failed")),
+            stuck: jest.fn().mockResolvedValue(undefined),
+        })
+        handlers.flowOf.mockReturnValue(flow)
+
+        await service.drain(PAYLOAD)
+
+        expect(flow.stuck).toHaveBeenCalledWith(last, "AGENT_WORK_UNEXPECTED")
+        expect(handler.holdOver).not.toHaveBeenCalled()
+        expect(handler.prepare).not.toHaveBeenCalled()
+        expect(turns.finish).toHaveBeenCalledWith(
+            last,
+            expect.objectContaining({ status: "failed", errorCode: "AGENT_WORK_UNEXPECTED" }),
+        )
+    })
+
+    it("tells nobody while a failed wake of the flow still has tries left", async () => {
+        const { service, handler, handlers } = await build()
+        const flow = mock<AgentWorkFlow>({
+            takes: jest.fn().mockResolvedValue(true),
+            run: jest.fn().mockRejectedValue(new Error("routing failed")),
+            stuck: jest.fn().mockResolvedValue(undefined),
+        })
+        handlers.flowOf.mockReturnValue(flow)
+
+        await service.drain(PAYLOAD)
+
+        expect(flow.stuck).not.toHaveBeenCalled()
+        expect(handler.holdOver).not.toHaveBeenCalled()
     })
 
     it("leaves a wake the flow does not take to the handler of its source", async () => {
@@ -437,6 +475,30 @@ describe("AgentDrainService.drain, the heartbeat and its budget", () => {
         await done
         await jest.advanceTimersByTimeAsync(120_000)
         expect(fixture.turns.touch).toHaveBeenCalledTimes(2)
+    })
+
+    it("keeps the lease of a workflow wake whose model call and its one retry take ninety seconds: the lease never lapses under it", async () => {
+        const fixture = await build()
+        const gate = new AbortController()
+        const flow = mock<AgentWorkFlow>({
+            takes: jest.fn().mockResolvedValue(true),
+            run: jest.fn(async () => {
+                await whenAborted(gate.signal)
+                return { status: "done" as const, reason: null, outcome: { ran: "graph" } }
+            }),
+        })
+        fixture.handlers.flowOf.mockReturnValue(flow)
+
+        const done = fixture.service.drain(PAYLOAD)
+        // A model call that times out (45 s) and its one retry (45 s): the lease is 90 s and each beat pushes it 90 s further.
+        await jest.advanceTimersByTimeAsync(LEASE_SECONDS * 1000)
+        expect(fixture.turns.touch).toHaveBeenCalledTimes(Math.floor((LEASE_SECONDS * 1000) / HEARTBEAT_MS))
+        expect(HEARTBEAT_MS * 2).toBeLessThan(LEASE_SECONDS * 1000)
+        expect((flow.run.mock.calls[0]?.[1] as AbortSignal).aborted).toBe(false)
+
+        gate.abort()
+        await done
+        expect(fixture.turns.finish).toHaveBeenCalledWith(turn(), expect.objectContaining({ status: "done" }))
     })
 
     it("aborts the signal the model call watches when the lease is lost", async () => {

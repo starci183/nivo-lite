@@ -1,11 +1,7 @@
 import type { useTranslations } from "next-intl"
-import { SCOPE_KEY, TYPE_KEY } from "./labels"
-import type { FactWords } from "./fact-entries"
 import type { LessonFilter, LessonWords } from "./lesson-entries"
-import type { BrainPageHeaderView, FactScope, FactSource } from "@/modules/types"
+import type { BrainPageHeaderView } from "@/modules/types"
 
-type Brain = ReturnType<typeof useTranslations<"brain">>
-type Facts = ReturnType<typeof useTranslations<"brainFacts">>
 type Lessons = ReturnType<typeof useTranslations<"brainLessons">>
 
 /** A day as `dd/MM` (or `dd/MM/yyyy`), the way the shop writes it, in the viewer's time zone. */
@@ -14,57 +10,6 @@ const dayOf = (iso: string, withYear: boolean): string => {
     const day = `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`
     return withYear ? `${day}/${date.getFullYear()}` : day
 }
-
-/** The catalog key (`brainFacts` namespace) of the line that says who sees a fact in each scope. */
-const SCOPE_LINE_KEY = {
-    public: "scopeLinePublic",
-    internal: "scopeLineInternal",
-    restricted: "scopeLineRestricted",
-} as const satisfies Readonly<Record<FactScope, string>>
-
-/** The catalog key of the words that say where a fact came from. */
-const SOURCE_KEY = {
-    owner: "sourceOwner",
-    manager: "sourceManager",
-    document: "sourceDocument",
-    system: "sourceSystem",
-    staff: "sourceStaff",
-    customer: "sourceCustomer",
-    ai: "sourceAi",
-} as const satisfies Readonly<Record<FactSource, string>>
-
-/** The words and day formats the facts list is made of, resolved once for the viewer's language. */
-export const factWordsOf = (t: Brain, f: Facts): FactWords => ({
-    typeOf: (type) => t(TYPE_KEY[type]),
-    scopeOf: (scope) => t(SCOPE_KEY[scope]),
-    scopeLineOf: (scope, agents) =>
-        scope === "restricted" && agents === "" ? f("scopeHintRestricted") : f(SCOPE_LINE_KEY[scope], { agents }),
-    sourceOf: (source) => f(SOURCE_KEY[source]),
-    onlyAgents: (agents) => f("onlyAgents", { agents }),
-    proposalLine: f("proposalLine"),
-    validityNone: f("validityNone"),
-    headLine: f("headLine"),
-    valueLabel: f("valueLabel"),
-    termType: f("termType"),
-    termScope: f("termScope"),
-    termValidity: f("termValidity"),
-    termSource: f("termSource"),
-    termAddedBy: f("termAddedBy"),
-    addedBy: (who, date) => f("addedBy", { who, date }),
-    sinceOf: (date) => f("since", { date }),
-    untilOf: (date) => f("until", { date }),
-    betweenOf: (from, to) => f("between", { from, to }),
-    scheduledOf: (date) => f("scheduled", { date }),
-    retireLabel: t("retire"),
-    editLabel: t("editValue"),
-    historyTitle: f("historyTitle"),
-    historyNow: f("historyNow"),
-    historyReplaced: f("historyReplaced"),
-    historyExpired: f("historyExpired"),
-    historyScheduled: f("historyScheduled"),
-    day: (iso) => dayOf(iso, true),
-    dayShort: (iso) => dayOf(iso, false),
-})
 
 /** The catalog key (`brainLessons` namespace) of the word for each status a lesson is filed under. */
 const STATUS_KEY = {

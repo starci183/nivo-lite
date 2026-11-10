@@ -242,7 +242,7 @@ describe("SetupTurnService > a failed model call", () => {
         expect(stored.current.draft.summary).toBe("A bakery in Hanoi.")
     })
 
-    it.each(["quota", "not_configured", "engine_offline"] as const)(
+    it.each(["quota", "not_configured"] as const)(
         "posts the own message of a %s refusal at once and keeps the draft",
         async (reason) => {
             const { service, generations, sessions, messages } = await build()

@@ -5,7 +5,13 @@ import { useWorkspaceMember } from "@/hooks/knowledge"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { loadingSlot, mapSlot, useSlotLabels } from "@/hooks/slot"
 import { useQueryKnowledgeSourcesSwr } from "@/hooks/swr"
-import { brainGridOf, dossierDocumentsOf, dossierSectionsOf, findOpened, reviewedStatusOf } from "@/modules/brain"
+import {
+    brainGridOf,
+    dossierDocumentsOf,
+    dossierSectionsOf,
+    findOpened,
+    reviewedStatusOf,
+} from "@/modules/brain"
 import type { CategoryView, DossierDeskView, DossierSource, DossierView, Standing } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
 import { brainDossierHref, brainTabHref, workspaceHref } from "@/modules/routes"
@@ -41,6 +47,10 @@ interface DossierDesk {
     /** Who owns the open dossier and the task that changes it. */
     readonly owner: DossierOwner
 }
+
+/** The panes of the desk : a side pane when one is shown, the open dossier on a phone. */
+const deskGridOf = (hasAside: boolean, isOpen: boolean, isWhole: boolean) =>
+    brainGridOf({ hasAside, phone: isOpen ? "main" : "list", isWhole })
 
 /** What the desk reads from the address. */
 interface DossierDeskInput {
@@ -80,7 +90,8 @@ export const useBrainDossierDesk = (input: DossierDeskInput): DossierDesk => {
         rowOf: (_category, dossier) =>
             w.rowOf(dossier, standingOf(dossier), summary.reviewOf(dossier.id)?.openCount ?? 0),
     })
-    const waiting = member.isLoading || "isLoading" in slot || (!summary.isReady && !summary.isFailed)
+    const waiting =
+        member.isLoading || sources.isLoading || "isLoading" in slot || (!summary.isReady && !summary.isFailed)
     const listSlot = waiting ? loadingSlot<typeof sections>() : mapSlot(slot, () => sections)
     const isMap = input.mode === "map"
     const selectedId = waiting ? null : (input.dossier ?? (isMap ? null : (sections[0]?.rows[0]?.id ?? null)))
@@ -100,11 +111,7 @@ export const useBrainDossierDesk = (input: DossierDeskInput): DossierDesk => {
             selectedId,
             isFiltered: query.trim() !== "" && sections.length === 0,
         },
-        grid: brainGridOf({
-            hasAside: waiting || isAsideShown,
-            phone: input.dossier === undefined ? "list" : "main",
-            isWhole,
-        }),
+        grid: deskGridOf(waiting || isAsideShown, input.dossier !== undefined, isWhole),
         isWhole,
         head: aw.headViewOf(
             waiting,
@@ -113,6 +120,7 @@ export const useBrainDossierDesk = (input: DossierDeskInput): DossierDesk => {
         ),
         aside: aw.asideViewOf({ waiting, opened, isAsideShown, canWrite: member.canWrite, documents, details }),
         isWaiting: waiting,
+        hasDocuments: (sources.data?.length ?? 0) > 0,
     }
     return {
         view,

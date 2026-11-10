@@ -90,17 +90,11 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
     const provider = entry.provider
     return (
         <>
-            <Text size="sm">
-                <Text as="span" size="sm" isStrong>
-                    {detail.words.needs}:{" "}
-                </Text>
-                {entry.needs}
-            </Text>
             <Section
                 kind="list"
                 title={detail.words.yours}
                 headingLevel={3}
-                meta={detail.words.yoursFact}
+                count={detail.rows.length}
                 empty={<EmptyNotice message={detail.words.none} />}
                 items={detail.rows.map((row) => ({
                     id: row.connection.id,
@@ -119,7 +113,7 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
             />
             {detail.canConnect ? (
                 <div>
-                    <Button intent="commit" onPress={() => props.on.add(provider)}>
+                    <Button intent="commit" startGlyph="plus" onPress={() => props.on.add(provider)}>
                         {detail.words.add}
                     </Button>
                 </div>
@@ -164,18 +158,18 @@ export const ConnectorDetailOverlayBase = (props: ConnectorDetailOverlayBaseProp
                             </Stack>
                         </div>
                     </Cluster>
-                    <Text size="sm">
-                        <Text as="span" size="sm" isStrong>
-                            {props.props.words.brings}:{" "}
-                        </Text>
-                        {entry.brings}
-                    </Text>
-                    <Text size="sm">
-                        <Text as="span" size="sm" isStrong>
-                            {props.props.words.audience}:{" "}
-                        </Text>
-                        {entry.audience}
-                    </Text>
+                    <Section
+                        kind="list"
+                        ariaLabel={entry.name}
+                        empty={null}
+                        items={[
+                            { id: "brings", title: props.props.words.brings, description: entry.brings },
+                            { id: "audience", title: props.props.words.audience, description: entry.audience },
+                            ...(entry.needs === ""
+                                ? []
+                                : [{ id: "needs", title: props.props.words.needs, description: entry.needs }]),
+                        ]}
+                    />
                     {bodyOf(props, entry)}
                 </Stack>
             )}

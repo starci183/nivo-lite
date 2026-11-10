@@ -21,5 +21,7 @@ export { WorkspaceMemberDirectoryService } from "./workspace-member-directory.se
 export { MemberLookupService } from "./member-lookup.service"
 export { workspaceMembersEntities } from "./persistence/entities"
 export { MemberRosterService } from "./member-roster.service"
+export { MemberLobbyService } from "./member-lobby.service"
+export type { LobbySeat } from "./workspace-member-directory.contracts"
 export { WorkspaceMemberSeatsService } from "./workspace-member-seats.service"
 export type { MemberSeatRecord } from "./workspace-member-seats.contracts"

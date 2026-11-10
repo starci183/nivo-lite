@@ -147,3 +147,102 @@ export interface StoredGrant {
     /** The stored access level, which the caller parses before use. */
     readonly access: string
 }
+
+/** One grant as the catalog reads it: the agent and the connection it may use, with the purpose and access of the grant. */
+export interface AgentGrant {
+    /** The agent that holds the grant. */
+    readonly agentId: string
+    /** The connection with the access and purpose of the grant. */
+    readonly connection: BoundConnection
+}
+
+/** One active agent granted a connection, with what it uses the connection for and what it may do through it. */
+export interface ConnectionGrant {
+    /** The connection. */
+    readonly connectionId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The display name of the agent. */
+    readonly agentName: string
+    /** The module the agent belongs to. */
+    readonly module: string
+    /** What the agent uses the connection for. */
+    readonly purpose: Purpose
+    /** What the agent may do through the connection. */
+    readonly access: Access
+}
+
+/** A binding's connection facts with the agent whose link it came from. */
+export interface LinkedFacts {
+    /** The agent of the link. */
+    readonly agentId: string
+    /** The connection facts of the link. */
+    readonly facts: BoundConnectionFacts
+}
+
+/** One agent that answers a channel connection for its role: an acting grant (ask or auto) of a channel purpose. */
+export interface ChannelHolder {
+    /** The connection. */
+    readonly connectionId: string
+    /** The agent. */
+    readonly agentId: string
+    /** The display name of the agent. */
+    readonly agentName: string
+    /** The module (role) the agent belongs to. */
+    readonly module: string
+    /** What the agent uses the connection for. */
+    readonly purpose: Purpose
+    /** What the agent may do through the connection. */
+    readonly access: Access
+    /** When the grant was written. */
+    readonly grantedAt: Date
+}
+
+/** The one agent of a role that answers a channel connection, or null when no agent of that role does. */
+export type OptionalChannelOwner = ChannelHolder | null
+
+/** A grant about to be written, as the ownership rule weighs it. */
+export interface ChannelClaim {
+    /** The agent that would hold the grant. */
+    readonly agentId: string
+    /** The module (role) of the agent. */
+    readonly module: string
+    /** What the agent would use the connection for. */
+    readonly purpose: string
+    /** What the agent would be allowed to do. */
+    readonly access: string
+}
+
+/** Whom to keep on a channel two agents of one role would answer once a paused agent resumes: the resumed agent, or the agent that has it now. */
+export type ResumeKeep = "resumed" | "current"
+
+/** The choice of whom to keep, or null when the caller has not made one yet. */
+export type OptionalResumeKeep = ResumeKeep | null
+
+/** The agent that resumes, as the channel check names it. */
+export interface ResumingAgent {
+    /** The agent. */
+    readonly id: string
+    /** Its display name. */
+    readonly name: string
+    /** Its module (role). */
+    readonly module: string
+}
+
+/** One channel connection of a resuming agent that another agent of its role answers now. */
+export interface ChannelConflict {
+    /** The channel connection. */
+    readonly connectionId: string
+    /** The agent that answers it now. */
+    readonly owner: ChannelHolder
+}
+
+/** One channel a paused agent answers that another agent of its role answers now. */
+export interface ResumeConflict {
+    /** The channel connection. */
+    readonly connectionId: string
+    /** Its display name. */
+    readonly connectionName: string
+    /** The agent that answers it now. */
+    readonly owner: ChannelHolder
+}

@@ -92,6 +92,18 @@ describe("toolVisibleTo", () => {
         expect(policy.toolVisibleTo(staff, specOf({ internalOnly: true }))).toBe(true)
         expect(policy.toolVisibleTo(facing, specOf())).toBe(true)
     })
+
+    it("shows an internal-only tool to the workflow step of an internal agent whatever conversation its run carries, never to a customer-facing agent's step", async () => {
+        const policy = await build()
+        const carried = { ...CALLER, conversationId: "c1", graphStep: true as const }
+
+        expect(policy.toolVisibleTo({ ...carried, audience: "internal" }, specOf({ internalOnly: true }))).toBe(true)
+        expect(policy.toolVisibleTo(carried, specOf({ internalOnly: true }))).toBe(true)
+        expect(policy.toolVisibleTo({ ...carried, audience: "customer" }, specOf({ internalOnly: true }))).toBe(false)
+        expect(policy.toolVisibleTo({ ...CALLER, conversationId: "c1", audience: "internal" }, specOf({ internalOnly: true }))).toBe(
+            false,
+        )
+    })
 })
 
 describe("roleIn", () => {

@@ -1,5 +1,5 @@
 # Routes of the NIVO ingress (Traefik file provider, mounted as a versioned Swarm config; a change is a new config name and a rolled ingress task).
-# The landing is served on nivo.vn and www.nivo.vn, the console on app.nivo.vn, and the api on api.nivo.vn. The zone is at Tino: every host needs its A record there
+# The landing is served on nivo.vn and www.nivo.vn, the console on app.nivo.vn, the platform admin on admin.nivo.vn, and the api on api.nivo.vn. The zone is at Tino: every host needs its A record there
 # (be/docs/runbooks/dns-rollback.md) before Traefik can obtain its certificate. Each host gets its own Let's Encrypt certificate, persisted in the
 # acme volume. The api keeps answering the /api/, /graphql and /healthz paths of nivo.vn and www.nivo.vn so every webhook URL customers
 # configured with the old host keeps working.
@@ -28,6 +28,12 @@ http:
       tls: { certResolver: le }
     # Every /api/ path of the product hosts is the back end: provider webhooks and OAuth callbacks keep their public URLs. The explicit priority
     # makes this router win over the catch-all `landing` router; the path is forwarded unchanged. /health/live of the product hosts stays the landing's.
+    admin:
+      rule: Host(`admin.nivo.vn`)
+      entryPoints: [websecure]
+      service: admin
+      middlewares: [secure-headers]
+      tls: { certResolver: le }
     api-paths:
       rule: (Host(`nivo.vn`) || Host(`www.nivo.vn`)) && (PathPrefix(`/api/`) || Path(`/graphql`) || Path(`/healthz`))
       priority: 100
@@ -68,6 +74,10 @@ http:
     web:
       loadBalancer:
         servers: [{ url: "http://nivo-web-swarm:3000" }]
+        healthCheck: { path: /health/live, interval: 10s, timeout: 3s }
+    admin:
+      loadBalancer:
+        servers: [{ url: "http://nivo-admin:3000" }]
         healthCheck: { path: /health/live, interval: 10s, timeout: 3s }
     api:
       loadBalancer:

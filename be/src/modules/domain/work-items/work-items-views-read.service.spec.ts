@@ -73,4 +73,15 @@ describe("WorkItemsViewsReadService", () => {
             }),
         )
     })
+
+    it("lists the newest work of one agent instance, scoped to the workspace", async () => {
+        const em = mockEntityManager({ find: [WorkItemEntity, [entityOf(rowOf({ id: "w-2" }))]] })
+        const { service } = await build([], em)
+
+        await expect(service.ofInstallation("ws-1", "inst-1", 50)).resolves.toMatchObject([{ id: "w-2" }])
+        expect(em.find).toHaveBeenCalledWith(
+            WorkItemEntity,
+            expect.objectContaining({ where: { workspaceId: "ws-1", installationId: "inst-1" }, take: 50 }),
+        )
+    })
 })

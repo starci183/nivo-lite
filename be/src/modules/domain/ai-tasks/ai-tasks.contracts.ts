@@ -52,12 +52,10 @@ export interface RecalledPassage {
     readonly content: string
 }
 
-/** What the text generator port takes. */
+/** One prompt as it is run and metered. */
 export interface TextRequest {
     /** The workspace. */
     readonly workspaceId: string
-    /** What the text is for, `<module>:<kind>`. */
-    readonly purpose: string
     /** The prompt. */
     readonly messages: ReadonlyArray<ChatMessage>
     /** True when the answer must be one JSON object. */
@@ -291,8 +289,10 @@ export interface CallMeta {
 export interface NodeAsk {
     /** `<node id>:<purpose>`; the namespace of the node is the usage module. */
     readonly purpose: string
-    /** The node's instructions, the system message. */
+    /** The node's instructions, the system message: the stable part of the call, the same text for the same agent, shop and step. */
     readonly instructions: string
+    /** Words that hold for this call only; they go after the stable part, never inside it. */
+    readonly volatile?: string | undefined
     /** What the node asks about, sent as JSON. */
     readonly input: unknown
     /** Pictures to look at, sent with the input as image parts of the user message. */

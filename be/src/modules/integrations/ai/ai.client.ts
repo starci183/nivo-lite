@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { Document } from "@langchain/core/documents"
 import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages"
 import type { BaseMessage } from "@langchain/core/messages"
@@ -54,6 +55,15 @@ const reasoningFieldOf = (budget: AiBudget): Readonly<Record<string, unknown>> =
     reasoning: budget.effort === "off" ? { enabled: false } : { effort: budget.effort },
 })
 
+/**
+ * The `session_id` field a call's affinity adds to the chat body: OpenRouter routes every request of one session to the same
+ * upstream, which is what lets a prefix-cached prompt be found again. A digest, so no id of the app leaves it.
+ */
+const sessionFieldOf = (affinity: string | undefined): Readonly<Record<string, unknown>> =>
+    affinity === undefined || affinity === ""
+        ? {}
+        : { session_id: createHash("sha256").update(affinity).digest("hex").slice(0, 32) }
+
 const urlOf = (input: string | URL | Request): string => {
     if (typeof input === "string") return input
     return input instanceof URL ? input.href : input.url
@@ -105,6 +115,7 @@ export class AiClient implements AiRunner {
         return {
             content: fieldOf(raw, "content"),
             parsed: structured ? (fieldOf(result, "parsed") ?? null) : null,
+            provider: fieldOf(fieldOf(fieldOf(raw, "additional_kwargs"), "__raw_response"), "provider"),
             usageMetadata: fieldOf(raw, "usage_metadata"),
             responseMetadata: fieldOf(raw, "response_metadata"),
             retrieved,
@@ -131,8 +142,13 @@ export class AiClient implements AiRunner {
             temperature: 0,
             maxRetries: 0,
             timeout: request.timeoutMs,
+            // The raw answer rides along so the upstream that served the call can be read (the prompt cache is per upstream).
+            __includeRawResponse: true,
             maxTokens: request.budget?.maxTokens ?? NO_TOKEN_CAP,
-            modelKwargs: request.budget === undefined ? {} : reasoningFieldOf(request.budget),
+            modelKwargs: {
+                ...(request.budget === undefined ? {} : reasoningFieldOf(request.budget)),
+                ...sessionFieldOf(request.affinity),
+            },
             configuration: { baseURL: this.endpoint.gatewayUrl, fetch: this.fetcher(request.timeoutMs) },
         })
         if (!request.json) return model

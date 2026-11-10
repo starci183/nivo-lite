@@ -12,6 +12,8 @@ describe("platform module", () => {
             "platform.agent-done",
             "platform.agent-connections",
             "platform.agent-knowledge",
+            "platform.installation-connections",
+            "platform.installation-knowledge",
             "platform.parked-runs",
             "platform.agent-runs",
             "platform.agent-run-counts",

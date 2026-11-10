@@ -2,20 +2,22 @@ import type { ModuleKey } from "@/modules/catalog"
 import { AGENTS_ROUTE } from "@/modules/routes"
 
 /** A tab of one agent instance; `performance` (the weekly report) belongs to the AI Marketing (content) agent only. */
-export type AgentTab = "setup" | "workbench" | "work" | "chat" | "performance" | "settings"
+export type AgentTab = "workbench" | "work" | "graph" | "workflows" | "chat" | "connections" | "knowledge" | "performance" | "setup"
 
 /**
- * The route of an agent instance: /agents/<type>/<installationId>[/workbench|/work|/chat|/performance|/settings][?query]. Without an installation id it is the
- * type-level URL (/agents/<type>[/tab]), which redirects to the only instance, or to the instance that owns `?focus=`, or to the list.
+ * The route of an agent instance: /agents/<type>/<installationId>[/workbench|/work|/chat|/connections|/knowledge|/performance|/setup][?query].
+ * Without a tab it is the landing of the instance, which opens Setup for an agent that is not set up and the workbench otherwise.
+ * Without an installation id it is the type-level URL (/agents/<type>[/tab]), which redirects to the only instance, or to the instance
+ * that owns `?focus=`, or to the list.
  */
 export const agentHref = (
     module: ModuleKey,
     installationId: string | null | undefined,
-    tab: AgentTab = "setup",
+    tab?: AgentTab,
     query?: string,
 ): string => {
     const base = installationId ? `${AGENTS_ROUTE}/${module}/${installationId}` : `${AGENTS_ROUTE}/${module}`
-    const path = tab === "setup" ? base : `${base}/${tab}`
+    const path = tab === undefined ? base : `${base}/${tab}`
     return query ? `${path}?${query}` : path
 }
 
@@ -45,3 +47,13 @@ export const IDENTITY_PARAM = "identity"
 
 /** The query a menu link carries to open the picture-and-name dialog; closing the dialog drops it. */
 export const IDENTITY_QUERY: string = `${IDENTITY_PARAM}=1`
+
+/** The route of the "Chung" section of Setup (name, owner, pause, remove) of an instance: /agents/<type>/<id>/setup/general. */
+export const setupGeneralHref = (module: ModuleKey, installationId: string): string =>
+    `${agentHref(module, installationId, "setup")}/general`
+
+/** The route of the workflows of an instance, or of one workflow by its key: /agents/<type>/<id>/workflows[/<workflowKey>]. */
+export const workflowsHref = (module: ModuleKey, installationId: string, workflowKey?: string): string => {
+    const base = agentHref(module, installationId, "workflows")
+    return workflowKey === undefined ? base : `${base}/${encodeURIComponent(workflowKey)}`
+}

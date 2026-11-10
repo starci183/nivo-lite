@@ -13,6 +13,7 @@ import type { Logger } from "@modules/platform/logging"
 import { SEPAY_MANIFEST } from "./adapters/sepay-native.service"
 import { argsHashOf } from "./audit-mask.policy"
 import { McpGatewayErrorCode } from "./errors/mcp-gateway.error"
+import { ProviderAbilitiesService } from "./provider-abilities.service"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import type { GrantInput, NativeAdapter, RemoteConnectorInput } from "./mcp-gateway.contracts"
 import { MCP_GATEWAY_OPTIONS, NATIVE_ADAPTERS } from "./mcp-gateway.decorators"
@@ -51,6 +52,8 @@ const build = async () => {
     grantRows.set.mockResolvedValue(true)
     const callLines = mock<McpCallLogService>()
     const connections = mock<ConnectionsService>()
+    const access = mock<ProviderAbilitiesService>()
+    access.board.mockResolvedValue({ providers: [], attachments: [] })
     const moduleRef = await Test.createTestingModule({
         providers: [
             McpGatewayAdminService,
@@ -64,10 +67,11 @@ const build = async () => {
             { provide: McpCallLogService, useValue: callLines },
             { provide: ConnectionsService, useValue: connections },
             { provide: McpConnectorCredentialService, useValue: credentials },
+            { provide: ProviderAbilitiesService, useValue: access },
         ],
     }).compile()
     const admin = moduleRef.get(McpGatewayAdminService)
-    return { admin, remote, logger, gateway, credentials, connectorRows, grantRows, callLines, connections }
+    return { admin, remote, logger, gateway, credentials, connectorRows, grantRows, callLines, connections, access }
 }
 
 describe("McpGatewayAdminService reads", () => {
@@ -486,5 +490,59 @@ describe("McpGatewayAdminService.checkConnector", () => {
             connector: "hakuen",
         })
         expect(credentials.endpointOf).toHaveBeenCalledWith("ws-1", expect.objectContaining({ credentialState: "set" }))
+    })
+})
+
+/** The owner who sets access in these specs. */
+const OWNER = { workspaceId: "ws-1", principalId: "owner-1" }
+
+describe("McpGatewayAdminService provider abilities", () => {
+    it("reads the board and a module's proposal, for an owner or manager", async () => {
+        const { admin, connections, access } = await build()
+        access.proposalOf.mockResolvedValue([{ provider: "zalo_oa", abilities: { "customer.send": "auto" } }])
+
+        await expect(admin.providerBoard(OWNER)).resolves.toEqual({ providers: [], attachments: [] })
+        await expect(admin.abilityProposal(OWNER, "sales")).resolves.toEqual([
+            { provider: "zalo_oa", abilities: { "customer.send": "auto" } },
+        ])
+        expect(connections.authorize).toHaveBeenCalledWith(OWNER, ["owner", "manager"])
+        expect(access.proposalOf).toHaveBeenCalledWith("ws-1", "sales")
+    })
+
+    it("attaches, ticks and detaches with the person who did it, and throws the reason of a change that was refused", async () => {
+        const { admin, access } = await build()
+        access.attach.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false, reason: "not_connected" })
+        access.setAbility.mockResolvedValue({ ok: true })
+        access.detach.mockResolvedValue({ ok: false, reason: "not_attached" })
+        const wish = { provider: "zalo_oa", abilities: { "customer.send": "ask" } }
+
+        await expect(admin.attachProvider(OWNER, "agent-1", wish)).resolves.toBeUndefined()
+        await expect(admin.attachProvider(OWNER, "agent-1", wish)).rejects.toMatchObject({
+            code: McpGatewayErrorCode.AttachmentRefused,
+            params: { reason: "not_connected" },
+        })
+        expect(access.attach).toHaveBeenCalledWith({ workspaceId: "ws-1", agentId: "agent-1" }, wish, "owner-1")
+
+        await admin.setAbility(OWNER, { agentId: "agent-1", provider: "zalo_oa", ability: "customer.send", mode: "auto" })
+        expect(access.setAbility).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", agentId: "agent-1", provider: "zalo_oa" },
+            "customer.send",
+            "auto",
+            "owner-1",
+        )
+        await expect(admin.detachProvider(OWNER, "agent-1", "zalo_oa")).rejects.toMatchObject({
+            params: { reason: "not_attached" },
+        })
+    })
+
+    it("lists who a template would attach to a newly connected provider, and attaches the listed agents", async () => {
+        const { admin, access } = await build()
+        const candidate = { agentId: "a1", agentName: "Sales", module: "sales", abilities: { "customer.send": "auto" } } as const
+        access.templateCandidates.mockResolvedValue([candidate])
+        access.attachByTemplate.mockResolvedValue(["a1"])
+
+        await expect(admin.templateCandidates(OWNER, "telegram")).resolves.toEqual([candidate])
+        await expect(admin.attachByTemplate(OWNER, "telegram", ["a1"])).resolves.toEqual(["a1"])
+        expect(access.attachByTemplate).toHaveBeenCalledWith("ws-1", "telegram", ["a1"], "owner-1")
     })
 })

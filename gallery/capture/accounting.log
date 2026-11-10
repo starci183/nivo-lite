@@ -1,0 +1,16 @@
+installation /workspaces/<ws>/agents/accounting/1d24b4e0-d276-4ecb-a0e9-07bd01395630
+page 1 /workspaces/<ws>/agents/accounting/<inst>/workbench links=23 (overlay 3, in-page 0)
+page 2 /workspaces/<ws>/agents/accounting/<inst>/work links=12 (overlay 0, in-page 0)
+page 3 /workspaces/<ws>/agents/accounting/<inst>/work?view=runs links=18 (overlay 0, in-page 2)
+page 4 /workspaces/<ws>/agents/accounting/<inst>/workflows links=13 (overlay 0, in-page 0)
+page 5 /workspaces/<ws>/agents/accounting/<inst>/graph links=11 (overlay 0, in-page 0)
+page 6 /workspaces/<ws>/agents/accounting/<inst>/chat links=12 (overlay 2, in-page 2)
+page 7 /workspaces/<ws>/agents/accounting/<inst>/connections links=11 (overlay 0, in-page 0)
+page 8 /workspaces/<ws>/agents/accounting/<inst>/knowledge links=10 (overlay 0, in-page 0)
+page 9 /workspaces/<ws>/agents/accounting/<inst>/setup links=12 (overlay 0, in-page 0)
+page 10 /workspaces/<ws>/agents/accounting/<inst>/setup/general links=12 (overlay 0, in-page 7)
+page 11 /workspaces/<ws>/agents/accounting/<inst>/workbench?tab=today links=23 (overlay 3, in-page 0)
+page 12 /workspaces/<ws>/agents/accounting/<inst>/workbench?tab=overview links=21 (overlay 1, in-page 0)
+page 13 /workspaces/<ws>/agents/accounting/<inst>/workbench?tab=book links=24 (overlay 5, in-page 1)
+non-GET requests 
+done pages 13 links 202 blocked mutations 0 skipped 40

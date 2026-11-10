@@ -3,8 +3,7 @@ import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Stack, SurfaceCard } from "@starci/grammar/common"
 import type { accountingWeeklyBlock } from "../../blocks/accounting/weekly.block"
 import { bookPeriodOf } from "../../rules/accounting/book-view"
-import { monthOf, weekBarsOf, weeklyRecord } from "../../rules/accounting/weekly-view"
-import type { WeeklyRecord } from "../../rules/accounting/weekly-view"
+import { monthOf, weekBarsOf, weeklyRecord, type WeeklyRecord } from "../../rules/accounting/weekly-view"
 import { periodSwitchOf } from "../../rows/period-switch"
 import { parsedSlot } from "../../slots/slots"
 import { FiguresBars } from "../composites/FiguresStrip"
@@ -30,6 +29,7 @@ export const WeeklyBlock = (props: RenderOf<typeof accountingWeeklyBlock>): Reac
                     <SurfaceCard
                         label={`${words(props.props.title)}, ${words({ key: "weekly_period" })} ${monthOf(weekly.fromDay)}`}
                         headingLevel={3}
+                        note={words(props.props.caption)}
                         headers={[
                             {
                                 kind: "switch",
@@ -51,7 +51,7 @@ export const WeeklyBlock = (props: RenderOf<typeof accountingWeeklyBlock>): Reac
                             points={weekBarsOf(weekly, (position) => words({ key: `week_w${position}` }))}
                             empty={labels.empty}
                             isLoading={isLoading}
-                            caption={words(props.props.caption)}
+                            caption=""
                         />
                     </SurfaceCard>
                 )}

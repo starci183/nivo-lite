@@ -21,6 +21,7 @@ import type {
     NivoItemKind,
 } from "@/modules/types"
 import type { RetrievedPassage } from "./passages"
+import { pictureUrlOf } from "@/modules/agentAvatar"
 
 const STATUSES: ReadonlyArray<DocumentStatus> = [
     "pending",
@@ -155,7 +156,12 @@ export const toWireInstallation = (row: ModuleInstallationType): Installation | 
         name: displayNameOf(row),
         isMulti: row.isMulti,
         agentId: row.agentId ?? null,
-        agentAvatarUrl: row.agentAvatarUrl ?? null,
+        agentAvatarUrl: pictureUrlOf({
+            avatarUrl: row.agentAvatarUrl,
+            avatarPreset: row.agentAvatarPreset,
+            moduleKey: row.moduleKey,
+        }),
+        agentAvatarPreset: row.agentAvatarPreset ?? null,
         agentHandle: row.agentHandle ?? null,
         status: INSTALLATION_STATUSES.find((known) => known === row.status) ?? "setup",
         lifecycle: installationLifecycleOf(row.lifecycle),

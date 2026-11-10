@@ -1,10 +1,11 @@
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import { Button, Form, Grid, SurfaceCard } from "@starci/grammar/common"
+import { Button, Cluster, Form, Grid, Stack } from "@starci/grammar/common"
 import type { formBlock } from "../../blocks/form.block"
 import { cellContextOf } from "../../rows/cell-format"
 import { formRecordSlot, recordIdOf } from "../../rows/form-values"
 import { FormFieldView } from "../composites/FormFieldView"
+import { SurfaceFrame } from "../composites/SurfaceFrame"
 import { useFormValues } from "../composites/useFormValues"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
@@ -15,6 +16,8 @@ interface FormBodyProps {
     readonly props: FormProps
     readonly record: unknown
     readonly isLoading: boolean
+    /** Puts the fields back to the record: the cancel of the footer. */
+    readonly onReset: () => void
 }
 
 /** The fields, their values and errors, and the submit. It starts again from the record whenever the record changes. */
@@ -42,36 +45,42 @@ const FormBody = (body: FormBodyProps): ReactNode => {
             .catch(() => host.notify("danger", labels.error))
     }
     const currency = cellContextOf(host.locale(), props.props.currency).currency
+    const renderField = (field: FormProps["props"]["fields"][number]): ReactNode => {
+        const error = form.errors[field.name]
+        return (
+            <FormFieldView
+                key={field.name}
+                field={field}
+                value={form.values[field.name]}
+                error={error === undefined ? undefined : words(error)}
+                currency={currency}
+                isLoading={body.isLoading}
+                isBusy={submit.isRunning}
+                words={words}
+                onChange={(value) => form.change(field.name, value)}
+            />
+        )
+    }
+    const plain = props.props.fields.filter((field) => field.kind !== "switch")
+    const switches = props.props.fields.filter((field) => field.kind === "switch")
     return (
         <Form label={words(props.props.label)} validationBehavior="aria" isPending={submit.isRunning} onSubmit={send}>
-            <Grid kind="form">
-                {props.props.fields.map((field) => {
-                    const error = form.errors[field.name]
-                    return (
-                        <FormFieldView
-                            key={field.name}
-                            field={field}
-                            value={form.values[field.name]}
-                            error={error === undefined ? undefined : words(error)}
-                            currency={currency}
-                            isLoading={body.isLoading}
-                            isBusy={submit.isRunning}
-                            words={words}
-                            onChange={(value) => form.change(field.name, value)}
-                        />
-                    )
-                })}
-            </Grid>
-            <Button
-                type="submit"
-                intent="commit"
-                width="fill-narrow"
-                isPending={submit.isRunning}
-                isLoading={body.isLoading}
-                isDisabled={!submit.isAllowed}
-            >
-                {words(props.props.submitLabel)}
-            </Button>
+            <Grid kind="form">{plain.map((field) => renderField(field))}</Grid>
+            {switches.length === 0 ? null : <Stack gap="row">{switches.map((field) => renderField(field))}</Stack>}
+            <Cluster gap="inline" justify="end">
+                <Button intent="neutral" isDisabled={submit.isRunning} onPress={body.onReset}>
+                    {words({ key: "agentMessageCancel" })}
+                </Button>
+                <Button
+                    type="submit"
+                    intent="commit"
+                    isPending={submit.isRunning}
+                    isLoading={body.isLoading}
+                    isDisabled={!submit.isAllowed}
+                >
+                    {words(props.props.submitLabel)}
+                </Button>
+            </Cluster>
         </Form>
     )
 }
@@ -84,6 +93,7 @@ export const FormBlock = (props: FormProps): ReactNode => {
     const words = useBlockWords()
     const labels = useSlotLabels(props.props.idle ?? { key: "formIdle" })
     const read = props.slots.record
+    const [resets, setResets] = useState(0)
     return (
         <SlotView
             slot={formRecordSlot(read.slot, props.props.requireRecord === true)}
@@ -91,9 +101,15 @@ export const FormBlock = (props: FormProps): ReactNode => {
             placeholder={{}}
             onRetry={read.retry}
             render={(record, isLoading) => (
-                <SurfaceCard label={words(props.props.label)} headingLevel={2}>
-                    <FormBody key={JSON.stringify(record)} props={props} record={record} isLoading={isLoading} />
-                </SurfaceCard>
+                <SurfaceFrame surface={props.props.surface ?? "section"} label={words(props.props.label)}>
+                    <FormBody
+                        key={`${resets}:${JSON.stringify(record)}`}
+                        props={props}
+                        record={record}
+                        isLoading={isLoading}
+                        onReset={() => setResets((count) => count + 1)}
+                    />
+                </SurfaceFrame>
             )}
         />
     )

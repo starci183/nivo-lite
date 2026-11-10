@@ -38,7 +38,8 @@ export const mutateCopyInviteLink = async ({
     mutation = MutationCopyInviteLink.Mutation1,
     request,
     signal,
+    headers,
 }: MutateCopyInviteLinkParams): Promise<ApolloClient.MutateResult<MutateCopyInviteLinkResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient({ signal, headers })
     return apollo.mutate({ mutation: mutationMap[mutation], variables: { input: request } })
 }

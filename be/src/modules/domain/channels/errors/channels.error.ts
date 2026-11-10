@@ -15,6 +15,10 @@ export enum ChannelsErrorCode {
     ZaloStateRejected = "CHANNELS_ZALO_STATE_REJECTED",
     /** The started authorization is older than its allowed time. */
     ZaloStateExpired = "CHANNELS_ZALO_STATE_EXPIRED",
+    /** No collage is stored under that name. */
+    CollageNotFound = "CHANNELS_COLLAGE_NOT_FOUND",
+    /** The store refused the collage, so it was not kept. */
+    CollageStoreFailed = "CHANNELS_COLLAGE_STORE_FAILED",
 }
 
 /** How each channels code travels. */
@@ -25,6 +29,8 @@ export const CHANNELS_ERROR_KINDS: Record<ChannelsErrorCode, ErrorKind> = {
     [ChannelsErrorCode.ZaloRefreshBusy]: "unavailable",
     [ChannelsErrorCode.ZaloStateRejected]: "forbidden",
     [ChannelsErrorCode.ZaloStateExpired]: "conflict",
+    [ChannelsErrorCode.CollageNotFound]: "not-found",
+    [ChannelsErrorCode.CollageStoreFailed]: "unavailable",
 }
 
 /** The one error class of the channels capability. */

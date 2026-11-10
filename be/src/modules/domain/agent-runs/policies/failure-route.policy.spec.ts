@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { routeFailure } from "./failure-route.policy"
+import { routeFailure, triesLeft } from "./failure-route.policy"
 import { TOOL_OUTCOME_UNKNOWN, backoffMs } from "./agent-runs.policy"
 import type { FailureFacts, RouteStep } from "./failure-route.policy"
 
@@ -7,7 +7,7 @@ const SUBJECT = Symbol("failure-route.policy")
 
 const buildSubject = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { routeFailure } }],
+        providers: [{ provide: SUBJECT, useValue: { routeFailure, triesLeft } }],
     }).compile()
     return moduleRef.get<typeof import("./failure-route.policy")>(SUBJECT)
 }
@@ -135,5 +135,29 @@ describe("routeFailure for a parked step", () => {
         const subject = await buildSubject()
 
         expect(subject.routeFailure(parked({ park: false }))).toEqual({ kind: "compensate", stepKeys: ["door-1"] })
+    })
+})
+
+describe("routeFailure for a side step", () => {
+    it("tries a side step again while it has tries", async () => {
+        const { routeFailure } = await buildSubject()
+        expect(routeFailure(facts({ sideStep: true, attempt: 1 }))).toEqual({ kind: "retry", afterMs: backoffMs(1) })
+    })
+
+    it("goes on past a side step once no try is left, whatever is done before it and whatever stopped it", async () => {
+        const { routeFailure } = await buildSubject()
+        expect(routeFailure(facts({ sideStep: true, attempt: 3, steps: [pivot(1)] }))).toEqual({ kind: "continue" })
+        expect(routeFailure(facts({ sideStep: true, park: true, steps: [door(1)] }))).toEqual({ kind: "continue" })
+        expect(routeFailure(facts({ sideStep: true, retryable: false }))).toEqual({ kind: "continue" })
+        expect(routeFailure(facts({ sideStep: true, code: TOOL_OUTCOME_UNKNOWN }))).toEqual({ kind: "continue" })
+    })
+
+    it("says no try is left for a park, an unknown outcome, a refusal or spent tries", async () => {
+        const { triesLeft } = await buildSubject()
+        expect(triesLeft(facts({ attempt: 1 }))).toBe(true)
+        expect(triesLeft(facts({ attempt: 3 }))).toBe(false)
+        expect(triesLeft(facts({ park: true }))).toBe(false)
+        expect(triesLeft(facts({ retryable: false }))).toBe(false)
+        expect(triesLeft(facts({ code: TOOL_OUTCOME_UNKNOWN }))).toBe(false)
     })
 })

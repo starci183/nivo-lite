@@ -1,5 +1,5 @@
 import type { ReactElement } from "react"
-import { Alert, Button, Disclosure, Fieldset, Input, PaneSection, Grid } from "@starci/grammar/common"
+import { Alert, Button, Disclosure, Fieldset, Input, Grid, SurfaceCard } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels, ZnsRenewalForm } from "@/modules/types"
 
@@ -58,7 +58,7 @@ export const ZaloConnectionZnsBase = (props: ZaloConnectionZnsBaseProps): ReactE
     const view = props.props
     const isLocked = !view.canEdit || view.isPending
     return (
-        <PaneSection>
+        <SurfaceCard>
             <Disclosure
                 headingLevel={2}
                 title={view.title}
@@ -109,6 +109,6 @@ export const ZaloConnectionZnsBase = (props: ZaloConnectionZnsBaseProps): ReactE
                     />
                 }
             />
-        </PaneSection>
+        </SurfaceCard>
     )
 }

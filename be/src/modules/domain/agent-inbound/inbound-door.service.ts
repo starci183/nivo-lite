@@ -6,6 +6,7 @@ import { AgentRunsService } from "@modules/domain/agent-runs"
 import { AgentWakeService, AgentWorkAccessService } from "@modules/domain/agent-work"
 import { encodeInbound } from "@modules/domain/agent-wake-rules"
 import type { AgentWake } from "@modules/domain/agent-work"
+import { WorkspacesService } from "@modules/domain/workspaces"
 import { InjectIds } from "@modules/platform/ids"
 import type { Ids } from "@modules/platform/ids"
 import { InjectLogger } from "@modules/platform/logging"
@@ -27,6 +28,7 @@ import type { InboundChainStep, InboundStop, InboundStopReporter } from "./agent
  * `AgentEventWakesService`, not a second one). Each wake is written through `AgentWakeService` with the normalized event in its context, keyed by
  * the event's idempotency key, and the run of the wake opens with it, all in the caller's transaction and so through the outbox: a redelivery
  * is one wake and one run. A tag between agents carries a chain; waking an agent past the chain's limit writes nothing and tells a person.
+ * A workspace its owner deleted takes in nothing until it is restored.
  */
 export class InboundDoorService {
     constructor(
@@ -37,6 +39,7 @@ export class InboundDoorService {
         private readonly access: AgentWorkAccessService,
         private readonly wakes: AgentWakeService,
         private readonly runs: AgentRunsService,
+        private readonly workspaces: WorkspacesService,
         @Optional() @InjectInboundStopReporter() private readonly reporter: InboundStopReporter | null = null,
     ) {}
 
@@ -45,6 +48,10 @@ export class InboundDoorService {
         const adapter = this.registry.of(event.adapter)
         if (event.idempotencyKey === "") throw new AgentInboundError({ code: AgentInboundErrorCode.KeyMissing })
         if (!payloadFits(event.payload)) throw new AgentInboundError({ code: AgentInboundErrorCode.PayloadTooLarge })
+        if (!(await this.workspaces.isLive(event.workspaceId))) {
+            this.logger.info(AgentInboundLogEvent.WorkspaceDeleted, { adapter: adapter.key })
+            return { accepted: false, agentIds: [] }
+        }
         const targets = await this.targetsOf(event, adapter)
         if (targets.length === 0) this.logger.info(AgentInboundLogEvent.NoTarget, { adapter: adapter.key })
         const woken: Array<string> = []

@@ -4,6 +4,7 @@ import {
     ASSIGNABLE_ROLES,
     isAssignableRole,
     mayAssign,
+    mayManage,
     mayTag,
     ownerCardOf,
     resolveOwners,
@@ -229,5 +230,16 @@ describe("ownerCardOf", () => {
             roomId: null,
             active: false,
         })
+    })
+})
+
+describe("mayManage", () => {
+    it("admits a member by role or room even when the agent is paused, never an inactive member", () => {
+        const paused = assignOf({ agentStatus: "paused", role: "manager" })
+
+        expect(mayManage(paused)).toBe(true)
+        expect(mayManage(assignOf({ agentStatus: "paused", role: "staff", memberRooms: ["sales"], assignableRooms: ["sales"] }))).toBe(true)
+        expect(mayManage(assignOf({ role: "staff" }))).toBe(false)
+        expect(mayManage(assignOf({ role: "manager", memberStatus: "disabled" }))).toBe(false)
     })
 })

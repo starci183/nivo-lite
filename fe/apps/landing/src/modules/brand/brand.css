@@ -28,8 +28,8 @@
     --segment: oklch(100% 0.0068 17.59);
     --segment-foreground: oklch(21.03% 0.0068 17.59);
     --separator: oklch(92% 0.0068 17.59);
-    --success: oklch(73.29% 0.1961 122.46);
-    --success-foreground: oklch(21.03% 0.0059 122.46);
+    --success: oklch(73.29% 0.1935 150.81);
+    --success-foreground: oklch(21.03% 0.0059 285.89);
     --surface: oklch(100% 0.0034 17.59);
     --surface-foreground: oklch(21.03% 0.0068 17.59);
     --surface-secondary: oklch(95.24% 0.0054 17.59);
@@ -78,8 +78,8 @@
     --segment: oklch(39.64% 0.0068 17.59);
     --segment-foreground: oklch(99.11% 0.0068 17.59);
     --separator: oklch(25% 0.0068 17.59);
-    --success: oklch(73.29% 0.1961 122.46);
-    --success-foreground: oklch(21.03% 0.0059 122.46);
+    --success: oklch(73.29% 0.1935 150.81);
+    --success-foreground: oklch(21.03% 0.0059 285.89);
     --surface: oklch(21.03% 0.0136 17.59);
     --surface-foreground: oklch(99.11% 0.0068 17.59);
     --surface-secondary: oklch(25.7% 0.0102 17.59);

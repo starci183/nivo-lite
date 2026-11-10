@@ -15,6 +15,8 @@ interface TeamChatTarget {
     readonly agentId: string | null
     /** The people and agents of the room the draft may mention. */
     readonly parties: ReadonlyArray<ChatParty>
+    /** The message the draft answers; null for none. */
+    readonly replyTo: string | null
     /** Called with the id of the room a sent message landed in. */
     readonly onSent: (roomId: string) => void
 }
@@ -68,6 +70,7 @@ export const useTeamChatComposer = (target: TeamChatTarget): TeamChatComposerVie
                 body,
                 mentions,
                 clientId: crypto.randomUUID(),
+                ...(target.replyTo === null ? {} : { replyTo: target.replyTo }),
                 ...(fileKey === null ? {} : { fileKeys: [fileKey] }),
             })
             if (sent.message === null) {

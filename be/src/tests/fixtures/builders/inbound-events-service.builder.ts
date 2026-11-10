@@ -62,6 +62,8 @@ export const eventEntity: (overrides?: Partial<InboundEventEntity>) => InboundEv
         eventId: "evt-1",
         leadId: null,
         status: "received",
+        customerKey: null,
+        source: {},
         createdAt: new Date("2026-10-13T10:00:00.000Z"),
         updatedAt: new Date("2026-10-13T10:00:00.000Z"),
     },

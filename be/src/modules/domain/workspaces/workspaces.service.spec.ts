@@ -1,8 +1,8 @@
 import { builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { Test } from "@nestjs/testing"
-import { In, MoreThan } from "typeorm"
-import type { WorkspaceMember } from "@modules/domain/workspace-members"
+import { In, IsNull, MoreThan } from "typeorm"
+import type { LobbySeat } from "@modules/domain/workspace-members"
 import { WorkspaceMemberDirectoryService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { ownedWorkspaceRow, workspaceRow } from "@tests/fixtures/builders/workspaces.builder"
@@ -34,13 +34,18 @@ const thrownBy = (run: () => unknown): unknown => {
 }
 
 /** A seat of the caller, as the workspace-members directory answers it. */
-const seatOf = builder<WorkspaceMember>({
+const seatOf = builder<LobbySeat>({
     userId: "user-1",
     workspaceId: "ws-1",
     role: "manager",
     staffId: null,
     displayName: "An",
     status: "active",
+    lastOpenedAt: null,
+    disabledAt: null,
+    disabledBy: null,
+    disabledNote: null,
+    disabledByDeletion: false,
 })
 
 const INSERTED = (id: string) => ({ identifiers: [{ id }], generatedMaps: [], raw: [] })
@@ -78,7 +83,7 @@ describe("WorkspacesService > ensureNamed", () => {
         expect(em.query).toHaveBeenCalledWith(HASH_STATEMENT, ["workspace-first:owner-1", 0])
         expect(em.find).toHaveBeenCalledWith(WorkspaceEntity, {
             select: { id: true, status: true },
-            where: { ownerId: "owner-1", name: "Explicit" },
+            where: { ownerId: "owner-1", name: "Explicit", deletedAt: IsNull() },
             take: 2,
         })
         expect(members.isActiveOwner).toHaveBeenCalledWith("ws-1", "owner-1", expect.anything())
@@ -146,11 +151,27 @@ describe("WorkspacesService > nameOf", () => {
     })
 })
 
+/** The lobby facts of a living workspace whose seat is on. */
+const LIVING = {
+    deletedAt: null,
+    restoreBefore: null,
+    disabledAt: null,
+    disabledByName: null,
+    disabledByRole: null,
+    disabledNote: null,
+}
+
 describe("WorkspacesService > memberships", () => {
-    it("maps each seat of the person with its workspace, in the order of the seats", async () => {
-        const em = mockEntityManager({ find: [WorkspaceEntity, [workspaceRow()]] })
+    it("maps each seat of the person with its workspace and lobby facts, in the order of the seats", async () => {
+        const em = mockEntityManager({
+            find: [WorkspaceEntity, [workspaceRow({ planCode: "max", seatCount: 5 })]],
+        })
         const { service, members } = await build(em)
-        members.seatsOf.mockResolvedValue([seatOf(), seatOf({ workspaceId: "ws-gone" })])
+        members.seatsOf.mockResolvedValue([
+            seatOf({ lastOpenedAt: "2026-11-08T09:00:00.000Z" }),
+            seatOf({ workspaceId: "ws-gone" }),
+        ])
+        members.activeCountsOf.mockResolvedValue([{ workspaceId: "ws-1", count: 4, owners: 1 }])
 
         await expect(service.memberships("user-1")).resolves.toEqual([
             {
@@ -170,13 +191,66 @@ describe("WorkspacesService > memberships", () => {
                     createdAt: "2026-10-01T00:00:00.000Z",
                     businessType: "cafe",
                 },
+                lobby: {
+                    planCode: "max",
+                    seatCount: 5,
+                    memberCount: 4,
+                    ownerCount: 1,
+                    lastOpenedAt: "2026-11-08T09:00:00.000Z",
+                    ...LIVING,
+                },
             },
         ])
         expect(members.seatsOf).toHaveBeenCalledWith("user-1", 500)
+        expect(members.activeCountsOf).toHaveBeenCalledWith(["ws-1", "ws-gone"])
         expect(em.find).toHaveBeenCalledWith(WorkspaceEntity, {
-            where: { id: In(["ws-1", "ws-gone"]) },
+            where: [{ id: In(["ws-1", "ws-gone"]), deletedAt: IsNull() }, objectLike({ id: In(["ws-1", "ws-gone"]) })],
             take: 2,
         })
+    })
+})
+
+describe("WorkspacesService > memberships / deleted and switched off", () => {
+    it("shows a deleted workspace to its owner with the restore deadline, and hides it from everyone else", async () => {
+        const deleted = workspaceRow({ deletedAt: new Date("2026-11-01T00:00:00.000Z") })
+        const em = mockEntityManager({ find: [WorkspaceEntity, [deleted]] })
+        const { service, members } = await build(em)
+        members.activeCountsOf.mockResolvedValue([])
+        members.seatsOf.mockResolvedValue([seatOf({ role: "owner", status: "disabled", disabledByDeletion: true })])
+
+        await expect(service.memberships("user-1")).resolves.toMatchObject([
+            { lobby: { ...LIVING, deletedAt: "2026-11-01T00:00:00.000Z", restoreBefore: "2026-12-01T00:00:00.000Z" } },
+        ])
+
+        members.seatsOf.mockResolvedValue([seatOf({ status: "disabled", disabledByDeletion: true })])
+        await expect(service.memberships("user-1")).resolves.toEqual([])
+    })
+
+    it("names who switched the person's seat off, when and why", async () => {
+        const em = mockEntityManager({ find: [WorkspaceEntity, [workspaceRow()]] })
+        const { service, members } = await build(em)
+        members.activeCountsOf.mockResolvedValue([])
+        members.seatsOf.mockResolvedValue([
+            seatOf({
+                status: "disabled",
+                disabledAt: "2026-10-12T11:40:00.000Z",
+                disabledBy: { displayName: "Ut Le", role: "owner" },
+                disabledNote: "Left the shop",
+            }),
+        ])
+
+        await expect(service.memberships("user-1")).resolves.toMatchObject([
+            {
+                lobby: {
+                    memberCount: 0,
+                    ownerCount: 0,
+                    disabledAt: "2026-10-12T11:40:00.000Z",
+                    disabledByName: "Ut Le",
+                    disabledByRole: "owner",
+                    disabledNote: "Left the shop",
+                },
+            },
+        ])
     })
 
     it("reads no workspace for a person without a seat", async () => {
@@ -186,6 +260,16 @@ describe("WorkspacesService > memberships", () => {
 
         await expect(service.memberships("user-9")).resolves.toEqual([])
         expect(em.find).not.toHaveBeenCalled()
+        expect(members.activeCountsOf).not.toHaveBeenCalled()
+    })
+})
+
+describe("WorkspacesService > isLive", () => {
+    it("asks for the workspace among those not deleted", async () => {
+        const em = mockEntityManager({ exists: [WorkspaceEntity, true] })
+
+        await expect((await serviceOf(em)).isLive("ws-1")).resolves.toBe(true)
+        expect(em.exists).toHaveBeenCalledWith(WorkspaceEntity, { where: { id: "ws-1", deletedAt: IsNull() } })
     })
 })
 

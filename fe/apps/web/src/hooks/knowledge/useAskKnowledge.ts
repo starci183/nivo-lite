@@ -31,12 +31,17 @@ interface AskKnowledge {
 
 /**
  * The "ask as an agent" panel: asks the back end what an agent would retrieve, through that agent's own view. Reads only. A fixed audience
- * is the one every question is asked for, with no choice offered (the public part asks as a customer).
+ * is the one every question is asked for, with no choice offered (the public part asks as a customer). An initial agent is the one
+ * the address names (the knowledge tab of an agent opens the try-it screen on it); an unknown one falls back to the first.
  */
-export const useAskKnowledge = (agents: ReadonlyArray<AgentLens>, fixedAudience?: AskAudience): AskKnowledge => {
+export const useAskKnowledge = (
+    agents: ReadonlyArray<AgentLens>,
+    fixedAudience?: AskAudience,
+    initialAgentId?: string,
+): AskKnowledge => {
     const { trigger } = useQueryAskKnowledgeSwr()
     const [question, setQuestion] = useState("")
-    const [chosen, setChosen] = useState<string | undefined>()
+    const [chosen, setChosen] = useState<string | undefined>(initialAgentId)
     const [picked, setPicked] = useState<AskAudience | undefined>()
     const [results, setResults] = useState<ReadonlyArray<RetrievedPassage> | null>(null)
     const [error, setError] = useState<string | null>(null)

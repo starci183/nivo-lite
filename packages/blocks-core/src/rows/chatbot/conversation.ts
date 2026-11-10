@@ -1,5 +1,17 @@
 import { textOf, valueAt } from "../../slots/paths"
-import type { DayName, DeliveryState, MessagePaths, MessageRow, MessageSide, ThreadEntry } from "./conversation.types"
+import type {
+    DayName,
+    DeliveryState,
+    MessageFile,
+    MessageFiles,
+    MessageOrder,
+    MessageOrderItem,
+    MessageOrderMember,
+    MessagePaths,
+    MessageRow,
+    MessageSide,
+    ThreadEntry,
+} from "./conversation.types"
 
 /** Messages of one author within this gap, on one day, form one group. */
 export const GROUP_GAP_MS: number = 5 * 60_000
@@ -39,6 +51,67 @@ const msOf = (text: string): number | null => {
     return Number.isNaN(ms) ? null : ms
 }
 
+/** The pictures and files of a record at an optional path; entries that are not files are left out. */
+const filesAt = (record: unknown, path: string | undefined): ReadonlyArray<MessageFile> => {
+    const list = path === undefined ? null : valueAt(record, path)
+    if (!Array.isArray(list)) return []
+    return list.flatMap((entry: unknown): ReadonlyArray<MessageFile> => {
+        const url = textOf(valueAt(entry, "url"))
+        if (url === "") return []
+        return [
+            {
+                id: textOf(valueAt(entry, "id")) || url,
+                url,
+                name: textOf(valueAt(entry, "name")),
+                contentType: textOf(valueAt(entry, "contentType")),
+            },
+        ]
+    })
+}
+
+/** The `files` member of a message: present only when the record carries some. */
+const filesOf = (record: unknown, path: string | undefined): MessageFiles => {
+    const files = filesAt(record, path)
+    return files.length === 0 ? {} : { files }
+}
+
+/** The order of a record at an optional path; nothing when the value is not an order with a number. */
+const orderAt = (record: unknown, path: string | undefined): MessageOrder | null => {
+    const value = path === undefined ? null : valueAt(record, path)
+    const orderNo = textOf(valueAt(value, "orderNo"))
+    if (value === null || value === undefined || orderNo === "") return null
+    const list = valueAt(value, "lines")
+    const lines = Array.isArray(list)
+        ? list.flatMap((entry: unknown): ReadonlyArray<MessageOrderItem> => {
+              const name = textOf(valueAt(entry, "name"))
+              if (name === "") return []
+              const qty = Number(valueAt(entry, "qty"))
+              return [
+                  {
+                      name,
+                      qty: Number.isFinite(qty) ? qty : 1,
+                      unitText: textOf(valueAt(entry, "unitText")),
+                      amountText: textOf(valueAt(entry, "amountText")),
+                      imageUrl: textOf(valueAt(entry, "imageUrl")),
+                  },
+              ]
+          })
+        : []
+    return {
+        orderNo,
+        lines,
+        amountText: textOf(valueAt(value, "amountText")),
+        address: textOf(valueAt(value, "address")),
+        paid: valueAt(value, "paid") === true,
+    }
+}
+
+/** The `order` member of a message: present only when the record is about an order. */
+const orderOf = (record: unknown, path: string | undefined): MessageOrderMember => {
+    const order = orderAt(record, path)
+    return order === null ? {} : { order }
+}
+
 /** The message of one record; a record without a text id draws none. */
 const messageOf = (record: unknown, paths: MessagePaths): ReadonlyArray<MessageRow> => {
     const id = textOf(valueAt(record, paths.idPath))
@@ -53,6 +126,8 @@ const messageOf = (record: unknown, paths: MessagePaths): ReadonlyArray<MessageR
             atMs: msOf(textAt(record, paths.timePath)),
             mark: textAt(record, paths.markPath),
             delivery: side === "outgoing" ? deliveryOf(textAt(record, paths.statusPath)) : null,
+            ...filesOf(record, paths.filesPath),
+            ...orderOf(record, paths.orderPath),
         },
     ]
 }

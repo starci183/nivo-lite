@@ -219,3 +219,33 @@ describe("KnowledgeSourcesReadService textOf", () => {
         await expect((await build(em)).textOf("ws-1", "s1")).resolves.toBeNull()
     })
 })
+
+describe("KnowledgeSourcesReadService readyOfInstance", () => {
+    it("reads the ready documents kept for one agent instance alone, with their text, never the shared ones", async () => {
+        const em = mockEntityManager({
+            find: [KnowledgeSourceEntity, [{ ...row, installationId: "i1", status: "ready", content: "Open 8-21" }]],
+        })
+        const service = await build(em)
+
+        const documents = await service.readyOfInstance("ws-1", "i1")
+
+        expect(documents).toEqual([
+            {
+                id: row.id,
+                kind: row.kind,
+                title: row.title,
+                content: "Open 8-21",
+                topic: row.topic,
+                tags: row.tags,
+                visibility: row.visibility,
+            },
+        ])
+        expect(em.find).toHaveBeenCalledWith(
+            KnowledgeSourceEntity,
+            expect.objectContaining({
+                where: { workspaceId: "ws-1", installationId: "i1", status: "ready" },
+                order: { createdAt: "ASC", id: "ASC" },
+            }),
+        )
+    })
+})

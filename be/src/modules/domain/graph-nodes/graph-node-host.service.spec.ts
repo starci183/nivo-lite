@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { z } from "zod"
 import { FakeClock, mock } from "@starci/jest-preset"
 import {
     PROBE_READ,
@@ -12,7 +13,7 @@ import {
     unflatEffect,
     unpingEffect,
 } from "@nivo-lite/agent-sdk/testing"
-import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
+import { callDigestOf, nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import { CLOCK } from "@modules/platform/clock"
 import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
@@ -148,6 +149,9 @@ const buildWithoutTokens = async (port: NodeDataPort) => {
 /** A data port that reads no rows and has no write. */
 const readingPort = (): NodeDataPort => ({ kind: "record", read: () => Promise.resolve([]) })
 
+/** The key of the probe's one effect call: the step, then the digest of the effect and its arguments. */
+const PING_KEY = `run-1:node:${callDigestOf("core.ping", { n: 1 })}`
+
 describe("GraphNodeHostService", () => {
     it("runs a node through the registered port, the ledgered executor, the model and the tool door", async () => {
         const port = mock<NodeDataPort>({ kind: "record" })
@@ -160,9 +164,9 @@ describe("GraphNodeHostService", () => {
         })
         expect(port.read).toHaveBeenCalledWith(INPUT.turn, { fields: ["id"] }, "turn")
         expect(effects.once.mock.calls.map((call) => [call[0], call[1], call[2]])).toEqual([
-            ["ws-1", "core.ping", { key: "run-1:node:0", dedupeKey: null }],
+            ["ws-1", "core.ping", { key: PING_KEY, dedupeKey: null }],
         ])
-        expect(executor.execute).toHaveBeenCalledWith(INPUT.turn, { n: 1 }, { key: "run-1:node:0", dedupeKey: null })
+        expect(executor.execute).toHaveBeenCalledWith(INPUT.turn, { n: 1 }, { key: PING_KEY, dedupeKey: null })
         expect(ai.nodeText).toHaveBeenCalledWith(
             { workspaceId: "ws-1", locale: "vi" },
             { purpose: "core.probe:say", instructions: "", input: null },
@@ -171,7 +175,7 @@ describe("GraphNodeHostService", () => {
             token: "token-1",
             tool: "core.look",
             args: {},
-            key: "run-1:node:tool:0",
+            key: `run-1:node:tool:${callDigestOf("core.look", {})}`,
             approval: null,
         })
     })
@@ -315,5 +319,32 @@ describe("GraphNodeHostService subjects and undo", () => {
 
         expect(effects.once).not.toHaveBeenCalled()
         expect(executor.execute).not.toHaveBeenCalled()
+    })
+})
+
+describe("GraphNodeHostService.core", () => {
+    const ASK = { purpose: "ai-core", instructions: "Decide once.", input: { step: "keep" } }
+
+    it("asks the engine's own decision under the policy of the turn's agent: its guidance and values go before the instructions", async () => {
+        const { host, ai } = await build(readingPort())
+        ai.nodeJson.mockResolvedValue({ n: 7 })
+        const turn = { ...INPUT.turn, guidance: "CHÍNH SÁCH: hỏi chủ tiệm.", policy: { approvalThresholdVnd: 3_000_000 } }
+
+        await expect(host.core(turn, ASK, z.object({ n: z.number() }))).resolves.toEqual({ n: 7 })
+
+        const [scope, asked] = ai.nodeJson.mock.calls[0] ?? []
+        expect(scope).toEqual({ workspaceId: "ws-1", locale: "vi" })
+        expect(asked?.instructions.startsWith("CHÍNH SÁCH: hỏi chủ tiệm.\n\n")).toBe(true)
+        expect(asked?.instructions).toContain('{"approvalThresholdVnd":3000000}')
+        expect(asked?.instructions.endsWith("\n\nDecide once.")).toBe(true)
+    })
+
+    it("asks with the instructions as they are for a turn that carries no policy", async () => {
+        const { host, ai } = await build(readingPort())
+        ai.nodeJson.mockResolvedValue({ n: 7 })
+
+        await host.core(INPUT.turn, ASK, z.object({ n: z.number() }))
+
+        expect(ai.nodeJson).toHaveBeenCalledWith({ workspaceId: "ws-1", locale: "vi" }, ASK, expect.anything())
     })
 })

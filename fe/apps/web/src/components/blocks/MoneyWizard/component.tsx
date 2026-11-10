@@ -4,6 +4,7 @@ import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
 import {
     WizardFooter,
     backAction,
+    forwardAction,
     nextAction,
     startActions,
     type WizardAction,
@@ -22,6 +23,7 @@ import type {
     VerifyHelpView,
     WizardNote,
     WizardResume,
+    WizardPhases,
 } from "@/modules/types"
 import { MoneyAccountStep } from "@/components/composites/MoneyAccountStep"
 import { MoneyEnvironmentStep } from "@/components/composites/MoneyEnvironmentStep"
@@ -33,6 +35,7 @@ export interface MoneyWizardBaseProps {
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
+        readonly phases: WizardPhases
         readonly index: number
         readonly step: "env" | "account" | "follow" | "verify" | "agent"
         /** The stored connection a resumed wizard reads back; a new one is ready at once. */
@@ -80,7 +83,7 @@ const actionsOf = ({ props, on }: MoneyWizardBaseProps): ReadonlyArray<WizardAct
     const back = backAction(text.back, props.isPending, () => on.go(props.index - 1))
     if (props.step === "account") {
         const missing = props.accountStep.form.name.trim() === "" && !props.accountStep.isLocked
-        return [nextAction(text.next, on.create, { isPending: props.isPending, isDisabled: missing }), back]
+        return [forwardAction(text.next, on.create, { isPending: props.isPending, isDisabled: missing }), back]
     }
     if (props.step === "follow") {
         return [
@@ -95,7 +98,7 @@ const actionsOf = ({ props, on }: MoneyWizardBaseProps): ReadonlyArray<WizardAct
             intent: "dismiss",
             onPress: on.checkLater,
         }
-        return [props.received === null ? checkLater : nextAction(text.next, () => on.go(4)), back]
+        return [props.received === null ? checkLater : forwardAction(text.next, () => on.go(4)), back]
     }
     return [nextAction(text.done, on.finish, { isPending: props.isPending }), back]
 }
@@ -112,6 +115,7 @@ export const MoneyWizardBase = (props: MoneyWizardBaseProps) => {
             render={(_resume, isLoading) => (
                 <WizardFrame
                     {...frameOf(view)}
+                    phases={view.phases}
                     footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
                 >
                     <MoneyStepBody {...props} isLoading={isLoading} />

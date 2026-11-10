@@ -6,6 +6,7 @@ import { AgentEventWakesService } from "./agent-event-wakes.service"
 import { AgentDrainJobService } from "./agent-drain-job.service"
 import { AgentProbesService } from "./agent-probes.service"
 import { AgentScheduleFireService } from "./agent-schedule-fire.service"
+import { AccountingCloseProbeService } from "./probes/accounting-close-probe.service"
 import { InvoicesDueProbeService } from "./probes/invoices-due-probe.service"
 import { MoneyInProbeService } from "./probes/money-in-probe.service"
 import { NewDocumentsProbeService } from "./probes/new-documents-probe.service"
@@ -44,6 +45,7 @@ export class AgentSchedulesModule extends ConfigurableModuleClass {
                 InvoicesDueProbeService,
                 NewDocumentsProbeService,
                 MoneyInProbeService,
+                AccountingCloseProbeService,
                 AgentDrainJobService,
                 AgentProbesService,
                 AgentTriggerSyncService,

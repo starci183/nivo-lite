@@ -1,10 +1,8 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import { Button, Form, NumberField, Stack, SurfaceCard, Text, Textarea } from "@starci/grammar/common"
+import { Button, Form, Cluster, NumberField, Stack, Text, Textarea } from "@starci/grammar/common"
 import type { rulesBlock } from "../../blocks/chatbot/rules.block"
-import { draftOf, rulesErrorsOf, valuesOf } from "../../rows/chatbot/rules-form"
-import type { RulesDraft } from "../../rows/chatbot/rules-form"
+import { draftOf, rulesErrorsOf, valuesOf, type RulesDraft } from "../../rows/chatbot/rules-form"
 import { HOLDING_MESSAGE_MAX, TIMEOUT_MAX_SEC, TIMEOUT_MIN_SEC } from "../../rules/chatbot/settings"
 import { textOf, valueAt } from "../../slots/paths"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
@@ -98,11 +96,7 @@ const RulesForm = (props: RulesFormProps): ReactNode => {
         return key === undefined ? {} : { errorMessage: key.startsWith("rules_error_") ? words({ key }) : key }
     }
     return (
-        <SurfaceCard label={words({ key: "rules_title" })} headingLevel={2}>
-            <Stack gap="row">
-                <Text size="sm" tone="muted">
-                    {words({ key: "rules_intro" })}
-                </Text>
+        <Stack gap="row">
                 <Form
                     label={words({ key: "rules_title" })}
                     validationBehavior="aria"
@@ -117,15 +111,26 @@ const RulesForm = (props: RulesFormProps): ReactNode => {
                         errorOf={errorOf}
                     />
                     {save.isAllowed ? (
-                        <Button
-                            type="submit"
-                            intent="commit"
-                            width="fill-narrow"
-                            isPending={save.isRunning}
-                            isLoading={props.isLoading}
-                        >
-                            {words({ key: "rules_submit" })}
-                        </Button>
+                        <Cluster gap="inline" justify="end">
+                            <Button
+                                intent="neutral"
+                                isDisabled={save.isRunning}
+                                onPress={() => {
+                                    setDraft(draftOf(props.record))
+                                    setShown({})
+                                }}
+                            >
+                                {words({ key: "agentMessageCancel" })}
+                            </Button>
+                            <Button
+                                type="submit"
+                                intent="commit"
+                                isPending={save.isRunning}
+                                isLoading={props.isLoading}
+                            >
+                                {words({ key: "rules_submit" })}
+                            </Button>
+                        </Cluster>
                     ) : (
                         <Text size="sm" tone="muted">
                             {words({ key: "rules_read_only" })}
@@ -138,7 +143,6 @@ const RulesForm = (props: RulesFormProps): ReactNode => {
                     )}
                 </Form>
             </Stack>
-        </SurfaceCard>
     )
 }
 

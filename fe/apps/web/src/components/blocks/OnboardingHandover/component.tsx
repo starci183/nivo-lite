@@ -1,4 +1,4 @@
-import { Button, EmptyNotice, Stack, Switch, Text } from "@starci/grammar/common"
+import { Button, EmptyNotice, Switch } from "@starci/grammar/common"
 import { FirstRunCard } from "@/components/frames/FirstRunCard"
 
 /** One rule the workspace starts with: its name, what it means and the value it holds; a rule with a `toggle` is changed in place. */
@@ -42,7 +42,7 @@ export const OnboardingHandoverBase = (props: OnboardingHandoverBaseProps) => {
                     <Button intent="neutral" href={view.backHref}>
                         {view.backLabel}
                     </Button>
-                    <Button intent="commit" href={view.finishHref}>
+                    <Button endArrow intent="commit" href={view.finishHref}>
                         {view.finishLabel}
                     </Button>
                 </>
@@ -54,21 +54,22 @@ export const OnboardingHandoverBase = (props: OnboardingHandoverBaseProps) => {
                     id: rule.id,
                     title: rule.name,
                     description: rule.description,
-                    detail: (
-                        <Stack gap="inline">
-                            <Text size="sm">{rule.value}</Text>
-                            {rule.toggle === undefined ? null : (
-                                <Switch
-                                    name={rule.id}
-                                    label={rule.name}
-                                    isLabelHidden
-                                    isSelected={rule.toggle.isOn}
-                                    isDisabled={rule.toggle.isDisabled}
-                                    onSelectedChange={(on) => props.on.toggle(rule.id, on)}
-                                />
-                            )}
-                        </Stack>
-                    ),
+                    meta: { text: rule.value },
+                    actionPlacement: "end" as const,
+                    ...(rule.toggle === undefined
+                        ? {}
+                        : {
+                              control: (
+                                  <Switch
+                                      name={rule.id}
+                                      label={rule.name}
+                                      isLabelHidden
+                                      isSelected={rule.toggle.isOn}
+                                      isDisabled={rule.toggle.isDisabled}
+                                      onSelectedChange={(on) => props.on.toggle(rule.id, on)}
+                                  />
+                              ),
+                          }),
                 })),
             }}
         />

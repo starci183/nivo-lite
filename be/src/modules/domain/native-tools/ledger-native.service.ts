@@ -1,4 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common"
+import { ledgerEntryOf } from "@nivo-lite/blocks-core/modules/accounting"
+import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
+import type { RunIn } from "@modules/domain/entity-engine"
 import { GraphNodeEffectsService } from "@modules/domain/graph-nodes"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
 import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
@@ -7,7 +10,7 @@ import {
     ProviderRegistryError,
     ProviderRegistryErrorCode,
 } from "@modules/domain/provider-registry"
-import type { LedgerPort } from "@modules/domain/provider-registry"
+import type { BusinessLedgerEntry, LedgerPort } from "@modules/domain/provider-registry"
 import {
     LEDGER_APPEND_INPUT_SCHEMA,
     LEDGER_APPEND_SCHEMA,
@@ -19,6 +22,13 @@ import {
 import { nativeRefusal } from "./native-refusal.policy"
 import { NativeViewService } from "./native-view.service"
 
+const TRANSACTION = "payment.transaction"
+const ORDER = "sales.order"
+const LEAD = "sales.lead"
+
+/** The id of a record. */
+const RECORD_ID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu
+
 /** The ledger capability: named by what it keeps, never by the provider that keeps it. */
 export const LEDGER_MANIFEST: NativeConnectorManifest = {
     key: "ledger",
@@ -29,7 +39,7 @@ export const LEDGER_MANIFEST: NativeConnectorManifest = {
         {
             name: "append",
             description:
-                "Adds one entry (date, order, customer, amount, transaction, status) to the business ledger the workspace connected. A transaction is recorded once; nothing already written is changed or removed.",
+                "Writes one bank transaction into the business ledger the workspace connected. Give the transaction id alone: the date, amount, order number and customer of the line are read from the records. A transaction is recorded once; nothing already written is changed or removed.",
             scope: "write",
             defaultMode: "auto",
             inputSchema: LEDGER_APPEND_INPUT_SCHEMA,
@@ -77,6 +87,8 @@ export class LedgerNativeService implements NativeAdapter {
         private readonly views: NativeViewService,
         private readonly providers: LedgerRegistryService,
         @Optional() private readonly once?: GraphNodeEffectsService,
+        @Optional() private readonly engine?: EntityEngineService,
+        @Optional() private readonly ports?: EntityPortsService,
     ) {}
 
     /** Runs one ledger tool. */
@@ -87,7 +99,8 @@ export class LedgerNativeService implements NativeAdapter {
             return { connected: (await this.readyPort(workspaceId)) !== undefined }
         }
         if (tool === "append") {
-            const { entry } = argumentsOf(tool, LEDGER_APPEND_SCHEMA, args)
+            const asked = argumentsOf(tool, LEDGER_APPEND_SCHEMA, args)
+            const entry = "entry" in asked ? asked.entry : await this.entryOf(workspaceId, asked.transactionId)
             const key = `ledger:${entry.transactionId}${entry.status === "void" ? ":void" : ""}`
             return this.written(workspaceId, key, (port) => port.append(workspaceId, entry))
         }
@@ -98,6 +111,30 @@ export class LedgerNativeService implements NativeAdapter {
             )
         }
         throw unknownTool(tool)
+    }
+
+    /**
+     * The entry of a bank transaction named by its id, built from the records (the transaction, the order it paid, the customer): no
+     * figure of the line comes from the caller. A transaction that is not there, or paid nothing yet, is the refusal `not_found`.
+     */
+    private async entryOf(workspaceId: string, transactionId: string): Promise<BusinessLedgerEntry> {
+        if (this.engine === undefined || this.ports === undefined || !RECORD_ID.test(transactionId)) {
+            throw nativeRefusal("not_found")
+        }
+        const { engine, ports } = this
+        const built = await engine.scoped(workspaceId, (tx) => {
+            const runIn: RunIn = (use) => use(tx)
+            return ledgerEntryOf(
+                {
+                    transactions: ports.entityApi(runIn, "action", TRANSACTION),
+                    orders: ports.entityApi(runIn, "action", ORDER),
+                    leads: ports.entityApi(runIn, "action", LEAD),
+                },
+                transactionId,
+            )
+        })
+        if ("refused" in built) throw nativeRefusal("not_found")
+        return built.entry
     }
 
     private async written(

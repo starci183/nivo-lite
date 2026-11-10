@@ -9,6 +9,6 @@ interface ConversationPickProps {
 /** The thread pane before a thread is chosen: one notice that says to pick a conversation. */
 export const ConversationPick = (props: ConversationPickProps): ReactNode => (
     <PaneSection align="center" grow>
-        <EmptyNotice message={props.message} />
+        <EmptyNotice frame="frameless" message={props.message} />
     </PaneSection>
 )

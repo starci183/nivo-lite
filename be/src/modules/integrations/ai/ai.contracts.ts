@@ -20,6 +20,11 @@ export interface AiUsage {
     readonly totalTokens: number | null
     /** The cost in US dollars, when the endpoint reports it (OpenRouter and the gateway can). */
     readonly costUsd: number | null
+    /**
+     * How many of the request's tokens the provider served from its prompt cache (they are part of `promptTokens`); absent or null
+     * when the endpoint did not say. It is only measured: the provider caches the stable prefix of a prompt by itself.
+     */
+    readonly cachedTokens?: number | null
 }
 
 /** One retrieved passage of the business notes. */
@@ -57,6 +62,13 @@ export interface AiChatRequest {
     readonly context: AiContext | null
     /** What a reasoning model may spend on the call; absent leaves the model's own defaults. */
     readonly budget?: AiBudget
+    /**
+     * Whose calls these are, for cache affinity (a workspace id): calls that name the same owner are sent with the same routing key
+     * (`session_id`), so the endpoint serves them from the same upstream and they find the prompt cache the earlier ones wrote. A
+     * provider's cache is per upstream; without the key each new first message is routed afresh and misses it. Only a digest of
+     * the name leaves the app. Absent: the endpoint routes the call as it likes.
+     */
+    readonly affinity?: string
 }
 
 /** The spend a call caps: how hard a reasoning model thinks and how many tokens it may write (reasoning included). */
@@ -117,6 +129,8 @@ export interface ChainReply {
     readonly responseMetadata: unknown
     /** How many passages the retriever found. */
     readonly retrieved: number
+    /** The upstream that served the call, as the endpoint names it in its raw answer (OpenRouter's `provider`); absent when it does not say. */
+    readonly provider?: unknown
 }
 
 /** The two calls the app makes through LangChain; the adapter over `@langchain/*` implements it and a spec stands in for it. */

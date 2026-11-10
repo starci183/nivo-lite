@@ -1,4 +1,4 @@
-import { Alert, Button, Cluster, Icon, IconTile, Select, Stack } from "@starci/grammar/common"
+import { Alert, Button, Cluster, IconTile, Select, Stack } from "@starci/grammar/common"
 import type { ListBoxItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { LessonDetail } from "@/components/composites/LessonDetail"
@@ -81,7 +81,6 @@ const AgentRow = (props: BrainLessonsBaseProps) => {
                     intent="neutral"
                     size="sm"
                     isPending={agent.isMining}
-                    startContent={<Icon source={nivoIconSource("sparkle", "leading")} usage="leading" />}
                     onPress={props.on.mine}
                 >
                     {agent.mineLabel}

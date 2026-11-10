@@ -55,4 +55,8 @@ export class WorkspaceEntity extends UuidAbstractEntity {
     /** The brand logo URL. */
     @Column({ name: "logo_url", type: "text", nullable: true })
     logoUrl!: string | null
+
+    /** When the owner deleted the workspace (a soft delete); null while it lives. */
+    @Column({ name: "deleted_at", type: "timestamptz", nullable: true })
+    deletedAt!: Date | null
 }

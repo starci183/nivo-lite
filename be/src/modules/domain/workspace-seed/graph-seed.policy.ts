@@ -42,10 +42,11 @@ export interface ConnectionBinding {
 
 /**
  * The connections each module's agent is assigned to in the seeded workspace, by module key: the accounting agent reads the SePay bank
- * feed, the chatbot answers on the Zalo OA and on Telegram. A connection the workspace does not hold is skipped by the seed.
+ * feed, the sales agent reads the SePay account the payment QR it sends a customer is drawn from, the chatbot answers on the Zalo OA and on Telegram. A connection the workspace does not hold is skipped by the seed.
  */
 export const CONNECTION_BINDINGS: Readonly<Record<string, ReadonlyArray<ConnectionBinding>>> = {
     accounting: [{ connection: "sepay", purpose: "bank_feed", access: "auto" }],
+    sales: [{ connection: "sepay", purpose: "data_source", access: "read" }],
     chatbot: [
         { connection: "zaloOa", purpose: "inbound_chat", access: "auto" },
         { connection: "telegram", purpose: "inbound_chat", access: "auto" },

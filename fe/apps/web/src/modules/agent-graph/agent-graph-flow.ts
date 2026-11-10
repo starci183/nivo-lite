@@ -5,6 +5,7 @@ import type {
     AgentGraphFlowNode,
     AgentGraphNodeData,
     AgentGraphPaint,
+    AgentGraphWaitData,
 } from "@/modules/types"
 
 /** The kinds of node in the order a flow goes: what starts it, what it works out, what it decides, what it does. */
@@ -13,19 +14,38 @@ export const BANDS: ReadonlyArray<AgentGraphNodeKind> = ["trigger", "execute", "
 /** Whether the paint marks a node: the selected one, or any node on the path of a traced run. */
 const isMarked = (key: string, paint: AgentGraphPaint): boolean => key === paint.selectedKey || paint.path.includes(key)
 
+/** The words a node says about a wait and a traced run, in the language of the reader. */
+export interface AgentGraphNodeWords {
+    /** "Waits 24h, reminds after 2h": what a waiting node waits for and how long. */
+    readonly wait: (wait: AgentGraphWaitData) => string
+    /** "You are here": the mark of the step a traced run stands on. */
+    readonly current: string
+}
+
 /**
  * The nodes as the graph draws them: the graph lays them out top to bottom, each step below the ones that lead to it. A selected or
- * visited node paints `accent`, and while a run is traced every other node is dimmed and paints `muted`.
+ * visited node paints `accent`, and while a run is traced every other node is dimmed and paints `muted`. The last step of a traced
+ * run is the one it stands on: it paints `success` and says so. A node that waits is a pill in `warning` that reads its timeout and
+ * reminder, so a wait never looks like a step that works.
  */
 export const flowNodesOf = (
     nodes: ReadonlyArray<AgentGraphNodeData>,
     paint: AgentGraphPaint,
+    words: AgentGraphNodeWords,
 ): ReadonlyArray<AgentGraphFlowNode> =>
     nodes.map((node) => {
         const isTraced = paint.path.length > 0
+        const isCurrent = isTraced && paint.path[paint.path.length - 1] === node.key
+        const { wait } = node.card
         const tone = (() => {
+            if (isCurrent) return "success"
             if (isMarked(node.key, paint)) return "accent"
-            return isTraced ? "muted" : node.card.tone
+            if (isTraced) return "muted"
+            return wait === null ? node.card.tone : "warning"
+        })()
+        const count = (() => {
+            if (isCurrent) return words.current
+            return wait === null ? node.card.count : words.wait(wait)
         })()
         return {
             id: node.key,
@@ -33,8 +53,8 @@ export const flowNodesOf = (
             description: node.card.description,
             kind: node.kind,
             tone,
-            shape: node.card.shape,
-            count: node.card.count,
+            shape: wait === null ? node.card.shape : "stadium",
+            count,
             isPlaceholder: node.card.isPlaceholder,
             isDimmed: isTraced && !isMarked(node.key, paint),
         }
@@ -106,15 +126,23 @@ const layersOf = (nodes: ReadonlyArray<AgentGraphNodeData>): ReadonlyMap<string,
     return layers
 }
 
-/** The title of each lane of the map: the kind of step a layer holds, for each layer whose steps are all of one kind. */
+/**
+ * The title of each lane of the map. A layer whose steps all belong to one group is titled with the group ("Consult"), so a sub-flow
+ * reads as one labelled run of lanes; otherwise the kind of step the layer holds, for each layer whose steps are all of one kind.
+ */
 export const layerHeadersOf = (
     nodes: ReadonlyArray<AgentGraphNodeData>,
     word: (kind: AgentGraphNodeKind) => string,
+    groupWord: (group: string) => string = (group) => group,
 ): ReadonlyArray<{ readonly label: string; readonly at: number }> => {
     const layers = layersOf(nodes)
     const at = [...new Set(layers.values())].sort((left, right) => left - right)
     return at.flatMap((layer, index) => {
-        const kinds = new Set(nodes.filter((node) => layers.get(node.key) === layer).map((node) => node.kind))
+        const members = nodes.filter((node) => layers.get(node.key) === layer)
+        const groups = new Set(members.map((node) => node.card.group))
+        const [group] = [...groups]
+        if (groups.size === 1 && group !== undefined && group !== "") return [{ label: groupWord(group), at: layer }]
+        const kinds = new Set(members.map((node) => node.kind))
         const [kind] = [...kinds]
         const before = nodes.find((node) => layers.get(node.key) === at[index - 1])?.kind
         // A lane that holds the same kind as the one above it is the same lane: its title is written once.

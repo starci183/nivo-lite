@@ -8,7 +8,6 @@ import { announceOf, boardColumnsOf } from "../../rows/board-rows"
 import type { BoardColumnView } from "../../rows/board-rows"
 import { cellContextOf, formatValue } from "../../rows/cell-format"
 import type { CellContext } from "../../rows/cell-format"
-import { countedWords } from "../../rows/counted-words"
 import { countsView } from "../../rows/filter-tabs"
 import { paneHeadersOf } from "../../rows/pane-headers"
 import type { TabCounts } from "../../rows/filter-tabs"
@@ -122,11 +121,7 @@ export const PipelineBlock = (props: Props): ReactNode => {
     })
     const headers = paneHeadersOf(null, search)
     return (
-        <Section
-            title={words(props.props.label)}
-            headingLevel={3}
-            {...(known === null ? {} : { fact: countedWords(words(props.props.countLabel), known.total) })}
-        >
+        <Section title={words(props.props.label)} headingLevel={3} {...(known === null ? {} : { count: known.total })}>
             <SlotView
                 slot={cards}
                 frame={(notice) => <SurfaceCard headers={headers}>{notice}</SurfaceCard>}

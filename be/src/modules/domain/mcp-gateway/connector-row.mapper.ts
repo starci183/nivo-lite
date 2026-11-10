@@ -153,7 +153,7 @@ export const remoteConnectorOf = (row: McpConnectorRow): WorkspaceConnector => {
 
 /**
  * A native connector as a workspace runs it: its manifest from code, the status and the per-call limit of its row when the
- * workspace has one, else active with the gateway's default limit. Every native tool may run (its tools are code).
+ * workspace has one, else active with the manifest's own limit or the gateway's default. Every native tool may run (its tools are code).
  */
 export const nativeConnectorOf = (
     rows: ReadonlyArray<McpConnectorRow>,
@@ -167,7 +167,7 @@ export const nativeConnectorOf = (
         url: null,
         credentialState: "none",
         credentialSetAt: null,
-        timeoutMs: boundedTimeoutOf(row?.timeout_ms ?? defaultTimeoutMs),
+        timeoutMs: boundedTimeoutOf(row?.timeout_ms ?? adapter.manifest.timeoutMs ?? defaultTimeoutMs),
         approvedTools: null,
         approvedAt: null,
         checkedAt: row?.checked_at ?? null,

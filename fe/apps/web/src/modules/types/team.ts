@@ -1,3 +1,5 @@
+import type { PageHeaderBreadcrumbs } from "@starci/grammar/common"
+
 /** The invitation command whose own control displays its pending state. */
 export type InviteAction = "resend" | "copy" | "revoke"
 
@@ -142,6 +144,8 @@ interface TeamInviteDrawerView {
 /** The words of the team panes, resolved once. */
 interface TeamPanesCopy {
     readonly grid: string
+    /** The trail of the page: the dashboard, then the team. */
+    readonly breadcrumbs: PageHeaderBreadcrumbs
     readonly title: string
     readonly description: string
     readonly tabsLabel: string

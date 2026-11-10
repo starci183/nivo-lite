@@ -19,7 +19,7 @@ export class BrainTodoType {
     @Field(() => Int)
     proposals!: number
 
-    /** The sum of the four: the one number of what needs doing. */
+    /** Facts, questions and proposals: the one inbox number of what needs doing (findings stay with their dossiers). */
     @Field(() => Int)
     total!: number
 }

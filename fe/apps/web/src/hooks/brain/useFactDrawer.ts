@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { SCOPE_KEY, TYPE_KEY } from "@/modules/brain"
+import { SCOPE_KEY, TYPE_KEY, sameValue } from "@/modules/brain"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainTab } from "@/modules/routes"
@@ -105,9 +105,19 @@ export const useFactDrawer = (input: FactDrawerAddress): FactDrawerView | null =
     const close = () => router.replace(workspaceHref(workspaceId, brainTabHref(input.tab)))
     const submit = () => {
         if (!form.isComplete) return
-        command.send("fact.save", form.payload(address.preset?.gapId), { onResult: close }).catch(() => {
-            failed()
-        })
+        // A new value for a waiting fact replaces it: the proposal is turned down once the value is saved (the same value applies it).
+        const opened = address.editing
+        const waiting = opened?.status === "proposed" && !sameValue(opened.value, form.state.value) ? opened.id : null
+        command
+            .send("fact.save", form.payload(address.preset?.gapId), { onResult: close })
+            .then((saved) =>
+                saved === true && waiting !== null
+                    ? command.send("fact.decide", { id: waiting, action: "reject" })
+                    : undefined,
+            )
+            .catch(() => {
+                failed()
+            })
     }
     const { state } = form
     if (!address.canWrite) return null

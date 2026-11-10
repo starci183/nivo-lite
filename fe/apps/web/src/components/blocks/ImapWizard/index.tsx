@@ -4,9 +4,9 @@ import type { SlotRead } from "@/hooks/slot"
 
 import { useFormatter, useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
-import { agentChoicesOf } from "@/hooks/connection-wizard"
+import { agentChoicesOf, useWizardPhases } from "@/hooks/connection-wizard"
 import { useSlotLabels, slotOfReads } from "@/hooks/slot"
-import type { AgentOption, SlotLabels } from "@/modules/types"
+import type { AgentOption, SlotLabels, WizardPhases } from "@/modules/types"
 import {
     IMAP_EVERY,
     IMAP_GUIDE_KEY,
@@ -51,6 +51,7 @@ interface BuildImapWizardViewContext extends BuildMailboxAccountViewContext {
     readonly tw: ReturnType<typeof useTranslations<"connectionWizard">>
     readonly props: ImapWizardProps
     readonly slotLabelsOf: (empty: string) => SlotLabels
+    readonly phases: WizardPhases
 }
 
 /**
@@ -61,6 +62,7 @@ interface BuildImapWizardViewContext extends BuildMailboxAccountViewContext {
 export const ImapWizard = (props: ImapWizardProps) => {
     const t = useTranslations("connectorImap")
     const tw = useTranslations("connectionWizard")
+    const phases = useWizardPhases("imap")
     const tc = useTranslations("connections")
     const format = useFormatter()
     const slotLabelsOf = useSlotLabels()
@@ -82,6 +84,7 @@ export const ImapWizard = (props: ImapWizardProps) => {
         format,
         props,
         slotLabelsOf,
+        phases,
     }
     return (
         <ImapWizardBase
@@ -152,6 +155,7 @@ const buildImapWizardView = ({
     format,
     props,
     slotLabelsOf,
+    phases,
 }: BuildImapWizardViewContext) =>
     ({
         resume: slotOfReads([...props.dependencyReads, ...wizard.reads], () => ({
@@ -160,6 +164,7 @@ const buildImapWizardView = ({
         slotLabels: { ...slotLabelsOf(""), ...(wizard.loadError === null ? {} : { error: wizard.loadError }) },
         title: tc(providerKey("imap", "title")),
         stepLabel: tw("stepOf", { n: wizard.index + 1, total: IMAP_STEPS.length }),
+        phases,
         steps: [t("stepAccount"), t("stepFolders"), t("stepSchedule"), t("stepAgent")],
         index: wizard.index,
         step: wizard.step,

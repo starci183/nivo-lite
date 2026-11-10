@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import { Injectable, Optional } from "@nestjs/common"
+import { TOOL } from "@nivo-lite/blocks-core"
 import { graphSpecProblems } from "@nivo-lite/agent-sdk/graph"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
@@ -22,7 +23,7 @@ import { baseGraphOf } from "./policies/base-graph.policy"
 import { sameBehaviour, sameRights } from "./policies/graph-behaviour.policy"
 
 /** The effect a refresh raises the owner's review of a node graph through, and the action of that work. */
-const RAISE_EFFECT = "work-item.raise"
+const RAISE_EFFECT: string = TOOL.workItemRaise
 const FLOW_REVIEW_ACTION = "review_agent_flow"
 
 /** The wait given to a rule the owner never set approvers on, minutes. */

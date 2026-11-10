@@ -1,6 +1,6 @@
 import type { NodeQuery } from "@nivo-lite/agent-sdk/node"
 import type { RightScope } from "@nivo-lite/agent-sdk/rights"
-import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
+import type { EntityDefinition, IndexDef, IndexPart } from "@nivo-lite/agent-sdk/entity"
 import type { FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { EntityNodeRow, EntityNodeTurn, NodeCondition, NodeReadPlan, TurnPath } from "./entity-node.contracts"
@@ -30,11 +30,68 @@ const NEWEST_FIRST: OrderBy = [
 export const isLookup = (entity: EntityDefinition, pinned: ReadonlyArray<string>): boolean =>
     pinned.includes("id") ||
     (entity.constraints ?? []).some(
-        (constraint) => constraint.kind === "unique" && constraint.on.every((field) => pinned.includes(field)),
+        // A partial unique key (its `where`) names one record only among the rows its predicate holds for, so it is a lookup only when
+        // the pins make the predicate hold: a `notNull` of a pinned field (an equality to a value is never null).
+        (constraint) =>
+            constraint.kind === "unique" &&
+            (constraint.where === undefined ||
+                (constraint.where.op === "notNull" && pinned.includes(constraint.where.field))) &&
+            constraint.on.every((field) => pinned.includes(field)),
     )
 
 /** A lookup of one record: by its id, which a `key` index serves. */
 const BY_ID: OrderBy = [["id", "asc"]]
+
+/** A plain column of an index part, with its direction; null for a folded or a jsonb-key part, which no order names. */
+const columnOf = (part: IndexPart): { readonly name: string; readonly desc: boolean } | null => {
+    if (typeof part === "string") return { name: part, desc: false }
+    return "desc" in part ? { name: part.desc, desc: true } : null
+}
+
+/** The btree indexes that serve the entity's lists: the declared ones and the index behind each unconditional unique key. */
+const servingIndexesOf = (entity: EntityDefinition): ReadonlyArray<IndexDef> => [
+    ...(entity.indexes ?? []),
+    ...(entity.constraints ?? []).flatMap((constraint): ReadonlyArray<IndexDef> =>
+        constraint.kind === "unique" && constraint.where === undefined
+            ? [{ name: constraint.name, on: [...constraint.on, "id"] }]
+            : [],
+    ),
+]
+
+/** Whether a field of the entity is a moment: the engine's own creation and change times, or a declared `timestamptz` field. */
+const isTimeOf = (entity: EntityDefinition, field: string): boolean =>
+    field === "createdAt" || field === "updatedAt" || entity.fields[field]?.kind === "timestamptz"
+
+/**
+ * The newest-first order a declared index serves after the fields a read pins: the time column that follows the pinned fields in an
+ * index (`createdAt` when one serves it, else the index's own: `sentAt` of a message, `occurredAt` of a credit, `updatedAt` of a
+ * customer), then the id, both descending. Null when no index serves a newest-first read of these pins.
+ */
+export const newestOrderOf = (entity: EntityDefinition, pinned: ReadonlyArray<string>): OrderBy | null => {
+    const wanted = [...new Set(pinned)]
+    const fields = servingIndexesOf(entity).flatMap((index): ReadonlyArray<string> => {
+        if (index.where !== undefined || (index.using !== undefined && index.using !== "btree")) return []
+        const columns = index.on.map(columnOf)
+        const head = columns.slice(0, wanted.length).map((column) => column?.name)
+        const [time, last] = columns.slice(wanted.length, wanted.length + 2)
+        const pinsFit = head.length === wanted.length && wanted.every((field) => head.includes(field))
+        return pinsFit &&
+            time !== null &&
+            time !== undefined &&
+            isTimeOf(entity, time.name) &&
+            last?.name === "id" &&
+            last.desc === time.desc
+            ? [time.name]
+            : []
+    })
+    const field = fields.includes("createdAt") ? "createdAt" : fields[0]
+    return field === undefined
+        ? null
+        : [
+              [field, "desc"],
+              ["id", "desc"],
+          ]
+}
 
 const SYSTEM_FIELDS: ReadonlySet<string> = new Set(["id", "version", "createdAt", "updatedAt"])
 
@@ -112,7 +169,7 @@ export const nodeReadPlanOf = (
             select: selectOf(query.fields),
             ...(via === null ? {} : { join: { [via]: [] } }),
             ...condition,
-            order: isLookup(entity, pinned) ? BY_ID : NEWEST_FIRST,
+            order: isLookup(entity, pinned) ? BY_ID : (newestOrderOf(entity, pinned) ?? NEWEST_FIRST),
             page: { size: via === null ? limit : NODE_READ_MAX },
         },
         via,

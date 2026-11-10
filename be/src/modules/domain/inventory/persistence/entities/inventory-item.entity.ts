@@ -63,4 +63,12 @@ export class InventoryItemEntity extends UuidAbstractEntity {
     /** Whether the item is in use. */
     @Column({ name: "active", type: "boolean", default: () => "true" })
     active!: boolean
+
+    /** Where the item photo is kept in the media bucket, or null when it has none. */
+    @Column({ name: "image_path", type: "text", nullable: true })
+    imagePath!: string | null
+
+    /** The content type of the photo, or null when it has none. */
+    @Column({ name: "image_type", type: "text", nullable: true })
+    imageType!: string | null
 }

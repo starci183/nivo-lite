@@ -1,4 +1,5 @@
 import type { TeamChatErrorCode } from "./errors/team-chat.error"
+import type { ReactionView, ReplyView } from "./team-chat-reaction.contracts"
 
 /** The most characters a person's message holds; a longer body is refused so one message cannot swell a thread page. */
 export const BODY_MAX = 8000
@@ -26,6 +27,21 @@ export type MemberKind = "user" | "agent"
 
 /** What a room is: a pair of members or a named group. */
 export type RoomKind = "direct" | "group"
+
+/**
+ * What a room is for: `direct` (a pair), `group` (a plain named group), `common` (the one room of the whole workspace) or `module` (the one
+ * room of a module's team). An agent addresses a room by its purpose, never by its id.
+ */
+export type RoomPurpose = "direct" | "group" | "common" | "module"
+
+/** The purpose a group may be given: plain, the common room, or the room of one module's team. */
+export type GroupPurpose =
+    | { readonly purpose: "group" | "common" }
+    | {
+          readonly purpose: "module"
+          /** The module (department) whose team room it is. */
+          readonly module: string
+      }
 
 /** What a member may do in a room: an owner manages the members of a group, a member only takes part. */
 export type RoomRole = "owner" | "member"
@@ -57,6 +73,8 @@ export interface RoomMemberView extends ChatMemberRef {
     readonly lastReadAt: Date
     /** Whether the member silenced the room, so a screen shows no alert for it. */
     readonly muted: boolean
+    /** Whether an agent seat holds the right to post in this group; always false for a person. */
+    readonly mayPost: boolean
 }
 
 /** Where the decision an approval card is about stands, for one viewer. */
@@ -117,6 +135,14 @@ export interface MessageView {
     readonly decisionId: string | null
     /** The state of that decision; null for any other kind. */
     readonly approval: ApprovalState | null
+    /** The structured message of an agent, as JSON text, when the line carries one; null otherwise. */
+    readonly agentMessage: string | null
+    /** The emoji on the message, summed over the members, the most tapped first; empty when none. */
+    readonly reactions: ReadonlyArray<ReactionView>
+    /** The message this one answers, as a quote; null when it answers none. */
+    readonly replyTo: ReplyView | null
+    /** Whose words a forwarded message carries (empty when the author is unknown); null when the message was not forwarded. */
+    readonly forwardedFrom: string | null
 }
 
 /** One room as a screen shows it, for one viewer. */
@@ -125,6 +151,10 @@ export interface ChatRoomView {
     readonly id: string
     /** Whether the room is a pair or a group. */
     readonly kind: RoomKind
+    /** What the room is for. */
+    readonly purpose: RoomPurpose
+    /** The module whose team room it is; null unless the purpose is `module`. */
+    readonly purposeModule: string | null
     /** The name printed for the room: the group name, or the other member of a direct room. */
     readonly name: string
     /** Where the room sorts among rooms that have no message. */
@@ -252,6 +282,8 @@ export interface SendInput {
     readonly fileKeys: ReadonlyArray<string>
     /** The author's retry key: the same key from the same author in the same room is the same message. */
     readonly clientId: string | null
+    /** The message of the same room this one answers; null or omitted for none. */
+    readonly replyTo?: string | null
 }
 
 /** The input of opening a room. */
@@ -262,6 +294,8 @@ export interface CreateRoomInput {
     readonly name: string | null
     /** The members to add besides the person who opens it. */
     readonly members: ReadonlyArray<ChatMemberRef>
+    /** What a group is for; a plain group when omitted. A direct room is always `direct`. */
+    readonly purpose?: GroupPurpose | undefined
 }
 
 /** The report of a finished run to write as a card. */
@@ -312,6 +346,8 @@ export interface LineInput {
     readonly body: string
     /** The retry key: the same key from the same agent in the same room is the same line. */
     readonly key: string | null
+    /** The structured message the line carries as JSON text, or null for a plain line. */
+    readonly agentMessage?: string | null
 }
 
 /** Where a line went. */
@@ -332,6 +368,8 @@ export interface AgentPostInput {
     readonly body: string
     /** The retry key of the line. */
     readonly key: string | null
+    /** The structured message the line carries as JSON text, or null for a plain line. */
+    readonly agentMessage?: string | null
 }
 
 /** Where a line of an agent went, and which agent spoke. */
@@ -370,4 +408,8 @@ export interface MessageRef {
     readonly run_id?: string
     /** The decision an approval card is about. */
     readonly decision_id?: string
+    /** The structured message an agent said (its kind, intent and payload) as JSON text, which a screen draws as a card; the line itself stays readable text. */
+    readonly agent_message?: string
+    /** Whose words a forwarded message carries: the name of the author of the message that was forwarded. */
+    readonly forwarded_from?: string
 }

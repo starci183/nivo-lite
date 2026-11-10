@@ -1,5 +1,5 @@
 import type { BookingStatisticsData } from "@/modules/types"
-import { EmptyNotice, Meter, Stack, SurfaceCard, Text } from "@starci/grammar/common"
+import { EmptyNotice, Meter, Section, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 
 type ReadyProps = Omit<BookingStatisticsData, "slot" | "slotLabels">
 
@@ -13,10 +13,10 @@ export const BookingStats = (props: BookingStatsProps) => (
             {props.rangeText}
         </Text>
         <SurfaceCard isLoading={props.isLoading} kind="figures" ariaLabel={props.label} items={props.stats} />
-        <SurfaceCard
+        <Section
             isLoading={props.isLoading}
             kind="list"
-            label={props.utilisationLabel}
+            title={props.utilisationLabel}
             empty={<EmptyNotice message={props.utilisationEmpty} />}
             items={props.resources.map((resource) => ({
                 id: resource.id,

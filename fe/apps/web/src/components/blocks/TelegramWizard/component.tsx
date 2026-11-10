@@ -1,8 +1,16 @@
-import type { DataSlot, SlotLabels, AgentStepView, CopyLabels, GuideScreen, WizardNote } from "@/modules/types"
+import type {
+    DataSlot,
+    SlotLabels,
+    AgentStepView,
+    CopyLabels,
+    GuideScreen,
+    WizardNote,
+    WizardPhases,
+} from "@/modules/types"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Alert, Button, Cluster, Grid, Input, Text } from "@starci/grammar/common"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { backAction, nextAction, startActions, WizardFooter } from "@/components/branches/WizardFooter"
+import { backAction, forwardAction, nextAction, startActions, WizardFooter } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
 import { WizardFrame } from "@/components/frames/WizardFrame"
 import { WizardGuideView } from "@/components/composites/WizardGuideView"
@@ -15,6 +23,7 @@ export interface TelegramWizardBaseProps {
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
+        readonly phases: WizardPhases
         readonly index: number
         readonly step: "bot" | "token" | "check" | "agent"
         readonly providerHref: string
@@ -61,7 +70,7 @@ const actionsOf = ({ props, on }: TelegramWizardBaseProps): ReadonlyArray<Wizard
     if (props.step === "bot") return startActions(text.next, text.close, () => on.go(1), on.close)
     if (props.step === "token") {
         const missing = props.form.name.trim() === "" || props.form.token.trim() === ""
-        return [nextAction(text.next, on.connect, { isPending: props.isPending, isDisabled: missing }), back]
+        return [forwardAction(text.next, on.connect, { isPending: props.isPending, isDisabled: missing }), back]
     }
     if (props.step === "check") {
         const retry: WizardAction = {
@@ -71,7 +80,7 @@ const actionsOf = ({ props, on }: TelegramWizardBaseProps): ReadonlyArray<Wizard
             isDisabled: props.isChecking,
             onPress: on.retry,
         }
-        return [nextAction(text.next, () => on.go(3), { isDisabled: props.isChecking }), retry]
+        return [forwardAction(text.next, () => on.go(3), { isDisabled: props.isChecking }), retry]
     }
     return [nextAction(text.done, on.finish, { isPending: props.isPending })]
 }
@@ -84,13 +93,14 @@ const renderTelegramWizard = (props: TelegramWizardBaseProps, isLoading: boolean
             title={view.title}
             stepLabel={view.stepLabel}
             steps={view.steps}
+            phases={view.phases}
             index={view.index}
             footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
         >
             {view.step === "bot" ? (
                 <>
                     <Cluster gap="inline">
-                        <Button
+                        <Button endArrow
                             intent="neutral"
                             href={view.providerHref}
                             target="_blank"

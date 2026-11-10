@@ -1,7 +1,7 @@
 /** Console and public destinations the workbench and landing surfaces link to, named once. */
 export const CONSOLE_ROUTES = {
     login: "/login",
-    workspaceHome: "/agents",
+    workspaceHome: "/overview",
     inbox: "/inbox",
     chat: "/chat",
     authority: "/authority",

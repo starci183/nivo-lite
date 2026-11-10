@@ -1,23 +1,22 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { useOpenAgentCreate } from "@/hooks/agentCreate"
 import { isManager, useMember } from "@/hooks/member"
-import { useWorkspaceId } from "@/hooks/workspaces"
-import { AGENT_ROLES_HREF, workspaceHref } from "@/modules/routes"
 import { AgentCreateActionBase } from "./component"
 
-/** The connected create action of the catalogue header: shown to the people who may install agents, as the install buttons are. */
+/** The connected create action of the catalogue header: opens the create dialog, for the people who may install agents. */
 export const AgentCreateAction = () => {
-    const t = useTranslations("modulesCore")
+    const t = useTranslations("agentCatalog")
     const member = useMember()
-    const workspaceId = useWorkspaceId()
+    const openCreate = useOpenAgentCreate()
     return (
         <AgentCreateActionBase
             props={{
-                label: t("createAgent"),
-                href: workspaceHref(workspaceId, AGENT_ROLES_HREF),
+                label: t("create"),
                 canCreate: isManager(member),
             }}
+            on={{ create: () => openCreate() }}
         />
     )
 }

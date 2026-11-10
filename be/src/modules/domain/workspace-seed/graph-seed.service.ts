@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import type { NodeIndex } from "@nivo-lite/agent-sdk/node"
@@ -7,9 +7,10 @@ import {
     AgentConnectionsError,
     AgentConnectionsErrorCode,
 } from "@modules/domain/agent-connections"
-import { AgentGraphFlowService } from "@modules/domain/agent-graphs"
+import { AgentGraphFlowService, AgentWorkflowsService } from "@modules/domain/agent-graphs"
 import { MANAGEMENT_CONNECTION_IDS } from "@modules/domain/channel-provisioning"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
+import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
 import { ModuleTagGrantsService, ModulesService, defaultRulesOf } from "@modules/domain/modules"
@@ -19,9 +20,9 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { CONNECTION_BINDINGS, readGraphSpecs } from "./graph-seed.policy"
 import { ProfileActivationService } from "./profile-activation.service"
-import { InjectSeedAgents, InjectSeedToolGrants, InjectWorkspaceSeedOptions } from "./workspace-seed.decorators"
+import { InjectSeedAgents, InjectWorkspaceSeedOptions } from "./workspace-seed.decorators"
 import type { WorkspaceSeedOptions } from "./workspace-seed.options"
-import type { SeedAgentRecords, SeedToolGrants } from "./workspace-seed.port"
+import type { SeedAgentRecords } from "./workspace-seed.port"
 
 /** The workspace a seed run writes into, its owner and the nodes the graphs may use. */
 interface SeedSeat {
@@ -34,13 +35,6 @@ interface SeedSeat {
 const SEED_LOCALE = "vi"
 /** The most workspaces looked through for the named one. */
 const WORKSPACE_SCAN_LIMIT = 1000
-
-/**
- * The tools of the ledger copy the seed grants `auto` to the agent whose graph declares them (the append-only copy, its void, and the
- * read that says whether a ledger is connected: without it a read with no grant is denied and the copy is never written); no other tool
- * is granted by the seed.
- */
-const LEDGER_SEED_TOOLS: ReadonlySet<string> = new Set(["ledger.append", "ledger.void", "ledger.status"])
 
 /** The installation that runs a module's graph, with the agent it drives. */
 interface Seat {
@@ -69,7 +63,8 @@ export class GraphSeedService {
         private readonly flows: AgentGraphFlowService,
         private readonly bindings: AgentBindingsService,
         private readonly tagGrants: ModuleTagGrantsService,
-        @InjectSeedToolGrants() private readonly toolGrants: SeedToolGrants,
+        private readonly abilities: ProviderAbilitiesService,
+        @Optional() private readonly workflows?: AgentWorkflowsService,
     ) {}
 
     /**
@@ -93,9 +88,10 @@ export class GraphSeedService {
         const { installation, agentId } = await this.seatOf(workspaceId, module)
         // Before the fast path: an agent seeded by an earlier run, or before tag rights existed, gets them on any rerun.
         await this.tagGrants.grantFor(workspaceId, module.key, agentId)
-        await this.grantTools(workspaceId, agentId, spec)
+        await this.attachProviders(workspaceId, agentId, module.key)
         if (installation.status === "live" && (await this.flows.holds(workspaceId, agentId, spec))) {
             this.options.print(`${module.key} agent ${agentId} live, graph unchanged`)
+            await this.seedWorkflows(workspaceId, module.key, agentId)
             return
         }
         await this.rules.seedDefaults(workspaceId, module.key, defaultRulesOf(module))
@@ -117,18 +113,29 @@ export class GraphSeedService {
         this.options.print(
             `${module.key} agent ${agentId} ${statuses[module.agent.handle] ?? "unknown"}, graph ${published}, ${bound} connections assigned`,
         )
+        await this.seedWorkflows(workspaceId, module.key, agentId)
     }
 
     /**
-     * Gives the agent an `auto` gateway grant for the ledger tools its graph declares, when it has none: the ledger copy is written by
-     * the graph without a person. Every other tool the graph declares keeps its behaviour, and a grant that exists (a mode the owner set
-     * in the console) is never touched, so a rerun of the seed changes nothing.
+     * Makes the published graph the agent's primary workflow (or brings it up to the graph just published) and adds a draft workflow
+     * from each other template of the module, so the workflows tab of a seeded shop has its history and its templates. A rerun adds
+     * nothing; it prints how many drafts it added. An app without workflows does nothing.
      */
-    private async grantTools(workspaceId: string, agentId: string, spec: GraphSpec): Promise<void> {
-        const tools = spec.grant.tools.filter((tool) => LEDGER_SEED_TOOLS.has(tool))
-        await this.toolGrants.insertMissing(
-            tools.map((tool) => ({ workspaceId, agentId, tool, mode: "auto", limitVnd: null, constraints: [] })),
-        )
+    private async seedWorkflows(workspaceId: string, moduleKey: string, agentId: string): Promise<void> {
+        if (this.workflows === undefined) return
+        const drafts = await this.workflows.seedAgent(workspaceId, agentId, moduleKey)
+        this.options.print(`${moduleKey} agent ${agentId} workflows adopted, ${drafts} drafts added`)
+    }
+
+    /**
+     * Gives the agent the default rights of its module on the providers the workspace connected (the abilities its declaration names,
+     * by kind), where it holds none: an attachment that exists is left exactly as the workspace holds it, so a rerun of the seed or a
+     * new version of a module never changes a right. Without them the published graph could not send, draw a QR or write the ledger.
+     */
+    private async attachProviders(workspaceId: string, agentId: string, moduleKey: string): Promise<void> {
+        const made = await this.abilities.attachDefaults({ workspaceId, agentId, moduleKey }, null, null)
+        if (made.ok && made.attached.length > 0)
+            this.options.print(`${moduleKey} agent ${agentId} attached to ${made.attached.map((entry) => entry.provider).join(", ")}`)
     }
 
     /**

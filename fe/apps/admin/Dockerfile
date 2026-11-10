@@ -1,0 +1,61 @@
+# nivo-lite/admin - the platform-admin Next app on admin.nivo.vn (standalone output). The build context is the APP ROOT (the folder holding the one
+# package.json and package-lock.json), not this folder:
+#
+#   docker build -f fe/apps/admin/Dockerfile -t nivo-lite/admin:<tag> .
+#
+# Pass the public values with --build-arg: NEXT_PUBLIC_API_URL (default https://api.nivo.vn), NEXT_PUBLIC_SITE_URL (default https://admin.nivo.vn, this app's
+# own origin) and NEXT_PUBLIC_APP_URL (default https://app.nivo.vn, the console where a person signs in and where everyone the admin does not know is sent).
+#
+# NEXT_PUBLIC_* values are published to every browser by design, so they are the one kind of build argument; the app has no server-only
+# variable. It reads the session cookie the console sets (AUTH_COOKIE_DOMAIN of the api) and the api decides who is a platform admin.
+# It follows the image canon (knowledge/hfs/docker.md) and diverges from it nowhere. No secret is built in and .dockerignore keeps credentials out of the build context.
+
+FROM node:22.14.0-alpine3.21 AS manifests
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY fe fe
+COPY packages packages
+# The install stages hold manifests only, so a workspace `prepare` (it builds dist from sources) has nothing to compile; npm runs it for workspace
+# links even under --ignore-scripts. Drop it from these throwaway manifest copies; the build stages copy the sources and manifests back.
+RUN find fe packages -type f ! -name package.json -delete \
+ && find fe packages -name package.json -exec node -e "const fs=require('fs');const f=process.argv[1];const p=JSON.parse(fs.readFileSync(f,'utf8'));if(p.scripts&&p.scripts.prepare){delete p.scripts.prepare;fs.writeFileSync(f,JSON.stringify(p,null,2))}" {} \;
+
+FROM node:22.14.0-alpine3.21 AS build
+WORKDIR /app
+ARG NEXT_PUBLIC_API_URL=https://api.nivo.vn
+ARG NEXT_PUBLIC_SITE_URL=https://admin.nivo.vn
+ARG NEXT_PUBLIC_APP_URL=https://app.nivo.vn
+# NEXT_PUBLIC_LOCAL_API_URL is a dev-tunnel value only (the admin opened on localhost keeps its local api); a deployed image leaves it empty.
+ARG NEXT_PUBLIC_LOCAL_API_URL=
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL     NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL     NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL     NEXT_TELEMETRY_DISABLED=1
+COPY --from=manifests /app ./
+RUN npm ci --ignore-scripts
+
+COPY turbo.json ./
+COPY scripts scripts
+COPY be/contracts be/contracts
+COPY db/migrations db/migrations
+COPY fe/tsconfig.json fe/tsconfig.json
+COPY fe/packages fe/packages
+# The shared workbench SDK (slot views) the console and the admin both draw with.
+COPY packages packages
+COPY fe/apps/admin fe/apps/admin
+RUN mkdir -p fe/apps/admin/public
+RUN npm run codegen --silent
+RUN node_modules/.bin/turbo run build --filter=@nivo-lite/admin
+
+FROM node:22.14.0-alpine3.21 AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+ENV NEXT_TELEMETRY_DISABLED=1
+
+COPY --from=build --chown=node:node /app/fe/apps/admin/.next/standalone ./
+COPY --from=build --chown=node:node /app/fe/apps/admin/.next/static ./fe/apps/admin/.next/static
+COPY --from=build --chown=node:node /app/fe/apps/admin/public ./fe/apps/admin/public
+
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/health/live').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "fe/apps/admin/server.js"]

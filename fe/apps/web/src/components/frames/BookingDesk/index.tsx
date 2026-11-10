@@ -1,6 +1,6 @@
 import type { BookingDeskData, BookingDeskActions, BookingAgendaRowView } from "@/modules/types"
 import { BookingDeskControls } from "@/components/composites/BookingDeskControls"
-import { AlertDialog, Badge, EmptyNotice, SurfaceCard, type ListRowData, Stack, Cluster } from "@starci/grammar/common"
+import { AlertDialog, Badge, Cluster, EmptyNotice, Section, Stack, type ListRowData } from "@starci/grammar/common"
 import { BookingDetailDialog } from "@/components/composites/BookingDetailDialog"
 import { BookingPlacementDialog } from "@/components/composites/BookingPlacementDialog"
 
@@ -47,7 +47,7 @@ export const BookingDesk = (props: BookingDeskProps) => {
                 onDismissNotice={props.onDismissNotice}
             />
             {props.days.length === 0 ? (
-                <SurfaceCard
+                <Section
                     isLoading={props.isLoading}
                     kind="list"
                     ariaLabel={props.label}
@@ -56,11 +56,11 @@ export const BookingDesk = (props: BookingDeskProps) => {
                 />
             ) : (
                 props.days.map((day) => (
-                    <SurfaceCard
+                    <Section
                         isLoading={props.isLoading}
                         key={day.id}
                         kind="list"
-                        label={day.label}
+                        title={day.label}
                         items={day.rows.map((row) => bookingAgendaItem(row, props.isPending, props))}
                         empty={<EmptyNotice message={props.empty.title} description={props.empty.body} />}
                     />

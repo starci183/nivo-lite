@@ -1,12 +1,10 @@
 import type { ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { Section, Stack } from "@starci/grammar/common"
+import { SurfaceCard } from "@starci/grammar/common"
 import type { accountingPeriodFiguresBlock } from "../../blocks/accounting/period-figures.block"
-import { figureCellsOf, figuresRecord } from "../../rules/accounting/overview-view"
-import type { FiguresRecord } from "../../rules/accounting/overview-view"
+import { figureCellsOf, figuresRecord, type FiguresRecord } from "../../rules/accounting/overview-view"
 import { parsedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
-import { useIsPhone } from "../composites/useIsPhone"
 import type { RenderOf } from "../render-props"
 
 /** The figures shown while the first read is in flight. */
@@ -21,7 +19,6 @@ const PLACEHOLDER: FiguresRecord = {
 /** The four figures of the period, with the line under each in the words of the viewer. */
 export const PeriodFiguresBlock = (props: RenderOf<typeof accountingPeriodFiguresBlock>): ReactNode => {
     const words = useBlockWords()
-    const isPhone = useIsPhone()
     const labels = useSlotLabels()
     const read = props.slots.figures
     return (
@@ -44,19 +41,13 @@ export const PeriodFiguresBlock = (props: RenderOf<typeof accountingPeriodFigure
                     ageingTerm: words({ key: "fig_ageing_term" }),
                     ageingHint: words({ key: "fig_ageing_hint" }),
                 }).map((cell) => ({ id: cell.id, term: cell.term, value: cell.value, meta: cell.hint }))
-                const rows = isPhone ? [cells.slice(0, 2), cells.slice(2)] : [cells]
                 return (
-                    <Stack gap="inline">
-                        {rows.map((items) => (
-                            <Section
-                                key={items[0]?.id}
-                                kind="figures"
-                                ariaLabel={words(props.props.label)}
-                                isLoading={isLoading}
-                                items={items}
-                            />
-                        ))}
-                    </Stack>
+                    <SurfaceCard
+                        kind="figures"
+                        ariaLabel={words(props.props.label)}
+                        isLoading={isLoading}
+                        items={cells}
+                    />
                 )
             }}
         />

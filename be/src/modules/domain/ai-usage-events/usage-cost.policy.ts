@@ -52,6 +52,8 @@ export const figuresOf = (
     return {
         promptTokens: Math.round(promptTokens),
         completionTokens: Math.round(completionTokens),
+        // A cached count is a part of the prompt it was read with: it is never estimated and never exceeds the prompt.
+        cachedTokens: estimated ? 0 : Math.min(Math.round(countOf(usage?.cached_tokens) ?? 0), Math.round(promptTokens)),
         costUsd: Number(cost.toFixed(8)),
         estimated,
     }

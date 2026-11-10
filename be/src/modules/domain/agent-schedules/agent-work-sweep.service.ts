@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { AgentRunSweepService } from "@modules/domain/agent-runs"
 import type { EntityManager } from "typeorm"
 import {
+    AgentTagService,
     AgentTasksService,
     AgentTriggersService,
     AgentTurnsService,
@@ -15,12 +16,17 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
+import { CARE_DUE_EVENT, careTaskOf } from "@nivo-lite/blocks-core"
+import type { CareTask } from "@nivo-lite/blocks-core"
 import { InjectAgentTurnQueue } from "@modules/queues/agent-turn"
 import type { AgentTurnQueue } from "@modules/queues/agent-turn"
 import { AgentSchedulesLogEvent } from "./agent-schedules.log-events"
 import { RETENTION_BATCH, SWEEP_LIMIT, isMissed, latestMissedSlot } from "./agent-schedules.policy"
 import { AgentTriggerSyncService } from "./agent-trigger-sync.service"
 import type { SweepReport } from "./agent-schedules.contracts"
+
+/** What starts a care tag: the clock of the care steps. */
+const CARE_SOURCE = "care-timer"
 
 /** What handling one due item did, for the report. */
 type Done = keyof Omit<SweepReport, "removed"> | null
@@ -45,6 +51,7 @@ export class AgentWorkSweepService {
         private readonly retention: AgentWakeRetentionService,
         private readonly sync: AgentTriggerSyncService,
         private readonly runSweep: AgentRunSweepService,
+        private readonly tags: AgentTagService,
     ) {}
 
     /** Runs one pass and answers what it did. */
@@ -105,6 +112,9 @@ export class AgentWorkSweepService {
     private async wakeForTask(item: AgentWorkDue): Promise<Done> {
         if (item.subjectId === null || item.at === null) return null
         const { subjectId, at } = item
+        const task = await this.tasks.byId(subjectId)
+        const care = task === null ? null : careTaskOf(task.dedupeKey, task.title)
+        if (care !== null) return this.wakeForCare(item, subjectId, at, care)
         await this.entityManager.transaction(async (tx) => {
             await this.wakes.wake(tx, {
                 workspaceId: item.workspaceId,
@@ -116,6 +126,39 @@ export class AgentWorkSweepService {
             })
             await this.tasks.markWoken(tx, subjectId, at)
         })
+        return "tasks"
+    }
+
+    /**
+     * Wakes the Sales agent for a care step that fell due: a tag from the system whose context names the step, the record it is about and the
+     * moment it was really due (a task wakes at most seven days ahead, so the graph arms it again when it is early), keyed by the task and the
+     * moment so a replay is one wake. The task's wake time is cleared in the same transaction.
+     */
+    private async wakeForCare(item: AgentWorkDue, taskId: string, at: Date, care: CareTask): Promise<Done> {
+        const aboutOrder = care.kind !== "occasion"
+        await this.entityManager.transaction(async (tx) => {
+            await this.tags.tagAgent(
+                {
+                    workspaceId: item.workspaceId,
+                    toAgentId: item.agentId,
+                    source: CARE_SOURCE,
+                    text: `${CARE_DUE_EVENT} ${care.kind}`,
+                    subject: `${aboutOrder ? "order" : "lead"}:${care.ref}`,
+                    ...(aboutOrder ? {} : { leadId: care.ref }),
+                    eventKey: `care:${taskId}:${String(at.getTime())}`,
+                    context: {
+                        event: CARE_DUE_EVENT,
+                        careKind: care.kind,
+                        ref: care.ref,
+                        suffix: care.suffix,
+                        dueAt: care.dueAt,
+                    },
+                },
+                tx,
+            )
+            await this.tasks.markWoken(tx, taskId, at)
+        })
+        this.logger.info(AgentSchedulesLogEvent.CareWoken, { agentId: item.agentId, kind: care.kind })
         return "tasks"
     }
 

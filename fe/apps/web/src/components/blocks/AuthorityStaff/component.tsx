@@ -41,8 +41,7 @@ export const AuthorityStaffBase = (props: AuthorityStaffBaseProps) => {
             render={(rows, isLoading) => (
                 <SurfaceCard
                     kind="list"
-                    label={view.title}
-                    headingLevel={2}
+                    ariaLabel={view.title}
                     isLoading={isLoading}
                     items={rows.map((row) => ({
                         id: row.id,

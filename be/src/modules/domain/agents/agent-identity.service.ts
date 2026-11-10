@@ -2,7 +2,8 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager, UpdateResult } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { AGENT_DISPLAY_NAME_LIMITS, cleanAgentName, isAgentAvatarUrl } from "./agent-name.policy"
+import { AGENT_DISPLAY_NAME_LIMITS, cleanAgentName, isAgentAvatarPreset, isAgentAvatarUrl } from "./agent-name.policy"
+import type { OptionalAvatarPreset } from "./agent-name.contracts"
 import type { OptionalAvatarUrl } from "./agents.contracts"
 import { AgentsError, AgentsErrorCode } from "./errors/agents.error"
 import { AgentEntity } from "./persistence/entities"
@@ -29,14 +30,42 @@ export class AgentIdentityService {
         )
     }
 
-    /** Sets the picture of an agent (an HTTPS address) or clears it back to the generated avatar; a manager only. */
+    /** Sets the picture of an agent (an HTTPS address, which drops any preset) or clears it back to the generated avatar; a manager only. */
     async setAvatar(userId: string, workspaceId: string, agentId: string, avatarUrl: OptionalAvatarUrl): Promise<void> {
         await this.members.require(userId, workspaceId, GOVERNORS)
         if (avatarUrl !== null && !isAgentAvatarUrl(avatarUrl)) {
             throw new AgentsError({ code: AgentsErrorCode.AvatarInvalid })
         }
         this.expectChanged(
-            await this.entityManager.update(AgentEntity, { id: agentId, workspaceId }, { avatarUrl }),
+            await this.entityManager.update(
+                AgentEntity,
+                { id: agentId, workspaceId },
+                avatarUrl === null ? { avatarUrl } : { avatarUrl, avatarPreset: null },
+            ),
+            agentId,
+        )
+    }
+
+    /**
+     * Dresses an agent in a preset picture (the NIVO AI mark, its role's mark, its initials, a shop mark), dropping any uploaded picture;
+     * null goes back to the default sprout Grammar draws from the name. A manager only.
+     */
+    async setAvatarPreset(
+        userId: string,
+        workspaceId: string,
+        agentId: string,
+        preset: OptionalAvatarPreset,
+    ): Promise<void> {
+        await this.members.require(userId, workspaceId, GOVERNORS)
+        if (preset !== null && !isAgentAvatarPreset(preset)) {
+            throw new AgentsError({ code: AgentsErrorCode.AvatarPresetInvalid, params: { preset } })
+        }
+        this.expectChanged(
+            await this.entityManager.update(
+                AgentEntity,
+                { id: agentId, workspaceId },
+                { avatarPreset: preset, avatarUrl: null },
+            ),
             agentId,
         )
     }

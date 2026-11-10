@@ -3,6 +3,8 @@ import { ADJUSTMENT, INVOICE, ORDER, TRANSACTION, transactionOf } from "../../..
 import { questionQueueOf } from "../../../rules/accounting/questions"
 import type { QuestionLine } from "../../../rules/accounting/questions"
 import { unmatchedQueueOf } from "../../../rules/accounting/decisions"
+import type { OwnerQueueWords } from "../../../rules/accounting/today"
+import { ownerQueueOf, todayFiguresOf } from "../../../rules/accounting/today"
 import { openOrdersOf } from "../../../rules/accounting/open-orders"
 import type { OpenOrdersView } from "../../../rules/accounting/open-orders"
 import { entryStatusOf } from "../../../rules/accounting/entry-status"
@@ -270,6 +272,14 @@ export const FIGURES_NONE: FiguresView = {
     ...figuresOf({ totals: [], unmatched: NONE, openInvoices: [], now: FIXTURE_NOW }),
 }
 
+/** The words of the queue rows in the prototype data. */
+const OWNER_QUEUE_WORDS: OwnerQueueWords = {
+    unmatched: "Unmatched",
+    question: "Needs an answer",
+    inbox: "Also in Inbox",
+    paymentTitle: (amount) => `${amount} not matched to an order`,
+}
+
 /**
  * The Accounting reads in the states a prototype draws (ready, empty, and the period that waits for the owner's answer) and the
  * answer of its action. Built from the same sample records the rules' specs use, through the module's own rules. Loading and error
@@ -286,6 +296,41 @@ export const ACCOUNTING_FIXTURES: ModuleFixtures = {
         "accounting.weekly": { ready: WEEKLY_VIEW, empty: WEEKLY_NONE },
         "accounting.open-orders": { ready: OPEN_ORDERS_VIEW, empty: openOrdersOf([]) },
         "accounting.decisions": { ready: unmatchedQueueOf([UNMATCHED_PAYMENT], 1), empty: unmatchedQueueOf([], 0) },
+        "accounting.owner-queue": {
+            ready: ownerQueueOf([UNMATCHED_PAYMENT], QUESTIONS, 1 + QUESTIONS.length, OWNER_QUEUE_WORDS),
+            empty: ownerQueueOf([], [], 0, OWNER_QUEUE_WORDS),
+        },
+        "accounting.recent": {
+            ready: {
+                rows: [
+                    {
+                        id: "r1",
+                        time: "14:32",
+                        title: "+250.000 matched",
+                        connection: "MB 9999",
+                        logo: "/logos/providers/sepay.png",
+                        level: "auto",
+                        status: "done",
+                    },
+                ],
+                cursor: null,
+            },
+            empty: { rows: [], cursor: null },
+        },
+        "accounting.today": {
+            ready: todayFiguresOf({
+                received: { vnd: 6_450_000, count: 14 },
+                matched: { vnd: 5_250_000, count: 12 },
+                unmatched: { vnd: 1_200_000, count: 1 },
+                waitingQuestions: 1,
+            }),
+            empty: todayFiguresOf({
+                received: { vnd: 0, count: 0 },
+                matched: { vnd: 0, count: 0 },
+                unmatched: { vnd: 0, count: 0 },
+                waitingQuestions: 0,
+            }),
+        },
         "accounting.question-count": { ready: { count: 3 }, empty: { count: 0 } },
         "accounting.questions": { ready: questionQueueOf(QUESTIONS, 3), empty: questionQueueOf([], 0) },
         "accounting.entry": { ready: ENTRY_DETAIL, empty: null },
@@ -300,6 +345,7 @@ export const ACCOUNTING_FIXTURES: ModuleFixtures = {
         "accounting.save-settings": { ok: true },
         "accounting.answer-question": { ok: true },
         "accounting.resolve-unmatched-payment": { ok: true, data: { result: "other-income" } },
+        "accounting.decide-owner-item": { ok: true, data: { result: "other-income" } },
         "accounting.repost-ledger": { ok: true, data: { result: "queued" } },
     },
 }

@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common"
+import { AgentChannelChoicesHandler } from "./application/agent-channel-choices.handler"
 import { ApplySetupHandler } from "./application/apply-setup.handler"
+import { CreateAgentInstallationHandler } from "./application/create-agent-installation.handler"
 import { ContextNotesHandler } from "./application/context-notes.handler"
 import { DismissContextNoteHandler } from "./application/dismiss-context-note.handler"
 import { DecideSetupCardHandler } from "./application/decide-setup-card.handler"
@@ -25,7 +27,9 @@ import { ConfigurableModuleClass } from "./modules.module-definition"
 
 @Module({
     providers: [
+        AgentChannelChoicesHandler,
         ApplySetupHandler,
+        CreateAgentInstallationHandler,
         ContextNotesHandler,
         DismissContextNoteHandler,
         DecideSetupCardHandler,

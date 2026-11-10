@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import type { ReactNode } from "react"
 import { Cluster, Tabs } from "@starci/grammar/common"
 import type { ParamHandle, ReadDefinition } from "../../block/block.types"
@@ -7,6 +8,22 @@ import { resolveVariables } from "../../spec/spec-value"
 import { useWorkbenchHost } from "../host/WorkbenchHostProvider"
 import type { CountChip, ViewChrome } from "./view-chrome"
 import { countChipOf } from "./view-chrome"
+
+/** The tab row of a workbench as data, for a host that draws it in its own header (the app frame's second tab layer). */
+export interface PageFrameTabs {
+    readonly label: string
+    readonly items: ReadonlyArray<{
+        readonly id: string
+        readonly label: string
+        readonly count?: number
+        readonly isAttention?: boolean
+    }>
+    readonly selectedKey?: string
+    readonly panelId: string | ((id: string) => string)
+    readonly onSelect: (id: string) => void
+    /** The view's primary command, to stand at the end of the row. */
+    readonly end: ReactNode
+}
 
 /** What the page frame takes. */
 export interface PageFrameProps {
@@ -24,6 +41,11 @@ export interface PageFrameProps {
     readonly onSelect: (id: string) => void
     /** The page's commands at the end of the tabs band. */
     readonly actions: ReactNode
+    /**
+     * Where the tab row goes when the host draws it itself: the frame publishes the row here (null when it unmounts) and draws no
+     * tabs band, so the body is given `null` for its band.
+     */
+    readonly tabsSink?: (tabs: PageFrameTabs | null) => void
     /** The page from its tabs band: the body takes the band and places it (above the body, or inside its main pane). */
     readonly children: (tabs: ReactNode) => ReactNode
 }
@@ -53,7 +75,10 @@ const TabCount = (props: TabCountProps): ReactNode => {
 }
 
 /** What the chain of counts takes. */
-interface CountChainProps extends Omit<PageFrameProps, "selected" | "panelId" | "onSelect" | "actions" | "children"> {
+interface CountChainProps extends Omit<
+    PageFrameProps,
+    "selected" | "panelId" | "onSelect" | "actions" | "children" | "tabsSink"
+> {
     readonly rest: ReadonlyArray<PlanView>
     readonly chips: Chips
     readonly done: (chips: Chips) => ReactNode
@@ -81,8 +106,32 @@ const CountChain = (props: CountChainProps): ReactNode => {
     )
 }
 
+/** What the publisher of the tab row takes. */
+interface TabsPublisherProps {
+    readonly sink: (tabs: PageFrameTabs | null) => void
+    readonly tabs: PageFrameTabs
+}
+
+/** Hands the tab row to the host when its data changes, never for a new closure (the latest handlers are read through a ref). */
+const TabsPublisher = (props: TabsPublisherProps): ReactNode => {
+    const latest = useRef(props.tabs)
+    latest.current = props.tabs
+    const { sink, tabs } = props
+    const key = JSON.stringify([tabs.label, tabs.items, tabs.selectedKey])
+    useEffect(() => {
+        const current = latest.current
+        sink({
+            ...current,
+            panelId: (id) => (typeof current.panelId === "function" ? current.panelId(id) : current.panelId),
+            onSelect: (id) => latest.current.onSelect(id),
+        })
+    }, [sink, key])
+    useEffect(() => () => sink(null), [sink])
+    return null
+}
+
 /**
- * The frame of a workbench: the views as page tabs (each with the count of its counts read as a chip, in the attention tone when the
+ * The frame of a workbench: the views as page tabs (the default underline tabs, or the host's second tab layer through `tabsSink`; each with the count of its counts read as a chip, in the attention tone when the
  * view declares it and something waits), the view's primary command at the end of the band, and the body under them. A tab shows no
  * number while its count is unknown; the tab never waits for it.
  */
@@ -97,30 +146,47 @@ export const PageFrame = (props: PageFrameProps): ReactNode => {
             {...props}
             rest={visible}
             chips={{}}
-            done={(chips) =>
-                props.children(
+            done={(chips) => {
+                const items = visible.map((candidate) => {
+                    const chip = chips[candidate.id]
+                    return {
+                        id: candidate.id,
+                        label: wordsOf(candidate.label, (key) => owner({ key }), locale),
+                        ...(chip?.count === undefined ? {} : { count: chip.count }),
+                        ...(chip?.isAttention === true ? { isAttention: true } : {}),
+                    }
+                })
+                const common = {
+                    label: text({ key: "renderer.tabs" }),
+                    ...(props.selected === undefined ? {} : { selectedKey: props.selected }),
+                    panelId: props.panelId,
+                    onSelect: props.onSelect,
+                    labelVisibility: "always" as const,
+                }
+                if (props.tabsSink !== undefined)
+                    return (
+                        <>
+                            <TabsPublisher
+                                sink={props.tabsSink}
+                                tabs={{
+                                    label: common.label,
+                                    items,
+                                    ...(props.selected === undefined ? {} : { selectedKey: props.selected }),
+                                    panelId: props.panelId,
+                                    onSelect: props.onSelect,
+                                    end: props.actions,
+                                }}
+                            />
+                            {props.children(null)}
+                        </>
+                    )
+                return props.children(
                     <Cluster gap="row" align="center" justify="between" wrap={false}>
-                        <Tabs
-                            label={text({ key: "renderer.tabs" })}
-                            {...(props.selected === undefined ? {} : { selectedKey: props.selected })}
-                            inset="none"
-                            labelVisibility="always"
-                            items={visible.map((candidate) => {
-                                const chip = chips[candidate.id]
-                                return {
-                                    id: candidate.id,
-                                    label: wordsOf(candidate.label, (key) => owner({ key }), locale),
-                                    ...(chip?.count === undefined ? {} : { count: chip.count }),
-                                    ...(chip?.isAttention === true ? { isAttention: true } : {}),
-                                }
-                            })}
-                            panelId={props.panelId}
-                            onSelect={props.onSelect}
-                        />
+                        <Tabs {...common} items={items} />
                         {props.actions}
                     </Cluster>,
                 )
-            }
+            }}
         />
     )
 }

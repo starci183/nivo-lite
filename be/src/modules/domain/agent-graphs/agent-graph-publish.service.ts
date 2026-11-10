@@ -111,6 +111,19 @@ export class AgentGraphPublishService {
         return this.publishDocument(state, document, by, "", "template")
     }
 
+    /**
+     * Publishes the graph a sibling agent of the same role runs as the next version of a new agent ("copy the setup of"), under the same
+     * checks as any change: nothing above the ceiling of the authority rules, and a widening only by the owner.
+     */
+    async publishCopy(
+        workspaceId: string,
+        agentId: string,
+        document: GraphDocument,
+        by: Publisher,
+    ): Promise<GraphVersionView> {
+        return this.publishDocument(await this.requireState(workspaceId, agentId), document, by, "", "copy")
+    }
+
     /** Goes back to an older version by publishing it again as a new one, so nothing in the history changes. */
     async restore(workspaceId: string, agentId: string, versionId: string, by: Publisher): Promise<GraphVersionView> {
         const state = await this.requireState(workspaceId, agentId)

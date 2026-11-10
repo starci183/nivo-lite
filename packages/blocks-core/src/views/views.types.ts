@@ -40,6 +40,16 @@ export interface ConnectionRow {
     readonly statusTone: BadgeTone
     /** The words of what the agent may do through it, for instance "Read only". */
     readonly accessLabel: string
+    /** The provider the connection is with (`sepay`, `google`), which picks its mark; absent draws none. */
+    readonly provider?: string | undefined
+    /** What the agent may do through it as the raw level (`read`, `ask`, `auto`); absent for an account that is not granted. */
+    readonly access?: string | undefined
+    /** The masked bank account, when the connection is a bank feed. */
+    readonly accountMasked?: string | undefined
+    /** False for an account of the same kind the agent has not been granted: the row offers `actionLabel` in place of the badges. */
+    readonly isGranted?: boolean | undefined
+    /** The words of the command that grants the account; set with `isGranted` false. */
+    readonly actionLabel?: string | undefined
 }
 
 /** What the connections region shows once read. */
@@ -96,6 +106,24 @@ export interface KnowledgeRegionView {
     readonly internalDescription: string
     /** Null shows no gaps card. */
     readonly gaps: KnowledgeGapsView | null
+    /** How much the agent reads and how much of it the owner approved; absent draws no summary. */
+    readonly summary?: KnowledgeSummary | undefined
+}
+
+/** What the agent reads, in numbers and words. */
+export interface KnowledgeSummary {
+    /** The documents and their kinds in one line, for instance "6 documents, 2 public". */
+    readonly documentsLine: string
+    /** The facts in one line, for instance "0 / 63 facts". */
+    readonly factsLine: string
+    /** The facts the owner approved. */
+    readonly approvedFacts: number
+    /** The facts approved and waiting. */
+    readonly totalFacts: number
+    /** The fact that waits for the owner and keeps the agent from acting on its own, as words; null when none waits. */
+    readonly blocker: string | null
+    /** The words of the line that names the waiting fact. */
+    readonly blockerLine: string | null
 }
 
 /** The trace line under a row: the branch that decided it, with a link to the why when one is recorded. */
@@ -142,6 +170,8 @@ export interface DecisionRowView {
     readonly description: string
     /** The name whose initials lead the row (the agent that asked); absent draws no mark. */
     readonly leading?: string | undefined
+    /** The source of the logo that leads the row (the connection the item came through); wins over `leading`. */
+    readonly logo?: string | undefined
     /** The state and age marks beside the headline. */
     readonly badges: ReadonlyArray<BadgeView>
     /** Why the agent stopped for a person; null when it gave none. */

@@ -1,6 +1,7 @@
 import { Button, IconButton, Page, Pane, PaneGrid } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { BrainHeaderActions, brainHeaderTabs } from "@/components/composites/BrainHeaderActions"
+import { brainHeaderSubTabs } from "@/components/composites/BrainKnowledgeChips"
 import { KnowledgeDocAside } from "@/components/composites/KnowledgeDocAside"
 import { KnowledgeDocBody, KnowledgeNivoBody } from "@/components/composites/KnowledgeDocBody"
 import { KnowledgeDocHead } from "@/components/frames/KnowledgeDocHead"
@@ -241,6 +242,7 @@ export const KnowledgeDocsBase = (props: KnowledgeDocsBaseProps) => {
                     </>
                 ),
                 tabs: brainHeaderTabs({ tabs: view.header.tabs, onSelect: props.on.selectTab }),
+                ...brainHeaderSubTabs(view.header.chips),
             }}
             measure="product"
         >

@@ -15,7 +15,7 @@ interface WorkspaceHomeRedirectPageProps {
     readonly workspaceId: string
 }
 
-/** The front address of a workspace forwards to the agents page. */
+/** The front address of a workspace forwards to its dashboard (the overview page). */
 export const WorkspaceHomeRedirectPage = async (props: WorkspaceHomeRedirectPageProps): Promise<ReactElement> =>
     navigation.redirect({
         href: workspaceHref(props.workspaceId, CONSOLE_ROUTES.workspaceHome),

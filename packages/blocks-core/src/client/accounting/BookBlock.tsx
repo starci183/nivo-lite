@@ -1,23 +1,14 @@
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { Badge, EmptyNotice, Stack, SurfaceCard, type TableColumnData, type TableRowData } from "@starci/grammar/common"
 import type { accountingBookBlock } from "../../blocks/accounting/book.block"
-import { bookPeriodOf, bookRecords, bookRowsOf, bookSubtitleOf, phoneCardOf } from "../../rules/accounting/book-view"
-import type { BookRow } from "../../rules/accounting/book-view"
-import { ENTRY_STATUSES } from "../../rules/accounting/entry-status"
-import type { EntryStatus } from "../../rules/accounting/entry-status"
-import {
-    EMPTY_TAB_COUNTS,
-    countsView,
-    selectedTab,
-    tabEntriesOf,
-    tabParamValue,
-    TAB_COUNTS_PLACEHOLDER,
-} from "../../rows/filter-tabs"
+import { bookRecords, bookRowsOf, orderCodeIn, type BookRow } from "../../rules/accounting/book-view"
+import { ENTRY_STATUSES, type EntryStatus } from "../../rules/accounting/entry-status"
+import { EMPTY_TAB_COUNTS, countsView, selectedTab, tabParamValue, type TabCounts } from "../../rows/filter-tabs"
 import { queryOf } from "../../rows/search"
-import type { TabCounts } from "../../rows/filter-tabs"
-import { paneHeadersOf } from "../../rows/pane-headers"
+import { pagesOf } from "../../rows/table-pages"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
+import { filterFieldsOf, footerZonesOf, headerZonesOf } from "../composites/ListZones"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import { usePaneSearch } from "../composites/usePaneSearch"
 import type { RenderOf } from "../render-props"
@@ -39,74 +30,119 @@ const tabCountsOf = (counts: ReturnType<typeof parsedSlot<TabCounts>>): TabCount
     return "isEmpty" in counts ? EMPTY_TAB_COUNTS : null
 }
 
-/** The books: the head, the search, the status tabs with their counts and the entries as rows. */
+/** The columns of the table of the books; the content takes the rest of the row and the status folds on a narrow screen. */
+const columnsOf = (words: ReturnType<typeof useBlockWords>): ReadonlyArray<TableColumnData> => [
+    { id: "date", label: words({ key: "book_col_date" }), width: "fit" },
+    { id: "content", label: words({ key: "book_col_content" }), width: "fill", minWidth: 200, truncate: true },
+    { id: "amount", label: words({ key: "book_col_amount" }), numeric: true, width: "fit" },
+    { id: "status", label: words({ key: "book_col_status" }), width: "fit", priority: "low" },
+]
+
+/** What a row says of its entry: the order code and the customer, so the raw transfer text stays in the detail; the text itself when it names neither. */
+const contentOf = (row: BookRow): string => {
+    const parts = [orderCodeIn(row.title), row.subline].filter((part) => part !== "")
+    return parts.length === 0 ? row.title : parts.join(" · ")
+}
+
+/** One row of the table of the books: the day, the document over its counterparty, the amount, and the status with its dot. */
+const tableRowOf = (row: BookRow): TableRowData => ({
+    id: row.id,
+    cells: {
+        date: row.date,
+        content: contentOf(row),
+        amount: row.amount,
+        status: (
+            <Badge tone={row.tone} isDot>
+                {row.status}
+            </Badge>
+        ),
+    },
+})
+
+/** The rows a page of the table shows. */
+const PAGE_SIZE = 10
+
+/** The page of the table in memory; it starts again at the first page whenever the search or the status choice changes. */
+const useBookPage = (resetKey: string): readonly [number, (page: number) => void] => {
+    const [chosen, setChosen] = useState({ key: resetKey, page: 1 })
+    return [chosen.key === resetKey ? chosen.page : 1, (page) => setChosen({ key: resetKey, page })]
+}
+
+/** The books: a ribbon of how many documents stand in each status, then one card with the label and its count, the search, the status tabs, the entries as a table and the pager. */
 export const BookBlock = (props: RenderOf<typeof accountingBookBlock>): ReactNode => {
     const words = useBlockWords()
     const spec = props.props
     const query = queryOf(props.params.value(spec.searchParam))
     const labels = useSlotLabels(query === null ? spec.empty : spec.emptySearch)
-    const searchFields = usePaneSearch(props.params, spec.searchParam, {
+    const search = usePaneSearch(props.params, spec.searchParam, {
         label: words(spec.searchLabel),
         clearLabel: words({ key: "searchClear" }),
     })
-    const select = (chosen: string | null): void =>
-        props.params.setMany({
-            [spec.selectParam]: chosen,
-            [spec.paneParam]: chosen === null ? "list" : "detail",
-        })
+    const select = (chosen: string): void =>
+        props.params.setMany({ [spec.selectParam]: chosen, [spec.paneParam]: "detail" })
     const statusWord = (status: EntryStatus): string => words({ key: `status_${status}` })
     const rows = derivedSlot(parsedSlot(props.slots.rows.slot, bookRecords), (records) =>
         records.length === 0 ? null : bookRowsOf(records, statusWord),
     )
-    const counts = parsedSlot(props.slots.counts.slot, countsView)
-    const total = "items" in counts ? counts.items.total : 0
-    const period = words({ key: `book_period_${bookPeriodOf(props.params.value(spec.periodParam))}` })
+    const tabCounts = tabCountsOf(parsedSlot(props.slots.counts.slot, countsView))
     const specs = ENTRY_STATUSES.map((status) => ({
         value: status,
         label: words({ key: `tab_${status}` }),
         attention: status === "review",
     }))
-    const tabCounts = tabCountsOf(counts)
-    const headers = paneHeadersOf(
+    const filterKey = selectedTab(props.params.value(spec.filterParam), specs)
+    const [chosenPage, setPage] = useBookPage(`${query ?? ""}|${filterKey}`)
+    const filter = filterFieldsOf(
         {
             label: words({ key: "book_filters" }),
-            moreLabel: (count) => words({ key: "filtersMore" }).replaceAll("{count}", String(count)),
-            overflowLabel: words({ key: "filtersOverflow" }),
-            selectedKey: selectedTab(props.params.value(spec.filterParam), specs),
-            items: tabEntriesOf(words({ key: "filter_all" }), specs, tabCounts ?? TAB_COUNTS_PLACEHOLDER),
+            allLabel: words({ key: "filter_all" }),
+            specs,
+            counts: tabCounts,
+            selectedKey: filterKey,
             onSelect: (key) => props.params.set(spec.filterParam, tabParamValue(key)),
         },
-        searchFields,
+        words,
     )
-    const head = {
-        label: words(spec.title),
-        headingLevel: 3 as const,
-        fact: bookSubtitleOf(period, total, words({ key: "book_count" })),
-        headers,
-    }
+    const ribbon = ENTRY_STATUSES.map((status) => ({
+        id: status,
+        term: words({ key: `tab_${status}` }),
+        value: String(tabCounts?.counts[status] ?? 0),
+    }))
     return (
-        <SlotView
-            slot={rows}
-            labels={labels}
-            placeholder={PLACEHOLDER}
-            onRetry={props.slots.rows.retry}
-            frame={(notice) => <SurfaceCard {...head}>{notice}</SurfaceCard>}
-            render={(items, isLoading) => (
-                <SurfaceCard
-                    kind="list"
-                    {...head}
-                    isLoading={isLoading}
-                    items={items.map(phoneCardOf).map((card) => ({
-                        id: card.id,
-                        title: card.title,
-                        description: card.description,
-                        meta: { text: card.amount },
-                        badges: [{ label: card.status, tone: card.tone, isDot: true }],
-                        onPress: () => select(card.id),
-                    }))}
-                    empty={<EmptyNotice message={labels.empty} />}
-                />
-            )}
-        />
+        <Stack gap="section">
+            <SurfaceCard
+                kind="figures"
+                ariaLabel={words({ key: "book_figures" })}
+                isLoading={tabCounts === null}
+                items={ribbon}
+            />
+            <SlotView
+                slot={rows}
+                labels={labels}
+                placeholder={PLACEHOLDER}
+                onRetry={props.slots.rows.retry}
+                render={(items, isLoading) => {
+                    const paged = pagesOf(items, chosenPage, PAGE_SIZE)
+                    return (
+                        <SurfaceCard
+                            kind="table"
+                            label={words({ key: "book_head" })}
+                            headingLevel={3}
+                            count={tabCounts?.total ?? 0}
+                            columns={columnsOf(words)}
+                            rows={paged.rows.map((row) => tableRowOf(row))}
+                            headers={headerZonesOf(search, filter)}
+                            footers={footerZonesOf(
+                                { page: paged.page, pageCount: paged.pageCount, onPage: setPage },
+                                words,
+                            )}
+                            isLoading={isLoading}
+                            empty={<EmptyNotice frame="frameless" message={labels.empty} />}
+                            onRowAction={select}
+                        />
+                    )
+                }}
+            />
+        </Stack>
     )
 }

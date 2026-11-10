@@ -8,8 +8,15 @@ import { useMutateAuthorizeZaloSwr, useMutateDisconnectConnectionSwr } from "@/h
 import { navigation } from "@/modules/i18n"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { LocalStorage, StorageId } from "@/modules/storage"
-import type { DataSlot, ZaloHeadView } from "@/modules/types"
-import { chipToneOf, zaloStatusKindOf } from "./zaloConnection.shared"
+import type {
+    ConnectionLifecycle,
+    ConnectionLifecycleChip,
+    ConnectionSetupView,
+    DataSlot,
+    ZaloHeadView,
+} from "@/modules/types"
+import { useConnectionLife } from "@/hooks/connectionPage"
+import { chipToneOf, zaloLifecycleOf, zaloStatusKindOf } from "./zaloConnection.shared"
 import { useConnectionsRole } from "@/hooks/connections"
 import { useZaloPage } from "./useZaloPage"
 import type { ZaloPageData } from "./useZaloPage"
@@ -27,6 +34,13 @@ type UseZaloHeadResult = {
     isMissing: boolean
     isOwner: boolean
     statusKind: ZaloStatusKind | null
+    /** Where the connection stands in the shared life; null while the page is read. */
+    life: ConnectionLifecycle | null
+    /** The status badge in the shared vocabulary, and the setup card while the OA is unfinished. */
+    chip: ConnectionLifecycleChip | null
+    setup: ConnectionSetupView | null
+    /** How many agents work through the OA; undefined while the page is read. */
+    agentCount: number | undefined
 }
 
 /** The header of the page of a Zalo OA connection, its status kind, and its two commands: reconnect through the existing authorization, and disconnect. */
@@ -76,7 +90,22 @@ export const useZaloHead = (connectionId: string): UseZaloHeadResult => {
     }, [settle, labelOf, triggerDisconnect, connectionId, t, router, workspaceId])
 
     const page = "items" in slot ? slot.items : undefined
+    const life = page === undefined ? null : zaloLifecycleOf(page)
+    const view = useConnectionLife(life)
     const statusKind = page === undefined ? null : zaloStatusKindOf(page.healthy, page.status, page.access.state)
 
-    return { head, notice, reconnect, disconnect, isDisconnecting: isMutating, isMissing, isOwner, statusKind }
+    return {
+        head,
+        notice,
+        reconnect,
+        disconnect,
+        isDisconnecting: isMutating,
+        isMissing,
+        isOwner,
+        statusKind,
+        life,
+        chip: view.chip,
+        setup: view.setup,
+        agentCount: page?.agentIds.length,
+    }
 }

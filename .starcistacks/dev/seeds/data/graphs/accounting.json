@@ -1,377 +1,264 @@
 {
-  "schema": "nivo/agent-graph@1",
-  "moduleKey": "accounting",
-  "trigger": {
-    "kind": "tag",
-    "sources": [
-      "channel",
-      "chats-group",
-      "agent",
-      "system-event",
-      "schedule"
+    "schema": "nivo/agent-graph@1",
+    "moduleKey": "accounting",
+    "contract": {
+        "inputs": [
+            {
+                "name": "transactionId",
+                "type": "string",
+                "required": false
+            },
+            {
+                "name": "conversationId",
+                "type": "string",
+                "required": false
+            },
+            {
+                "name": "text",
+                "type": "string",
+                "required": false
+            },
+            {
+                "name": "leadId",
+                "type": "string",
+                "required": false
+            },
+            {
+                "name": "channel",
+                "type": "string",
+                "required": false
+            }
+        ]
+    },
+    "triggers": [
+        {
+            "key": "sepay",
+            "source": {
+                "kind": "sepay",
+                "connectionId": null
+            }
+        },
+        {
+            "key": "call",
+            "source": {
+                "kind": "workflow",
+                "connectionId": null
+            }
+        }
     ],
-    "burst": {
-      "agent": {
-        "window": "0s"
-      },
-      "system-event": {
-        "window": "0s"
-      }
-    }
-  },
-  "grant": {
-    "rights": [
-      {
-        "kind": "bank-transaction",
-        "access": "read",
-        "scope": "workspace",
-        "fields": [
-          "id",
-          "amountVnd",
-          "reference",
-          "payer",
-          "occurredAt",
-          "orderId",
-          "status"
+    "outcomes": [],
+    "entry": {
+        "openTo": "any"
+    },
+    "trigger": {
+        "kind": "tag",
+        "sources": [
+            "agent",
+            "system-event"
+        ],
+        "burst": {
+            "agent": {
+                "window": "0s"
+            },
+            "system-event": {
+                "window": "0s"
+            }
+        }
+    },
+    "grant": {
+        "rights": [
+            {
+                "kind": "bank-transaction",
+                "access": "read",
+                "scope": "workspace",
+                "fields": [
+                    "id",
+                    "amountVnd",
+                    "reference",
+                    "payer",
+                    "occurredAt",
+                    "orderId",
+                    "status"
+                ]
+            },
+            {
+                "kind": "order",
+                "access": "read",
+                "scope": "workspace",
+                "fields": [
+                    "id",
+                    "orderNo",
+                    "leadId",
+                    "items",
+                    "amountVnd",
+                    "status",
+                    "confirmedAt",
+                    "createdAt"
+                ]
+            },
+            {
+                "kind": "payment-claim",
+                "access": "read",
+                "scope": "workspace",
+                "fields": [
+                    "id",
+                    "leadId",
+                    "conversationId",
+                    "amountVnd",
+                    "names",
+                    "body",
+                    "claimedAt",
+                    "status"
+                ]
+            },
+            {
+                "kind": "sales-lead",
+                "access": "read",
+                "scope": "workspace",
+                "fields": [
+                    "id",
+                    "contactName"
+                ]
+            },
+            {
+                "kind": "payment-claim",
+                "access": "write",
+                "scope": "turn",
+                "fields": [
+                    "leadId",
+                    "amountVnd",
+                    "names",
+                    "body"
+                ]
+            },
+            {
+                "kind": "message",
+                "access": "write",
+                "scope": "turn",
+                "fields": [
+                    "body"
+                ]
+            },
+            {
+                "kind": "order",
+                "access": "write",
+                "scope": "workspace",
+                "fields": [
+                    "status"
+                ]
+            },
+            {
+                "kind": "bank-transaction",
+                "access": "write",
+                "scope": "workspace",
+                "fields": [
+                    "orderId"
+                ]
+            }
+        ],
+        "tools": [
+            "ledger.append"
+        ],
+        "effects": [
+            "payment.claim.record",
+            "customer.message.send",
+            "payment.order.settle",
+            "team.message.post",
+            "agent.tag"
         ]
-      },
-      {
-        "kind": "bank-transaction",
-        "access": "write",
-        "scope": "workspace",
-        "fields": [
-          "orderId"
-        ]
-      },
-      {
-        "kind": "order",
-        "access": "read",
-        "scope": "workspace",
-        "fields": [
-          "id",
-          "orderNo",
-          "leadId",
-          "items",
-          "amountVnd",
-          "status",
-          "confirmedAt",
-          "createdAt"
-        ]
-      },
-      {
-        "kind": "order",
-        "access": "write",
-        "scope": "workspace",
-        "fields": [
-          "status"
-        ]
-      },
-      {
-        "kind": "payment-claim",
-        "access": "read",
-        "scope": "workspace",
-        "fields": [
-          "id",
-          "leadId",
-          "conversationId",
-          "amountVnd",
-          "names",
-          "body",
-          "claimedAt",
-          "status"
-        ]
-      },
-      {
-        "kind": "sales-lead",
-        "access": "read",
-        "scope": "workspace",
-        "fields": [
-          "id",
-          "contactName"
-        ]
-      },
-      {
-        "kind": "conversation",
-        "access": "read",
-        "scope": "workspace",
-        "fields": [
-          "id",
-          "leadId",
-          "lastAt"
-        ]
-      },
-      {
-        "kind": "message",
-        "access": "write",
-        "scope": "turn",
-        "fields": [
-          "body"
-        ]
-      }
-    ],
-    "tools": [
-      "ledger.append",
-      "ledger.void",
-      "ledger.status"
-    ],
-    "effects": [
-      "payment.mark-paid",
-      "channel.send",
-      "work-item.raise"
+    },
+    "nodes": [
+        {
+            "key": "match",
+            "kind": "execute",
+            "step": "accounting.match-payment",
+            "params": {
+                "transactionId": {
+                    "$ref": "trigger.transactionId",
+                    "default": null
+                },
+                "conversationId": {
+                    "$ref": "trigger.conversationId",
+                    "default": null
+                },
+                "text": {
+                    "$ref": "trigger.text",
+                    "default": null
+                },
+                "leadId": {
+                    "$ref": "trigger.leadId",
+                    "default": null
+                }
+            },
+            "routes": {
+                "matched": "mark-paid"
+            }
+        },
+        {
+            "key": "mark-paid",
+            "kind": "output",
+            "step": "payment.settle",
+            "params": {
+                "orderId": {
+                    "$ref": "steps.match.output.orderId"
+                },
+                "transactionId": {
+                    "$ref": "steps.match.output.transactionId"
+                },
+                "verdict": {
+                    "$ref": "steps.match.output.verdict"
+                },
+                "expectedVnd": {
+                    "$ref": "steps.match.output.expectedVnd"
+                },
+                "receivedVnd": {
+                    "$ref": "steps.match.output.receivedVnd"
+                }
+            },
+            "next": "ledger"
+        },
+        {
+            "key": "ledger",
+            "kind": "output",
+            "step": "accounting.post-payment",
+            "params": {
+                "transactionId": {
+                    "$ref": "steps.match.output.transactionId"
+                },
+                "orderId": {
+                    "$ref": "steps.mark-paid.output.orderId"
+                }
+            },
+            "next": "notify-paid"
+        },
+        {
+            "key": "notify-paid",
+            "kind": "output",
+            "step": "payment.received-notice",
+            "params": {
+                "orderId": {
+                    "$ref": "steps.mark-paid.output.orderId"
+                }
+            },
+            "next": "to-after-sale"
+        },
+        {
+            "key": "to-after-sale",
+            "kind": "output",
+            "step": "core.call-workflow",
+            "params": {
+                "agent": "sales",
+                "workflow": "after-sale",
+                "version": "latest",
+                "inputs": {
+                    "orderId": {
+                        "$ref": "steps.mark-paid.output.orderId"
+                    },
+                    "leadId": {
+                        "$ref": "steps.mark-paid.output.leadId"
+                    }
+                }
+            }
+        }
     ]
-  },
-  "nodes": [
-    {
-      "key": "entry",
-      "kind": "condition",
-      "step": "payment.entry",
-      "input": {
-        "subject": {
-          "$ref": "trigger.subject"
-        },
-        "context": {
-          "$ref": "trigger.context"
-        }
-      },
-      "routes": {
-        "transaction": "evidence",
-        "claim": "evidence",
-        "none": "end"
-      }
-    },
-    {
-      "key": "evidence",
-      "kind": "execute",
-      "step": "payment.evidence",
-      "params": {
-        "windowHours": 72
-      },
-      "input": {
-        "transactionId": {
-          "$ref": "entry.transactionId"
-        },
-        "claimId": {
-          "$ref": "entry.claimId"
-        }
-      },
-      "next": "match-code"
-    },
-    {
-      "key": "match-code",
-      "kind": "condition",
-      "step": "payment.match-code",
-      "input": {
-        "evidenced": {
-          "$ref": "evidence.evidenced"
-        }
-      },
-      "routes": {
-        "matched": "settle-code",
-        "mismatch": "settle-ask",
-        "no-code": "judge"
-      }
-    },
-    {
-      "key": "settle-code",
-      "kind": "output",
-      "step": "payment.settle",
-      "params": {
-        "confirmationText": "Shop đã nhận {amount} đ cho đơn {orderNo}. Cảm ơn bạn!",
-        "reviewTitle": "Kiểm tra khoản tiền"
-      },
-      "input": {
-        "transactionId": {
-          "$ref": "evidence.transactionId"
-        },
-        "claimId": {
-          "$ref": "evidence.claimId"
-        },
-        "mode": "apply",
-        "candidateIds": {
-          "$ref": "match-code.candidateIds"
-        },
-        "reasons": {
-          "$ref": "match-code.reasons"
-        }
-      },
-      "next": "ledger-ready-code"
-    },
-    {
-      "key": "settle-ask",
-      "kind": "output",
-      "step": "payment.settle",
-      "params": {
-        "confirmationText": "Shop đã nhận {amount} đ cho đơn {orderNo}. Cảm ơn bạn!",
-        "reviewTitle": "Kiểm tra khoản tiền"
-      },
-      "input": {
-        "transactionId": {
-          "$ref": "evidence.transactionId"
-        },
-        "claimId": {
-          "$ref": "evidence.claimId"
-        },
-        "mode": "ask",
-        "candidateIds": {
-          "$ref": "match-code.candidateIds"
-        },
-        "reasons": {
-          "$ref": "match-code.reasons"
-        }
-      }
-    },
-    {
-      "key": "judge",
-      "kind": "condition",
-      "step": "payment.judge",
-      "input": {
-        "arrival": {
-          "$ref": "evidence.arrival"
-        },
-        "evidenced": {
-          "$ref": "evidence.evidenced"
-        },
-        "claims": {
-          "$ref": "evidence.claims"
-        }
-      },
-      "routes": {
-        "match": "settle-judged",
-        "ambiguous": "raise-ambiguous",
-        "no_match": "claim-wait"
-      }
-    },
-    {
-      "key": "settle-judged",
-      "kind": "output",
-      "step": "payment.settle",
-      "params": {
-        "confirmationText": "Shop đã nhận {amount} đ cho đơn {orderNo}. Cảm ơn bạn!",
-        "reviewTitle": "Kiểm tra khoản tiền"
-      },
-      "input": {
-        "transactionId": {
-          "$ref": "evidence.transactionId"
-        },
-        "claimId": {
-          "$ref": "evidence.claimId"
-        },
-        "mode": "apply",
-        "candidateIds": {
-          "$ref": "judge.candidateIds"
-        },
-        "reasons": {
-          "$ref": "judge.reasons"
-        }
-      },
-      "next": "ledger-ready-judged"
-    },
-    {
-      "key": "raise-ambiguous",
-      "kind": "output",
-      "step": "core.raise-work-item",
-      "params": {
-        "action": "reconcile_payment",
-        "title": "Đối chiếu khoản tiền vào với đơn hàng"
-      },
-      "input": {
-        "payload": {
-          "transactionId": {
-            "$ref": "evidence.transactionId"
-          }
-        },
-        "amountVnd": null,
-        "claimId": {
-          "$ref": "evidence.claimId"
-        }
-      }
-    },
-    {
-      "key": "claim-wait",
-      "kind": "output",
-      "step": "payment.claim-wait",
-      "params": {
-        "timeoutMinutes": 30,
-        "neutralText": "Shop đang kiểm tra giao dịch của bạn, sẽ báo lại ngay khi nhận được tiền.",
-        "overdueTitle": "Đối soát khoản chuyển chưa thấy tiền"
-      },
-      "input": {
-        "claimId": {
-          "$ref": "evidence.claimId"
-        },
-        "timedOut": false
-      }
-    },
-    {
-      "key": "ledger-ready-code",
-      "kind": "condition",
-      "step": "accounting.ledger-ready",
-      "input": {
-        "result": {
-          "$ref": "settle-code.result"
-        }
-      },
-      "routes": {
-        "record": "ledger-code",
-        "skip": "end"
-      }
-    },
-    {
-      "key": "ledger-code",
-      "kind": "output",
-      "step": "accounting.post-payment",
-      "params": {
-        "reconnectTitle": "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán"
-      },
-      "input": {
-        "transactionId": {
-          "$ref": "evidence.transactionId"
-        },
-        "orderId": {
-          "$ref": "settle-code.orderId"
-        },
-        "result": {
-          "$ref": "settle-code.result"
-        }
-      }
-    },
-    {
-      "key": "ledger-ready-judged",
-      "kind": "condition",
-      "step": "accounting.ledger-ready",
-      "input": {
-        "result": {
-          "$ref": "settle-judged.result"
-        }
-      },
-      "routes": {
-        "record": "ledger-judged",
-        "skip": "end"
-      }
-    },
-    {
-      "key": "ledger-judged",
-      "kind": "output",
-      "step": "accounting.post-payment",
-      "params": {
-        "reconnectTitle": "Kết nối lại Google (có quyền Sheets) để ghi sổ kế toán"
-      },
-      "input": {
-        "transactionId": {
-          "$ref": "evidence.transactionId"
-        },
-        "orderId": {
-          "$ref": "settle-judged.orderId"
-        },
-        "result": {
-          "$ref": "settle-judged.result"
-        }
-      }
-    },
-    {
-      "key": "end",
-      "kind": "output",
-      "step": "stop"
-    }
-  ]
 }

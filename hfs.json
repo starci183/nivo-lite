@@ -33,16 +33,7 @@
       "reads": [],
       "patterns": ["webhooks", "queue", "fenced-job", "realtime", "event-bus"],
       "backing": ["redis"],
-      "optionalSlots": [
-        "repo.docs",
-        "repo.packages",
-        "be.contract.graphql",
-        "be.contract.events",
-        "be.contract.mcp-tools",
-        "repo.i18n-dynamic-keys",
-        "be.events",
-        "be.platform.event-bus"
-      ],
+      "optionalSlots": ["repo.docs", "repo.packages", "be.contract.graphql", "be.contract.events", "be.contract.mcp-tools", "repo.i18n-dynamic-keys", "be.events", "be.platform.event-bus"],
       "sqlPassThrough": [
         {
           "file": "src/modules/platform/database/customer-sessions.client.ts",
@@ -59,6 +50,14 @@
         {
           "file": "src/modules/platform/database/postgres-session.client.spec.ts",
           "reason": "proves the outside Postgres session passes its statement text through as given"
+        },
+        {
+          "file": "src/modules/domain/channel-provisioning/chat-seed.service.ts",
+          "reason": "the tracked dev seed of the team chat: writes rooms, seats and lines under fixed ids and past instants, which the entity columns (created_at is database-set) cannot carry; plain statement constants, no value in the text"
+        },
+        {
+          "file": "src/modules/domain/channel-provisioning/chat-seed.service.spec.ts",
+          "reason": "proves the chat seed hands its plain statements and values to the manager"
         }
       ],
       "dbFunctions": [
@@ -715,6 +714,10 @@
         {
           "name": "landing",
           "kind": "next"
+        },
+        {
+          "name": "admin",
+          "kind": "next"
         }
       ],
       "reads": ["be/contracts/"],
@@ -735,6 +738,10 @@
         {
           "name": "@types/papaparse",
           "reason": "Type declarations for papaparse."
+        },
+        {
+          "name": "@starci/visual-effects",
+          "reason": "The confetti of the purchase and set-up celebrations (components/composites/CelebrationPanel); declared in the harness stack fe.yaml (concern visual-effects) once the hfs runtime carries it."
         }
       ]
     }

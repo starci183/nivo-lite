@@ -37,6 +37,10 @@ export const ACCOUNTING_MODULE: ModuleDefinition = {
     connectionProviders: ["sepay", "payos", "casso"],
     defaultOperatingMode: "assist",
     multiInstance: false,
+    // Accounting tells Sales when an order is paid (the `payment.paid` event Sales' payment wait resumes on).
+    tags: ["sales"],
+    // The evening close of the books: the daily report at 21:00 shop time, and the month-end reconciliation on the last evening of the month.
+    triggers: [{ key: "evening-close", preset: "daily_at", atTime: "21:00", probeKey: "accounting_close" }],
     agent: {
         label: catalogText("modulesCatalog.accounting.agent.label"),
         handle: "accounting",

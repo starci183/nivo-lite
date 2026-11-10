@@ -1,4 +1,4 @@
-import type { RunUsage } from "@modules/integrations/openclaw"
+import type { RunUsage } from "./ai-generations.contracts"
 import type { Locale } from "@modules/platform/i18n"
 
 /** What the plan allowance says about a workspace that is over it. */
@@ -24,6 +24,8 @@ export interface GenerationUsageRecord {
     readonly completionChars: number
     /** The length of the prompt, for a run that reported no usage: the estimate then has something to count. */
     readonly promptChars?: number
+    /** The agent run the generation was made for, when it was made for one. */
+    readonly runId?: string
 }
 
 /**

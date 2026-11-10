@@ -1,11 +1,13 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
+import type { GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
 import { NodeRunError } from "@nivo-lite/agent-sdk/node"
-import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
-import { stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
+import { TOOL } from "@nivo-lite/blocks-core"
+import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import { DAY_MS, FINGERPRINT, FLOW, NOW, TRIGGER, stepOf } from "@tests/fixtures/builders/agent-graph-node-step.builder"
 import { AgentRunHandlersService } from "@modules/domain/agent-runs"
+import type { StepDecision, StepSpec } from "@modules/domain/agent-runs"
 import { AgentTagService } from "@modules/domain/agent-work"
-import type { StepDecision, StepSpec, StepView } from "@modules/domain/agent-runs"
 import {
     GraphNodeHostService,
     GraphNodeRegistryService,
@@ -18,56 +20,46 @@ import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
 import { AgentGraphNodeStepService } from "./agent-graph-node-step.service"
+import { AgentGraphRunNoticesService } from "./agent-graph-run-notices.service"
+import { AgentGraphTurnPolicyService } from "./agent-graph-turn-policy.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import type { GraphDocument } from "./agent-graphs.contracts"
 import type { GraphNodeStepInput } from "./policies/graph-flow.policy"
+import { EMPTY_GRANT, ownRunGrantOf } from "./policies/workflow-grant.policy"
 
-const FLOW: GraphSpec = {
-    schema: "nivo/agent-graph@1",
-    moduleKey: "sales",
-    trigger: { kind: "tag", sources: ["agent"] },
-    grant: { rights: [], tools: ["order.look"], effects: [] },
-    nodes: [
-        { key: "check", kind: "condition", step: "order.check", routes: { yes: "keep" } },
-        {
-            key: "keep",
-            kind: "output",
-            step: "order.keep",
-            params: { n: 1 },
-            input: { id: { $ref: "check.id" }, t: { $ref: "trigger.text" } },
-            next: "end",
-        },
-        { key: "end", kind: "output", step: "stop" },
-    ],
-}
-
-const TRIGGER = { text: "hi", conversationId: "c-1", subject: { kind: "order", id: "o-1" }, locale: "en" }
-
-const stepOf = (nodeKey: string, overrides: Partial<StepView> = {}): StepView =>
-    stepViewOf({
-        stepKey: nodeKey,
-        nodeKey,
-        kind: "graph_node",
-        input: { versionId: "version-1", nodeKey, trigger: TRIGGER },
-        earlier: { check: { output: { branch: "yes", id: "o-9" } } },
-        ...overrides,
-    })
-
-const NOW = Date.parse("2026-11-04T10:00:00.000Z")
-const DAY_MS = 86_400_000
-const FINGERPRINT = "f".repeat(64)
-
-const raise = mock<NodeEffectExecutor>({ effect: "work-item.raise" })
+const raise = mock<NodeEffectExecutor>({ effect: TOOL.workItemRaise })
 raise.execute.mockResolvedValue({ kind: "work-item", id: "w-1" })
 
-const build = async (document: GraphDocument = { nodes: [], rights: [], flow: FLOW }) => {
+/** The installed node definitions as the registry answers them: one `order.keep` that says `blocking` as given. */
+const installedWith = (blocking?: boolean): ReturnType<GraphNodeRegistryService["installed"]> =>
+    mock<ReturnType<GraphNodeRegistryService["installed"]>>({
+        nodes: new Map(
+            blocking === undefined ? [] : [["order.keep", mock<NodeDefinition>({ id: "order.keep", blocking })]],
+        ),
+    })
+
+const build = async (
+    document: GraphDocument = { nodes: [], rights: [], flow: FLOW },
+    policy?: AgentGraphTurnPolicyService,
+) => {
     const handlers = mock<AgentRunHandlersService>()
     const tags = mock<AgentTagService>()
     tags.release.mockResolvedValue(undefined)
-    const graphs = mock<AgentGraphsService>({ documentOf: jest.fn().mockResolvedValue(document) })
+    const graphs = mock<AgentGraphsService>({
+        documentOf: jest.fn().mockResolvedValue(document),
+        runGrantOf: jest.fn().mockResolvedValue(ownRunGrantOf(document.flow?.grant ?? EMPTY_GRANT)),
+    })
     const host = mock<GraphNodeHostService>()
-    const nodes = mock<GraphNodeRegistryService>({ optionalExecutorOf: jest.fn().mockReturnValue(raise) })
+    const nodes = mock<GraphNodeRegistryService>({
+        optionalExecutorOf: jest.fn().mockReturnValue(raise),
+        installed: jest.fn().mockReturnValue(installedWith()),
+    })
+    const notices = mock<AgentGraphRunNoticesService>({
+        runStopped: jest.fn().mockResolvedValue(undefined),
+        sidePassedOver: jest.fn().mockResolvedValue(undefined),
+        stuck: jest.fn().mockResolvedValue(undefined),
+    })
     const flows = mock<AgentGraphFlowRunsService>({
         stepOf: jest.fn((node: GraphSpecNode, input: GraphNodeStepInput): StepSpec => ({
             stepKey: node.key,
@@ -88,9 +80,11 @@ const build = async (document: GraphDocument = { nodes: [], rights: [], flow: FL
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) }) },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: AgentTagService, useValue: tags },
+            { provide: AgentGraphRunNoticesService, useValue: notices },
+            ...(policy === undefined ? [] : [{ provide: AgentGraphTurnPolicyService, useValue: policy }]),
         ],
     }).compile()
-    return { steps: moduleRef.get(AgentGraphNodeStepService), handlers, host, nodes, tags }
+    return { steps: moduleRef.get(AgentGraphNodeStepService), handlers, host, nodes, tags, notices }
 }
 
 describe("AgentGraphNodeStepService", () => {
@@ -139,6 +133,24 @@ describe("AgentGraphNodeStepService", () => {
             grant: { rights: [], tools: ["order.look"] },
             key: "run-1:keep",
         })
+    })
+
+    it("runs the node in a turn that carries the policy of the workflow's module, read for the step's own key", async () => {
+        const policy = mock<AgentGraphTurnPolicyService>()
+        policy.toldOf.mockImplementation((turn) =>
+            Promise.resolve({ ...turn, guidance: "CHÍNH SÁCH", policy: { approvalThresholdVnd: 3_000_000 } }),
+        )
+        const { steps, host } = await build(undefined, policy)
+        host.run.mockResolvedValue({ output: { done: true }, effects: [] })
+
+        await steps.run(stepOf("keep"))
+
+        expect(policy.toldOf).toHaveBeenCalledWith(expect.objectContaining({ turnId: "run-1" }), "sales", "run-1:keep")
+        expect(host.run).toHaveBeenCalledWith(
+            expect.objectContaining({
+                turn: expect.objectContaining({ guidance: "CHÍNH SÁCH", policy: { approvalThresholdVnd: 3_000_000 } }),
+            }),
+        )
     })
 
     it("routes a condition on its branch and ends the run on a branch without a route or at stop", async () => {
@@ -190,18 +202,46 @@ describe("AgentGraphNodeStepService failures and undo", () => {
         await expect(steps.run(stepOf("keep"))).resolves.toEqual({ kind: "failed", code: "RIGHTS_DENIED" })
     })
 
-    it("lets a domain error that names no refusal reach the engine, which tries the step again", async () => {
-        const { steps, host } = await build()
+    it("stops the step on a domain error that names no refusal under the error's own code, and tells the team", async () => {
+        const { steps, host, notices } = await build()
         const unnamed = new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid, params: { refusal: 7 } })
         host.run.mockRejectedValueOnce(unnamed)
 
-        await expect(steps.run(stepOf("keep"))).rejects.toBe(unnamed)
+        await expect(steps.run(stepOf("keep"))).resolves.toEqual({
+            kind: "failed",
+            code: AgentGraphsErrorCode.DocumentInvalid,
+        })
+        expect(notices.stuck).toHaveBeenCalledWith(
+            expect.objectContaining({ code: AgentGraphsErrorCode.DocumentInvalid }),
+            expect.objectContaining({ report: null, customerLine: null }),
+        )
     })
 
-    it("lets any other failure reach the engine, which tries the step again", async () => {
-        const { steps, host } = await build()
+    it("never rejects when the node throws: with no AI core to decide, the step stops as handler_threw and the team reads the raw words as a fact", async () => {
+        const { steps, host, notices } = await build()
         host.run.mockRejectedValue(new Error("port down"))
-        await expect(steps.run(stepOf("keep"))).rejects.toThrow("port down")
+
+        await expect(steps.run(stepOf("keep"))).resolves.toEqual({ kind: "failed", code: "handler_threw" })
+
+        expect(notices.troubled).toHaveBeenCalledWith(
+            expect.objectContaining({ stepKey: "keep" }),
+            expect.objectContaining({ kind: "threw", code: "handler_threw", text: "Error: port down" }),
+        )
+        expect(notices.stuck).toHaveBeenCalledTimes(1)
+        expect(notices.stuck).toHaveBeenCalledWith(
+            expect.objectContaining({ code: "handler_threw", trigger: TRIGGER }),
+            {
+                report: null,
+                customerLine: null,
+                leadId: null,
+                facts: expect.arrayContaining([
+                    ["step", "keep (order.keep)"],
+                    ["code", "handler_threw"],
+                    ["error", "Error: port down"],
+                    ["run", "run-1"],
+                ]),
+            },
+        )
     })
 
     it("undoes a done step's effects through the host on the subjects its result kept", async () => {
@@ -219,33 +259,53 @@ describe("AgentGraphNodeStepService failures and undo", () => {
 })
 
 describe("AgentGraphNodeStepService dead letters", () => {
-    beforeEach(() => raise.execute.mockClear())
-
-    it("raises one owner review per dead run, naming the run, the node and why, in the trigger's language", async () => {
-        const { steps } = await build()
+    it("hands a dead run to its notices with the turn and the trigger the row holds", async () => {
+        const { steps, notices } = await build()
 
         await steps.deadLetter(stepOf("keep"), "INPUT_INVALID")
-        await steps.deadLetter(stepOf("keep"), "INPUT_INVALID")
 
-        const [turn, payload, call] = raise.execute.mock.calls[0] ?? []
-        expect(turn).toMatchObject({ workspaceId: "ws-1", agentId: "agent-1", conversationId: "c-1", locale: "en" })
-        expect(payload).toEqual({
-            action: "review_agent_run",
-            title: "[agentGraphs.runDead.title]",
-            payload: { runId: "run-1", nodeKey: "keep", code: "INPUT_INVALID", conversationId: "c-1" },
-        })
-        expect(call).toEqual({ key: "graph-run-dead:run-1", dedupeKey: "graph-run-dead:run-1" })
-        expect(new Set(raise.execute.mock.calls.map((each) => each[2].dedupeKey)).size).toBe(1)
+        const [notice] = notices.runStopped.mock.calls[0] ?? []
+        expect(notice).toMatchObject({ step: { stepKey: "keep" }, trigger: TRIGGER, code: "INPUT_INVALID" })
+        expect(notice?.turn).toMatchObject({ conversationId: "c-1", locale: "en" })
     })
 
-    it("raises for a row it cannot read, and stays quiet where no module raises work", async () => {
-        const { steps, nodes } = await build()
-        await steps.deadLetter(stepOf("keep", { input: {} }), "invalid_step_input")
-        expect(raise.execute.mock.calls[0]?.[0]).toMatchObject({ conversationId: null, locale: "vi" })
+    it("hands a row it cannot read over with an empty trigger, in the default language", async () => {
+        const { steps, notices } = await build()
 
-        nodes.optionalExecutorOf.mockReturnValue(undefined)
-        await steps.deadLetter(stepOf("keep"), "x")
-        expect(raise.execute).toHaveBeenCalledTimes(1)
+        await steps.sideFailed(stepOf("keep", { input: {} }), "handler_threw")
+
+        const [notice] = notices.sidePassedOver.mock.calls[0] ?? []
+        expect(notice).toMatchObject({ trigger: {}, turn: { conversationId: null, locale: "vi" } })
+    })
+})
+
+describe("AgentGraphNodeStepService side nodes", () => {
+    it("passes over a side node that failed: the step keeps its failure and the run goes on to the node that follows", async () => {
+        const { steps, nodes } = await build()
+        nodes.installed.mockReturnValue(installedWith(false))
+
+        await expect(steps.passOver(stepOf("keep"), "handler_threw")).resolves.toEqual({
+            result: { output: null, effects: [], failed: "handler_threw", passedOver: true },
+            next: [expect.objectContaining({ stepKey: "end", nodeKey: "end" })],
+        })
+    })
+
+    it("leaves a node that blocks its run, and a row it cannot read, to the failure policy", async () => {
+        const { steps, nodes } = await build()
+        await expect(steps.passOver(stepOf("keep"), "handler_threw")).resolves.toBeNull()
+
+        nodes.installed.mockReturnValue(installedWith(true))
+        await expect(steps.passOver(stepOf("keep"), "handler_threw")).resolves.toBeNull()
+        await expect(steps.passOver(stepOf("keep", { input: {} }), "handler_threw")).resolves.toBeNull()
+    })
+
+    it("takes the graph node's own `blocking: false` over a node that says nothing", async () => {
+        const nodes = FLOW.nodes.map((node) => (node.key === "keep" ? { ...node, blocking: false } : node))
+        const { steps } = await build({ nodes: [], rights: [], flow: { ...FLOW, nodes } })
+
+        await expect(steps.passOver(stepOf("keep"), "handler_threw")).resolves.toMatchObject({
+            result: { failed: "handler_threw", passedOver: true },
+        })
     })
 })
 
@@ -382,10 +442,10 @@ describe("AgentGraphNodeStepService approval verdicts", () => {
         expect(first.kind === "done" ? first.next : []).toHaveLength(1)
     })
 
-    it("ends a verdict it cannot read, and fails the step where no module raises work", async () => {
+    it("ends a step it cannot read, and fails the step where no module raises work", async () => {
         const { steps, host, nodes } = await build()
 
-        expect(steps.onDecided(stepOf("keep"), { approved: true, by: "member-1" })).toMatchObject({
+        expect(steps.onDecided(stepOf("keep", { input: {} }), { approved: true, by: "member-1" })).toMatchObject({
             result: { failed: "approval_unreadable" },
         })
         host.run.mockRejectedValue(approvalRequired())
@@ -421,7 +481,7 @@ describe("AgentGraphNodeStepService the end of an agent's work", () => {
 describe("AgentGraphNodeStepService approval edge cases", () => {
     beforeEach(() => raise.execute.mockClear())
 
-    it("lets an approval refusal that names no call reach the engine, which tries the step again", async () => {
+    it("stops the step on an approval refusal that names no call: nobody can be asked about it, so no item is raised", async () => {
         const { steps, host } = await build()
         const unreadable = new GraphNodesError({
             code: GraphNodesErrorCode.ToolApprovalRequired,
@@ -429,7 +489,10 @@ describe("AgentGraphNodeStepService approval edge cases", () => {
         })
         host.run.mockRejectedValue(unreadable)
 
-        await expect(steps.run(stepOf("keep"))).rejects.toBe(unreadable)
+        await expect(steps.run(stepOf("keep"))).resolves.toEqual({
+            kind: "failed",
+            code: GraphNodesErrorCode.ToolApprovalRequired,
+        })
         expect(raise.execute).not.toHaveBeenCalled()
     })
 

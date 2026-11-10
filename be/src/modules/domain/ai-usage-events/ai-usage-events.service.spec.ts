@@ -3,7 +3,7 @@ import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { LOGGER } from "@modules/platform/logging"
+import { LOGGER, withRunScope } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { QuotaRecord, QuotaStatus, UsageInput, UsageKind } from "./ai-usage-events.contracts"
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
@@ -158,6 +158,32 @@ describe("AiUsageEventsService > creditsUsedBy", () => {
     })
 })
 
+describe("AiUsageEventsService > creditsByModule", () => {
+    it("groups the whole credits of a period by module, the guide left out", async () => {
+        const em = mockEntityManager()
+        const sums = fakeQueryBuilder({
+            getRawMany: [
+                { module: "sales", credits: 210 },
+                { module: "chatbot", credits: 380 },
+            ],
+        })
+        em.createQueryBuilder.mockReturnValue(sums.builder)
+        const { usage } = await build(em)
+        const from = new Date("2026-11-02T17:00:00.000Z")
+        const to = new Date("2026-11-09T17:00:00.000Z")
+
+        const credits = await usage.creditsByModule("ws-1", from, to)
+
+        expect([...credits]).toEqual([
+            ["sales", 210],
+            ["chatbot", 380],
+        ])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(AiUsageEventEntity, "u")
+        expect(sums.callsOf("andWhere")).toEqual([["u.created_at >= :from AND u.created_at < :to", { from, to }]])
+        expect(sums.callsOf("groupBy")).toEqual([["1"]])
+    })
+})
+
 const BOOKED = (overrides: Record<string, unknown> = {}) => ({
     workspaceId: "ws-1",
     kind: "chat_reply",
@@ -165,8 +191,10 @@ const BOOKED = (overrides: Record<string, unknown> = {}) => ({
     model: "deepseek-chat",
     promptTokens: 100,
     completionTokens: 20,
+    cachedTokens: 0,
     costUsd: "0.01234568",
     estimated: false,
+    runId: null,
     ...overrides,
 })
 
@@ -384,5 +412,56 @@ describe("AiUsageEventsService > blockedBy", () => {
         expect(logger.error.mock.calls).toEqual([
             [AiUsageEventsLogEvent.NoticeFailed, failure, { workspaceId: "ws-1" }],
         ])
+    })
+})
+
+describe("AiUsageEventsService > a call made for a run", () => {
+    it("books the call to the run named, else to the run in scope, else to none", async () => {
+        const em = mockEntityManager({ insert: [AiUsageEventEntity, {}], query: [SELECT_QUOTA_STATUS, []] })
+        const { usage } = await build(em)
+
+        await usage.record({ ...INPUT, runId: "run-9" })
+        await withRunScope("run-5", () => usage.record(INPUT))
+        await withRunScope("run-5", () => usage.record({ ...INPUT, runId: "run-9" }))
+        await usage.record(INPUT)
+
+        expect(em.insert.mock.calls.map((call) => call[1])).toEqual([
+            expect.objectContaining({ runId: "run-9" }),
+            expect.objectContaining({ runId: "run-5" }),
+            expect.objectContaining({ runId: "run-9" }),
+            expect.objectContaining({ runId: null }),
+        ])
+    })
+})
+
+describe("AiUsageEventsService > creditsByRun", () => {
+    it("groups the whole credits of the runs given, the guide left out", async () => {
+        const em = mockEntityManager()
+        const sums = fakeQueryBuilder({
+            getRawMany: [
+                { run_id: "run-1", credits: 12 },
+                { run_id: "run-2", credits: 3 },
+            ],
+        })
+        em.createQueryBuilder.mockReturnValue(sums.builder)
+        const { usage } = await build(em)
+
+        const credits = await usage.creditsByRun("ws-1", ["run-1", "run-2", "run-3"])
+
+        expect([...credits]).toEqual([
+            ["run-1", 12],
+            ["run-2", 3],
+        ])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(AiUsageEventEntity, "u")
+        expect(sums.callsOf("andWhere")).toEqual([["u.run_id IN (:...runIds)", { runIds: ["run-1", "run-2", "run-3"] }]])
+        expect(sums.callsOf("groupBy")).toEqual([["u.run_id"]])
+    })
+
+    it("reads nothing for no runs", async () => {
+        const em = mockEntityManager()
+        const { usage } = await build(em)
+
+        await expect(usage.creditsByRun("ws-1", [])).resolves.toEqual(new Map())
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 })

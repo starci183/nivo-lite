@@ -34,8 +34,14 @@ export interface RunRecord {
     readonly resumeNotBefore: Date | null
     /** When the run ended or parked, or null. */
     readonly endedAt: Date | null
+    /** When the run started, or null for a record that holds none. */
+    readonly startedAt: Date | null
     /** The steps written so far: the next ordinal. */
     readonly stepSeq: number
+    /** When an owner or manager cancelled the run, or null. */
+    readonly cancelledAt: Date | null
+    /** The member who cancelled the run, or null. */
+    readonly cancelledBy: string | null
 }
 
 /** A step record as the engine returns it, its declared fields read. */

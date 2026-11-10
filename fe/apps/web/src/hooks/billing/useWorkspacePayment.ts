@@ -1,7 +1,6 @@
 "use client"
 
 import { useNow, useTranslations } from "next-intl"
-import { useEffect } from "react"
 import {
     useQueryBillingPlanSwr,
     useQueryBillingWorkspacesSwr,
@@ -10,7 +9,6 @@ import {
     useQueryPaymentOrdersSwr,
 } from "@/hooks/swr"
 import { dayjs } from "@/modules/dayjs"
-import { navigation } from "@/modules/i18n"
 import { useRequestPaymentOrder } from "./useRequestPaymentOrder"
 import { readError } from "@/hooks/workspaceread"
 import { messageOf, returnToOf } from "./billing.shared"
@@ -120,7 +118,6 @@ export interface WorkspacePaymentView {
 /** Browser payment state: request a job, then read its order and poll until the transfer settles. */
 export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors): WorkspacePaymentView => {
     const t = useTranslations("onboarding")
-    const router = navigation.useRouter()
     const workspaces = useQueryBillingWorkspacesSwr()
     const workspaceId = selectors.workspaceId
     const workspace = workspaces.data?.find((item) => item.id === workspaceId)
@@ -141,12 +138,6 @@ export const useWorkspacePayment = (selectors: WorkspacePaymentSelectors): Works
     const expiresAt = payment?.expiresAt
     const paid = payment?.status === "paid" || (workspace?.status === "active" && !selectors.renewing)
     const returnTo = returnToOf(workspaceId, selectors.renewing)
-
-    useEffect(() => {
-        if (!paid || !workspaceId) return
-        const timer = setTimeout(() => router.replace(returnTo), 1800)
-        return () => clearTimeout(timer)
-    }, [paid, returnTo, router, workspaceId])
 
     const regenerate = () => {
         if (!planCode || plan.data?.isCustom) return

@@ -1,9 +1,24 @@
-import { Alert, Button, Dialog, EmptyNotice, Input, Stack, SurfaceCard, Textarea } from "@starci/grammar/common"
-import type { ListRowData } from "@starci/grammar/common"
-import type { ReactElement } from "react"
-import { AGENT_MARK_MASCOT_SRC } from "@/components/leaves/AgentMark"
+import {
+    Alert,
+    Button,
+    Dialog,
+    EmptyNotice,
+    Input,
+    Stack,
+    SurfaceCard,
+    Textarea,
+    type ListRowData,
+} from "@starci/grammar/common"
+import { cloneElement, isValidElement, type ReactElement, type ReactNode } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
+import { nivoIconSource } from "@/components/leaves/Icon"
 import type { DataSlot, SlotLabels } from "@/modules/types"
+
+/** The notice of a slot that is empty, forbidden or failed, set bare on the page ground (a notice on the well has no frame). */
+const framelessNotice = (notice: ReactNode): ReactNode =>
+    isValidElement<{ readonly frame?: "card" | "frameless" }>(notice)
+        ? cloneElement(notice, { frame: "frameless" })
+        : notice
 
 /** One saved version of a template as the hub draws it. */
 interface VersionView {
@@ -120,8 +135,8 @@ const templateRowsOf = (props: Props, data: AgentTemplatesHubData): ReadonlyArra
         template.versions.map((version): ListRowData => ({
             id: `${template.key}-${String(version.version)}`,
             title: template.name,
-            description: `${template.key} \u00b7 ${version.line}`,
-            leading: { avatar: { name: template.name, kind: "agent", src: AGENT_MARK_MASCOT_SRC } },
+            description: version.line,
+            leading: { avatar: { name: template.name, kind: "agent" } },
             action: {
                 label: view.importLabel,
                 intent: "neutral",
@@ -213,6 +228,7 @@ export const AgentTemplatesHubBase = (props: AgentTemplatesHubBaseProps): ReactE
             placeholder={view.placeholder}
             labels={view.slotLabels}
             onRetry={props.on.retry}
+            frame={framelessNotice}
             render={(data, isLoading) => (
                 <Stack gap="region">
                     {view.notice === undefined ? null : <Alert tone="cautionary" title={view.notice} />}
@@ -220,19 +236,19 @@ export const AgentTemplatesHubBase = (props: AgentTemplatesHubBaseProps): ReactE
                         kind="list"
                         label={view.offersTitle}
                         headingLevel={2}
-                        fact={String(data.offers.length)}
                         isLoading={isLoading}
+                        count={data.offers.length}
                         items={data.offers.flatMap((offer) => offerRowsOf(props, offer))}
-                        empty={<EmptyNotice message={view.noOffers} />}
+                        empty={<EmptyNotice message={view.noOffers} iconSource={nivoIconSource("overview", "leading")} />}
                     />
                     <SurfaceCard
                         kind="list"
                         label={view.mineTitle}
                         headingLevel={2}
-                        fact={String(data.templates.length)}
                         isLoading={isLoading}
+                        count={data.templates.length}
                         items={templateRowsOf(props, data)}
-                        empty={<EmptyNotice message={view.slotLabels.empty} />}
+                        empty={<EmptyNotice message={view.slotLabels.empty} iconSource={nivoIconSource("overview", "leading")} />}
                     />
                     {view.dialog === null ? null : <CommandDialog {...props} dialog={view.dialog} />}
                 </Stack>

@@ -1,7 +1,6 @@
 import { Page } from "@starci/grammar/common"
 import { OnboardingPlan } from "@/components/blocks/OnboardingPlan"
 import { FirstRunStep } from "@/components/frames/FirstRunStep"
-import type { FirstRunRail } from "@/components/frames/FirstRunStep"
 
 /** Copy the /workspaces/new/plan page supplies. */
 export interface WorkspacePlanPageBaseProps {
@@ -9,8 +8,8 @@ export interface WorkspacePlanPageBaseProps {
         /** The accessible name of the first-run steps and their labels, in order. */
         readonly stepsLabel: string
         readonly steps: ReadonlyArray<string>
-        /** The words of the step rail. */
-        readonly rail: FirstRunRail
+        /** One short line under each step label. */
+        readonly descriptions: ReadonlyArray<string>
         /** Where the Enterprise plan sends the owner to talk to NIVO. */
         readonly contactHref: string
     }
@@ -22,10 +21,9 @@ export const WorkspacePlanPageBase = (props: WorkspacePlanPageBaseProps) => (
         <FirstRunStep
             stepsLabel={props.props.stepsLabel}
             steps={props.props.steps}
-            rail={props.props.rail}
+            descriptions={props.props.descriptions}
             currentStepId="s3"
             layout="wide"
-            artwork={null}
         >
             <OnboardingPlan contactHref={props.props.contactHref} />
         </FirstRunStep>

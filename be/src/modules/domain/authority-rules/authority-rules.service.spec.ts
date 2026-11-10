@@ -396,3 +396,32 @@ describe("AuthorityRulesService > disableForAgent", () => {
         ])
     })
 })
+
+describe("AuthorityRulesService > extendToAgent", () => {
+    it("adds the new agent to every rule of the department that lists its sibling, and counts them", async () => {
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [{ execute: { affected: 2 } }])
+        const service = await build(em)
+
+        await expect(service.extendToAgent("ws-1", "sales", "agent-lan", "agent-minh")).resolves.toBe(2)
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(AuthorityRuleEntity, "ar")
+        expect(expressionOf(fake?.callsOf("set"), "agents")).toBe("array_append(agents, :toAgentId::uuid)")
+        expect(fake?.callsOf("where")).toEqual([
+            ["workspace_id = :workspaceId AND department = :department", { workspaceId: "ws-1", department: "sales" }],
+        ])
+        expect(fake?.callsOf("andWhere")).toEqual([
+            [
+                ":fromAgentId::uuid = ANY(agents) AND NOT (:toAgentId::uuid = ANY(agents))",
+                { fromAgentId: "agent-lan", toAgentId: "agent-minh" },
+            ],
+        ])
+    })
+
+    it("answers none when the update reports no count", async () => {
+        const em = mockEntityManager()
+        queueQueryBuilders(em, [{ execute: {} }])
+        const service = await build(em)
+
+        await expect(service.extendToAgent("ws-1", "sales", "agent-lan", "agent-minh")).resolves.toBe(0)
+    })
+})

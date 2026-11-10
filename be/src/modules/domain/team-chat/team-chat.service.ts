@@ -10,6 +10,8 @@ import {
     cursorOf,
     directKeyOf,
     groupNameOf,
+    isPurposeValid,
+    isUniqueViolation,
     pageSizeOf,
     positionOf,
     sendProblem,
@@ -20,6 +22,7 @@ import { TeamChatAccessService } from "./team-chat-access.service"
 import { TeamChatApprovalsService } from "./team-chat-approvals.service"
 import { TeamChatCardsService } from "./team-chat-cards.service"
 import { TeamChatFilesService } from "./team-chat-files.service"
+import { lineKeyOf } from "./team-chat.policy"
 import { TeamChatStoreService } from "./team-chat-store.service"
 import { compareRooms } from "./team-chat-view.policy"
 import { TeamChatViewsService } from "./team-chat-views.service"
@@ -29,6 +32,7 @@ import type {
     ChatMemberRef,
     ChatUpload,
     CreateRoomInput,
+    GroupPurpose,
     LineInput,
     MessagePage,
     MessageView,
@@ -51,6 +55,27 @@ import type {
     OptionalRoomView,
 } from "./team-chat-store.contracts"
 
+/** A person's reply to a line an agent wrote under a key. */
+export interface AgentLineReplied {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The person who replied. */
+    readonly byUserId: string
+    /** The stored key of the agent's line (`lineKeyOf` of the key it was posted under). */
+    readonly lineKey: string
+}
+
+/** What hears a person's reply to an agent's line. */
+export type AgentLineReplyListener = (reply: AgentLineReplied) => Promise<void>
+
+/** One reply of a person, as the engine reads it. */
+export interface AgentLineReply {
+    /** The words. */
+    readonly text: string
+    /** When they were written, ISO text. */
+    readonly at: string
+}
+
 @Injectable()
 /**
  * The internal team chat of a workspace: rooms (direct of two, or groups), their members (people and agents), the messages, the pins
@@ -60,6 +85,8 @@ import type {
  * statements, the access rules, the views and the engine cards each live in their own class behind it.
  */
 export class TeamChatRoomsService {
+    private replyListener: AgentLineReplyListener | null = null
+
     constructor(
         private readonly store: TeamChatStoreService,
         private readonly access: TeamChatAccessService,
@@ -69,6 +96,31 @@ export class TeamChatRoomsService {
         private readonly approvals: TeamChatApprovalsService,
         @Optional() @InjectTeamChatTags() private readonly tags: TeamChatTags | null = null,
     ) {}
+
+    /**
+     * Registers the one listener of a person's reply to a line an agent wrote under a key (the engine's report of a stuck step: the
+     * founder's answer there lets the workflow go on). The chat does no business itself: it only says a reply was written.
+     */
+    listenReplies(listener: AgentLineReplyListener): void {
+        this.replyListener = listener
+    }
+
+    /** What people replied to the line an agent wrote under a key, oldest first; none when there is no such line. */
+    async repliesToAgentLine(workspaceId: string, key: string): Promise<ReadonlyArray<AgentLineReply>> {
+        const line = await this.store.agentLine(workspaceId, lineKeyOf(key))
+        if (line === null) return []
+        const replies = await this.store.repliesTo(workspaceId, line.id)
+        return replies.map((reply) => ({ text: reply.body, at: reply.createdAt.toISOString() }))
+    }
+
+    /** Tells the listener a person replied to an agent's line; what the listener does never fails the person's message. */
+    private async heard(workspaceId: string, byUserId: string, lineKey: string): Promise<void> {
+        try {
+            await this.replyListener?.({ workspaceId, byUserId, lineKey })
+        } catch {
+            // The message is written; the listener's own failure is its own to report.
+        }
+    }
 
     /** The rooms the viewer sits in (all of them for an owner), newest message first. */
     async rooms(
@@ -134,9 +186,17 @@ export class TeamChatRoomsService {
     /** Opens a room; a direct room of a pair that already has one answers that one. */
     createRoom(workspaceId: string, viewerId: string, input: CreateRoomInput): Promise<TeamChatResult<ChatRoomView>> {
         const others = uniqueMembers(input.members, { memberKind: "user", memberId: viewerId })
-        return input.kind === "group"
-            ? this.openGroup(workspaceId, viewerId, groupNameOf(input.name), others)
-            : this.openDirect(workspaceId, viewerId, input.name, others)
+        if (input.kind === "direct")
+            return input.purpose === undefined
+                ? this.openDirect(workspaceId, viewerId, input.name, others)
+                : Promise.resolve(chatRefusal(TeamChatErrorCode.PurposeInvalid))
+        return this.openGroup(
+            workspaceId,
+            viewerId,
+            groupNameOf(input.name),
+            others,
+            input.purpose ?? { purpose: "group" },
+        )
     }
 
     /** Adds a person or an agent to a group. */
@@ -191,6 +251,9 @@ export class TeamChatRoomsService {
         const problem = sendProblem(input.body, mentions.length, input.fileKeys.length)
         if (problem !== null) return chatRefusal(problem)
         if (!(await this.access.allKnown(workspaceId, mentions))) return chatRefusal(TeamChatErrorCode.MemberUnknown)
+        const repliedTo =
+            input.replyTo == null ? null : await this.store.messageIn(workspaceId, found.id, input.replyTo)
+        if (input.replyTo != null && repliedTo === null) return chatRefusal(TeamChatErrorCode.NotFound)
         const retried = await this.store.sentBefore(workspaceId, found.id, viewerId, input.clientId)
         const stored =
             retried === null
@@ -198,6 +261,9 @@ export class TeamChatRoomsService {
                 : chatDone(retried)
         if (!stored.ok) return chatRefusal(stored.refusal)
         if (retried === null) await this.tagAgents(workspaceId, viewerId, stored.value, mentions)
+        if (retried === null && repliedTo?.authorKind === "agent" && repliedTo.clientId !== null) {
+            await this.heard(workspaceId, viewerId, repliedTo.clientId)
+        }
         const view = await this.views.viewOf(workspaceId, stored.value, viewerId)
         await this.store.moveReadPosition(workspaceId, found.id, viewerId, stored.value.id)
         return chatDone(view)
@@ -332,24 +398,31 @@ export class TeamChatRoomsService {
         return this.opened(workspaceId, viewerId, room)
     }
 
-    /** Opens a named group with its members. */
+    /** Opens a named group with its members and its purpose; a purpose another room holds is refused. */
     private async openGroup(
         workspaceId: string,
         viewerId: string,
         name: OptionalId,
         others: ReadonlyArray<ChatMemberRef>,
+        purpose: GroupPurpose,
     ): Promise<TeamChatResult<ChatRoomView>> {
         if (name === null) return chatRefusal(TeamChatErrorCode.GroupNeedsName)
+        if (!isPurposeValid(purpose)) return chatRefusal(TeamChatErrorCode.PurposeInvalid)
         if (!(await this.access.allKnown(workspaceId, others))) return chatRefusal(TeamChatErrorCode.MemberUnknown)
-        const room = await this.store.insertRoom({
+        const opening = {
             workspaceId,
             createdBy: viewerId,
-            kind: "group",
+            kind: "group" as const,
             name,
             directKey: null,
             others,
+            purpose,
+        }
+        const room = await this.store.insertRoom(opening).catch((cause: unknown) => {
+            if (isUniqueViolation(cause)) return null
+            throw cause
         })
-        return this.opened(workspaceId, viewerId, room)
+        return room === null ? chatRefusal(TeamChatErrorCode.PurposeTaken) : this.opened(workspaceId, viewerId, room)
     }
 
     private async opened(
@@ -386,6 +459,7 @@ export class TeamChatRoomsService {
                 clientId: input.clientId,
                 mentions: storedMentionsOf(mentions),
                 attachments: attached.value,
+                replyTo: input.replyTo ?? null,
             }),
         )
     }

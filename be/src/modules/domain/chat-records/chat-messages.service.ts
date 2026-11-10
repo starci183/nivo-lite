@@ -7,14 +7,19 @@ import type { EntitiesApi, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { q } from "@nivo-lite/agent-sdk/query"
 import type { FilterExpr, Query } from "@nivo-lite/agent-sdk/query"
 import { patchAfterLine } from "@nivo-lite/blocks-core/rules/chatbot"
+import type { LineFile, LineOrder } from "@nivo-lite/blocks-core/rules/chatbot"
 import { CONVERSATION_ENTITY, plainFactsOf, stateOf } from "./chat-conversation.policy"
 import { ChatEntitiesService } from "./chat-entities.service"
 import {
     MESSAGE_SELECT,
     TRANSCRIPT_MAX,
+    answersCustomer,
     customerLineOf,
+    filesFieldOf,
     lineOf,
+    lineRefOf,
     linesOf,
+    orderFieldOf,
     replyOf,
     storedMessageOf,
     transcriptOf,
@@ -44,8 +49,8 @@ const MESSAGE_ENTITY = "chat.message"
 /** How often a write retries after another writer moved the record first. */
 const WRITE_ATTEMPTS = 3
 
-/** The key of a line stored once under a caller's key (a work item id, a customer message id). */
-const lineRefOf = (key: string): string => `line:${key}`
+/** How many of the agent's newest lines the last reply is looked for among, past the holding lines. */
+const REPLY_LOOKBACK = 20
 
 /** A line to store: its values and the instant it is said at. */
 interface NewLine {
@@ -57,6 +62,10 @@ interface NewLine {
     readonly inReplyTo: string | null
     /** The agent that sent the line, when an agent did. */
     readonly sentBy?: string | null | undefined
+    /** The pictures and files the line carries. */
+    readonly files?: ReadonlyArray<LineFile> | undefined
+    /** The order the line is about. */
+    readonly order?: LineOrder | undefined
     readonly author: {
         readonly kind: "ai" | "human"
         readonly name: string | null
@@ -162,6 +171,8 @@ export class ChatMessagesService {
                 channelRef,
                 inReplyTo: line.inReplyTo ?? null,
                 sentBy: line.sentBy ?? null,
+                files: line.files,
+                order: line.order,
                 author:
                     line.human === undefined
                         ? { kind: "ai", name: null, userId: null }
@@ -257,7 +268,7 @@ export class ChatMessagesService {
         limit: number,
     ): Promise<ReadonlyArray<ChatCustomerLine>> {
         return this.entities.run(workspaceId, async (api) => {
-            const reply = await this.readOne(api, inConversation(conversationId, roleIs("agent")))
+            const reply = await this.lastReply(api, conversationId)
             const page = await api.list(
                 linesQuery(
                     inConversation(
@@ -364,6 +375,12 @@ export class ChatMessagesService {
         return found === undefined ? null : lineOf(found.row)
     }
 
+    /** The agent's newest line that answered the customer: a run's holding line promises a reply and is passed over. */
+    private async lastReply(api: EntitiesApi, conversationId: string): Promise<LineFacts | null> {
+        const page = await api.list(linesQuery(inConversation(conversationId, roleIs("agent")), "desc", REPLY_LOOKBACK))
+        return page.rows.flatMap((found) => linesOf(found.row)).find(answersCustomer) ?? null
+    }
+
     private async readNewest(api: EntitiesApi, where: FilterExpr): Promise<LineFacts | null> {
         const [found] = (await api.list(linesQuery(where, "desc", 1))).rows
         return found === undefined ? null : lineOf(found.row)
@@ -387,6 +404,8 @@ export class ChatMessagesService {
                 authorName: line.author?.name ?? null,
                 authorUserId: line.author?.userId ?? null,
                 sentBy: line.sentBy ?? null,
+                files: filesFieldOf(line.files),
+                orderCard: orderFieldOf(line.order),
             },
             { conversation: line.conversationId },
         )

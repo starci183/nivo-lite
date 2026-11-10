@@ -1,0 +1,284 @@
+{
+    "id": "chatbot.front-desk",
+    "moduleKey": "chatbot",
+    "primary": true,
+    "name": {
+        "vi": "Lễ tân",
+        "en": "Front desk"
+    },
+    "summary": {
+        "vi": "Đón tin nhắn Zalo và Telegram, trả lời và chuyển đúng quy trình",
+        "en": "Greets Zalo and Telegram messages, answers and passes on to the right workflow"
+    },
+    "requires": [
+        {
+            "kind": "zalo",
+            "label": {
+                "vi": "Zalo OA",
+                "en": "Zalo OA"
+            },
+            "why": {
+                "vi": "Nhận và trả lời tin nhắn khách",
+                "en": "Receives and answers customer messages"
+            }
+        },
+        {
+            "kind": "telegram",
+            "label": {
+                "vi": "Telegram",
+                "en": "Telegram"
+            },
+            "why": {
+                "vi": "Kênh trò chuyện thứ hai",
+                "en": "A second chat channel"
+            }
+        }
+    ],
+    "shops": 3051,
+    "versions": [
+        {
+            "version": 4,
+            "publishedAt": "2026-11-10T12:00:00.000Z",
+            "changes": [
+                {
+                    "vi": "Thuần nghiệp vụ: Hiểu ý khách rồi bốn hướng (Muốn mua, Báo đã chuyển, Khiếu nại, Hỏi thông tin); Trả lời câu hỏi tra thông tin công khai của tiệm bằng công cụ tìm kiếm thay vì đọc cả tài liệu",
+                    "en": "Pure business steps: understand the customer, then four routes (Wants to buy, Reports a transfer, Complaint, Question); the answer searches the shop's public knowledge through the search tool instead of reading whole documents"
+                }
+            ],
+            "graph": {
+                "schema": "nivo/agent-graph@1",
+                "moduleKey": "chatbot",
+                "contract": {
+                    "inputs": [
+                        {
+                            "name": "conversationId",
+                            "type": "string",
+                            "required": true
+                        },
+                        {
+                            "name": "text",
+                            "type": "string",
+                            "required": true
+                        },
+                        {
+                            "name": "channel",
+                            "type": "string",
+                            "required": true
+                        },
+                        {
+                            "name": "leadId",
+                            "type": "string",
+                            "required": false
+                        },
+                        {
+                            "name": "messages",
+                            "type": "array",
+                            "required": false
+                        }
+                    ]
+                },
+                "triggers": [
+                    {
+                        "key": "zalo",
+                        "source": {
+                            "kind": "zalo",
+                            "connectionId": null
+                        }
+                    },
+                    {
+                        "key": "telegram",
+                        "source": {
+                            "kind": "telegram",
+                            "connectionId": null
+                        }
+                    }
+                ],
+                "outcomes": [
+                    {
+                        "key": "owner",
+                        "label": "Chuyển chủ tiệm",
+                        "outputs": [
+                            {
+                                "name": "summary",
+                                "type": "string"
+                            }
+                        ]
+                    }
+                ],
+                "entry": {
+                    "openTo": "any"
+                },
+                "trigger": {
+                    "kind": "tag",
+                    "sources": [
+                        "channel"
+                    ],
+                    "burst": {
+                        "channel": {
+                            "window": "6s",
+                            "maxWait": "20s"
+                        }
+                    }
+                },
+                "grant": {
+                    "rights": [
+                        {
+                            "kind": "message",
+                            "access": "read",
+                            "scope": "turn",
+                            "fields": [
+                                "conversationId",
+                                "role",
+                                "text",
+                                "sentAt",
+                                "status"
+                            ]
+                        },
+                        {
+                            "kind": "message",
+                            "access": "write",
+                            "scope": "turn",
+                            "fields": [
+                                "body"
+                            ]
+                        }
+                    ],
+                    "tools": [
+                        "brain.search"
+                    ],
+                    "effects": [
+                        "agent.tag",
+                        "customer.message.send",
+                        "team.message.post"
+                    ]
+                },
+                "nodes": [
+                    {
+                        "key": "understand",
+                        "kind": "condition",
+                        "step": "chatbot.understand",
+                        "params": {
+                            "conversationId": {
+                                "$ref": "trigger.conversationId"
+                            },
+                            "text": {
+                                "$ref": "trigger.text"
+                            },
+                            "messages": {
+                                "$ref": "trigger.messages",
+                                "default": []
+                            },
+                            "lastOrderCode": {
+                                "$ref": "lead.lastOrderCode",
+                                "default": null
+                            }
+                        },
+                        "routes": {
+                            "buy": "to-consult",
+                            "paid": "to-reconcile",
+                            "complaint": "complaint",
+                            "question": "answer"
+                        }
+                    },
+                    {
+                        "key": "to-consult",
+                        "kind": "output",
+                        "step": "core.call-workflow",
+                        "params": {
+                            "agent": "sales",
+                            "workflow": "consult",
+                            "version": "latest",
+                            "inputs": {
+                                "conversationId": {
+                                    "$ref": "trigger.conversationId"
+                                },
+                                "text": {
+                                    "$ref": "trigger.text"
+                                },
+                                "channel": {
+                                    "$ref": "trigger.channel"
+                                },
+                                "leadId": {
+                                    "$ref": "trigger.leadId",
+                                    "default": null
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "key": "to-reconcile",
+                        "kind": "output",
+                        "step": "core.call-workflow",
+                        "params": {
+                            "agent": "accounting",
+                            "workflow": "reconcile",
+                            "version": "latest",
+                            "inputs": {
+                                "conversationId": {
+                                    "$ref": "trigger.conversationId"
+                                },
+                                "text": {
+                                    "$ref": "trigger.text"
+                                },
+                                "channel": {
+                                    "$ref": "trigger.channel"
+                                },
+                                "leadId": {
+                                    "$ref": "trigger.leadId",
+                                    "default": null
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "key": "complaint",
+                        "kind": "output",
+                        "step": "chatbot.complaint",
+                        "params": {
+                            "conversationId": {
+                                "$ref": "trigger.conversationId"
+                            },
+                            "text": {
+                                "$ref": "trigger.text"
+                            },
+                            "summary": {
+                                "$ref": "steps.understand.output.summary"
+                            },
+                            "lastOrderCode": {
+                                "$ref": "lead.lastOrderCode",
+                                "default": null
+                            }
+                        },
+                        "next": "to-owner"
+                    },
+                    {
+                        "key": "to-owner",
+                        "kind": "output",
+                        "step": "core.outcome",
+                        "params": {
+                            "outcome": "owner",
+                            "outputs": {
+                                "summary": {
+                                    "$ref": "steps.complaint.output.summary"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "key": "answer",
+                        "kind": "output",
+                        "step": "chatbot.answer",
+                        "params": {
+                            "conversationId": {
+                                "$ref": "trigger.conversationId"
+                            },
+                            "text": {
+                                "$ref": "trigger.text"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

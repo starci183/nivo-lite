@@ -2,11 +2,9 @@
 
 import { useLocale, useTranslations } from "next-intl"
 import { useState } from "react"
-import { kindOf, parameterErrorOf, useMarketplace } from "@/hooks/templates"
-import type { ParameterRule, ParameterWords } from "@/hooks/templates"
+import { kindOf, parameterErrorOf, useMarketplace, type ParameterRule, type ParameterWords } from "@/hooks/templates"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentMarketplaceBase } from "./component"
-import type { AgentMarketplaceBaseProps } from "./component"
+import { AgentMarketplaceBase, type AgentMarketplaceBaseProps } from "./component"
 
 /** The shape of a listing while the first read loads: the skeleton reuses the ready tree. */
 const PLACEHOLDER: AgentMarketplaceBaseProps["props"]["placeholder"] = [
@@ -71,6 +69,10 @@ const listingViewOf = (listing: Listing, lens: ListingLens): ListingViews[number
     }),
 })
 
+/** A marketplace with no listing still draws its section and its empty card, never one bare notice in their place. */
+const withEmptyList = (slot: AgentMarketplaceBaseProps["props"]["slot"]): AgentMarketplaceBaseProps["props"]["slot"] =>
+    "isEmpty" in slot ? { items: [] } : slot
+
 /** The connected marketplace: approved listings with their settings, the free install in shadow mode, and the order of a paid one. */
 export const AgentMarketplace = () => {
     const t = useTranslations("agentMarketplace")
@@ -78,7 +80,7 @@ export const AgentMarketplace = () => {
     const slotLabels = useSlotLabels()
     const market = useMarketplace()
     const [installingId, setInstallingId] = useState<string | null>(null)
-    const [isAsked, setAsked] = useState(false)
+    const [isAsked, setIsAsked] = useState(false)
     const pick = (text: LocalizedText): string => (locale === "vi" ? text.vi : text.en)
     const order = market.order
     const words: ParameterWords = {
@@ -95,11 +97,13 @@ export const AgentMarketplace = () => {
     return (
         <AgentMarketplaceBase
             props={{
-                slot: mapSlot(market.slot, (listings): ListingViews =>
-                    listings.map((listing) => listingViewOf(listing, lens)),
+                slot: withEmptyList(
+                    mapSlot(market.slot, (listings): ListingViews => listings.map((listing) => listingViewOf(listing, lens))),
                 ),
                 placeholder: PLACEHOLDER,
                 slotLabels: slotLabels(t("empty")),
+                sectionTitle: t("sectionTitle"),
+                emptyHint: t("emptyHint"),
                 installLabel: t("install"),
                 orderLabel: t("order"),
                 cancelLabel: t("cancel"),
@@ -119,13 +123,13 @@ export const AgentMarketplace = () => {
                 retry: market.reload,
                 openInstall: (id) => {
                     setInstallingId(id)
-                    setAsked(false)
+                    setIsAsked(false)
                 },
                 setValue: market.setValue,
                 install: (listingId) => {
                     const found =
                         "items" in market.slot ? market.slot.items.find((entry) => entry.id === listingId) : undefined
-                    setAsked(true)
+                    setIsAsked(true)
                     if (found === undefined) return
                     // Once asked, a missing required value counts too, so the dialog stays open and shows what is wrong.
                     const isBlocked = found.parameters.some(
@@ -140,7 +144,7 @@ export const AgentMarketplace = () => {
                     if (isBlocked) return
                     void market.install(listingId, found.parameters)
                     setInstallingId(null)
-                    setAsked(false)
+                    setIsAsked(false)
                 },
                 pay: (listingId) => void market.pay(listingId),
             }}

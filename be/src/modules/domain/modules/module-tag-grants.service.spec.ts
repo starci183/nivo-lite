@@ -36,7 +36,7 @@ const build = async (installed: ReadonlyArray<InstallationRecord>) => {
 }
 
 describe("ModuleTagGrantsService.grantFor", () => {
-    it("lets Chatbot tag Sales and Accounting, and Sales tag Accounting, in a workspace that holds all three", async () => {
+    it("lets Chatbot tag Sales and Accounting, and Sales and Accounting tag each other, in a workspace that holds all three", async () => {
         const all = [record("chatbot", "chat"), record("sales", "sales"), record("accounting", "acc")]
         const { service, agents } = await build(all)
 
@@ -47,7 +47,7 @@ describe("ModuleTagGrantsService.grantFor", () => {
         const granted = agents.grantTags.mock.calls.flatMap(([, grants]) =>
             grants.map((grant) => `${grant.from}>${grant.to}`),
         )
-        expect([...new Set(granted)].sort()).toEqual(["chat>acc", "chat>sales", "sales>acc"])
+        expect([...new Set(granted)].sort()).toEqual(["acc>sales", "chat>acc", "chat>sales", "sales>acc"])
     })
 
     it("grants the right to the agent installed before it and to the one installed after, whichever comes second", async () => {

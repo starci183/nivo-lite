@@ -38,7 +38,7 @@ describe("accounting.resolve-unmatched-payment", () => {
 
     it("ties the payment to the order through the normal payment path", async () => {
         const world = worldOf()
-        await expect(run(world, ASSIGN)).resolves.toEqual({ ok: true, data: { result: "paid", orderId: ORDER.id } })
+        await expect(run(world, ASSIGN)).resolves.toEqual({ ok: true, data: { result: "paid", orderId: ORDER.id, expectedVnd: 5_000_000, receivedVnd: 5_000_000, differenceVnd: 0 } })
         expect(rowsOf(world, "payment.transaction")[0]?.data).toMatchObject({ status: "matched", orderId: ORDER.id })
         expect(rowsOf(world, "sales.order")[0]?.data).toMatchObject({ status: "paid" })
         expect(world.jobs.map((job) => job.job)).toEqual([
@@ -51,15 +51,25 @@ describe("accounting.resolve-unmatched-payment", () => {
     it("refuses an order that does not take the payment, as data", async () => {
         const world = memoryWorld()
         putTransaction(world, TRANSACTION)
-        putOrder(world, orderOf({ amountVnd: 4_000_000 }))
+        putOrder(world, orderOf({ status: "paid" }))
         await expect(run(world, ASSIGN)).resolves.toMatchObject({
             ok: false,
             reason: "refused",
-            data: { reason: "amount_differs" },
+            data: { reason: "order_not_open" },
         })
     })
 
-    it("records the payment as other income and projects its book entry, writing records only", async () => {
+    it("pays an order of another amount and says the gap: the amount is the owner's call, never refused", async () => {
+        const world = memoryWorld()
+        putTransaction(world, TRANSACTION)
+        putOrder(world, orderOf({ amountVnd: 4_000_000 }))
+        await expect(run(world, ASSIGN)).resolves.toMatchObject({
+            ok: true,
+            data: { result: "paid", expectedVnd: 4_000_000, receivedVnd: 5_000_000, differenceVnd: 1_000_000 },
+        })
+    })
+
+    it("records the payment as other income, projects its book entry and its ledger line, writing records only", async () => {
         const world = worldOf()
         await expect(run(world, OTHER)).resolves.toEqual({
             ok: true,
@@ -71,6 +81,11 @@ describe("accounting.resolve-unmatched-payment", () => {
                 job: "accounting.book-project",
                 input: { sourceEntity: "payment.transaction", sourceId: TRANSACTION.id },
                 dedupeKey: `book:payment.transaction:${TRANSACTION.id}`,
+            },
+            {
+                job: "accounting.ledger-append",
+                input: { transactionId: TRANSACTION.id, orderId: null },
+                dedupeKey: `ledger:${TRANSACTION.id}`,
             },
         ])
         expect(world.calls).toEqual([])

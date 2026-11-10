@@ -192,6 +192,11 @@ const cardOf = (card: AgentGraphWire["cards"][number] | undefined): AgentGraphNo
     shape: card?.shape ?? "rect",
     count: card?.count ?? "",
     isPlaceholder: card?.isPlaceholder ?? false,
+    group: card?.group ?? "",
+    wait:
+        card?.wait === undefined
+            ? null
+            : { kind: card.wait.kind, timeout: card.wait.timeout ?? "", reminder: card.wait.reminder ?? "" },
 })
 
 const nodeOf = (

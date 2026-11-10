@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
-import { EmptyNotice, Section, SurfaceCard } from "@starci/grammar/common"
-import type { BadgeData, ListRowData } from "@starci/grammar/common"
+import { EmptyNotice, Link, Section, SurfaceCard, type BadgeData, type ListRowData } from "@starci/grammar/common"
 import type { RecordRow } from "../../rows/rows"
 
 /** What the card list takes. */
@@ -19,6 +18,8 @@ interface RecordCardListProps {
     readonly isCard: boolean
     /** The command each row offers under its text; null when the viewer may not run it. */
     readonly action: { readonly label: string; readonly press: (id: string) => void } | null
+    /** A link under the rows of a card: its words and where it goes; absent draws none. */
+    readonly footer?: { readonly label: string; readonly href: string } | undefined
 }
 
 /** The marks of a row: its badge with a status dot and the tone of its value, then its first further chip. */
@@ -29,12 +30,18 @@ const badgesOf = (row: RecordRow): { readonly badges?: readonly [BadgeData] | re
     return chip === undefined ? { badges: [status] } : { badges: [status, { label: chip, tone: "neutral" }] }
 }
 
+/** What leads a row: its logo when it has one, else the initials of its title when the list asks for them. */
+const leadingOf = (row: RecordRow, hasAvatar: boolean): Pick<ListRowData, "leading"> => {
+    if (row.logo !== "") return { leading: { avatar: { name: row.title, src: row.logo } } }
+    return hasAvatar ? { leading: { avatar: { name: row.title } } } : {}
+}
+
 /** The row the Grammar list draws for one record. */
 const rowOf = (row: RecordRow, props: RecordCardListProps): ListRowData => ({
     id: row.id,
     title: row.title,
     ...(row.description === "" ? {} : { description: row.description }),
-    ...(props.hasAvatar ? { leading: { avatar: { name: row.title } } } : {}),
+    ...leadingOf(row, props.hasAvatar),
     ...(row.meta === "" ? {} : { meta: { text: row.meta } }),
     ...badgesOf(row),
     ...(props.action === null
@@ -56,6 +63,15 @@ export const RecordCardList = (props: RecordCardListProps): ReactNode => {
             isLoading={props.isLoading}
             items={items}
             empty={empty}
+            {...(props.footer === undefined
+                ? {}
+                : {
+                      labelEnd: (
+                          <Link variant="head" href={props.footer.href}>
+                              {props.footer.label}
+                          </Link>
+                      ),
+                  })}
         />
     ) : (
         <Section

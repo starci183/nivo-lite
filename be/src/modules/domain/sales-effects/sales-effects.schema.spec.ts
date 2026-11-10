@@ -16,18 +16,17 @@ describe("sales-effects.schema", () => {
     it("reads what an order effect carries and drops what it does not name", () => {
         expect(confirmSchema.parse({ orderId: "o-1", extra: 1 })).toEqual({ orderId: "o-1" })
         expect(voidSchema.parse({ id: "o-1" })).toEqual({ id: "o-1" })
-        const record = { leadId: "l-1", items: [{ name: "tea", qty: 1 }], amountVnd: 10 }
+        const record = { leadId: "l-1", items: [{ name: "tea", qty: 1 }], address: "25 Nguyen Hue" }
         expect(recordSchema.safeParse(record).success).toBe(true)
-        expect(recordSchema.safeParse({ ...record, amountVnd: null }).success).toBe(true)
+        expect(recordSchema.parse({ ...record, amountVnd: 10, items: [{ name: "tea", qty: 1, unitVnd: 5 }] })).toEqual(record)
     })
 
-    it("bounds what an effect carries: an empty id, no item lines, a fractional or negative total", () => {
-        const record = { leadId: "l-1", items: [{ name: "tea", qty: 1 }], amountVnd: 10 }
+    it("bounds what an effect carries: an empty id, no item lines, a quantity that is not positive", () => {
+        const record = { leadId: "l-1", items: [{ name: "tea", qty: 1 }] }
         expect(confirmSchema.safeParse({ orderId: "" }).success).toBe(false)
         expect(voidSchema.safeParse({ id: "" }).success).toBe(false)
         expect(recordSchema.safeParse({ ...record, items: [] }).success).toBe(false)
-        expect(recordSchema.safeParse({ ...record, amountVnd: 1.5 }).success).toBe(false)
-        expect(recordSchema.safeParse({ ...record, amountVnd: -1 }).success).toBe(false)
+        expect(recordSchema.safeParse({ ...record, items: [{ name: "tea", qty: 0 }] }).success).toBe(false)
     })
 
     it("reads what a lead.ensure asks for: a conversation, and a name and a phone when the chat knows them", () => {

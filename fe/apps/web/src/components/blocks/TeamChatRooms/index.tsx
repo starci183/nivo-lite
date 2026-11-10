@@ -21,6 +21,7 @@ export const TeamChatRooms = () => {
             props={view}
             on={{
                 refresh: list.rooms.refresh,
+                query: list.setQuery,
                 select: openRoom,
                 openNewChat: newChat.open,
                 newChatOpenChange: newChat.setOpen,

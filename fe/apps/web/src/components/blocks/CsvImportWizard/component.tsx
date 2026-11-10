@@ -7,10 +7,10 @@ import type { CsvImportMapView, CsvMapColumn } from "@/components/composites/Csv
 import { CsvImportRun } from "@/components/composites/CsvImportRun"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { WizardFooter, backAction, closeAction, nextAction } from "@/components/branches/WizardFooter"
+import { WizardFooter, backAction, closeAction, forwardAction, nextAction } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
 import { frameOf, WizardFrame } from "@/components/frames/WizardFrame"
-import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume } from "@/modules/types"
+import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume, WizardPhases } from "@/modules/types"
 
 /** The ready drawing with its canonical first-read loading atom. */
 type CsvImportWizardDrawLoadingProps = CsvImportWizardBaseProps & { readonly isLoading: boolean }
@@ -67,6 +67,7 @@ export interface CsvImportWizardBaseProps {
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
+        readonly phases: WizardPhases
         readonly index: number
         readonly step: "source" | "data" | "docs" | "map" | "import" | "agent"
         readonly source: "file" | "sheet" | "manual" | "document"
@@ -132,14 +133,14 @@ const actionsOf = ({ props, on }: CsvImportWizardBaseProps): ReadonlyArray<Wizar
     const forward = () => on.go(props.index + 1)
     if (props.step === "source") {
         const short = props.form.name.trim().length < NAME_MIN
-        return [nextAction(text.next, () => on.go(1), { isDisabled: short }), closeAction(text.close, on.close)]
+        return [forwardAction(text.next, () => on.go(1), { isDisabled: short }), closeAction(text.close, on.close)]
     }
     if (props.step === "data")
-        return [nextAction(text.readNext, on.read, { isPending: props.isPending }), ...back, ...leave]
+        return [forwardAction(text.readNext, on.read, { isPending: props.isPending }), ...back, ...leave]
     if (props.step === "docs")
-        return [nextAction(text.next, forward, { isDisabled: !props.docsReady }), ...back, ...leave]
-    if (props.step === "map") return [nextAction(text.next, () => on.go(3), { isPending: props.isPending }), ...back]
-    if (props.step === "import" && props.done !== null) return [nextAction(text.next, forward)]
+        return [forwardAction(text.next, forward, { isDisabled: !props.docsReady }), ...back, ...leave]
+    if (props.step === "map") return [forwardAction(text.next, () => on.go(3), { isPending: props.isPending }), ...back]
+    if (props.step === "import" && props.done !== null) return [forwardAction(text.next, forward)]
     if (props.step === "import")
         return [nextAction(text.importNow, on.runImport, { isPending: props.isPending }), ...back]
     return [nextAction(text.done, on.finish, { isPending: props.isPending })]
@@ -247,6 +248,7 @@ export const CsvImportWizardBase = (props: CsvImportWizardBaseProps) => {
             render={(_resume, isLoading) => (
                 <WizardFrame
                     {...frameOf(view)}
+                    phases={view.phases}
                     footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
                 >
                     {view.resumeLine === null ? null : (

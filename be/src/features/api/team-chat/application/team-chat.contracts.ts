@@ -1,4 +1,4 @@
-import type { ChatMemberRef, UploadAsk } from "@modules/domain/team-chat"
+import type { ChatMemberRef, GroupPurpose, UploadAsk } from "@modules/domain/team-chat"
 
 /** The workspace selected by X-Workspace-Id; the service proves the caller's seat. */
 export interface TeamChatScope {
@@ -38,6 +38,8 @@ export interface CreateRoomRequest extends TeamChatScope {
     readonly name: string | null
     /** The other members. */
     readonly members: ReadonlyArray<ChatMemberRef>
+    /** What a group is for; a plain group when omitted. */
+    readonly purpose?: GroupPurpose | undefined
 }
 
 /** A member added to or removed from a room. */
@@ -60,6 +62,8 @@ export interface SendMessageRequest extends TeamChatScope {
     readonly fileKeys: ReadonlyArray<string>
     /** The retry key. */
     readonly clientId: string | null
+    /** The message of the room it answers; null for none. */
+    readonly replyTo: string | null
 }
 
 /** A read position. */
@@ -77,6 +81,20 @@ export interface SetMutedRequest extends RoomRequest {
     readonly muted: boolean
 }
 
+/** The purpose to give a group. */
+export interface SetPurposeRequest extends RoomRequest {
+    /** The purpose. */
+    readonly purpose: GroupPurpose
+}
+
+/** The right of an agent seat to post in a group. */
+export interface SetPostRightRequest extends RoomRequest {
+    /** The agent sitting in the group. */
+    readonly agentId: string
+    /** True to grant the right. */
+    readonly mayPost: boolean
+}
+
 /** A verdict on the decision an approval card is about. */
 export interface DecideRequest extends TeamChatScope {
     /** The decision (the approval request). */
@@ -89,4 +107,22 @@ export interface DecideRequest extends TeamChatScope {
 export interface PinRequest extends RoomRequest {
     /** The message. */
     readonly messageId: string
+}
+
+/** Taps of one emoji on one message. */
+export interface ReactRequest extends TeamChatScope {
+    /** The message. */
+    readonly messageId: string
+    /** The emoji. */
+    readonly emoji: string
+    /** How many taps this call carries; null is one. */
+    readonly times: number | null
+}
+
+/** A message to forward into another room. */
+export interface ForwardRequest extends TeamChatScope {
+    /** The message. */
+    readonly messageId: string
+    /** The room it goes to. */
+    readonly roomId: string
 }

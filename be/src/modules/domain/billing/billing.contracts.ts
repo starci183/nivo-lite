@@ -1,4 +1,5 @@
 import type { PaymentOrder } from "@modules/domain/payment-orders"
+import type { WorkspaceMembership } from "@modules/domain/workspaces"
 import type { BankAccountOptions } from "./billing.options"
 import type { JsonObject } from "./webhook-body.policy"
 
@@ -305,3 +306,23 @@ export type FeedCreditAnswer =
 
 /** The workspace providers admitted by the bank-feed receipt job. */
 export type BankFeedProvider = "casso" | "payos" | "sepay-feed"
+
+/** What the workspaces lobby shows of one workspace: the workspaces facts, with the plan by name and the seats it may fill. */
+export interface LobbyFacts extends Omit<WorkspaceMembership["lobby"], "seatCount"> {
+    /** The Vietnamese plan name, or null when there is no active plan. */
+    readonly planNameVi: string | null
+    /** The English plan name, or null when there is no active plan. */
+    readonly planNameEn: string | null
+    /** The seats the workspace may fill (the paid seats, else the plan's), or null when there is no plan. */
+    readonly seatLimit: number | null
+}
+
+/** One workspace of the person as the lobby lists it: the workspace, their seat, and the lobby facts. */
+export interface LobbyMembership {
+    /** The workspace. */
+    readonly workspace: WorkspaceMembership["workspace"]
+    /** The person's seat. */
+    readonly member: WorkspaceMembership["member"]
+    /** What the lobby shows beside it. */
+    readonly lobby: LobbyFacts
+}

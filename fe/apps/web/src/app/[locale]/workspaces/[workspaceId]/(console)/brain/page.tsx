@@ -9,10 +9,12 @@ export const dynamic = "force-dynamic"
 /**
  * What the address may ask for: the tab, the fact form (a new fact, a fact in force or a customer question), the lesson form and the public document
  * forms (the picker, the written form with a title, a draft). The documents tab keeps its own keys (the agent, the filter, the search
- * text, the drawer that adds documents) in the address and reads them in the browser.
+ * text, the drawer that adds documents) in the address and reads them in the browser; an old address keeps them when it is forwarded.
  */
 interface BrainSearch {
+    readonly [key: string]: string | ReadonlyArray<string> | undefined
     readonly tab?: string
+    readonly view?: string
     readonly fact?: string
     readonly edit?: string
     readonly answer?: string
@@ -32,14 +34,23 @@ interface BrainRouteProps {
     readonly searchParams: Promise<BrainSearch>
 }
 
+/** The first value of each parameter of the address. */
+const paramsOf = (search: BrainSearch): Readonly<Record<string, string | undefined>> =>
+    Object.fromEntries(
+        Object.entries(search).map(([key, value]) => [key, typeof value === "string" ? value : value?.[0]]),
+    )
+
 /** The Second Brain: the shared memory of the business, its documents and what each agent sees of it. Everyone reads; owners and managers decide. */
 const Page = async ({ params, searchParams }: BrainRouteProps): Promise<ReactElement> => {
     const { workspaceId } = await params
-    const { tab, fact, edit, answer, lesson, dossier, finding, draft, node, compose, title, doc } = await searchParams
+    const search = await searchParams
+    const { tab, view, fact, edit, answer, lesson, dossier, finding, draft, node, compose, title, doc } = search
     return (
         <BrainPage
             workspaceId={workspaceId}
             tab={tab}
+            view={view}
+            params={paramsOf(search)}
             fact={fact}
             edit={edit}
             answer={answer}

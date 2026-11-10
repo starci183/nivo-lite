@@ -176,6 +176,14 @@ describe("isIndexed with the unique constraints of the entity", () => {
         expect(isIndexed(check, q.eq("stage", "won"), [["id", "asc"]])).toBe(false)
     })
 
+    it("serves a unique key that is partial on its own field being set, to a read that pins that field to a value", () => {
+        const partial = withConstraints([{ ...UNIQUE, where: { op: "notNull", field: "stage" } }])
+        expect(isIndexed(partial, q.eq("stage", "won"), [["id", "asc"]])).toBe(true)
+        expect(isIndexed(partial, undefined, [["id", "asc"]])).toBe(false)
+        const elsewhere = withConstraints([{ ...UNIQUE, where: { op: "notNull", field: "channel" } }])
+        expect(isIndexed(elsewhere, q.eq("stage", "won"), [["id", "asc"]])).toBe(false)
+    })
+
     it("serves a unique key beside the declared indexes", () => {
         const entity: EntityDefinition = {
             ...LEAD,

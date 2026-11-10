@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { shopDayOf } from "@nivo-lite/blocks-core"
 import { BrainFactsService } from "@modules/domain/brain-facts"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { ModuleReadinessService } from "@modules/domain/modules"
@@ -24,8 +25,6 @@ import { HORIZON_DAYS, payablesDue, remindersToday, upcomingDues } from "./tax-c
 import { suppliersOf, taxProfileOf } from "./tax-profile.policy"
 
 const DAY_MS = 86_400_000
-/** Vietnam is UTC+7 all year. */
-const VN_OFFSET_MS = 7 * 3_600_000
 /** The module whose workspaces get the morning run. */
 const ACCOUNTING_MODULE = "accounting"
 /** The verdicts of a morning whose workspace has no `invoice.list` tool: nothing was read, so nothing is counted. */
@@ -39,8 +38,8 @@ interface Reconciled {
     readonly tool: string | null
 }
 
-/** The calendar day in Vietnam of an instant, `YYYY-MM-DD`. */
-export const vnDayOf = (now: Date): string => new Date(now.getTime() + VN_OFFSET_MS).toISOString().slice(0, 10)
+/** The shop's calendar day of an instant, `YYYY-MM-DD`: the shop's time is blocks-core's, never a second copy here. */
+export const vnDayOf = (now: Date): string => shopDayOf(now.toISOString())
 
 /** The optional features that will not run this morning because the workspace has no tool for their role. */
 const notConnectedOf = (connected: DeskConnections): ReadonlyArray<DeskFeature> => [

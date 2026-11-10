@@ -18,11 +18,14 @@ interface ProfilePageProps {
 /** The /profile screen body: static copy; the picture and the name are read in the browser from the back end GraphQL API. */
 export const ProfilePage = async (props: ProfilePageProps): Promise<ReactElement> => {
     const t = await getTranslations("account")
+    const shell = await getTranslations("shell")
     return (
         <ProfilePageBase
             props={{
                 header: accountHeadingOf({
                     workspaceId: props.workspaceId,
+                    crumbLabel: shell("crumbLabel"),
+                    home: shell("crumbHome"),
                     title: t("profilePageTitle"),
                     description: t("profilePageDescription"),
                     tabsLabel: t("tabsLabel"),

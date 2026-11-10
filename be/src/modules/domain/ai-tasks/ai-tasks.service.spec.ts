@@ -23,22 +23,38 @@ import { AiTasksService } from "./ai-tasks.service"
 import { NodeImagesService } from "./node-images.service"
 import { NotesService } from "./notes.service"
 import type { AiTaskScope } from "./ai-tasks.contracts"
-import { AI_TASKS_METER, AI_TASKS_OPTIONS, AI_TASKS_TEXT_GENERATOR } from "./ai-tasks.decorators"
-import type { AiTaskMeter, AiTaskTextGenerator } from "./ai-tasks.port"
+import { AI_TASKS_METER, AI_TASKS_OPTIONS } from "./ai-tasks.decorators"
+import type { AiTaskMeter } from "./ai-tasks.port"
 import { AiTasksErrorCode } from "./errors/ai-tasks.error"
 import { leadTurnPrompt } from "./lead-turn-prompt.policy"
 import { ORDER_SCHEMA } from "./ai-tasks.schema"
 
 const scope: AiTaskScope = { workspaceId: "ws-1", locale: "vi" }
 
-const build = async (jsonRetries = 1, available = false) => {
-    const generator = mock<AiTaskTextGenerator>()
+/** What a spec scripts and reads back: the prompt the endpoint was sent, with the identity the call was metered under once it answered. */
+interface Sent extends Pick<Parameters<AiService["chat"]>[0], "messages" | "json"> {
+    workspaceId?: string
+    kind?: string
+    module?: string
+}
+
+const build = async (jsonRetries = 1, available = true) => {
+    const generator = { generate: jest.fn<Promise<string>, [Sent]>() }
     const ai = mock<AiService>()
     ai.available.mockReturnValue(available)
+    const sent: Array<Sent> = []
+    ai.chat.mockImplementation(async ({ messages, json }) => {
+        const prompt: Sent = { messages, json }
+        sent.push(prompt)
+        return { ...ANSWER, text: await generator.generate(prompt), usage: USAGE, model: "m" }
+    })
     const meter = mock<AiTaskMeter>()
     const notes = mock<NotesService>()
     meter.blockedBy.mockResolvedValue(null)
-    meter.record.mockResolvedValue(undefined)
+    meter.record.mockImplementation(({ workspaceId, kind, module }) => {
+        Object.assign(sent.at(-1) ?? {}, { workspaceId, kind, module })
+        return Promise.resolve()
+    })
     const logger = mock<Logger>()
     const images = mock<NodeImagesService>({ inline: jest.fn(dataUrls) })
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) })
@@ -46,7 +62,6 @@ const build = async (jsonRetries = 1, available = false) => {
         providers: [
             AiTasksService,
             { provide: AI_TASKS_OPTIONS, useValue: { jsonRetries, timeoutMs: 30_000 } },
-            { provide: AI_TASKS_TEXT_GENERATOR, useValue: generator },
             { provide: AI, useValue: ai },
             { provide: AI_TASKS_METER, useValue: meter },
             { provide: NotesService, useValue: notes },
@@ -68,7 +83,6 @@ describe("AiTasksService text prompts", () => {
         const request = generator.generate.mock.calls[0]?.[0]
         expect(request).toMatchObject({
             workspaceId: "ws-1",
-            purpose: "sales:engine",
             json: false,
             kind: "engine",
             module: "sales",
@@ -97,7 +111,6 @@ describe("AiTasksService text prompts", () => {
         await client.draftFollowUp({ ...scope, kind: "followup", module: "crm" }, lead, "ctx", "call", agent, "")
 
         expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({
-            purpose: "sales:engine",
             kind: "followup",
             module: "crm",
         })
@@ -124,7 +137,7 @@ describe("AiTasksService text prompts", () => {
         await client.agentReply(scope, agent, ["a"], "state", "")
 
         const request = generator.generate.mock.calls[0]?.[0]
-        expect(request).toMatchObject({ purpose: "office:owner_chat", kind: "owner_chat", module: "office" })
+        expect(request).toMatchObject({ kind: "owner_chat", module: "office" })
         expect(request?.messages[0]?.content).toContain("Workspace state:\nstate")
         expect(request?.messages[1]?.content).toBe("a\nb")
     })
@@ -176,7 +189,6 @@ describe("AiTasksService json prompts", () => {
         expect(catalog.get).toHaveBeenCalledWith("prompts.leadVoice", {}, "vi")
         expect(generator.generate).toHaveBeenCalledWith({
             workspaceId: "ws-1",
-            purpose: "lead_gen:chat_reply",
             messages: leadTurnPrompt(input, "[prompts.leadVoice]"),
             json: true,
             kind: "chat_reply",
@@ -191,7 +203,7 @@ describe("AiTasksService json prompts", () => {
         await expect(client.proposeResponsibility(scope, lead, "ctx", [agent], "Owner")).resolves.toEqual(
             RESPONSIBILITY,
         )
-        expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({ json: true, purpose: "sales:engine" })
+        expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({ json: true })
         expect(generator.generate.mock.calls[0]?.[0].messages[1]?.content).toContain('"handle":"mai"')
     })
 
@@ -200,7 +212,7 @@ describe("AiTasksService json prompts", () => {
         generator.generate.mockResolvedValue(JSON.stringify(BOT))
 
         await expect(client.designModule(scope, "a helper")).resolves.toEqual(BOT)
-        expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({ purpose: "setup:setup", module: "setup" })
+        expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({ module: "setup" })
     })
 })
 
@@ -227,7 +239,6 @@ describe("AiTasksService json prompts, classification", () => {
 
         await expect(client.extractOrder(scope, "1,5 trieu combo")).resolves.toEqual(COMBO_ORDER)
         expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({
-            purpose: "accounting:engine",
             module: "accounting",
         })
         expect(generator.generate.mock.calls[0]?.[0].messages[0]?.content).toContain("[prompts.orderMoney]")
@@ -245,7 +256,6 @@ describe("AiTasksService node calls and authority", () => {
             items: "2 combo",
         })
         expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({
-            purpose: "order:engine",
             module: "order",
             messages: [
                 { role: "system", content: "Read the order" },
@@ -263,23 +273,6 @@ describe("AiTasksService node calls and authority", () => {
 
         expect(images.inline).toHaveBeenCalledWith(["u1"])
         expect(ai.chat.mock.calls[0]?.[0].messages[1]).toMatchObject({ images: ["data:image/png;base64,u1"] })
-    })
-
-    it("tells the fallback model it cannot see the pictures, and never hands it a picture to drop silently", async () => {
-        const { client, generator, logger } = await build()
-        generator.generate.mockResolvedValue("ok")
-
-        await client.nodeText(scope, {
-            purpose: "intent.classify:x",
-            instructions: "i",
-            input: {},
-            images: ["u1", "u2"],
-        })
-
-        const sent = generator.generate.mock.calls[0]?.[0]
-        expect(sent?.messages.some((message) => message.images !== undefined)).toBe(false)
-        expect(sent?.messages.at(-1)).toEqual({ role: "system", content: "[prompts.imagesUnsupported]" })
-        expect(logger.warn).toHaveBeenCalledWith("ai_tasks.images_unsupported", { workspaceId: "ws-1", images: 2 })
     })
 
     it("reads the owner's authority chat", async () => {
@@ -311,7 +304,6 @@ describe("AiTasksService command proposal", () => {
         })
 
         expect(generator.generate.mock.calls[0]?.[0]).toMatchObject({
-            purpose: "office:office_command",
             json: true,
             kind: "office_command",
             module: "office",
@@ -369,11 +361,15 @@ describe("AiTasksService json parsing", () => {
 })
 
 describe("AiTasksService on the AI endpoint", () => {
-    it("keeps the OpenClaw door while AI is unavailable", async () => {
-        const { client, generator, ai, meter } = await build()
-        generator.generate.mockResolvedValue("- who")
+    it("fails as unavailable without the AI endpoint: no other door, no quota read, no model call", async () => {
+        const { client, ai, meter } = await build(1, false)
 
-        await expect(client.summarizeContext(scope, lead, [])).resolves.toBe("- who")
+        await expect(client.summarizeContext(scope, lead, [])).rejects.toMatchObject({
+            code: AiTasksErrorCode.Unavailable,
+        })
+        await expect(
+            client.nodeText(scope, { purpose: "intent.classify:x", instructions: "i", input: {}, images: ["u1"] }),
+        ).rejects.toMatchObject({ code: AiTasksErrorCode.Unavailable })
 
         expect(ai.chat).not.toHaveBeenCalled()
         expect(meter.blockedBy).not.toHaveBeenCalled()
@@ -422,13 +418,28 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
         })
     })
 
-    it("fails as unavailable when the endpoint did not answer, and meters nothing", async () => {
+    it("asks once more when the endpoint gave no answer (a timeout), with the very same call, and meters the one answer", async () => {
+        const { client, ai, meter, logger } = await build(1, true)
+        ai.chat.mockResolvedValueOnce(null).mockResolvedValueOnce({ ...ANSWER, text: "thanks", model: "work", usage: USAGE })
+
+        await expect(client.draftCare(scope, lead, "note", "")).resolves.toBe("thanks")
+
+        expect(ai.chat).toHaveBeenCalledTimes(2)
+        expect(ai.chat.mock.calls[1]?.[0]).toBe(ai.chat.mock.calls[0]?.[0])
+        expect(ai.chat.mock.calls[0]?.[0]).toMatchObject({ affinity: "ws-1" })
+        expect(logger.warn).toHaveBeenCalledWith("ai_tasks.retried", { workspaceId: "ws-1", module: "sales" })
+        expect(meter.blockedBy).toHaveBeenCalledTimes(1)
+        expect(meter.record).toHaveBeenCalledTimes(1)
+    })
+
+    it("fails as unavailable when the endpoint did not answer twice: one retry, never a loop, and meters nothing", async () => {
         const { client, ai, meter } = await build(1, true)
         ai.chat.mockResolvedValue(null)
 
         await expect(client.draftCare(scope, lead, "note", "")).rejects.toMatchObject({
             code: AiTasksErrorCode.Unavailable,
         })
+        expect(ai.chat).toHaveBeenCalledTimes(2)
         expect(meter.record).not.toHaveBeenCalled()
     })
 
@@ -480,19 +491,14 @@ describe("AiTasksService structured output and notes", () => {
         expect(ai.chat.mock.calls[0]?.[0].context).toBe(context)
     })
 
-    it("sends no schema and no notes with a text prompt, and reads no notes while the key is missing", async () => {
+    it("sends no schema and no notes with a text prompt", async () => {
         const { client, ai, notes } = await build(1, true)
-        const off = await build()
         ai.chat.mockResolvedValue(reply)
         notes.contextOf.mockReturnValue(null)
-        off.generator.generate.mockResolvedValue("template")
 
         await client.summarizeContext(scope, lead, [])
-        await off.client.draftCare({ ...scope, lane }, lead, "paid", "")
 
         expect(ai.chat.mock.calls[0]?.[0]).toMatchObject({ schema: null, context: null })
         expect(notes.contextOf).toHaveBeenCalledWith(scope, null)
-        expect(off.notes.contextOf).not.toHaveBeenCalled()
-        expect(off.generator.generate).toHaveBeenCalledTimes(1)
     })
 })

@@ -1,4 +1,4 @@
-import type { ConnectionTone } from "@/modules/types"
+import type { ConnectionLifecycle, ConnectionTone } from "@/modules/types"
 
 /** How often the live panel asks for newer events. */
 
@@ -46,3 +46,25 @@ export const telegramStepsDone = (facts: TelegramStepFacts): ReadonlyArray<reado
 /** The step a page opens on: the first one not done, or none when every step is done. */
 export const firstOpenTelegramStep = (done: ReadonlyArray<readonly [TelegramStepId, boolean]>): TelegramStepId | null =>
     done.find(([, isDone]) => !isDone)?.[0] ?? null
+
+/** What the life of a Telegram bot connection needs from the page. */
+interface TelegramLifeFacts {
+    readonly status: string
+    readonly healthy: boolean
+    readonly botUsername: string
+    readonly lastError: string | null
+}
+
+/**
+ * Where a Telegram bot connection stands in the one life every connection shares: a disconnected one is off, a healthy one runs, a
+ * pending one whose bot is known waits for its first message (the webhook is set automatically), a pending one without a bot is still
+ * in setup, and anything else (a refused token or webhook, a failed check) needs the owner.
+ */
+export const telegramLifecycleOf = (page: TelegramLifeFacts): ConnectionLifecycle => {
+    if (page.status === "disconnected") return { id: "disconnected" }
+    if (page.healthy) return { id: "running" }
+    if (page.lastError !== null) return { id: "attention" }
+    if (page.status === "pending")
+        return page.botUsername === "" ? { id: "setup", phase: 2 } : { id: "waiting", phase: 3 }
+    return { id: "attention" }
+}

@@ -187,6 +187,35 @@ describe("AiClient chat", () => {
     })
 })
 
+describe("AiClient prompt cache", () => {
+    it("sends the same session_id for the same affinity, a digest and never the name, and none without one", async () => {
+        const { client, http } = await build()
+
+        await client.chat({ ...ASK, affinity: "workspace-1" })
+        await client.chat({ ...ASK, affinity: "workspace-1", messages: [{ role: "user", content: "another" }] })
+        await client.chat({ ...ASK, affinity: "workspace-2" })
+        await client.chat(ASK)
+
+        const sessions = [0, 1, 2].map((at) => /"session_id":"([0-9a-f]{32})"/u.exec(sentOf(http, at).text)?.[1])
+        expect(sessions[0]).toBeDefined()
+        expect(sessions[1]).toBe(sessions[0])
+        expect(sessions[2]).not.toBe(sessions[0])
+        expect(sentOf(http, 0).text).not.toContain("workspace-1")
+        expect(sentOf(http, 3).text).not.toContain("session_id")
+    })
+
+    it("reads the upstream that served the call from the raw answer", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({
+            status: 200,
+            headers: { "content-type": "application/json" },
+            body: completion("ok").replace('"object"', '"provider":"DeepInfra","object"'),
+        })
+
+        await expect(client.chat(ASK)).resolves.toMatchObject({ provider: "DeepInfra" })
+    })
+})
+
 describe("AiClient chat budget", () => {
     it("sends a call without a budget with no token cap and no reasoning field", async () => {
         const { client, http } = await build()

@@ -9,21 +9,5 @@ export const workspaceReadyPageMetadata = async (): Promise<Metadata> => {
     return { title: t("readyTitle") }
 }
 
-/** /workspaces/new/done: a step of the first-run wizard; the proxy sends the signed-out to the sign-in page. */
-export const WorkspaceReadyPage = async (): Promise<ReactElement> => {
-    const t = await getTranslations("onboarding")
-    return (
-        <WorkspaceReadyPageBase
-            props={{
-                stepsLabel: t("welcomeStepsLabel"),
-                steps: [t("trackStep1"), t("trackStep2"), t("trackStep3"), t("trackStep4")],
-                rail: {
-                    title: t("railTitle"),
-                    text: t("railText"),
-                    descriptions: [t("trackStep1Text"), t("trackStep2Text"), t("trackStep3Text"), t("trackStep4Text")],
-                    hint: t("railHint"),
-                },
-            }}
-        />
-    )
-}
+/** /workspaces/new/done: the end of the first-run wizard; the proxy sends the signed-out to the sign-in page. */
+export const WorkspaceReadyPage = (): ReactElement => <WorkspaceReadyPageBase />

@@ -2,6 +2,9 @@ import { defineEntity, field } from "@nivo-lite/agent-sdk/entity"
 import type { EntityDefinition, FieldDef } from "@nivo-lite/agent-sdk/entity"
 
 import { MAX_BODY, MAX_LINE } from "../../bounds"
+import { boundedRecord } from "../../json.schema"
+import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
+import type { ZodType } from "zod"
 import { MAX_REASON_CHARS } from "../../rules/sales/stage"
 
 /** The channels a customer reaches the business through. */
@@ -11,6 +14,18 @@ export const LEAD_CHANNELS: readonly [string, ...Array<string>] = [
     "facebook",
     "instagram",
     "website",
+]
+
+/**
+ * The stages of the sales agent's consult with the customer, apart from the pipeline `stage`: finding out who it is for and the budget
+ * and time, recommending, closing, the order placed and waiting for the money, and after the sale.
+ */
+export const CONSULT_STAGES: readonly [string, ...Array<string>] = [
+    "discover",
+    "recommend",
+    "close",
+    "ordered",
+    "after_sale",
 ]
 
 /** The stages a lead moves through. */
@@ -34,6 +49,8 @@ type LeadFields = {
     readonly orderVnd: FieldDef<"money_vnd", true>
     readonly note: FieldDef<"text", true>
     readonly needs: FieldDef<"text", true>
+    readonly consultStage: FieldDef<"enum", true>
+    readonly consultFacts: FieldDef<"jsonb", true> & { readonly shape: ZodType<{ readonly [key: string]: JsonValue }> }
 }
 
 const leadFields: LeadFields = {
@@ -54,6 +71,8 @@ const leadFields: LeadFields = {
     orderVnd: field.moneyVnd({ nullable: true }),
     note: field.text({ maxLength: MAX_BODY, nullable: true }),
     needs: field.text({ maxLength: MAX_LINE, nullable: true }),
+    consultStage: field.enum({ of: CONSULT_STAGES, nullable: true }),
+    consultFacts: field.jsonb({ shape: boundedRecord, nullable: true }),
 }
 
 /** One customer of a workspace. Graph node kind `sales-lead`. */

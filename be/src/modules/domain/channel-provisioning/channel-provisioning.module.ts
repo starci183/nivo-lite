@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
 import { BrainSeedService } from "./brain-seed.service"
 import { ManagementSeedService } from "./management-seed.service"
+import { ChatSeedService } from "./chat-seed.service"
 import { RecordsSeedService } from "./records-seed.service"
 import { CatalogueSeedService } from "./catalogue-seed.service"
 import { TestAccountsSeedService } from "./test-accounts-seed.service"
@@ -24,6 +25,7 @@ export class ChannelProvisioningModule extends ConfigurableModuleClass {
                 CatalogueSeedService,
                 BrainSeedService,
                 RecordsSeedService,
+                ChatSeedService,
             ],
             exports: [
                 ChannelProvisioningService,
@@ -32,6 +34,7 @@ export class ChannelProvisioningModule extends ConfigurableModuleClass {
                 CatalogueSeedService,
                 BrainSeedService,
                 RecordsSeedService,
+                ChatSeedService,
             ],
         }
     }

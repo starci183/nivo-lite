@@ -1,6 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import type { EffectPayload, SubjectRef } from "@nivo-lite/agent-sdk/node"
+import { TOOL } from "@nivo-lite/blocks-core"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeTurn } from "@modules/domain/graph-nodes"
 import type { WorkSpec } from "./decisions.contracts"
@@ -37,7 +38,8 @@ const subjectOf = (payload: PayloadMembers, turn: NodeTurn): RaisedSubject => {
 /**
  * The executor of the `work-item.raise` effect: a graph node asks a person to decide, and the work engine opens the item that waits for
  * them, once per business key. An action the catalogue does not list (a run's review, a flow's review) is a generic owner decision of
- * the raising agent's module.
+ * the raising agent's module. The amount the decision is judged by is read here from the order or the bank transaction the payload
+ * names, never taken from the caller.
  */
 export class WorkItemRaiseExecutorService implements OnModuleInit {
     constructor(
@@ -49,7 +51,7 @@ export class WorkItemRaiseExecutorService implements OnModuleInit {
     /** Registers the executor when the app hosts graph nodes; otherwise there is nothing to serve. */
     onModuleInit(): void {
         this.registry?.addExecutor({
-            effect: "work-item.raise",
+            effect: TOOL.workItemRaise,
             execute: (turn, payload, call) => this.raise(turn, payload, call.dedupeKey ?? call.key),
         })
     }
@@ -65,7 +67,11 @@ export class WorkItemRaiseExecutorService implements OnModuleInit {
             subject_id: subject.id,
             lead_id: textOf(given.payload.leadId),
             dedupeKey: `graph-node:work-item.raise:${key}`,
-            seed: { summary: given.title, amount_vnd: given.amountVnd ?? null, fields: fieldsOf(given.payload) },
+            seed: {
+                summary: given.title,
+                amount_vnd: await this.amountOf(turn, given.payload),
+                fields: fieldsOf(given.payload),
+            },
             preset: true,
             forceAsk: "branch_ask",
         }
@@ -74,5 +80,28 @@ export class WorkItemRaiseExecutorService implements OnModuleInit {
             spec,
         )
         return { kind: "work-item", id: item.id }
+    }
+
+    /**
+     * The amount at stake, VND: the total of the order the payload names, else the amount of the bank transaction it names, read from
+     * the records. The caller gives no amount, so a number an agent typed never reaches the owner's decision or the limit it is judged by.
+     * Null when the payload names neither, or the record has no amount or cannot be read (the work is still raised).
+     */
+    private async amountOf(turn: NodeTurn, payload: PayloadMembers): Promise<number | null> {
+        const order = await this.amountIn(turn, "order", textOf(payload.orderId))
+        return order ?? (await this.amountIn(turn, "bank-transaction", textOf(payload.transactionId)))
+    }
+
+    /** The `amountVnd` of one record of a data kind, or null. */
+    private async amountIn(turn: NodeTurn, kind: string, id: string | null): Promise<number | null> {
+        if (id === null || this.registry === undefined) return null
+        try {
+            const [row] = await this.registry
+                .portOf(kind)
+                .read(turn, { where: { id }, fields: ["amountVnd"], limit: 1 }, "workspace")
+            return typeof row?.amountVnd === "number" ? row.amountVnd : null
+        } catch {
+            return null
+        }
     }
 }

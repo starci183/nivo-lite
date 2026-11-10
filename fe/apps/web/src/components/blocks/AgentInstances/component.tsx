@@ -1,8 +1,7 @@
-import { Button, EmptyNotice, Icon, Page, Stack, SurfaceCard } from "@starci/grammar/common"
+import { Button, EmptyNotice, Page, Stack, SurfaceCard } from "@starci/grammar/common"
 import type { BadgeTone, BreadcrumbItem } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
-import { nivoIconSource } from "@/components/leaves/Icon"
 import { ConnectionNeeds, type ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import { AddInstanceDialog } from "@/components/composites/AddInstanceDialog"
 import type { AddInstanceDialogProps } from "@/components/composites/AddInstanceDialog"
@@ -56,7 +55,7 @@ export const AgentInstancesBase = (props: AgentInstancesBaseProps) => {
                               <Button
                                   intent="commit"
                                   onPress={props.on.add}
-                                  startContent={<Icon source={nivoIconSource("add", "leading")} usage="leading" />}
+                                  startGlyph="plus"
                               >
                                   {view.addLabel}
                               </Button>
@@ -78,8 +77,7 @@ export const AgentInstancesBase = (props: AgentInstancesBaseProps) => {
                             empty={<EmptyNotice message={view.slotLabels.empty} />}
                             label={view.listLabel}
                             headingLevel={2}
-                            fact={String(rows.length)}
-                            {...(view.singleNote === null ? {} : { footer: view.singleNote })}
+                            {...(view.singleNote === null ? {} : { note: view.singleNote })}
                             items={rows.map((row) => ({
                                 id: row.id,
                                 title: row.title,

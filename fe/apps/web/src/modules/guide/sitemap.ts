@@ -1,7 +1,7 @@
 /**
  * The NIVO guide's map of the console: every place the assistant may send someone. The words (name, purpose, steps, search phrases)
  * live in the `guideMap` catalog by page id. The guide only ever links to an entry of this map (never a URL a model made up), and
- * `managerOnly` entries are never offered to staff. `target` names the element marked `data-guide="<target>"` that is highlighted
+ * `managerOnly` entries are never offered to staff. `target` names the element marked `data-guide-id="<target>"` that is highlighted
  * after the jump.
  */
 

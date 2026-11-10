@@ -63,6 +63,19 @@ const named = builder<WorkspaceMembership>({
         businessType: null,
     },
     member: { userId: OWNER, workspaceId: WS, role: "owner", staffId: null, displayName: "Owner", status: "active" },
+    lobby: {
+        planCode: null,
+        seatCount: null,
+        memberCount: 1,
+        ownerCount: 1,
+        lastOpenedAt: null,
+        deletedAt: null,
+        restoreBefore: null,
+        disabledAt: null,
+        disabledByName: null,
+        disabledByRole: null,
+        disabledNote: null,
+    },
 })
 
 const build = async (input?: Secret) => {

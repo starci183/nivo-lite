@@ -5,11 +5,10 @@ import type { ReactNode } from "react"
 import { IDENTITY_QUERY } from "@/hooks/installations"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { navigation } from "@/modules/i18n"
-import { profileChipsOf, useAgentProfile, useProfileModuleName } from "@/hooks/agentProfile"
+import { profileChipsOf, useAgentPages, useAgentProfile, useProfileModuleName } from "@/hooks/agentProfile"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { AGENTS_ROUTE, CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
-import { AgentProfileHeadBase } from "./component"
-import type { ProfileHeadView } from "./component"
+import { AgentProfileHeadBase, type ProfileHeadView } from "./component"
 
 const PLACEHOLDER: ProfileHeadView = {
     crumbs: [],
@@ -36,6 +35,7 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
     const workspaceId = useWorkspaceId()
     const agent = "items" in slot ? slot.items : undefined
     const moduleName = useProfileModuleName(agent?.module)
+    const pages = useAgentPages(props.agentId)
 
     return (
         <AgentProfileHeadBase
@@ -47,6 +47,7 @@ export const AgentProfileHead = (props: AgentProfileHeadProps) => {
                     identityLabel: t("identityTitle"),
                     identityHref: `${pathname}?${IDENTITY_QUERY}`,
                 },
+                open: pages === null ? null : { label: t("openAgent"), href: pages.home },
                 isLoading: "isLoading" in slot,
                 head:
                     agent === undefined

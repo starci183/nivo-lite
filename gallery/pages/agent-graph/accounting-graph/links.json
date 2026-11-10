@@ -1,0 +1,160 @@
+[
+ {
+  "label": "Tổng quan",
+  "box": {
+   "x": 268,
+   "y": 96,
+   "w": 69,
+   "h": 20
+  },
+  "to": "overview/overview",
+  "kind": "page"
+ },
+ {
+  "label": "Agent",
+  "box": {
+   "x": 357,
+   "y": 96,
+   "w": 39,
+   "h": 20
+  },
+  "to": "agents-catalog/dang-chay",
+  "kind": "page"
+ },
+ {
+  "label": "Bàn làm việc",
+  "box": {
+   "x": 268,
+   "y": 188,
+   "w": 92,
+   "h": 40
+  },
+  "to": "agent-workbench/accounting-wb-hom-nay",
+  "kind": "page"
+ },
+ {
+  "label": "Công việc",
+  "box": {
+   "x": 360,
+   "y": 188,
+   "w": 86,
+   "h": 40
+  },
+  "to": "agent-work/accounting-work",
+  "kind": "page"
+ },
+ {
+  "label": "Quy trình",
+  "box": {
+   "x": 509,
+   "y": 188,
+   "w": 84,
+   "h": 40
+  },
+  "to": "agent-workflows/accounting-list",
+  "kind": "page"
+ },
+ {
+  "label": "Trò chuyện",
+  "box": {
+   "x": 593,
+   "y": 188,
+   "w": 93,
+   "h": 40
+  },
+  "to": null,
+  "kind": "page",
+  "note": "trỏ tới trang chưa có trong gallery",
+  "route": "/agents/accounting/<inst>/chat"
+ },
+ {
+  "label": "Kết nối 1",
+  "box": {
+   "x": 686,
+   "y": 188,
+   "w": 104,
+   "h": 40
+  },
+  "to": "agent-connections/accounting-connections",
+  "kind": "page"
+ },
+ {
+  "label": "Tri thức 73",
+  "box": {
+   "x": 790,
+   "y": 188,
+   "w": 113,
+   "h": 40
+  },
+  "to": "agent-knowledge/accounting-knowledge",
+  "kind": "page"
+ },
+ {
+  "label": "Thiết lập",
+  "box": {
+   "x": 903,
+   "y": 188,
+   "w": 79,
+   "h": 40
+  },
+  "to": "agent-setup/accounting-huong-dan",
+  "kind": "page"
+ },
+ {
+  "label": "Mở danh sách",
+  "box": {
+   "x": 1321,
+   "y": 247,
+   "w": 107,
+   "h": 32
+  },
+  "to": "agent-workflows/accounting-list",
+  "kind": "page"
+ },
+ {
+  "label": "Đối soát tiền về SePay Đã nhận tiền Chủ tiệm xem lại",
+  "box": {
+   "x": 613,
+   "y": 345,
+   "w": 194,
+   "h": 94
+  },
+  "to": "agent-workflows/accounting-detail-map",
+  "kind": "page"
+ },
+ {
+  "label": "Khách báo đã chuyển Cửa mở · Báo đã chuyển Đã nhận tiền Chủ ",
+  "box": {
+   "x": 889,
+   "y": 326,
+   "w": 194,
+   "h": 131
+  },
+  "to": "agent-workflows/accounting-detail-map",
+  "kind": "page"
+ },
+ {
+  "label": "Báo cáo cuối ngày Lịch Đã báo cáo",
+  "box": {
+   "x": 613,
+   "y": 639,
+   "w": 194,
+   "h": 74
+  },
+  "to": "agent-workflows/accounting-detail-map",
+  "kind": "page"
+ },
+ {
+  "label": "Cảm ơn sau mua Bán hàng",
+  "box": {
+   "x": 751,
+   "y": 529,
+   "w": 194,
+   "h": 54
+  },
+  "to": null,
+  "kind": "page",
+  "note": "trỏ tới trang chưa có trong gallery",
+  "route": "/agents/sales/<inst>/graph"
+ }
+]

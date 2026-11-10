@@ -28,7 +28,7 @@ export const AgentGraphBranches = (props: AgentGraphBranchesProps) => (
                             {row.line}
                         </Text>
                         {row.source === "" ? null : <Badge isLoading={props.isLoading}>{row.source}</Badge>}
-                        <Button
+                        <Button endArrow
                             intent="neutral"
                             size="sm"
                             isLoading={props.isLoading}

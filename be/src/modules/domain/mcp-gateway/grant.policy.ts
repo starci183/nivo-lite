@@ -1,5 +1,5 @@
 import { evaluateGate } from "@modules/domain/authority-rules"
-import type { GatewayJson, GrantVerdict, ToolGrant } from "./mcp-gateway.contracts"
+import type { GatewayCaller, GatewayJson, GatewayToolSpec, GrantVerdict, ToolGrant } from "./mcp-gateway.contracts"
 
 const numberOf = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null)
 
@@ -46,4 +46,35 @@ export const judgeGrant = (
         return number !== null && exceeds(grant, name, number)
     })
     return !approved && broken ? { kind: "approval", reason: "over_constraint" } : { kind: "allow" }
+}
+
+/** The connectors whose read tools every agent of a workspace holds with no grant row: the second brain. */
+const DEFAULT_READ_CONNECTORS: ReadonlySet<string> = new Set(["brain"])
+
+/**
+ * True for a tool every agent holds by default (owner rule 2026-11-10, "the second brain MCP is granted to agents by default"): a READ
+ * tool of the second brain (`brain.search`, `brain.facts.list`, `brain.facts.get`, `brain.documents.read`). A tool that writes is never
+ * one, whatever its connector. Inside a graph step the default holds only for a tool on the step's allow-list (its node declares it and
+ * its workflow grants it). What the read may see is not decided here: the caller's audience lens and its data rights still narrow it.
+ */
+export const grantedByDefault = (spec: GatewayToolSpec, caller: GatewayCaller, name: string): boolean =>
+    spec.scope === "read" &&
+    DEFAULT_READ_CONNECTORS.has(name.split(".", 1).join("")) &&
+    (caller.run === undefined || caller.run.stepTools.includes(name))
+
+/**
+ * The grant a call runs under: the owner's row when one applies (it always decides: never, ask, limits), else for a tool a graph step may
+ * call on its allow-list (`stepGranted`) a grant that runs alone when the caller's step declared it, else for a read tool every agent
+ * holds by default (`grantedByDefault`) a grant that runs alone, else none (default deny).
+ */
+export const grantOfCall = (
+    row: ToolGrant | null,
+    spec: GatewayToolSpec,
+    caller: GatewayCaller,
+    name: string,
+): ToolGrant | null => {
+    if (row !== null) return row
+    const stepGranted = spec.stepGranted === true && caller.run !== undefined && caller.run.stepTools.includes(name)
+    if (!stepGranted && !grantedByDefault(spec, caller, name)) return null
+    return { tool: name, mode: "auto", limitVnd: null, constraints: [] }
 }

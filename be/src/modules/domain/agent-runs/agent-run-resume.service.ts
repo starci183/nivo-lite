@@ -31,7 +31,9 @@ const OUTCOME_UNKNOWN: ReadonlyArray<string> = [TOOL_OUTCOME_UNKNOWN, CHAT_DELIV
 @Injectable()
 /**
  * Runs a parked run again from the step it stopped on. A person asks (the owner's action, the CLI), a new build asks for the runs parked
- * under an older one, and the sweep asks for those parked a while, a few times each and with a growing pause. The reset and the job that
+ * under an older one, and the sweep asks for those parked a while, a few times each and with a growing pause: a run that serves a customer
+ * conversation climbs the chat ladder (about a minute, then five, then half an hour), any other waits the app's pause, and one that a newer
+ * run of its agent already answered in that conversation is closed instead of answering twice. The reset and the job that
  * drives it commit together through the same outbox as every step, so there is no second road: the steps that are done keep their results
  * and are never claimed again, which is why a pivot that was done is never repeated. A compensated run cannot be resumed, and a step whose
  * outcome is unknown stays with a person.
@@ -106,6 +108,7 @@ export class AgentRunResumeService implements OnApplicationBootstrap {
             build: this.build,
             byBuild,
             minAgeSeconds: byBuild ? 0 : this.pauseSeconds(),
+            ladder: !byBuild,
             max: this.options?.parkMaxResumes ?? PARK_MAX_RESUMES,
             exclude: OUTCOME_UNKNOWN,
         })
@@ -147,7 +150,11 @@ export class AgentRunResumeService implements OnApplicationBootstrap {
             max: this.options?.parkMaxResumes ?? PARK_MAX_RESUMES,
             backoffSeconds: this.pauseSeconds(),
         })
-        if (answer.kind !== "resumed") return answer
+        if (answer.kind !== "resumed") {
+            if (answer.kind !== "superseded") return { kind: answer.kind }
+            this.logger.info(AgentRunsLogEvent.RunSuperseded, { runId: request.runId, actor: request.actor })
+            return { kind: "not_parked" }
+        }
         this.logger.info(AgentRunsLogEvent.RunResumed, {
             runId: request.runId,
             stepKey: answer.stepKey,

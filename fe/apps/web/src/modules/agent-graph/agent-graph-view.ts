@@ -14,7 +14,7 @@ import { detailViewOf } from "./agent-graph-view-detail"
 import { adderPickOf, adderViewOf, decideEditorViewOf, problemsViewOf } from "./agent-graph-view-decide"
 import type { AgentGraphAdderPick } from "./agent-graph-view-decide"
 import { branchesViewOf, modeViewOf, proposalsViewOf, runViewOf, versionsViewOf } from "./agent-graph-view-lists"
-import { kindWordOf } from "./agent-graph-words"
+import { groupWordOf, legendOf, kindWordOf, waitWordOf } from "./agent-graph-words"
 import type { AgentGraphContext } from "./agent-graph-words"
 
 /** What the person is doing on the panes: the choices that are not data. */
@@ -77,6 +77,13 @@ const publishBlockedOf = (data: AgentGraphData, ctx: AgentGraphContext): string 
     return ctx.setup.isReady ? ctx.t("nothingToPublish") : ctx.t("setupMissingBlock", { count: ctx.setup.missing })
 }
 
+/** The running version's label when the agent runs and the draft has nothing new; empty otherwise. */
+const runningLabelOf = (data: AgentGraphData, ctx: AgentGraphContext): string => {
+    const isIdle = ctx.canEdit && ctx.setup.isReady && data.changes === 0 && !ctx.setup.isChanged
+    const isClear = data.problems.length === 0 && data.gaps.length === 0
+    return isIdle && isClear && data.activeVersion > 0 ? ctx.t("statusVersion", { version: data.activeVersion }) : ""
+}
+
 const headOf = (data: AgentGraphData, ctx: AgentGraphContext, isPublishing: boolean): AgentGraphHeadView => ({
     title: ctx.t("title"),
     status: statusOf(data, ctx),
@@ -84,6 +91,7 @@ const headOf = (data: AgentGraphData, ctx: AgentGraphContext, isPublishing: bool
     publishLabel: ctx.t("publish", { version: data.activeVersion + 1 }),
     publishBlocked: publishBlockedOf(data, ctx),
     isPublishing: isPublishing || ctx.setup.isApplying,
+    runningLabel: runningLabelOf(data, ctx),
 })
 
 /**
@@ -106,7 +114,11 @@ export const panelViewOf = (data: AgentGraphData, ui: AgentGraphUi, ctx: AgentGr
         canvas: {
             label: t("mapLabel"),
             emptyLabel: t("mapEmpty"),
-            nodes: flowNodesOf(data.nodes, { selectedKey: ui.selectedKey, path: run?.path ?? [] }).map((flow) => {
+            nodes: flowNodesOf(
+                data.nodes,
+                { selectedKey: ui.selectedKey, path: run?.path ?? [] },
+                { wait: (wait) => waitWordOf(t, wait), current: t("nodeCurrent") },
+            ).map((flow) => {
                 const node = data.nodes.find((entry) => entry.key === flow.id)
                 return node === undefined
                     ? flow
@@ -126,7 +138,12 @@ export const panelViewOf = (data: AgentGraphData, ui: AgentGraphUi, ctx: AgentGr
                     return at >= 0 && run?.path[at + 1] === target
                 },
             }),
-            headers: layerHeadersOf(data.nodes, (kind) => kindWordOf(t, kind)),
+            headers: layerHeadersOf(
+                data.nodes,
+                (kind) => kindWordOf(t, kind),
+                (group) => groupWordOf(t, group),
+            ),
+            legend: legendOf(data.nodes, t, run !== null),
             selectedId: ui.selectedKey,
         },
         sideTab: ui.sideTab,

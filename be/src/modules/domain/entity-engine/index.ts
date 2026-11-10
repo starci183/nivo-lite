@@ -13,4 +13,9 @@ export type { RunIn, ScopedWork } from "./entity-engine.contracts"
 export type { ScopedTx } from "./policies/scoped-tx.contracts"
 export { EntityNodePortsService } from "./entity-node-ports.service"
 export type { EntityNodePort } from "./entity-node.contracts"
-export type { EngineDoorProvider, EngineFailureAlerts } from "./entity-engine.contracts"
+export type {
+    EngineDoorProvider,
+    EngineFailureAlerts,
+    EngineWorkflowProvider,
+    JobWorkflowBinding,
+} from "./entity-engine.contracts"

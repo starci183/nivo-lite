@@ -5,13 +5,14 @@ import { WizardTestButtons } from "@/components/composites/WizardTestButtons"
 import {
     backAction,
     closeAction,
+    forwardAction,
     nextAction,
     WizardFooter,
     type WizardAction,
 } from "@/components/branches/WizardFooter"
 
 import { frameOf, WizardFrame } from "@/components/frames/WizardFrame"
-import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume } from "@/modules/types"
+import type { AgentStepView, DataSlot, SlotLabels, WizardNote, WizardResume, WizardPhases } from "@/modules/types"
 import { metaWizardClassNames as classNames } from "./classNames"
 
 /** The ready drawing with its canonical first-read loading atom. */
@@ -30,6 +31,7 @@ export interface MetaWizardBaseProps {
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
+        readonly phases: WizardPhases
         readonly index: number
         readonly step: "connect" | "pick" | "agent" | "test"
         /** The stored connection a resumed wizard reads back; a new one is ready at once. */
@@ -113,7 +115,7 @@ const pickStepActions = (
         return [nextAction(text.pickSave, on.choose, { isPending: view.isPending, isDisabled: view.pageId === "" })]
     }
     if (view.chosen === null) return []
-    return [nextAction(text.next, () => on.go(2))]
+    return [forwardAction(text.next, () => on.go(2))]
 }
 
 /** The Page step body: the list, the chosen Page, or the empty sentence. */
@@ -163,7 +165,7 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
             closeAction(text.close, on.close),
         ],
         pick: [...pickStepActions(view, text, on), back],
-        agent: [nextAction(text.next, on.saveAgents, { isPending: view.isPending }), back],
+        agent: [forwardAction(text.next, on.saveAgents, { isPending: view.isPending }), back],
         test: [nextAction(text.done, on.done), back],
     }[view.step]
     return (
@@ -173,7 +175,11 @@ export const MetaWizardBase = (props: MetaWizardBaseProps) => {
             labels={view.slotLabels}
             onRetry={on.retry}
             render={(_resume, isLoading) => (
-                <WizardFrame {...frameOf(view)} footer={<WizardFooter actions={actions} isLoading={isLoading} />}>
+                <WizardFrame
+                    {...frameOf(view)}
+                    phases={view.phases}
+                    footer={<WizardFooter actions={actions} isLoading={isLoading} />}
+                >
                     {view.step === "connect" ? (
                         <div className={classNames.copy}>
                             <Text size="sm">{text.connectBody}</Text>

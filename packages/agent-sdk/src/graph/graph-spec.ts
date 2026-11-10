@@ -1,9 +1,11 @@
 import { burstIsSound } from "./graph-burst"
+import { LOOP_BODY_ROUTE } from "../node/memory.contracts"
 import { graphSpecJsonDocument } from "./graph-spec.schema"
 import { BRANCH_FIELD, graphNodeProblems, inputSourcesOf, nodeSagaOf, TRIGGER_SOURCE } from "../node"
 import type { NodeDefinition, NodeIndex } from "../node"
 import type { DataRight } from "../rights/rights.types"
 import type { GraphSpec, GraphSpecNode, GraphSpecProblem } from "./graph-spec.types"
+import { contractProblems, entryProblems, outcomeEndsOf, outcomeProblems, triggerProblems } from "./workflow-contract"
 
 /**
  * The JSON Schema of a graph spec, generated from `graphSpecSchema`: what a seed step that validates spec files by JSON Schema reads, so
@@ -25,7 +27,8 @@ export const edgesOf = (node: GraphSpecNode): ReadonlyArray<string> => [
  * `next`; null ends the run (no next, or a branch without a route).
  */
 export const nextKeyOf = (node: GraphSpecNode, output: unknown): string | null => {
-    if (node.routes === undefined) return node.next ?? null
+    const branching = Object.keys(node.routes ?? {}).some((name) => name !== LOOP_BODY_ROUTE)
+    if (node.routes === undefined || !branching) return node.next ?? null
     const branch: unknown =
         typeof output === "object" && output !== null ? Reflect.get(output, BRANCH_FIELD) : undefined
     return typeof branch === "string" ? (node.routes[branch] ?? null) : null
@@ -166,6 +169,10 @@ export const graphSpecProblems = (spec: GraphSpec, index: NodeIndex): ReadonlyAr
     return [
         ...shapeProblems(spec, nodes),
         ...burstProblems(spec),
+        ...contractProblems(spec.contract),
+        ...triggerProblems(spec.triggers, spec.trigger.sources, spec.contract),
+        ...outcomeProblems(spec.outcomes, outcomeEndsOf(spec.nodes)),
+        ...entryProblems(spec.entry, spec.contract),
         ...refProblems(spec, nodes),
         ...sagaProblems(spec, nodes, index),
         ...judged,

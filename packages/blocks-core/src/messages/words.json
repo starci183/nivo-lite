@@ -1,12 +1,6 @@
 {
-  "classifyOrderInstruction": "order: when an order is raised, the items (name and quantity, 1 when not said), the delivery address and the name of who orders. The delivery address is whatever follows a delivery word (\"giao\", \"giao tới\", \"giao đến\", \"ship\", \"gửi tới\", \"deliver to\") up to the end of the message or the next sentence, written exactly as the customer wrote it: \"đặt 1 giỏ hoa nhỏ, giao 25 Nguyễn Huệ\" has the address \"25 Nguyễn Huệ\". The address stays null only when no such place is written anywhere in the messages. Leave out or set null whatever else the messages do not say. Never invent an item, an address or a name.",
   "unitThousand": "k\nnghìn\nngàn\nnghin\nngan",
   "unitMillion": "tr\ntriệu\ntrieu",
-  "currencyTail": "vnđ\nvnd\nđ",
   "letterD": "đ",
-  "letterDCapital": "Đ",
-  "moneyArrivedWords": "nhận được\nđã nhận\nthành công",
-  "deliverGoodsWords": "hàng\nhang",
-  "deliverToWords": "tới\ntoi\nđến\nden\ntại\ntai\nở",
-  "deliverAddressWords": "địa chỉ\ndia chi\nđc\ndc"
+  "letterDCapital": "Đ"
 }

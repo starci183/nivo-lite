@@ -4,6 +4,8 @@ import type { DataRight, RightsGrant } from "../rights/rights.types"
 import { isNamespaced } from "../schema/namespaced"
 import type { DataKindDefinition, EffectDefinition, ToolDefinition } from "./effect.types"
 import { BRANCH_FIELD } from "./node"
+import { fixedParamsOf, isBindings, paramRefsOf, schemaKeysOf } from "./memory"
+import type { ParamBindings } from "./memory.contracts"
 import type { NodeDefinition } from "./node.types"
 
 /** What a node list or a graph node that names one is refused for. */
@@ -42,6 +44,8 @@ export interface NodeInstall {
     readonly tools: ReadonlyArray<ToolDefinition>
     /** The data kinds rights may name. */
     readonly dataKinds: ReadonlyArray<DataKindDefinition>
+    /** The words of the install's text keys, in the language model calls are written in; undefined for a key it does not know. */
+    readonly words?: ((key: string) => string | undefined) | undefined
 }
 
 /** The install by id, for lookups. */
@@ -163,6 +167,29 @@ const routeProblems = (node: NodeDefinition, ref: GraphNodeRef): ReadonlyArray<N
     return missing ? [{ code: "NODE_ROUTE_MISSING", at: ref.key }] : []
 }
 
+/**
+ * Whether the settings a graph node writes are ones its params schema takes: only the members of the params schema are judged (the
+ * others feed the node's input), each ref stands for its default, and a ref without one is left out of the judging (it is checked by
+ * type at save, `graphRefProblems`).
+ */
+const paramsSound = (node: NodeDefinition, written: unknown): boolean => {
+    const bindings: ParamBindings = isBindings(written) ? written : {}
+    const settings = schemaKeysOf(node.params)
+    const inputs = schemaKeysOf(node.input)
+    const fixed = Object.fromEntries(
+        Object.entries(fixedParamsOf(bindings)).filter(
+            ([name]) => settings === null || settings.has(name) || !inputs?.has(name),
+        ),
+    )
+    const unbound = new Set(
+        paramRefsOf(bindings)
+            .filter(({ field, ref }) => ref.default === undefined && !(field in fixed))
+            .map(({ field }) => field),
+    )
+    const parsed = node.params.safeParse(fixed)
+    return parsed.success || parsed.error.issues.every((issue) => unbound.has(String(issue.path[0] ?? "")))
+}
+
 /** Whether a grant covers what a node requires, the rights of every effect and tool it may use, and names each of its tools. */
 const granted = (node: NodeDefinition, index: NodeIndex, grant: RightsGrant): boolean => {
     const tools = node.tools ?? []
@@ -190,7 +217,7 @@ export const graphNodeProblems = (
     if (node === undefined) return [{ code: "NODE_UNKNOWN", at: ref.key }]
     return [
         ...(node.role === ref.kind ? [] : [{ code: "NODE_ROLE_MISMATCH", at: ref.key } as const]),
-        ...(node.params.safeParse(ref.params ?? {}).success
+        ...(paramsSound(node, ref.params)
             ? []
             : [{ code: "NODE_PARAMS_INVALID", at: ref.key } as const]),
         ...routeProblems(node, ref),

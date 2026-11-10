@@ -9,6 +9,12 @@ import { navigation } from "@/modules/i18n"
 import { APP_ROUTES } from "@/modules/routes"
 import { AccountSessionsBase } from "./component"
 
+/** The two devices of the skeleton: the current one and another, with no facts. */
+const placeholderOf = (unknown: string) => [
+    { id: "current", device: unknown, facts: unknown, isCurrent: true, isPhone: false },
+    { id: "other", device: unknown, facts: unknown, isCurrent: false, isPhone: false },
+]
+
 /** The connected sessions section: signs one other device out after a confirmation, signs all the others out, or ends this session. */
 export const AccountSessions = () => {
     const auth = authActionsOf()
@@ -36,24 +42,14 @@ export const AccountSessions = () => {
                 currentLabel: t("current"),
                 signOutLabel: t("signOut"),
                 signOutOthersLabel: t("signOutOthers"),
+                paging: {
+                    nav: t("pageNav"),
+                    previous: t("pagePrev"),
+                    next: t("pageNext"),
+                },
                 failTitle: t("failTitle"),
                 slot,
-                placeholder: [
-                    {
-                        id: "current",
-                        device: t("deviceUnknown"),
-                        facts: t("deviceUnknown"),
-                        isCurrent: true,
-                        isPhone: false,
-                    },
-                    {
-                        id: "other",
-                        device: t("deviceUnknown"),
-                        facts: t("deviceUnknown"),
-                        isCurrent: false,
-                        isPhone: false,
-                    },
-                ],
+                placeholder: placeholderOf(t("deviceUnknown")),
                 labels: slotLabels(t("sessionsFailed")),
                 busy,
                 ...(asking === undefined || device === undefined
@@ -69,6 +65,8 @@ export const AccountSessions = () => {
             }}
             on={{
                 retry: reload,
+                pageLabel: (page) => t("pageLabel", { page }),
+                pageSummary: (from, to, total) => t("pageSummary", { from, to, total }),
                 askRevoke: setAsking,
                 cancelRevoke: () => setAsking(undefined),
                 revoke: (id) =>

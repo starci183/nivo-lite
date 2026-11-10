@@ -36,3 +36,39 @@ export const appliedBatchOf = (facts: ReadonlyArray<BrainFact>, sourceId: string
         .sort((left, right) => (right.decidedAt ?? "").localeCompare(left.decidedAt ?? ""))
     return batchIdOf(applied[0]?.decisionNote ?? null)
 }
+
+/** The shortest verbatim quote that counts as the document saying it (the back end judges the same way). */
+const MIN_QUOTE_CHARS = 8
+
+/** The words of a fact that name the value it sets: another fact with the same key makes it a choice for a person. */
+const keyOf = (fact: BrainFact): string => `${fact.subjectKey}|${fact.attribute}|${fact.installationId ?? ""}`
+
+/** Whether the document quotes the fact in its own words. */
+const quotedBy = (fact: BrainFact, sourceId: string): boolean =>
+    fact.evidence.some(
+        (proof) =>
+            proof.kind === "document" && proof.ref === sourceId && (proof.quote?.trim().length ?? 0) >= MIN_QUOTE_CHARS,
+    )
+
+/**
+ * How many facts a document proposed that the apply-together path will take: the ones that set an internal value the document quotes,
+ * with no other value waiting or in force for the same key and no later start date. A conflicted fact is left out; it stays for a
+ * person. The back end decides again, so this is the count the confirmation shows, not the authority.
+ */
+export const safeFactCountOf = (facts: ReadonlyArray<BrainFact>, sourceId: string, nowMs: number): number => {
+    const taken = new Map<string, number>()
+    for (const fact of facts) {
+        if (fact.status === "proposed" || fact.status === "active")
+            taken.set(keyOf(fact), (taken.get(keyOf(fact)) ?? 0) + 1)
+    }
+    return facts.filter(
+        (fact) =>
+            fact.status === "proposed" &&
+            fact.proposalKind === "set" &&
+            fact.sourceKind === "document" &&
+            fact.scope === "internal" &&
+            (fact.validFrom === null || Date.parse(fact.validFrom) <= nowMs) &&
+            quotedBy(fact, sourceId) &&
+            taken.get(keyOf(fact)) === 1,
+    ).length
+}

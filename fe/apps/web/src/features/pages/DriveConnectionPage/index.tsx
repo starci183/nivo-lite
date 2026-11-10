@@ -1,27 +1,25 @@
 import type { ReactElement } from "react"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
+import { CONNECTION_PAGE_VIEW_PARAM, connectionPageTabOf } from "@/modules/connection-page"
 import { DriveConnectionPageBase } from "./component"
 
-/** The document title of the Google Drive page. */
+/** What the route supplies: its awaited-by-the-owner query. */
+interface DriveConnectionPageProps {
+    readonly searchParams?: Promise<Record<string, string | string[] | undefined>>
+}
+
+/** The document title of the Google account page. */
 export const driveConnectionMetadata = async (): Promise<Metadata> => {
     const t = await getTranslations("driveConnection")
-    return { title: t("title") }
+    return { title: t("googleTitle") }
 }
 
 /**
- * The page of the workspace's Google Drive grant (owner | manager): a server shell. The header, the health tiles, the steps and the
- * progress of the files each read their own data in the browser.
+ * The page of the workspace's Google account (owner | manager): a server shell that picks the tab the address opens. The band, the
+ * setup, the services, the facts, the agents, the steps, the ledger and the live rail each read their own data in the browser.
  */
-export const DriveConnectionPage = async (): Promise<ReactElement> => {
-    const t = await getTranslations("driveConnection")
-    return (
-        <DriveConnectionPageBase
-            props={{
-                gridLabel: t("title"),
-                mainLabel: t("mainLabel"),
-                rail: { label: t("progressTitle"), closeLabel: t("progressClose") },
-            }}
-        />
-    )
+export const DriveConnectionPage = async (props: DriveConnectionPageProps): Promise<ReactElement> => {
+    const query = (await props.searchParams) ?? {}
+    return <DriveConnectionPageBase props={{ tab: connectionPageTabOf(query[CONNECTION_PAGE_VIEW_PARAM]) }} />
 }

@@ -1,5 +1,6 @@
 import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
 import { ChatRoomKind } from "./chat-room-kind.type"
+import { ChatRoomPurpose } from "./chat-room-purpose.type"
 import { ChatMemberType } from "./chat-member.type"
 import { ChatMessageType } from "./chat-message.type"
 
@@ -13,6 +14,14 @@ export class ChatRoomType {
     /** Direct or group. */
     @Field(() => ChatRoomKind)
     kind!: string
+
+    /** What the room is for. */
+    @Field(() => ChatRoomPurpose)
+    purpose!: string
+
+    /** The module whose team room it is; null unless the purpose is module. */
+    @Field(() => String, { nullable: true })
+    purposeModule!: string | null
 
     /** A group's name; a direct room shows the other party. */
     @Field(() => String)

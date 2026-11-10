@@ -50,12 +50,28 @@ const questionOf = (kind: "disconnect" | "remove", dialog: RowDialog, on: RowCom
     />
 )
 
+/** What the two destructive questions of a connection read. */
+interface ConnectionRowQuestionsProps {
+    readonly view: RowView
+    readonly on: RowCommandSet
+}
+
+/** The two questions a connection's destructive commands ask first (disconnect, remove); drawn in a portal, so they take no room. */
+export const ConnectionRowQuestions = (props: ConnectionRowQuestionsProps) => (
+    <>
+        {questionOf("disconnect", props.view.disconnect, props.on)}
+        {questionOf("remove", props.view.remove, props.on)}
+    </>
+)
+
 /** What the detail of a connection draws. */
 interface ConnectionRowBodyProps {
     readonly view: RowView
     readonly on: RowCommandSet
     /** The access picker is part of the detail pane; a row inside a drawer keeps it beside its buttons. */
     readonly withAccess?: boolean
+    /** The page's band draws the two questions (its menu opens them); a row inside a drawer keeps them here. */
+    readonly withoutQuestions?: boolean
 }
 
 /** What a connection says beyond its name: alerts, notes, the SMTP panel, the keys, the last note, and the two destructive questions. */
@@ -88,7 +104,7 @@ export const ConnectionRowBody = (props: ConnectionRowBodyProps) => {
                 />
             )}
             {view.keys === null ? null : (
-                <Stack gap="row">
+                <Stack gap="inline">
                     <ConnectionCopyInput
                         id={`row-${view.id}-url`}
                         name="webhookUrl"
@@ -107,8 +123,7 @@ export const ConnectionRowBody = (props: ConnectionRowBodyProps) => {
                 </Stack>
             )}
             {view.note === null ? null : <Alert title={view.note.text} tone={view.note.tone} />}
-            {questionOf("disconnect", view.disconnect, on)}
-            {questionOf("remove", view.remove, on)}
+            {props.withoutQuestions === true ? null : <ConnectionRowQuestions view={view} on={on} />}
         </Stack>
     )
 }

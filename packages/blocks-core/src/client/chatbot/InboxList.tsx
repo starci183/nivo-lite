@@ -1,16 +1,27 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import { Avatar, Badge, ListBox, RelativeTime, Stack, SurfaceCard } from "@starci/grammar/common"
-import type { BadgeTone, FilterFields, ListBoxItem } from "@starci/grammar/common"
+import {
+    Avatar,
+    Badge,
+    EmptyNotice,
+    ListBox,
+    PaneHeader,
+    PaneSection,
+    RelativeTime,
+    SearchField,
+    Stack,
+    Tabs,
+    type BadgeTone,
+    type FilterFields,
+    type ListBoxItem,
+    type SearchFields,
+} from "@starci/grammar/common"
 import type { inboxBlock } from "../../blocks/chatbot/inbox.block"
-import { countsView, tabEntriesOf } from "../../rows/filter-tabs"
-import type { TabSpec } from "../../rows/filter-tabs"
-import { footersOf, tabCountsOf } from "../../rows/list-card"
-import { paneHeadersOf } from "../../rows/pane-headers"
+import { countsView, tabEntriesOf, type TabSpec } from "../../rows/filter-tabs"
+import { tabCountsOf } from "../../rows/list-card"
 import { tabOf, paramsOfTab } from "../../rows/chatbot/inbox-tabs"
-import { INBOX_TABS, threadRowsOf } from "../../rows/chatbot/thread-rows"
-import type { ThreadListRow, ThreadStatus } from "../../rows/chatbot/thread-rows"
-import { chosenRow, moreStateOf, recordsView, selectionOf } from "../../rows/rows"
+import { INBOX_TABS, threadRowsOf, type ThreadListRow, type ThreadStatus } from "../../rows/chatbot/thread-rows"
+import { chosenRow, recordsView, selectionOf } from "../../rows/rows"
 import { queryOf } from "../../rows/search"
 import { derivedSlot, parsedSlot } from "../../slots/slots"
 import { usePaneSearch } from "../composites/usePaneSearch"
@@ -44,7 +55,6 @@ const trailingOf = (row: ThreadListRow, words: RowWords): ReactNode => (
                 {words.status(row)}
             </Badge>
         )}
-        {row.channel === "" ? null : <Badge tone="neutral">{words.channel(row.channel)}</Badge>}
     </Stack>
 )
 
@@ -85,7 +95,56 @@ const filterOf = (props: InboxListProps, words: ReturnType<typeof useBlockWords>
     }
 }
 
-/** The list pane of the inbox: one surface card whose header holds the tabs with their counts and the search on one line, and whose body is a row per conversation. */
+/** What the head of the list pane takes. */
+interface InboxHeadProps {
+    readonly label: string
+    /** How many conversations the inbox holds, as the chip after the title; null while unknown. */
+    readonly total: number | null
+    readonly filter: FilterFields
+    /** The search zone; null draws no search. */
+    readonly search: SearchFields | null
+}
+
+/** The bands over the rows: the heading, the filter tabs with their counts and the search. */
+const InboxHead = (props: InboxHeadProps): ReactNode => {
+    const { filter, search, label } = props
+    return (
+        <>
+            <PaneSection align="center">
+                <PaneHeader
+                    title={label}
+                    {...(props.total === null ? {} : { status: <Badge tone="neutral">{String(props.total)}</Badge> })}
+                />
+            </PaneSection>
+            {search === null ? null : (
+                <PaneSection>
+                    <SearchField
+                        label={search.label}
+                        isLabelHidden
+                        {...(search.placeholder === undefined ? {} : { placeholder: search.placeholder })}
+                        {...(search.clearLabel === undefined ? {} : { clearLabel: search.clearLabel })}
+                        value={search.value}
+                        onValueChange={search.onChange}
+                        onClear={() => search.onChange("")}
+                    />
+                </PaneSection>
+            )}
+            <PaneSection>
+                <Tabs
+                    kind="filter"
+                    label={filter.label}
+                    selectedKey={filter.selectedKey}
+                    onSelect={filter.onSelect}
+                    items={filter.items}
+                    {...(filter.moreLabel === undefined ? {} : { moreLabel: filter.moreLabel })}
+                    inset="none"
+                />
+            </PaneSection>
+        </>
+    )
+}
+
+/** The list pane of the inbox, as the bands of a white pane: its heading, the filter tabs with their counts, the search, then a row per conversation in the pane's own scroll band. */
 export const InboxList = (props: InboxListProps): ReactNode => {
     const host = useBlockHost()
     const words = useBlockWords()
@@ -95,7 +154,7 @@ export const InboxList = (props: InboxListProps): ReactNode => {
         label: words({ key: "search_label" }),
         clearLabel: words({ key: "searchClear" }),
     })
-    const headers = paneHeadersOf(filterOf(props, words), search)
+    const filter = filterOf(props, words)
     const read = props.slots.threads
     const rowWords = {
         untitled: words({ key: "inbox_untitled" }),
@@ -112,54 +171,34 @@ export const InboxList = (props: InboxListProps): ReactNode => {
         channel: (key) => words({ key: `channel_${key}` }),
     }
     const label = words({ key: "list_label" })
+    const total = tabCountsOf(parsedSlot(props.slots.counts.slot, countsView))?.total ?? null
     return (
-        <SlotView
-            slot={rows}
-            labels={labels}
-            placeholder={[]}
-            onRetry={read.retry}
-            frame={(notice: ReactNode) => (
-                <SurfaceCard ariaLabel={label} headers={headers}>
-                    {notice}
-                </SurfaceCard>
-            )}
-            {...(searched === null
-                ? {}
-                : {
-                      emptyAction: {
-                          label: words({ key: "searchClear" }),
-                          onAction: () => props.params.set(props.props.searchParam, null),
-                      },
-                  })}
-            render={(items, isLoading) => (
-                <SurfaceCard
-                    ariaLabel={label}
-                    headers={headers}
-                    footers={
-                        read.page === null
-                            ? []
-                            : footersOf(
-                                  moreStateOf(read.page),
-                                  { loadMore: words({ key: "listLoadMore" }), retry: labels.retry },
-                                  read.page.loadMore,
-                              )
-                    }
-                    isLoading={isLoading}
-                >
-                    <ListBox
-                        label={label}
-                        items={items.map((row) => itemOf(row, chipWords))}
-                        selectionMode="single"
-                        selectionIndicator="none"
-                        selectedIds={selectionOf(props.params.value(props.props.selectParam))}
-                        onSelectionChange={(ids) => {
-                            const id = chosenRow(ids)
-                            if (id !== null) props.params.set(props.props.selectParam, id)
-                        }}
-                        isLoading={isLoading}
-                    />
-                </SurfaceCard>
-            )}
-        />
+        <>
+            <InboxHead label={words({ key: "tab_inbox" })} total={total} filter={filter} search={search} />
+            <PaneSection scroll={{ label }}>
+                <SlotView
+                    slot={rows}
+                    labels={labels}
+                    placeholder={[]}
+                    onRetry={read.retry}
+                    frame={(notice: ReactNode) => <>{notice}</>}
+                    render={(items, isLoading) => (
+                        <ListBox
+                            label={label}
+                            items={items.map((row) => itemOf(row, chipWords))}
+                            selectionMode="single"
+                            selectionIndicator="none"
+                            selectedIds={selectionOf(props.params.value(props.props.selectParam))}
+                            onSelectionChange={(ids) => {
+                                const id = chosenRow(ids)
+                                if (id !== null) props.params.set(props.props.selectParam, id)
+                            }}
+                            isLoading={isLoading}
+                            emptyContent={<EmptyNotice frame="frameless" message={labels.empty} />}
+                        />
+                    )}
+                />
+            </PaneSection>
+        </>
     )
 }

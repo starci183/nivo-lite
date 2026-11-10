@@ -20,12 +20,22 @@ import {
 } from "./connector-row.mapper"
 import { isBearerCredential } from "./bearer-credential.policy"
 import { McpGatewayError, McpGatewayErrorCode } from "./errors/mcp-gateway.error"
+import { ProviderAbilitiesService } from "./provider-abilities.service"
+import type {
+    AttachmentChangeResult,
+    AttachmentRefusal,
+    AttachmentWish,
+    ProposedAttachment,
+    ProviderBoard,
+    TemplateCandidate,
+} from "./provider-abilities.service"
 import { McpConnectorCredentialService } from "./mcp-connector-credential.service"
 import { InjectMcpGatewayOptions, InjectNativeAdapters } from "./mcp-gateway.decorators"
 import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import type {
     CallLogQuery,
     CallLogView,
+    AbilityInput,
     ConnectorView,
     McpCredentialInput,
     GrantInput,
@@ -48,6 +58,15 @@ const MANAGER = ["owner", "manager"] as const
 /** The refusal of a console input, naming the field. */
 const invalid = (field: string): McpGatewayError =>
     new McpGatewayError({ code: McpGatewayErrorCode.Invalid, params: { field } })
+
+/** The refusal of a change of an attachment, with its reason. */
+const attachmentRefused = (reason: AttachmentRefusal): McpGatewayError =>
+    new McpGatewayError({ code: McpGatewayErrorCode.AttachmentRefused, params: { reason } })
+
+/** Passes a change that was made; throws the refusal of one that was not. */
+const attachmentDone = (result: AttachmentChangeResult): void => {
+    if (!result.ok) throw attachmentRefused(result.reason)
+}
 
 const viewOf = (connector: WorkspaceConnector): ConnectorView => ({
     key: connector.manifest.key,
@@ -92,7 +111,63 @@ export class McpGatewayAdminService {
         private readonly callLines: McpCallLogService,
         private readonly connections: ConnectionsService,
         private readonly credentials: McpConnectorCredentialService,
+        private readonly abilities: ProviderAbilitiesService,
     ) {}
+
+    /** The rights board: every provider with its abilities and whether it is connected, and every attachment of the workspace. */
+    async providerBoard(actor: ConnectionActor): Promise<ProviderBoard> {
+        await this.connections.authorize(actor, MANAGER)
+        return this.abilities.board(actor.workspaceId)
+    }
+
+    /** What a fresh agent of a module would be attached to in this workspace, pre-ticked from the module's defaults; nothing is written. */
+    async abilityProposal(actor: ConnectionActor, moduleKey: string): Promise<ReadonlyArray<ProposedAttachment>> {
+        await this.connections.authorize(actor, MANAGER)
+        return this.abilities.proposalOf(actor.workspaceId, moduleKey)
+    }
+
+    /** Attaches an agent to a connected provider with the abilities ticked; refused with its reason when it cannot be. */
+    async attachProvider(actor: ConnectionActor, agentId: string, wish: AttachmentWish): Promise<void> {
+        await this.connections.authorize(actor, MANAGER)
+        attachmentDone(await this.abilities.attach({ workspaceId: actor.workspaceId, agentId }, wish, actor.principalId))
+    }
+
+    /** Detaches an agent from a provider: every ability it held there goes. */
+    async detachProvider(actor: ConnectionActor, agentId: string, provider: string): Promise<void> {
+        await this.connections.authorize(actor, MANAGER)
+        attachmentDone(await this.abilities.detach(actor.workspaceId, agentId, provider))
+    }
+
+    /** Ticks one ability of an attachment (`auto` or `ask`) or unticks it (`off`). */
+    async setAbility(actor: ConnectionActor, input: AbilityInput): Promise<void> {
+        await this.connections.authorize(actor, MANAGER)
+        attachmentDone(
+            await this.abilities.setAbility(
+                { workspaceId: actor.workspaceId, agentId: input.agentId, provider: input.provider },
+                input.ability,
+                input.mode,
+                actor.principalId,
+            ),
+        )
+    }
+
+    /** The agents a template would attach to a provider connected after they were created, each with the ticks proposed. */
+    async templateCandidates(actor: ConnectionActor, provider: string): Promise<ReadonlyArray<TemplateCandidate>> {
+        await this.connections.authorize(actor, MANAGER)
+        return this.abilities.templateCandidates(actor.workspaceId, provider)
+    }
+
+    /** Attaches the listed agents to a provider by their template; answers the agents attached. */
+    async attachByTemplate(
+        actor: ConnectionActor,
+        provider: string,
+        agentIds: ReadonlyArray<string>,
+    ): Promise<ReadonlyArray<string>> {
+        await this.connections.authorize(actor, MANAGER)
+        const made = await this.abilities.attachByTemplate(actor.workspaceId, provider, agentIds, actor.principalId)
+        if ("ok" in made) throw attachmentRefused(made.reason)
+        return made
+    }
 
     /** The connectors of the workspace with their tools and which of them may run. */
     async connectors(actor: ConnectionActor): Promise<ReadonlyArray<ConnectorView>> {

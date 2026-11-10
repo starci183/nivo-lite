@@ -1,5 +1,5 @@
 import type { Type } from "@nestjs/common"
-import type { BindingAgentsDirectory } from "./agent-connections.port"
+import type { BindingAgentsDirectory, BindingManagers } from "./agent-connections.port"
 
 /** The agent-connections configuration: the classes behind the ports of the other lanes. */
 export interface AgentConnectionsOptions {
@@ -11,4 +11,6 @@ export interface AgentConnectionsOptions {
 export interface AgentConnectionsPorts {
     /** Implements the agents port; an existing provider of the app. */
     readonly agents: Type<BindingAgentsDirectory>
+    /** Implements the manager scope; without it only the owner grants channels. */
+    readonly managers?: Type<BindingManagers>
 }

@@ -18,6 +18,5 @@ export type {
     ResponseFormat,
 } from "./ai-generations.contracts"
 export type { GenerationState } from "./ai-generations.contracts"
-export { TextGeneratorService } from "./text-generator.service"
 export { ModuleTextGeneratorService } from "./module-text-generator.service"
 export { aiGenerationsEntities } from "./persistence/entities"

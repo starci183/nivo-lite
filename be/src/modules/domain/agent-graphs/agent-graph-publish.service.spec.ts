@@ -40,7 +40,7 @@ const FLOW: GraphSpec = {
     moduleKey: "accounting",
     trigger: { kind: "tag", sources: ["agent"] },
     grant: { rights: [], tools: [], effects: [] },
-    nodes: [{ key: "echo", kind: "execute", step: "intent.classify" }],
+    nodes: [{ key: "echo", kind: "output", step: "core.outcome", params: { outcome: "done", outputs: {} } }],
 }
 
 const build = async (state: OptionalGraphState, options: { context?: GraphContext; installation?: boolean } = {}) => {
@@ -401,6 +401,27 @@ describe("AgentGraphPublishService the contracts of a graph", () => {
 
         await expect(shipped.service.publishDraft("ws-1", "agent-1", OWNER, "Edit")).resolves.toBe(VERSION)
         await expect(warning.service.publishDraft("ws-1", "agent-1", OWNER, "Edit")).resolves.toBe(VERSION)
+    })
+})
+
+describe("AgentGraphPublishService.publishCopy", () => {
+    it("publishes the graph of a sibling agent as a version of kind copy", async () => {
+        const state = stateOf({ activeKind: "seed" })
+        const { service, graphs } = await build(state)
+
+        await expect(service.publishCopy("ws-1", "agent-1", state.draft, OWNER)).resolves.toBe(VERSION)
+
+        expect(graphs.publish).toHaveBeenCalledWith(expect.objectContaining({ kind: "copy", memberId: "boss" }))
+    })
+
+    it("still refuses a manager a copy that widens what the agent may do", async () => {
+        const state = stateOf({ activeKind: "seed" })
+        const { service, graphs } = await build(state)
+
+        expect(await codeOf(service.publishCopy("ws-1", "agent-1", raised(state), MANAGER))).toBe(
+            AgentGraphsErrorCode.WidensNeedsOwner,
+        )
+        expect(graphs.publish).not.toHaveBeenCalled()
     })
 })
 

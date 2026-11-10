@@ -1,4 +1,4 @@
-import { Button, CheckboxGroup, ChoiceChips, Cluster, Stack } from "@starci/grammar/common"
+import { Button, CheckboxGroup, ChoiceChips, Cluster, Stack, SurfaceCard } from "@starci/grammar/common"
 import type { ReactNode } from "react"
 import { PermissionBandsFields } from "@/components/branches/PermissionBandsFields"
 import type { PermissionBandsFieldsProps } from "@/components/branches/PermissionBandsFields"
@@ -115,7 +115,7 @@ interface FormFootProps {
     readonly on: Pick<PermissionRuleFormProps["on"], "close" | "save">
 }
 
-/** The commands at the foot of the form: leave it as it was, or save the rule. */
+/** The commands at the foot of the form card: leave it as it was, or save the rule. */
 const FormFoot = (props: FormFootProps) => (
     <Cluster gap="inline" justify="end">
         <Button intent="dismiss" isDisabled={props.props.isPending} onPress={props.on.close}>
@@ -138,7 +138,11 @@ export const PermissionRuleForm = (props: PermissionRuleFormProps) => {
     const draft = p.draft
     const asks = draft.strategy === "bands" || draft.strategy === "ask"
     return (
-        <Stack gap="section">
+        <SurfaceCard
+            ariaLabel={p.title}
+            footers={[{ kind: "custom", children: <FormFoot props={p} on={on} /> }]}
+        >
+            <Stack gap="section">
             <CheckboxGroup
                 label={p.copy.agentsLabel}
                 description={p.copy.agentsHint}
@@ -170,7 +174,7 @@ export const PermissionRuleForm = (props: PermissionRuleFormProps) => {
                 />
             ) : null}
             {asks ? <AskedFields props={p} on={on} grants={props.shape.grants} /> : null}
-            <FormFoot props={p} on={on} />
-        </Stack>
+            </Stack>
+        </SurfaceCard>
     )
 }

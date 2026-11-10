@@ -112,3 +112,42 @@ describe("TelegramClient sendTyping", () => {
         await expect(client.sendTyping("123:abc", "42")).resolves.toBe(false)
     })
 })
+
+describe("TelegramClient pictures", () => {
+    it("sends one photo by address with its caption", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 200, body: { ok: true, result: {} } })
+
+        await client.sendPhoto("123:abc", "555", "https://api/1.jpg", "Basket\n2.000 VND")
+
+        expect(http.request).toHaveBeenCalledWith(
+            expect.objectContaining({
+                url: "https://telegram.test/bot123:abc/sendPhoto",
+                body: { chat_id: "555", photo: "https://api/1.jpg", caption: "Basket\n2.000 VND" },
+            }),
+        )
+    })
+
+    it("sends an album with sendMediaGroup, a caption on each photo, and leaves out an empty caption", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValue({ status: 200, body: { ok: true, result: [] } })
+
+        await client.sendMediaGroup("123:abc", "555", [
+            { url: "https://api/1.jpg", caption: "Basket" },
+            { url: "https://api/2.jpg", caption: "" },
+        ])
+
+        expect(http.request).toHaveBeenCalledWith(
+            expect.objectContaining({
+                url: "https://telegram.test/bot123:abc/sendMediaGroup",
+                body: {
+                    chat_id: "555",
+                    media: [
+                        { type: "photo", media: "https://api/1.jpg", caption: "Basket" },
+                        { type: "photo", media: "https://api/2.jpg" },
+                    ],
+                },
+            }),
+        )
+    })
+})

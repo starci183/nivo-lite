@@ -6,7 +6,7 @@ import { TeamChatErrorCode } from "./errors/team-chat.error"
 import { TEAM_CHAT_TAGS } from "./team-chat.decorators"
 import type { TeamChatTags } from "./team-chat.port"
 import { TeamChatRoomsService } from "./team-chat.service"
-import { cursorOf } from "./team-chat.policy"
+import { cursorOf, lineKeyOf } from "./team-chat.policy"
 import type { ChatMemberRef, ChatRoomView, MessageView, SendInput, TeamChatResult } from "./team-chat.contracts"
 import { TeamChatAccessService } from "./team-chat-access.service"
 import { TeamChatApprovalsService } from "./team-chat-approvals.service"
@@ -161,6 +161,7 @@ describe("TeamChatRoomsService createRoom", () => {
             name: "Team",
             directKey: null,
             others: [ben],
+            purpose: { purpose: "group" },
         })
         expect(refusalOf(await subject.createRoom(WS, ANA, { ...group, name: " " }))).toBe(
             TeamChatErrorCode.GroupNeedsName,
@@ -192,6 +193,27 @@ describe("TeamChatRoomsService createRoom", () => {
         )
         access.allKnown.mockResolvedValue(false)
         expect(refusalOf(await subject.createRoom(WS, ANA, direct))).toBe(TeamChatErrorCode.MemberUnknown)
+    })
+})
+
+describe("TeamChatRoomsService room purpose", () => {
+    const sales = { purpose: "module" as const, module: "sales" }
+
+    it("opens a module room, and refuses a purpose with no module, one given to a direct room, or one another room holds", async () => {
+        const { subject, store, views } = await build()
+        views.roomView.mockResolvedValue(mock<ChatRoomView>())
+        store.insertRoom.mockResolvedValue(roomOf())
+        const group = { kind: "group" as const, name: "Sales", members: [ben], purpose: sales }
+        expect(valueOf(await subject.createRoom(WS, ANA, group))).toBeDefined()
+        expect(store.insertRoom).toHaveBeenCalledWith(expect.objectContaining({ purpose: sales }))
+        const blank = { ...group, purpose: { purpose: "module" as const, module: " " } }
+        expect(refusalOf(await subject.createRoom(WS, ANA, blank))).toBe(TeamChatErrorCode.PurposeInvalid)
+        const direct = { kind: "direct" as const, name: null, members: [ben], purpose: sales }
+        expect(refusalOf(await subject.createRoom(WS, ANA, direct))).toBe(TeamChatErrorCode.PurposeInvalid)
+        store.insertRoom.mockRejectedValueOnce({ code: "23505" })
+        expect(refusalOf(await subject.createRoom(WS, ANA, group))).toBe(TeamChatErrorCode.PurposeTaken)
+        store.insertRoom.mockRejectedValueOnce({ code: "40001" })
+        await expect(subject.createRoom(WS, ANA, group)).rejects.toEqual({ code: "40001" })
     })
 })
 
@@ -268,8 +290,29 @@ describe("TeamChatRoomsService send", () => {
             clientId: "c1",
             mentions: [],
             attachments: [],
+            replyTo: null,
         })
         expect(store.moveReadPosition).toHaveBeenCalledWith(WS, ROOM, ANA, MSG)
+    })
+
+    it("stores a reply with the message it answers when that message is in the room", async () => {
+        const { subject, store, views, files } = await build()
+        files.verify.mockResolvedValue({ ok: true, value: [] })
+        store.sentBefore.mockResolvedValue(null)
+        store.messageIn.mockResolvedValue(messageOf({ id: MSG2 }))
+        store.insertText.mockResolvedValue(messageOf({ id: MSG }))
+        views.viewOf.mockResolvedValue(mock<MessageView>())
+        valueOf(await subject.send(WS, ANA, sendOf({ replyTo: MSG2 })))
+        expect(store.messageIn).toHaveBeenCalledWith(WS, ROOM, MSG2)
+        expect(store.insertText).toHaveBeenCalledWith(expect.objectContaining({ replyTo: MSG2 }))
+    })
+
+    it("refuses a reply to a message that is not in the room, and stores nothing", async () => {
+        const { subject, store } = await build()
+        store.sentBefore.mockResolvedValue(null)
+        store.messageIn.mockResolvedValue(null)
+        expect(refusalOf(await subject.send(WS, ANA, sendOf({ replyTo: MSG2 })))).toBe(TeamChatErrorCode.NotFound)
+        expect(store.insertText).not.toHaveBeenCalled()
     })
 
     it("hands a mentioned agent the text once, and a retry stores and hands nothing again", async () => {
@@ -429,5 +472,79 @@ describe("TeamChatRoomsService engine side", () => {
         expect(await subject.postAsAgent(WS, { agent: "sales", body: "hi", toUserId: null, key: null })).toBeNull()
         expect(await subject.cardRooms(WS, MSG)).toBe(2)
         expect(cards.cardRooms).toHaveBeenCalledWith(WS, MSG)
+    })
+})
+
+describe("TeamChatRoomsService replies to a line an agent wrote under a key", () => {
+    const KEY = "run-stuck:run-1:mark-paid"
+
+    /** A world in which the room holds the agent's line `MSG2`, written under `clientId`, and the next text is stored as `MSG`. */
+    const buildReplying = async (clientId: string | null, authorKind: "agent" | "user" = "agent") => {
+        const world = await build()
+        world.files.verify.mockResolvedValue({ ok: true, value: [] })
+        world.store.sentBefore.mockResolvedValue(null)
+        world.store.messageIn.mockResolvedValue(messageOf({ id: MSG2, authorKind, authorId: BOT, clientId }))
+        world.store.insertText.mockResolvedValue(messageOf({ id: MSG, replyTo: MSG2 }))
+        world.views.viewOf.mockResolvedValue(mock<MessageView>())
+        return world
+    }
+
+    it("tells the listener who replied to which line, once the reply is stored, and nothing on a retry of the same reply", async () => {
+        const { subject, store } = await buildReplying("line-key-1")
+        const heard = jest.fn().mockResolvedValue(undefined)
+        subject.listenReplies(heard)
+
+        valueOf(await subject.send(WS, ANA, sendOf({ replyTo: MSG2, body: "cho qua" })))
+
+        expect(heard).toHaveBeenCalledTimes(1)
+        expect(heard).toHaveBeenCalledWith({ workspaceId: WS, byUserId: ANA, lineKey: "line-key-1" })
+        store.sentBefore.mockResolvedValue(messageOf({ id: MSG }))
+        valueOf(await subject.send(WS, ANA, sendOf({ replyTo: MSG2, body: "cho qua", clientId: "c1" })))
+        expect(heard).toHaveBeenCalledTimes(1)
+    })
+
+    it("tells nobody of a reply to a person's message, to an agent's line written under no key, or of a text that replies to nothing", async () => {
+        const person = await buildReplying("line-key-1", "user")
+        const keyless = await buildReplying(null)
+        const heard = jest.fn().mockResolvedValue(undefined)
+        person.subject.listenReplies(heard)
+        keyless.subject.listenReplies(heard)
+
+        valueOf(await person.subject.send(WS, ANA, sendOf({ replyTo: MSG2 })))
+        valueOf(await keyless.subject.send(WS, ANA, sendOf({ replyTo: MSG2 })))
+        valueOf(await keyless.subject.send(WS, ANA, sendOf()))
+
+        expect(heard).not.toHaveBeenCalled()
+    })
+
+    it("still stores the person's reply when the listener fails or nobody listens: the chat does no business itself", async () => {
+        const failing = await buildReplying("line-key-1")
+        failing.subject.listenReplies(jest.fn().mockRejectedValue(new Error("retry refused")))
+        const silent = await buildReplying("line-key-1")
+
+        expect((await failing.subject.send(WS, ANA, sendOf({ replyTo: MSG2 }))).ok).toBe(true)
+        expect((await silent.subject.send(WS, ANA, sendOf({ replyTo: MSG2 }))).ok).toBe(true)
+        expect(failing.store.moveReadPosition).toHaveBeenCalledWith(WS, ROOM, ANA, MSG)
+    })
+
+    it("reads what people replied to the line of a key, oldest first as the store answers them, and nothing when no line holds the key", async () => {
+        const { subject, store } = await build()
+        store.agentLine.mockResolvedValueOnce(messageOf({ id: MSG2, authorKind: "agent", authorId: BOT }))
+        store.repliesTo.mockResolvedValue([
+            messageOf({ id: MSG, body: "Khach chuyen thieu 2k", createdAt: new Date("2026-11-10T03:00:00.000Z") }),
+            messageOf({ id: MSG, body: "Cho qua", createdAt: new Date("2026-11-10T03:01:00.000Z") }),
+        ])
+
+        await expect(subject.repliesToAgentLine(WS, KEY)).resolves.toEqual([
+            { text: "Khach chuyen thieu 2k", at: "2026-11-10T03:00:00.000Z" },
+            { text: "Cho qua", at: "2026-11-10T03:01:00.000Z" },
+        ])
+        // The line is looked up under the stored form of the key it was posted with.
+        expect(store.agentLine).toHaveBeenCalledWith(WS, lineKeyOf(KEY))
+        expect(store.repliesTo).toHaveBeenCalledWith(WS, MSG2)
+
+        store.agentLine.mockResolvedValueOnce(null)
+        await expect(subject.repliesToAgentLine(WS, "run-stuck:none:none")).resolves.toEqual([])
+        expect(store.repliesTo).toHaveBeenCalledTimes(1)
     })
 })

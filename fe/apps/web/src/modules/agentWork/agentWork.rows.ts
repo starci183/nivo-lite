@@ -66,11 +66,22 @@ const waitLabelOf = (wire: TaskWire, context: AgentWorkContext): string => {
     return next === "" ? "" : t("waitNext", { next })
 }
 
+/** The title the engine gives a due care step ("care due <time>"): the time it is due. */
+const CARE_DUE = /^care due (.+)$/u
+
+/** The title and the line under it of a task: a due care step says a sentence and when it is due, any other task its own words. */
+const taskWordsOf = (wire: TaskWire, context: AgentWorkContext): { readonly title: string; readonly detail: string } => {
+    const care = CARE_DUE.exec(wire.title)
+    if (care === null)
+        return { title: maskPhones(plainText(context.t, wire.title)), detail: maskPhones(plainText(context.t, wire.detail)) }
+    const when = relative(context, care[1])
+    return { title: context.t("taskCareDue"), detail: when === "" ? "" : context.t("taskCareDueWhen", { when }) }
+}
+
 /** One task in words, with what it waits for and the way to its work item. */
 export const toTaskView = (wire: TaskWire, context: AgentWorkContext): AgentWorkTaskView => ({
     id: wire.id,
-    title: maskPhones(plainText(context.t, wire.title)),
-    detail: maskPhones(plainText(context.t, wire.detail)),
+    ...taskWordsOf(wire, context),
     statusLabel: taskStatusWord(context.t, wire.status),
     waitLabel: waitLabelOf(wire, context),
     workItemHref: workItemHrefOf(context, wire.workItemId),

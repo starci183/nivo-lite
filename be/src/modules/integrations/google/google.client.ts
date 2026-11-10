@@ -40,7 +40,8 @@ const textOf = (value: unknown): string | undefined => (typeof value === "string
 const a1 = (tab: string, range: string): string => encodeURIComponent(`'${tab}'!${range}`)
 
 /** The columns a ledger fills, on the first tab of the sheet the owner named. */
-const LEDGER_RANGE = "A:G"
+/** The columns of the ledger tab: date, document, description, in, out, counterpart, category, balance. */
+const LEDGER_COLUMNS = "A:H"
 
 const columnLetter = (width: number): string => String.fromCodePoint(64 + width)
 
@@ -172,22 +173,54 @@ export class GoogleClient {
     }
 
     /**
-     * Appends rows after the last one of the first tab of a spreadsheet, as the values are (no formula is run), and answers the A1 range
-     * Google wrote them to. Never updates or removes a cell. Throws `GOOGLE_REFUSED` (with the HTTP status) when Google refuses.
+     * Appends rows after the last one of a tab of a spreadsheet and answers the A1 range Google wrote them to. The values are entered as a
+     * person would type them (a date becomes a date, a number a number, and a formula runs), so the caller makes every text cell text.
+     * Never updates or removes a cell. Throws `GOOGLE_REFUSED` (with the HTTP status) when Google refuses.
      */
     async appendValues(
         token: string,
         spreadsheetId: string,
+        tab: string,
         rows: ReadonlyArray<ReadonlyArray<SheetCell>>,
     ): Promise<string> {
         const body = await this.call({
             method: "POST",
-            url: `${sheetsBase(this.options)}/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(LEDGER_RANGE)}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+            url: `${sheetsBase(this.options)}/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${a1(tab, LEDGER_COLUMNS)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
             headers: this.bearer(token),
             body: { majorDimension: "ROWS", values: rows },
         })
         const updates = isJson(body.updates) ? body.updates : {}
         return textOf(updates.updatedRange) ?? ""
+    }
+
+    /**
+     * Makes sure a spreadsheet has a tab of this title, adding it (with a frozen header row) when it has none. Adds only; no cell or
+     * tab already there is changed. Throws `GOOGLE_REFUSED` (with the HTTP status) when Google refuses.
+     */
+    async ensureTab(token: string, spreadsheetId: string, title: string): Promise<void> {
+        const base = `${sheetsBase(this.options)}/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}`
+        const body = await this.call({
+            method: "GET",
+            url: `${base}?fields=sheets.properties.title`,
+            headers: this.bearer(token),
+        })
+        const sheets: ReadonlyArray<unknown> = Array.isArray(body.sheets) ? body.sheets : []
+        const titles = sheets.map((sheet) => (isJson(sheet) && isJson(sheet.properties) ? textOf(sheet.properties.title) : undefined))
+        if (titles.includes(title)) return
+        await this.call({
+            method: "POST",
+            url: `${base}:batchUpdate`,
+            headers: this.bearer(token),
+            body: {
+                requests: [
+                    {
+                        addSheet: {
+                            properties: { title, gridProperties: { frozenRowCount: 1, rowCount: 1000, columnCount: 8 } },
+                        },
+                    },
+                ],
+            },
+        })
     }
 
     /** The title of a spreadsheet, blank when Google names none. Throws `GOOGLE_REFUSED` (with the HTTP status) when Google refuses. */

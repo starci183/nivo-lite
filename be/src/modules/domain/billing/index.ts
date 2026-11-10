@@ -10,6 +10,7 @@ export { BILLING_ERROR_KINDS, BillingError, BillingErrorCode } from "./errors/bi
 export { BILLING_MESSAGES } from "./messages/billing.messages"
 export { BillingModule } from "./billing.module"
 export { BillingService } from "./billing.service"
+export { LobbyMembershipsService } from "./lobby-memberships.service"
 export { EntitlementsService } from "./entitlements.service"
 export { PaymentProofService } from "./payment-proof.service"
 export { sepayPayloadOf } from "./sepay.policy"
@@ -17,6 +18,7 @@ export { parseJsonObject } from "./webhook-body.policy"
 export type { BankAccountOptions } from "./billing.options"
 export type {
     BillingWorkspace,
+    LobbyMembership,
     PayableOrder,
     Plan,
     PlanQuote,

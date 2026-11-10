@@ -32,10 +32,13 @@ export class InviteSupportService {
             .update()
             .returning("id, email, role")
             .set({ tokenHash: hashInviteToken(minted.token), expiresAt })
-            .where("id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL", {
-                inviteId,
-                workspaceId,
-            })
+            .where(
+                "id = :inviteId AND workspace_id = :workspaceId AND accepted_at IS NULL AND revoked_at IS NULL AND declined_at IS NULL",
+                {
+                    inviteId,
+                    workspaceId,
+                },
+            )
             .execute()
         const invite = firstChangedInvite(result.raw)
         if (invite === undefined) throw new WorkspaceInvitesError({ code: WorkspaceInvitesErrorCode.NotFound })

@@ -23,6 +23,10 @@ export enum WorkspacesErrorCode {
     NameAmbiguous = "WORKSPACES_NAME_AMBIGUOUS",
     /** The named workspace or owner seat is inactive and must be restored explicitly. */
     NameUnavailable = "WORKSPACES_NAME_UNAVAILABLE",
+    /** The name typed to confirm a deletion is not the workspace's name. */
+    DeleteConfirmMismatch = "WORKSPACES_DELETE_CONFIRM_MISMATCH",
+    /** The deleted workspace is past its restore window. */
+    RestoreExpired = "WORKSPACES_RESTORE_EXPIRED",
 }
 
 /** How each workspaces code travels. */
@@ -37,6 +41,8 @@ export const WORKSPACES_ERROR_KINDS: Record<WorkspacesErrorCode, ErrorKind> = {
     [WorkspacesErrorCode.NameInvalid]: "invalid",
     [WorkspacesErrorCode.NameAmbiguous]: "conflict",
     [WorkspacesErrorCode.NameUnavailable]: "conflict",
+    [WorkspacesErrorCode.DeleteConfirmMismatch]: "invalid",
+    [WorkspacesErrorCode.RestoreExpired]: "conflict",
 }
 
 /** The one error class of the workspaces capability. */

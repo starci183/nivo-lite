@@ -17,6 +17,7 @@ import { ChannelsError, ChannelsErrorCode } from "./errors/channels.error"
 import { ZaloCredentialsService } from "./zalo-credentials.service"
 import { ChannelPlanNoticeService } from "./channel-plan-notice.service"
 import { ZaloDeliveryService } from "./zalo-delivery.service"
+import { TelegramPicturesService } from "./telegram-pictures.service"
 
 const REJECTED = { delivered: false, outcome: "rejected", failure: null }
 const ACKNOWLEDGED = { delivered: true, outcome: "acknowledged", failure: null }
@@ -57,6 +58,7 @@ const build = async (found: ChatConversationTarget | null = target()) => {
             { provide: ZaloCredentialsService, useValue: credentials },
             { provide: ZaloDeliveryService, useValue: zaloDelivery },
             { provide: ChannelPlanNoticeService, useValue: planNotice },
+            { provide: TelegramPicturesService, useValue: mock<TelegramPicturesService>() },
         ],
     }).compile()
     return {
@@ -70,6 +72,7 @@ const build = async (found: ChatConversationTarget | null = target()) => {
         senders,
         zaloDelivery,
         planNotice,
+        pictures: moduleRef.get(TelegramPicturesService),
     }
 }
 
@@ -111,6 +114,14 @@ describe("ChannelDeliveryService", () => {
 })
 
 describe("ChannelDeliveryService telegram", () => {
+    it("hands the pictures to the picture sender once the text went out", async () => {
+        const { service, secrets, pictures } = await build()
+        secrets.botToken.mockResolvedValue({ kind: "ok", value: "123:token" })
+        const images = [{ url: "https://api/1.jpg", caption: "Basket" }]
+        await service.deliver({ ...request, images })
+        expect(pictures.send).toHaveBeenCalledWith(target(), "123:token", "555", images)
+    })
+
     it("sends to the chat of the conversation, ignoring the archive suffix, and marks the message sent", async () => {
         const { service, messages, telegram, secrets } = await build()
         secrets.botToken.mockResolvedValue({ kind: "ok", value: "123:token" })

@@ -33,7 +33,7 @@ export const HiringCvSection = (props: HiringCvSectionProps) => {
                                 {isPreviewing ? copy.candCvHide : copy.candCvPreview}
                             </Button>
                         ) : null}
-                        <Button
+                        <Button endArrow
                             isLoading={props.isLoading}
                             intent="dismiss"
                             size="sm"

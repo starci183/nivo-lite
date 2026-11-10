@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl"
 import { partyKeyOf } from "@/modules/teamChat"
-import { usePaneCopy } from "@/hooks/paneFrame"
 import { useSlotLabels } from "@/hooks/slot"
 import type { ChatParty, SlotLabels, TeamChatRoomsViewProps } from "@/modules/types"
 import type { TeamChatListState } from "./useTeamChatListState"
@@ -14,7 +13,6 @@ type Words = ReturnType<typeof useTranslations<"teamChat">>
 interface RoomsViewContext {
     readonly list: TeamChatListState
     readonly t: Words
-    readonly refreshLabel: string
     readonly labels: SlotLabels
     readonly selectedId: string | null
 }
@@ -61,8 +59,14 @@ const roomsViewPropsOf = (context: RoomsViewContext): TeamChatRoomsViewProps => 
             title: t("title"),
             listLabel: t("listLabel"),
             newChat: t("newChat"),
-            refresh: context.refreshLabel,
+            searchLabel: t("searchLabel"),
+            searchPlaceholder: t("searchPlaceholder"),
+            searchClear: t("searchClear"),
+            searchEmpty: t("searchEmpty"),
             groupLine: t("groupLine"),
+            sectionGroup: t("sectionGroup"),
+            sectionAgent: t("sectionAgent"),
+            sectionPerson: t("sectionPerson"),
             roomsEmpty: t("roomsEmpty"),
             roomsEmptyAction: t("roomsEmptyAction"),
             errorBody: t("errorBody"),
@@ -70,6 +74,7 @@ const roomsViewPropsOf = (context: RoomsViewContext): TeamChatRoomsViewProps => 
         labels: context.labels,
         slot: context.list.rooms.slot,
         selectedId: context.selectedId,
+        query: context.list.query,
         newChat: newChatOf(context),
     }
 }
@@ -77,12 +82,10 @@ const roomsViewPropsOf = (context: RoomsViewContext): TeamChatRoomsViewProps => 
 /** What the list of rooms draws, from its state, in the viewer's words. */
 export const useTeamChatRoomsView = (list: TeamChatListState, selectedId: string | null): TeamChatRoomsViewProps => {
     const t = useTranslations("teamChat")
-    const pane = usePaneCopy()
     const slotLabels = useSlotLabels()
     return roomsViewPropsOf({
         list,
         t,
-        refreshLabel: pane.refresh,
         labels: { ...slotLabels(t("roomsEmpty")), error: t("errorTitle") },
         selectedId,
     })

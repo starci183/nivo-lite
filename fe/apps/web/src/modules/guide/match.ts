@@ -1,14 +1,6 @@
 import type { GuidePage } from "./sitemap"
 
-/** Lower-case, accents removed (the Vietnamese d with stroke becomes d), punctuation to spaces. */
-export const normalize = (value: string): string =>
-    value
-        .toLowerCase()
-        .replaceAll(String.fromCodePoint(0x111), "d")
-        .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .replace(/[^a-z0-9@.]+/gu, " ")
-        .trim()
+import { normalize } from "./normalize"
 
 /** The search phrases of a page, by page id. */
 export type GuideKeywords = (pageId: string) => ReadonlyArray<string>

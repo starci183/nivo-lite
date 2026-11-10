@@ -1,9 +1,11 @@
 import { Test } from "@nestjs/testing"
-import { mockEntityManager } from "@starci/jest-preset"
+import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { inventoryItemOf } from "@tests/fixtures/builders/inventory.builder"
 import { SAVE_ITEM, SET_ITEM_ACTIVE } from "@tests/fixtures/builders/inventory-calls.builder"
+import type { StorageAssetsPort } from "@modules/integrations/object-storage"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { INVENTORY_ASSETS } from "./inventory.decorators"
 import { InventoryItemEntity } from "./persistence/entities"
 import { InventorySeedService } from "./inventory-seed.service"
 
@@ -29,9 +31,15 @@ const STORED = {
 const stored = (over: Parameters<typeof inventoryItemOf>[0] = {}): InventoryItemEntity =>
     inventoryItemOf({ ...STORED, ...over })
 
-const build = async (found: InventoryItemEntity | null) => {
+const PHOTO = { contentType: "image/jpeg", bytes: Buffer.from("jpeg-bytes") }
+const PHOTO_PATH = "catalogue-public/ws-1/chau-mini.jpg"
+
+const build = async (found: InventoryItemEntity | null, store: "ok" | "down" = "ok") => {
+    const assets = mock<StorageAssetsPort>()
+    assets.upload.mockResolvedValue({ error: store === "down" ? new Error("down") : null })
     const em: MockEntityManager = mockEntityManager({
         findOne: [InventoryItemEntity, found],
+        update: [InventoryItemEntity, { affected: 1 }],
         query: [SAVE_ITEM, [{ inventory_save_item: "item-1" }]],
     })
     const calls: Array<string> = []
@@ -40,9 +48,13 @@ const build = async (found: InventoryItemEntity | null) => {
         return Promise.resolve(statement === SET_ITEM_ACTIVE ? [] : [{ inventory_save_item: "item-1" }])
     })
     const moduleRef = await Test.createTestingModule({
-        providers: [InventorySeedService, { provide: PRIMARY_ENTITY_MANAGER, useValue: em }],
+        providers: [
+            InventorySeedService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: em },
+            { provide: INVENTORY_ASSETS, useValue: assets },
+        ],
     }).compile()
-    return { service: moduleRef.get(InventorySeedService), em, calls }
+    return { service: moduleRef.get(InventorySeedService), em, calls, upload: assets.upload }
 }
 
 describe("InventorySeedService > ensureItem", () => {
@@ -108,5 +120,51 @@ describe("InventorySeedService > ensureItem", () => {
         await expect(service.ensureItem("ws-1", ITEM)).resolves.toBe("updated")
 
         expect(calls).toEqual([SAVE_ITEM, SET_ITEM_ACTIVE])
+    })
+
+})
+
+describe("InventorySeedService > photos", () => {
+    it("writes the photo of a created item to the public product folder and points the item to it", async () => {
+        const { service, em, upload } = await build(null)
+
+        await expect(service.ensureItem("ws-1", { ...ITEM, image: PHOTO })).resolves.toBe("created")
+
+        expect(upload).toHaveBeenCalledWith("media", PHOTO_PATH, PHOTO.bytes, "image/jpeg")
+        expect(em.update).toHaveBeenCalledWith(
+            InventoryItemEntity,
+            { id: "item-1", workspaceId: "ws-1" },
+            { imagePath: PHOTO_PATH, imageType: "image/jpeg" },
+        )
+    })
+
+    it("keeps an item that holds the wanted photo, writing the photo again so a wiped store is filled", async () => {
+        const { service, calls, upload } = await build(stored({ imagePath: PHOTO_PATH, imageType: "image/jpeg" }))
+
+        await expect(service.ensureItem("ws-1", { ...ITEM, image: PHOTO })).resolves.toBe("kept")
+
+        expect(calls).toEqual([])
+        expect(upload).toHaveBeenCalledTimes(1)
+    })
+
+    it("gives an otherwise unchanged item its photo when it had none", async () => {
+        const { service, em } = await build(stored({ imagePath: null, imageType: null }))
+
+        await expect(service.ensureItem("ws-1", { ...ITEM, image: PHOTO })).resolves.toBe("updated")
+
+        expect(em.update).toHaveBeenCalledWith(
+            InventoryItemEntity,
+            { id: "item-1", workspaceId: "ws-1" },
+            { imagePath: PHOTO_PATH, imageType: "image/jpeg" },
+        )
+    })
+
+    it("refuses a photo the store cannot take, one of a type no photo may have", async () => {
+        const down = await build(null, "down")
+        await expect(down.service.ensureItem("ws-1", { ...ITEM, image: PHOTO })).rejects.toThrow()
+        const gif = await build(null)
+        await expect(
+            gif.service.ensureItem("ws-1", { ...ITEM, image: { ...PHOTO, contentType: "image/gif" } }),
+        ).rejects.toThrow()
     })
 })

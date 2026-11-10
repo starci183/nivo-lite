@@ -23,6 +23,7 @@ const PUBLIC_PATHS = [
     "/api/content",
     "/b",
     "/api/b",
+    "/w",
     "/j",
     "/l",
     "/health",

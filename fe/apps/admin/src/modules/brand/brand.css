@@ -1,0 +1,108 @@
+/*
+ * NIVO Brand System V1.2: the one place the app writes colour. The owner's set is final and the app owns it, independent of the
+ * grammar (--scrollbar is in the set but is not a grammar token, so the brand lint refuses it and it is not written). Soft pairs and the text-safe accent are derived from it with color-mix; info keeps its blue (no clash with the crimson set).
+ * The grammar renderers read these same HeroUI tokens, so a renderer and a HeroUI part paint the same colour.
+ */
+:root,
+.light {
+    --radius: 0.5rem;
+    --field-radius: 0.75rem;
+
+    --accent: oklch(58.58% 0.222 17.59);
+    --accent-foreground: oklch(99.11% 0 0);
+    --background: oklch(97.02% 0.0068 17.59);
+    --border: oklch(90% 0.0068 17.59);
+    --danger: oklch(65.32% 0.236 357.39);
+    --danger-foreground: oklch(99.11% 0 0);
+    --default: oklch(94% 0.0068 17.59);
+    --default-foreground: oklch(21.03% 0.0059 17.59);
+    --field-background: oklch(100% 0.0034 17.59);
+    --field-border: transparent;
+    --field-foreground: oklch(21.03% 0.0068 17.59);
+    --field-placeholder: oklch(55.17% 0.0136 17.59);
+    --focus: oklch(58.58% 0.222 17.59);
+    --foreground: oklch(21.03% 0.0068 17.59);
+    --muted: oklch(55.17% 0.0136 17.59);
+    --overlay: oklch(100% 0.002 17.59);
+    --overlay-foreground: oklch(21.03% 0.0068 17.59);
+    --segment: oklch(100% 0.0068 17.59);
+    --segment-foreground: oklch(21.03% 0.0068 17.59);
+    --separator: oklch(92% 0.0068 17.59);
+    --success: oklch(73.29% 0.1935 150.81);
+    --success-foreground: oklch(21.03% 0.0059 285.89);
+    --surface: oklch(100% 0.0034 17.59);
+    --surface-foreground: oklch(21.03% 0.0068 17.59);
+    --surface-secondary: oklch(95.24% 0.0054 17.59);
+    --surface-secondary-foreground: oklch(21.03% 0.0068 17.59);
+    --surface-tertiary: oklch(93.73% 0.0054 17.59);
+    --surface-tertiary-foreground: oklch(21.03% 0.0068 17.59);
+    --warning: oklch(78.19% 0.1607 43.98);
+    --warning-foreground: oklch(21.03% 0.0059 43.98);
+
+    --info: oklch(48.82% 0.2172 264.38);
+    --info-foreground: oklch(99.11% 0 0);
+    --backdrop: oklch(21.03% 0.0068 17.59 / 48%);
+
+    --accent-soft: color-mix(in oklab, var(--accent) 14%, var(--surface));
+    --accent-soft-foreground: color-mix(in oklab, var(--accent) 50%, var(--foreground));
+    --success-soft: color-mix(in oklab, var(--success) 14%, var(--surface));
+    --success-soft-foreground: color-mix(in oklab, var(--success) 50%, var(--foreground));
+    --warning-soft: color-mix(in oklab, var(--warning) 14%, var(--surface));
+    --warning-soft-foreground: color-mix(in oklab, var(--warning) 50%, var(--foreground));
+    --danger-soft: color-mix(in oklab, var(--danger) 14%, var(--surface));
+    --danger-soft-foreground: color-mix(in oklab, var(--danger) 50%, var(--foreground));
+    --info-soft: color-mix(in oklab, var(--info) 14%, var(--surface));
+    --info-soft-foreground: color-mix(in oklab, var(--info) 50%, var(--foreground));
+
+    --accent-soft-foreground: color-mix(in oklab, var(--accent) 70%, var(--foreground));
+}
+
+.dark {
+    --accent: oklch(58.58% 0.222 17.59);
+    --accent-foreground: oklch(99.11% 0 0);
+    --background: oklch(12% 0.0068 17.59);
+    --border: oklch(28% 0.0068 17.59);
+    --danger: oklch(59.4% 0.1994 356.28);
+    --danger-foreground: oklch(99.11% 0 0);
+    --default: oklch(27.4% 0.0068 17.59);
+    --default-foreground: oklch(99.11% 0 0);
+    --field-background: oklch(21.03% 0.0136 17.59);
+    --field-border: transparent;
+    --field-foreground: oklch(99.11% 0.0068 17.59);
+    --field-placeholder: oklch(70.5% 0.0136 17.59);
+    --focus: oklch(58.58% 0.222 17.59);
+    --foreground: oklch(99.11% 0.0068 17.59);
+    --muted: oklch(70.5% 0.0136 17.59);
+    --overlay: oklch(21.03% 0.0136 17.59);
+    --overlay-foreground: oklch(99.11% 0.0068 17.59);
+    --segment: oklch(39.64% 0.0068 17.59);
+    --segment-foreground: oklch(99.11% 0.0068 17.59);
+    --separator: oklch(25% 0.0068 17.59);
+    --success: oklch(73.29% 0.1935 150.81);
+    --success-foreground: oklch(21.03% 0.0059 285.89);
+    --surface: oklch(21.03% 0.0136 17.59);
+    --surface-foreground: oklch(99.11% 0.0068 17.59);
+    --surface-secondary: oklch(25.7% 0.0102 17.59);
+    --surface-secondary-foreground: oklch(99.11% 0.0068 17.59);
+    --surface-tertiary: oklch(27.21% 0.0102 17.59);
+    --surface-tertiary-foreground: oklch(99.11% 0.0068 17.59);
+    --warning: oklch(82.03% 0.1407 47.99);
+    --warning-foreground: oklch(21.03% 0.0059 47.99);
+
+    --info: oklch(71.37% 0.1434 254.62);
+    --info-foreground: oklch(20.77% 0.0398 265.75);
+    --backdrop: oklch(0% 0 0 / 64%);
+
+    --accent-soft: color-mix(in oklab, var(--accent) 22%, var(--surface));
+    --accent-soft-foreground: color-mix(in oklab, var(--accent) 40%, var(--foreground));
+    --success-soft: color-mix(in oklab, var(--success) 22%, var(--surface));
+    --success-soft-foreground: color-mix(in oklab, var(--success) 40%, var(--foreground));
+    --warning-soft: color-mix(in oklab, var(--warning) 22%, var(--surface));
+    --warning-soft-foreground: color-mix(in oklab, var(--warning) 40%, var(--foreground));
+    --danger-soft: color-mix(in oklab, var(--danger) 22%, var(--surface));
+    --danger-soft-foreground: color-mix(in oklab, var(--danger) 40%, var(--foreground));
+    --info-soft: color-mix(in oklab, var(--info) 22%, var(--surface));
+    --info-soft-foreground: color-mix(in oklab, var(--info) 40%, var(--foreground));
+
+    --accent-soft-foreground: color-mix(in oklab, var(--accent) 60%, var(--foreground));
+}

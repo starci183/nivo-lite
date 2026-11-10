@@ -6,7 +6,7 @@ import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
-import { agentChoicesOf } from "@/hooks/connection-wizard"
+import { agentChoicesOf, useWizardPhases } from "@/hooks/connection-wizard"
 import { useOpenApiView, useOpenApiWizard } from "@/hooks/openapi-wizard"
 import type { AgentOption } from "@/modules/types"
 import { OpenApiWizardBase } from "./component"
@@ -28,6 +28,7 @@ export const OpenApiWizard = (props: OpenApiWizardProps) => {
     const slotLabels = useSlotLabels()
     const t = useTranslations("connectorOpenapi")
     const tw = useTranslations("connectionWizard")
+    const phases = useWizardPhases("openapi")
     const tc = useTranslations("connections")
     const wizard = useOpenApiWizard({ resumeId: props.resumeId, onClose: props.onClose })
     const view = useOpenApiView(wizard)
@@ -40,6 +41,7 @@ export const OpenApiWizard = (props: OpenApiWizardProps) => {
                 slotLabels: slotLabels(""),
                 title: tw("title", { provider: tc(providerKey("openapi", "title")) }),
                 stepLabel: tw("stepOf", { n: wizard.index + 1, total: wizard.steps.length }),
+                phases,
                 steps: view.steps,
                 index: wizard.index,
                 step: wizard.step,

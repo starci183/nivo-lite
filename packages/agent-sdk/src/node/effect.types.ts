@@ -26,7 +26,7 @@ export interface EffectDefinition<P extends z.ZodType = z.ZodType> extends Effec
 }
 
 /**
- * What `defineTool` takes: a NIVO MCP tool a node may call, named by capability (`payment.instruction`), never by provider. The host
+ * What `defineTool` takes: a NIVO MCP tool a node may call, named by capability (`payment.quote`), never by provider. The host
  * routes it through the NIVO MCP door to whatever provider the workspace connected.
  */
 export interface ToolConfig<A extends z.ZodType, R extends z.ZodType> {

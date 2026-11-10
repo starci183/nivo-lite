@@ -4,6 +4,7 @@ import type { CredentialState } from "@modules/domain/mcp-connectors"
 import type { GatewayApprovalReason, GatewayJson } from "@modules/domain/mcp-gateway-receipts"
 import type { ArgConstraint, GrantMode } from "@modules/domain/mcp-tool-grants"
 import type { Secret } from "@modules/platform/config"
+import type { Locale } from "@modules/platform/i18n"
 import type { McpRpcResponse } from "@modules/integrations/mcp"
 import type { GatewayArgumentSchema } from "./gateway-tools.schema"
 
@@ -58,6 +59,45 @@ export interface GatewayToolSpec {
      * same turn needs a person's approval, however its grant reads, because the text may be trying to steer the agent.
      */
     readonly taints?: boolean
+    /**
+     * True for a tool whose adapter keeps its own once-per-key ledger (a NIVO effect tool: a success is kept under the step's key, a
+     * refusal or a throw is not): the gateway's durable receipt is not used, so a refusal or a failure is really asked again.
+     */
+    readonly ledgered?: boolean
+    /**
+     * True for a tool a graph step may call on its declared allow-list alone (a NIVO effect tool): with no grant row of the owner, the
+     * step's allow-list grants it; a grant row, when the owner set one, still decides (never, ask, limits).
+     */
+    readonly stepGranted?: boolean
+    /** True for a write the taint rule never holds: its arguments are ids only and its hard guards live in its own executor. */
+    readonly taintExempt?: boolean
+}
+
+/**
+ * Which lead a conversation belongs to, supplied by the owner of conversations (bound at the app root): the NIVO effect tools pin a
+ * step's `conversationId` and `leadId` arguments to the conversation or the lead of its run with it.
+ */
+export interface ConversationLeadsGate {
+    /** The lead of the conversation, or null when it has none or does not exist in the workspace. */
+    leadOf(workspaceId: string, conversationId: string): Promise<string | null>
+}
+
+/** The graph step a gateway call runs in, as the run token the host minted says it; absent for any caller outside a node run. */
+export interface GatewayRun {
+    /** The run (the agent turn). */
+    readonly turnId: string
+    /** The language the run writes in. */
+    readonly locale: Locale
+    /** Who the run acts for. */
+    readonly origin: "customer" | "owner" | "staff" | "system"
+    /** The member behind the turn, when a person is. */
+    readonly memberId: string | null
+    /** The agent that handed its conversation to this run, or null. */
+    readonly handedOffBy: string | null
+    /** The lead the run is about when it serves no conversation of its own (a workflow call, a timer), or null. */
+    readonly leadId: string | null
+    /** The tools the step may call: the node's declared `tools` that the run's grant holds. */
+    readonly stepTools: ReadonlyArray<string>
 }
 
 /**
@@ -188,6 +228,19 @@ export interface GatewayCaller {
     readonly opKey?: string | undefined
     /** The agent turn the call runs in (the bridge of a running turn knows it); the agent door has none. */
     readonly turnId?: string | undefined
+    /** The graph step the call runs in, when a node run makes it through the node tool door; absent otherwise. */
+    readonly run?: GatewayRun | undefined
+    /**
+     * True when the call is a step of a workflow, made through the node tool door under a token the host minted. The conversation of
+     * such a caller is the one its RUN carries (whoever started it), not a customer the agent answers freely: a tool for internal use
+     * is then judged by the audience of the step's agent alone.
+     */
+    readonly graphStep?: true | undefined
+    /**
+     * True for the engine's own caller: a module's declared job run as the workspace's internal agent. It is code, not an agent an
+     * owner attaches to providers, so the provider abilities do not judge it; its fixed door grants and its grant rows do.
+     */
+    readonly engine?: true | undefined
 }
 
 /** What the grant check decided for one call. */
@@ -331,6 +384,8 @@ export interface NativeConnectorManifest extends GatewayConnectorManifest {
     readonly kind: "native"
     /** Every tool has a bounded schema. */
     readonly tools: ReadonlyArray<NativeToolSpec>
+    /** The per-call limit of the connector when the workspace's row sets none; absent = the gateway's default. */
+    readonly timeoutMs?: number
 }
 
 /** Who a native tool runs for: the agent, and the customer conversation when the call serves one. */
@@ -339,6 +394,12 @@ export interface NativeCaller {
     readonly agentId: string
     /** The customer conversation the call serves, or null. */
     readonly conversationId: string | null
+    /** The stable key of the step the call is, when the caller has one. */
+    readonly opKey?: string | undefined
+    /** The graph step the call runs in, when a node run makes it; absent otherwise. */
+    readonly run?: GatewayRun | undefined
+    /** True when the call is a step of a workflow: the conversation is the run's, and the agent's own audience judges an internal tool. */
+    readonly graphStep?: true | undefined
 }
 
 /**
@@ -414,6 +475,18 @@ export interface GrantInput {
     readonly limitVnd?: number | null | undefined
     /** The argument constraints as JSON ([{ "arg": "quantity", "max": 5 }]), or null / absent for none. */
     readonly constraintsJson?: string | null | undefined
+}
+
+/** One ability an owner or manager ticks or unticks on an agent's attachment to a provider. */
+export interface AbilityInput {
+    /** The agent. */
+    readonly agentId: string
+    /** The provider. */
+    readonly provider: string
+    /** The ability id. */
+    readonly ability: string
+    /** `off` (unticked), `auto` or `ask`. */
+    readonly mode: string
 }
 
 /** A new bearer credential of a remote connector: its first one, or a rotation. */

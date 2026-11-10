@@ -21,7 +21,7 @@ export const VideoStepFooter = (props: VideoStepFooterProps) => (
                     {props.note}
                 </Text>
             )}
-            <Button
+            <Button endArrow
                 intent="commit"
                 isPending={props.pending}
                 isDisabled={props.nextDisabled}

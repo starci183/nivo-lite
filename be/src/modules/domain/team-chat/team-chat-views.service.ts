@@ -5,8 +5,17 @@ import type { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity } from
 import type { ChatMemberRef, MessageView, ChatRoomView } from "./team-chat.contracts"
 import { TeamChatApprovalsService } from "./team-chat-approvals.service"
 import { TeamChatFilesService } from "./team-chat-files.service"
+import { reactionsByMessageOf } from "./team-chat-reaction.policy"
+import { TeamChatReactionStoreService } from "./team-chat-reaction-store.service"
 import { TeamChatStoreService } from "./team-chat-store.service"
-import { decisionIdsOf, messageViewOf, nameKeyOf, refsOfMessages, roomViewOf } from "./team-chat-view.policy"
+import {
+    decisionIdsOf,
+    messageViewOf,
+    nameKeyOf,
+    refsOfMessages,
+    repliedIdsOf,
+    roomViewOf,
+} from "./team-chat-view.policy"
 import type { MessageViewContext, RoomViewContext } from "./team-chat-view.policy"
 
 @Injectable()
@@ -18,6 +27,7 @@ export class TeamChatViewsService {
         private readonly agents: AgentDirectoryService,
         private readonly files: TeamChatFilesService,
         private readonly approvals: TeamChatApprovalsService,
+        private readonly reactions: TeamChatReactionStoreService,
     ) {}
 
     /** The rooms as the viewer sees them, in the order given. */
@@ -104,12 +114,17 @@ export class TeamChatViewsService {
         messages: ReadonlyArray<ChatRoomMessageEntity>,
         viewerId: string,
     ): Promise<MessageViewContext> {
-        const names = await this.namesOf(workspaceId, refsOfMessages(messages))
+        const quotedRows = await this.store.messagesByIds(workspaceId, repliedIdsOf(messages))
+        const names = await this.namesOf(workspaceId, refsOfMessages([...messages, ...quotedRows]))
         const pinned = await this.store.pinnedAmong(messages.map((message) => message.id))
         const urls = await this.files.urlsOf(
             messages.flatMap((message) => message.attachments.map((file) => file.fileKey)),
         )
         const approvals = await this.approvals.statesOf(workspaceId, viewerId, decisionIdsOf(messages))
-        return { names, pinned, urls, approvals }
+        const reactions = reactionsByMessageOf(await this.reactions.rowsAmong(messages.map((message) => message.id)), {
+            memberKind: "user",
+            memberId: viewerId,
+        })
+        return { names, pinned, urls, approvals, reactions, quoted: new Map(quotedRows.map((row) => [row.id, row])) }
     }
 }

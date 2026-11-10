@@ -1,31 +1,33 @@
-import { Button, Heading, Stack, SurfaceCard, Text } from "@starci/grammar/common"
-import { CENTERED_CLASS_NAME } from "./classNames"
+import type { ListRowData } from "@starci/grammar/common"
+import { CelebrationPanel } from "@/components/composites/CelebrationPanel"
 
 /** Copy and state the connected ready screen supplies. */
 export interface OnboardingReadyBaseProps {
     readonly props: {
-        readonly title: string
+        readonly badge: string
         readonly heading: string
         readonly description: string
+        readonly nextLabel: string
+        /** The first things worth doing in the new workspace, each opening its page. */
+        readonly next: ReadonlyArray<ListRowData>
         readonly enterLabel: string
         readonly isLoading: boolean
     }
     readonly on: { readonly enter: () => void }
 }
 
-/** Draws the end of the first run: the workspace is ready, the first thing to do, and the way in. */
+/** Draws the end of the first run as a celebration: the workspace is ready, the first things to do, and the way in. */
 export const OnboardingReadyBase = (props: OnboardingReadyBaseProps) => (
-    <SurfaceCard ariaLabel={props.props.title} measure="form">
-        <div className={CENTERED_CLASS_NAME}>
-            <Stack gap="section" align="center">
-                <Heading level={1} isLoading={props.props.isLoading}>
-                    {props.props.heading}
-                </Heading>
-                <Text tone="muted">{props.props.description}</Text>
-                <Button intent="commit" onPress={props.on.enter}>
-                    {props.props.enterLabel}
-                </Button>
-            </Stack>
-        </div>
-    </SurfaceCard>
+    <CelebrationPanel
+        art="onboarding-done"
+        badge={props.props.badge}
+        heading={props.props.heading}
+        text={props.props.description}
+        isLoading={props.props.isLoading}
+        factsLabel=""
+        facts={[]}
+        nextLabel={props.props.nextLabel}
+        next={props.props.next}
+        primary={{ label: props.props.enterLabel, press: props.on.enter }}
+    />
 )

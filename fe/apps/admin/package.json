@@ -1,0 +1,36 @@
+{
+  "name": "@nivo-lite/admin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@apollo/client": "4.1.6",
+    "@heroicons/react": "2.2.0",
+    "@heroui/react": "3.2.6",
+    "@heroui/styles": "3.2.6",
+    "@nivo-lite/i18n": "*",
+    "@reduxjs/toolkit": "2.11.2",
+    "@starci/auth": "0.4.0",
+    "@starci/grammar": "0.36.2",
+    "@starci/next-data": "0.1.0",
+    "@starci/next-i18n": "0.1.0",
+    "graphql": "16.14.2",
+    "next": "16.4.2",
+    "next-intl": "4.13.6",
+    "next-themes": "0.4.6",
+    "react": "19.2.3",
+    "react-aria-components": "1.21.1",
+    "react-dom": "19.2.3",
+    "react-redux": "9.2.0",
+    "swr": "2.4.2"
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "7.4.6",
+    "@graphql-codegen/client-preset": "6.2.3"
+  }
+}

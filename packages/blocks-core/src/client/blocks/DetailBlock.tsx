@@ -1,6 +1,5 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
-import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
+import { useState, type ReactNode } from "react"
+import { SlotView, useAsideHead, useBlockHost } from "@nivo-lite/agent-sdk/client"
 import type { ActionHandle } from "@nivo-lite/agent-sdk/block"
 import type { SpecText } from "@nivo-lite/agent-sdk/schema"
 import {
@@ -12,20 +11,20 @@ import {
     IconButton,
     PinnedActionBar,
     Stack,
+    Sublabel,
     SurfaceCard,
     Text,
     Timeline,
 } from "@starci/grammar/common"
 import type { detailBlock } from "../../blocks/detail.block"
-import { cellContextOf } from "../../rows/cell-format"
-import type { CellContext } from "../../rows/cell-format"
+import { cellContextOf, type CellContext } from "../../rows/cell-format"
 import { detailSectionsOf } from "../../rows/detail-sections"
-import { detailTimelineOf } from "../../rows/detail-timeline"
-import type { DetailTimelineStep } from "../../rows/detail-timeline"
+import { detailTimelineOf, type DetailTimelineStep } from "../../rows/detail-timeline"
 import { recordIdOf } from "../../rows/form-values"
 import { refusalOf } from "../../rows/refusal"
 import { relabeller } from "../../rows/value-labels"
 import { textOf, valueAt } from "../../slots/paths"
+import { SurfaceFrame } from "../composites/SurfaceFrame"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
 
@@ -67,13 +66,21 @@ interface DetailHeadProps {
     readonly closeLabel: string
     readonly onClose: (() => void) | null
     readonly isLoading: boolean
+    /** One row inside a side pane: the name over its muted kind, a small close control. */
+    readonly isCompact: boolean
+}
+
+/** The muted line under the name of a record: the label of the pane inside a side pane, else the kind the spec gave. */
+const kindOf = (spec: RenderOf<typeof detailBlock>["props"], words: (text: SpecText) => string): string | null => {
+    if (spec.surface === "section") return words(spec.label)
+    return spec.kind === undefined ? null : words(spec.kind)
 }
 
 /** The head of a record: its title and kind, and a close control when the spec names the param that holds the chosen record. */
 const DetailHead = (props: DetailHeadProps): ReactNode => (
     <Cluster gap="row" wrap={false} justify="between" align="start">
         <Stack gap="inline">
-            <Heading level={2} isLoading={props.isLoading}>
+            <Heading level={props.isCompact ? 3 : 2} isLoading={props.isLoading}>
                 {props.title}
             </Heading>
             {props.kind === null ? null : (
@@ -83,7 +90,12 @@ const DetailHead = (props: DetailHeadProps): ReactNode => (
             )}
         </Stack>
         {props.onClose === null ? null : (
-            <IconButton intent="dismiss" label={props.closeLabel} onPress={props.onClose} />
+            <IconButton
+                intent="dismiss"
+                size={props.isCompact ? "sm" : "md"}
+                label={props.closeLabel}
+                onPress={props.onClose}
+            />
         )}
     </Cluster>
 )
@@ -152,27 +164,42 @@ interface DetailFactsProps {
     readonly isLoading: boolean
 }
 
-/** The groups of facts of a record, each under its heading. */
+/** The groups of facts of a record, each under its heading; inside a side pane each is its own key-value card under a sublabel (a card on a white pane is bordered by Grammar). */
 const DetailFacts = (props: DetailFactsProps): ReactNode =>
-    detailSectionsOf(props.record, props.spec, props.context).map((section) => (
-        <Stack key={section.id} gap="row">
-            {section.title === null ? null : (
-                <Heading level={3} isLoading={props.isLoading}>
-                    {props.words(section.title)}
-                </Heading>
-            )}
-            <DescriptionList
-                layout="columns"
-                isDivided
-                isLoading={props.isLoading}
-                items={section.items.map((item) => ({
-                    id: item.id,
-                    term: props.words(item.term),
-                    description: item.text,
-                }))}
-            />
-        </Stack>
-    ))
+    detailSectionsOf(props.record, props.spec, props.context).map((section) => {
+        const title = section.title === null ? null : props.words(section.title)
+        const items = section.items.map((item) => ({
+            id: item.id,
+            term: props.words(item.term),
+            description: item.text,
+        }))
+        const known = items.filter((item) => item.description !== "")
+        if (props.spec.surface === "section" && known.length === 0) return null
+        if (props.spec.surface === "section")
+            return (
+                <Stack key={section.id} gap="row">
+                    {title === null ? null : <Sublabel>{title}</Sublabel>}
+                    <SurfaceCard
+                        kind="list"
+                        layout="keyValue"
+                        ariaLabel={title ?? props.words(props.spec.label)}
+                        items={known.map((item) => ({ id: item.id, title: item.term, value: item.description }))}
+                        empty={null}
+                        isLoading={props.isLoading}
+                    />
+                </Stack>
+            )
+        return (
+            <Stack key={section.id} gap="row">
+                {title === null ? null : (
+                    <Heading level={3} isLoading={props.isLoading}>
+                        {title}
+                    </Heading>
+                )}
+                <DescriptionList layout="columns" isDivided isLoading={props.isLoading} items={items} />
+            </Stack>
+        )
+    })
 
 /** What the notice of a refused command is given. */
 interface DetailRefusalProps {
@@ -194,6 +221,31 @@ const DetailRefusal = (props: DetailRefusalProps): ReactNode =>
             onDismiss={props.onDismiss}
         />
     )
+
+/** What the frame of a record is given. */
+interface DetailFrameProps {
+    readonly spec: RenderOf<typeof detailBlock>["props"]
+    readonly label: string
+    readonly isLoading: boolean
+    readonly children: ReactNode
+}
+
+/** The frame of a record: a titled section inside a side pane; else a card, which names itself by its heading unless the record's own head names it. */
+const DetailFrame = (props: DetailFrameProps): ReactNode => {
+    const { spec, label, isLoading, children } = props
+    if (spec.surface === "section") return children
+    if (spec.titlePath === undefined)
+        return (
+            <SurfaceCard label={label} headingLevel={2} isLoading={isLoading}>
+                {children}
+            </SurfaceCard>
+        )
+    return (
+        <SurfaceCard ariaLabel={label} isLoading={isLoading}>
+            {children}
+        </SurfaceCard>
+    )
+}
 
 /** What the filled detail is given: the record, the block, and how its words, values and commands work. */
 interface DetailBodyProps {
@@ -227,12 +279,23 @@ const DetailBody = (props: DetailBodyProps): ReactNode => {
     )
     const isPinned = spec.pinsPrimary === true && !isLoading && hasActions
     const closeParam = spec.closeParam
+    const isHosted = useAsideHead(
+        spec.surface === "section" && spec.titlePath !== undefined
+            ? {
+                  title: textOf(valueAt(record, spec.titlePath)),
+                  description: words(spec.label),
+                  closeLabel: words({ key: "detailClose" }),
+                  ...(closeParam === undefined ? {} : { onClose: () => block.params.set(closeParam, null) }),
+              }
+            : null,
+    )
     const body = (
         <Stack gap="section">
-            {spec.titlePath === undefined ? null : (
+            {spec.titlePath === undefined || isHosted ? null : (
                 <DetailHead
                     title={textOf(valueAt(record, spec.titlePath))}
-                    kind={spec.kind === undefined ? null : words(spec.kind)}
+                    kind={kindOf(spec, words)}
+                    isCompact={spec.surface === "section"}
                     closeLabel={words({ key: "detailClose" })}
                     onClose={closeParam === undefined ? null : () => block.params.set(closeParam, null)}
                     isLoading={isLoading}
@@ -249,16 +312,11 @@ const DetailBody = (props: DetailBodyProps): ReactNode => {
             {isLoading || !hasActions || isPinned ? null : commands}
         </Stack>
     )
-    const frame =
-        spec.titlePath === undefined ? (
-            <SurfaceCard label={words(spec.label)} headingLevel={2} isLoading={isLoading}>
-                {body}
-            </SurfaceCard>
-        ) : (
-            <SurfaceCard ariaLabel={words(spec.label)} isLoading={isLoading}>
-                {body}
-            </SurfaceCard>
-        )
+    const frame = (
+        <DetailFrame spec={spec} label={words(spec.label)} isLoading={isLoading}>
+            {body}
+        </DetailFrame>
+    )
     return (
         <>
             {frame}
@@ -302,9 +360,9 @@ export const DetailBlock = (props: RenderOf<typeof detailBlock>): ReactNode => {
             placeholder={{}}
             onRetry={read.retry}
             frame={(notice) => (
-                <SurfaceCard label={words(props.props.label)} headingLevel={2}>
+                <SurfaceFrame surface={props.props.surface} label={words(props.props.label)}>
                     {notice}
-                </SurfaceCard>
+                </SurfaceFrame>
             )}
             render={(record, isLoading) => (
                 <DetailBody

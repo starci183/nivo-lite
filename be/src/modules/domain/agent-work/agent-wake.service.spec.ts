@@ -107,6 +107,14 @@ describe("AgentWakeService drain job", () => {
         expect(outbox.written).toEqual([job("conversation:conv-1", "agent-turn:agent-1:customer:msg-1", 3000)])
     })
 
+    it("makes the drain of a wake held for the agent's next working hour wait until then, over the burst window", async () => {
+        const { service, outbox, tx } = await build(inserted("wake-1"), { debounceMs: 3000 })
+
+        await service.wake(tx, wake({ source: "customer", context: { conversationId: "conv-1" }, delayMs: 3_600_000 }))
+
+        expect(outbox.written).toEqual([job("conversation:conv-1", "agent-turn:agent-1:customer:msg-1", 3_600_000)])
+    })
+
     it("writes the drain job of any other wake to run at once", async () => {
         const { service, outbox, tx } = await build(inserted("wake-1"))
 

@@ -1,280 +1,128 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeContext, NodeDefinition } from "@nivo-lite/agent-sdk/node"
-import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
+import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { z } from "zod"
-import { paymentRematchEffect } from "../../vocabulary"
-import type { PaymentInstruction } from "../../vocabulary"
-import { failureKindOf } from "../core/failure.policy"
-import {
-    noAccountTitleOf,
-    notPayableTitleOf,
-    orderHeldMessageOf,
-    orderLinesOf,
-    paymentMessageOf,
-    transferContentOf,
-} from "./payment-request.policy"
-import type { RequestLocale } from "./payment-request.messages"
-import type { NodeSchema } from "../node-schema.types"
-import { MAX_BODY, MAX_ID, MAX_LINE } from "../../bounds"
+import { MAX_ID } from "../../bounds"
 import { bilingualOf } from "../../messages/catalog"
+import { TOOL } from "../../vocabulary/tool-ids"
+import { exampleGrantOf } from "../sales/consult.grant"
+import type { NodeLocale, NodeSchema } from "../node-schema.types"
+import { nodeGoalOf } from "../node-ui"
 
-/** The confirmed order to be paid, and where to tell the customer. */
+/** The confirmed order to be paid, and the conversation the customer is in. */
 export interface PaymentRequestInput {
     /** The order. */
     readonly orderId: string
     /** The conversation the customer is in. */
     readonly conversationId: string
-    /** The language of the message. */
-    readonly locale: RequestLocale
+    /** The language the shop writes in. */
+    readonly locale: NodeLocale
 }
 
 /** What came of the request. */
 export interface PaymentRequestOutput {
-    /** `sent`: the message went to the customer; `no_account`: no provider answered, the owner was told; `not_payable`: the order is not confirmed or has no amount. */
-    readonly status: "sent" | "no_account" | "not_payable"
-    /** The transfer content, or null when nothing was sent. */
-    readonly content: string | null
-    /** The QR link the provider tool drew, or null when nothing was sent. */
-    readonly qrUrl: string | null
+    /** The order, echoed for the steps that follow. */
+    readonly orderId: string
+    /** True when the QR and the transfer details reached the customer. */
+    readonly sent: boolean
 }
 
-/** The order as the order data port reads it. */
-interface PayableOrder {
-    readonly orderNo: string
-    readonly amountVnd: number | null
-    readonly status: string
-    /** The lines as the record keeps them: an object that holds them, read through `orderLinesOf`. */
-    readonly items: unknown
-}
-
-/** The NIVO MCP tool that answers how to pay: the account of the connected provider and the QR link of the transfer. */
-const INSTRUCTION_TOOL = "payment.instruction" as const
-
-/** The agent grant the sending example runs under: the node own rights and the rights of its effect and its tool. */
-const SENDING_GRANT: RightsGrant = {
-    rights: [
-        { kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] },
-        { kind: "message", access: "write", scope: "turn", fields: ["body"] },
-        {
-            kind: "payment-account",
-            access: "read",
-            scope: "workspace",
-            fields: ["bankName", "bankCode", "accountNumber", "accountHolder"],
-        },
-    ],
-    tools: [INSTRUCTION_TOOL],
-}
+/** The id of the step, which names its goal in the messages catalog. */
+const ID = "payment.request"
 
 const params: z.ZodObject<Record<string, never>> = z.object({})
 
 const input: NodeSchema<PaymentRequestInput> = z.object({
-    orderId: z.string().max(MAX_ID).min(1),
-    conversationId: z.string().max(MAX_ID).min(1),
+    orderId: z.string().min(1).max(MAX_ID),
+    conversationId: z.string().min(1).max(MAX_ID),
     locale: z.enum(["vi", "en"]),
 })
 
 const output: NodeSchema<PaymentRequestOutput> = z.object({
-    status: z.enum(["sent", "no_account", "not_payable"]),
-    content: z.string().max(MAX_LINE).nullable(),
-    qrUrl: z.string().max(MAX_BODY).nullable(),
+    orderId: z.string().min(1).max(MAX_ID).describe("The order the QR was sent for, as given"),
+    sent: z.boolean().describe(`True when ${TOOL.paymentQrCreate} answered that the QR and transfer details were sent`),
 })
 
-const NOT_SENT: Omit<PaymentRequestOutput, "status"> = { content: null, qrUrl: null }
+/** How the agent of the step behaves: the guidance of the goal, never a line it must say. */
+const GUIDANCE = [
+    `Call ${TOOL.paymentQrCreate} with \`orderId\` only: the tool reads the amount and the order number and sends the customer the ` +
+        "bank details, the QR and the order card. You type no amount, account or transfer content.",
+    `Once the QR is sent, arm the two payment follow-ups of the order with ${TOOL.careSchedule} (\`ref\` = the order id): ` +
+        "`kind` `payment-reminder` after the policy's `paymentReminderHours`, and `kind` `payment-stale` after its " +
+        "`paymentStaleHours`, each as `afterHours`; never type an instant. Arming again only moves the same timer.",
+    "A refusal is a fact (no payment account connected, the order cannot be paid yet). Then tell the customer in one short holding " +
+        `message (${TOOL.customerMessageSend}, in their language) that the shop will send the payment details shortly, and answer ` +
+        "`confused` with the refusal as the reason, so the team is told. Never confirm a payment.",
+].join("\n")
 
-/** What the provider tool came to: the instruction, or the kind of the failure when it threw (no provider connected, a refusal, a bad answer). */
-type InstructionAnswer = { readonly instruction: PaymentInstruction } | { readonly failure: string }
+/** The effects the agent of the step may call: its whole reach. */
+const EFFECTS = [TOOL.paymentQrCreate, TOOL.careSchedule, TOOL.customerMessageSend]
 
-const instructionOf = async (
-    tools: NodeContext["tools"],
-    args: Readonly<Record<string, unknown>>,
-): Promise<InstructionAnswer> => {
-    try {
-        return { instruction: await tools.call<PaymentInstruction>(INSTRUCTION_TOOL, args) }
-    } catch (error) {
-        return { failure: failureKindOf(error) }
-    }
-}
+const GRANT = exampleGrantOf([], EFFECTS)
 
 /**
- * `payment.request`: asks the customer to pay a confirmed order. The business rules are here: only a confirmed order with an amount,
- * the order number reduced to letters and digits as the transfer content, and an order that is not confirmed or has no amount sends nothing but raises an `order_not_payable` work item for the owner (a payment request that silently does nothing would leave the customer and the shop in the dark), one request per order across runs (dedupe key
- * `payment-request:<orderId>`). The account and the QR link come from the `payment.instruction` tool; when it fails or no provider is
- * connected, the customer is told the order is recorded and that the shop will send the payment details (once per order), and a work item (`connect_sepay`) goes to the owner. Once the code is sent, the `payment.rematch` effect (one
- * per order across runs) asks the engine to look for a credit that arrived before the code existed.
+ * `payment.request` (Gửi QR thanh toán): an Agent + MCP step that sends the customer the payment QR of a confirmed order, then arms the
+ * payment reminder and the stale check at the hours of the Sales policy (`paymentReminderHours`, `paymentStaleHours`). The agent calls
+ * the QR tool with the order id alone; everything with money in it (the amount, the account, the transfer content, the QR) is inside the
+ * tool; when to follow up is the shop's policy, armed by the step, not by the tool. A refusal (no bank connected, an order not payable) is a fact the agent answers with a holding line and its
+ * confusion, so the step is not done (`requires`), the team is told on /chat and the workflow waits; no branch is drawn for it.
  */
 export const paymentRequestNode: NodeDefinition<typeof input, typeof output, typeof params> = defineNode({
-    id: "payment.request",
+    id: ID,
     role: "output",
     title: bilingualOf("nodePaymentRequestTitle"),
     params,
     input,
     output,
-    rights: [
-        { kind: "order", access: "read", scope: "turn", fields: ["id", "orderNo", "amountVnd", "status", "items"] },
-    ],
-    effects: ["channel.send", "payment.rematch", "work-item.raise"],
-    tools: [INSTRUCTION_TOOL],
+    rights: [],
+    effects: EFFECTS,
+    requires: [TOOL.paymentQrCreate],
     run: async (given, context) => {
-        const [order] = await context.data.read<PayableOrder>("order", {
-            where: { id: given.orderId },
-            fields: ["orderNo", "amountVnd", "status", "items"],
-            limit: 1,
+        const decision = await context.agent.run({
+            goal: `${nodeGoalOf(ID, "en")}\n${GUIDANCE}`,
+            purpose: "send-qr",
+            input: given,
+            output,
+            maxTurns: 6,
         })
-        const amountVnd = order?.amountVnd ?? 0
-        if (order?.status !== "confirmed" || amountVnd <= 0) {
-            await context.effect(
-                "work-item.raise",
-                {
-                    action: "order_not_payable",
-                    title: notPayableTitleOf(given.orderId, given.locale),
-                    payload: { orderId: given.orderId, status: order?.status ?? "missing" },
-                },
-                { dedupeKey: `order-not-payable:${given.orderId}` },
-            )
-            return { status: "not_payable", ...NOT_SENT }
-        }
-        const content = transferContentOf(order.orderNo)
-        const answer = await instructionOf(context.tools, {
-            orderNo: order.orderNo,
-            amountVnd,
-            transferContent: content,
-        })
-        if ("failure" in answer) {
-            await context.effect(
-                "channel.send",
-                {
-                    conversationId: given.conversationId,
-                    text: orderHeldMessageOf({ amountVnd, lines: orderLinesOf(order.items) }, given.locale),
-                },
-                { dedupeKey: `order-held:${given.orderId}` },
-            )
-            await context.effect("work-item.raise", {
-                action: "connect_sepay",
-                title: noAccountTitleOf(order.orderNo, given.locale),
-                payload: { orderId: given.orderId, failure: answer.failure },
-            })
-            return { status: "no_account", ...NOT_SENT }
-        }
-        const { instruction } = answer
-        const text = paymentMessageOf(
-            instruction,
-            { amountVnd, lines: orderLinesOf(order.items) },
-            content,
-            given.locale,
-        )
-        await context.effect(
-            "channel.send",
-            { conversationId: given.conversationId, text },
-            { dedupeKey: `payment-request:${given.orderId}` },
-        )
-        await context.effect(
-            paymentRematchEffect.id,
-            { orderId: given.orderId },
-            { dedupeKey: `payment-rematch:${given.orderId}` },
-        )
-        return { status: "sent", content, qrUrl: instruction.qrUrl }
+        if (decision.kind === "confused") return context.confused(decision.confusion)
+        return decision.value
     },
     examples: [
         {
-            name: "sends the order number as the transfer content with the account and QR link the provider tool gave",
+            name: "sends the QR of the confirmed order through the QR tool, by its id alone",
             params: {},
-            input: { orderId: "o1", conversationId: "conv-1", locale: "en" },
-            output: { status: "sent", content: "DH202611050001", qrUrl: "https://qr.example/DH202611050001" },
+            grant: GRANT,
+            input: { orderId: "order-1", conversationId: "conv-1", locale: "vi" },
+            output: { orderId: "order-1", sent: true },
             effects: [
-                {
-                    kind: "channel.send",
-                    payload: {
-                        conversationId: "conv-1",
-                        text: [
-                            "Your order is confirmed: 2 x tea boxes · 300,000 VND.",
-                            "Please transfer with these details:",
-                            "Bank: MB Bank",
-                            "Account number: 525209999",
-                            "Account holder: NGUYEN VAN A",
-                            "Transfer content (type exactly): DH202611050001",
-                            "Or scan the QR code: https://qr.example/DH202611050001",
-                            "Once you have transferred, just message us here.",
-                        ].join("\n"),
-                    },
-                },
-                { kind: "payment.rematch", payload: { orderId: "o1" } },
+                { kind: TOOL.paymentQrCreate, payload: { orderId: "order-1" } },
+                { kind: TOOL.careSchedule, payload: { kind: "payment-reminder", ref: "order-1", afterHours: 2 } },
+                { kind: TOOL.careSchedule, payload: { kind: "payment-stale", ref: "order-1", afterHours: 24 } },
             ],
-            grant: SENDING_GRANT,
-            tools: [
-                {
-                    bankName: "MB Bank",
-                    bankCode: "MBBank",
-                    accountNumber: "525209999",
-                    accountHolder: "NGUYEN VAN A",
-                    qrUrl: "https://qr.example/DH202611050001",
-                    provider: "sepay",
-                },
+            model: [
+                { call: { tool: TOOL.paymentQrCreate, args: { orderId: "order-1" } } },
+                { call: { tool: TOOL.careSchedule, args: { kind: "payment-reminder", ref: "order-1", afterHours: 2 } } },
+                { call: { tool: TOOL.careSchedule, args: { kind: "payment-stale", ref: "order-1", afterHours: 24 } } },
+                { done: { orderId: "order-1", sent: true } },
             ],
-            store: {
-                order: [
+            answers: {
+                [TOOL.paymentQrCreate]: [
                     {
-                        id: "o1",
-                        orderNo: "DH-20261105-0001",
-                        amountVnd: 300_000,
-                        status: "confirmed",
-                        items: { lines: [{ name: "tea boxes", qty: 2, unitVnd: 150_000, amountVnd: 300_000 }] },
+                        kind: "message",
+                        id: "msg-1",
+                        facts: {
+                            orderNo: "DH-1",
+                            amountVnd: 4000,
+                            transferContent: "DH1",
+                            qrUrl: "https://qr.example/DH1.png",
+                        },
                     },
                 ],
+                [TOOL.careSchedule]: [
+                    { kind: "agent-task", id: "payment-reminder:order-1" },
+                    { kind: "agent-task", id: "payment-stale:order-1" },
+                ],
             },
-        },
-        {
-            name: "sends nothing for an order that is not confirmed",
-            params: {},
-            input: { orderId: "o1", conversationId: "conv-1", locale: "en" },
-            output: { status: "not_payable", content: null, qrUrl: null },
-            effects: [
-                {
-                    kind: "work-item.raise",
-                    payload: {
-                        action: "order_not_payable",
-                        title: "Order o1 cannot be paid yet: it is not confirmed or has no amount",
-                        payload: { orderId: "o1", status: "draft" },
-                    },
-                },
-            ],
-            store: {
-                order: [{ id: "o1", orderNo: "DH-1", amountVnd: 300_000, status: "draft", items: { lines: [] } }],
-            },
-        },
-        {
-            name: "sends nothing for a confirmed order that has no amount",
-            params: {},
-            input: { orderId: "o1", conversationId: "conv-1", locale: "en" },
-            output: { status: "not_payable", content: null, qrUrl: null },
-            effects: [
-                {
-                    kind: "work-item.raise",
-                    payload: {
-                        action: "order_not_payable",
-                        title: "Order o1 cannot be paid yet: it is not confirmed or has no amount",
-                        payload: { orderId: "o1", status: "confirmed" },
-                    },
-                },
-            ],
-            store: {
-                order: [{ id: "o1", orderNo: "DH-1", amountVnd: null, status: "confirmed", items: { lines: [] } }],
-            },
-        },
-        {
-            name: "sends nothing for an order that is gone",
-            params: {},
-            input: { orderId: "o9", conversationId: "conv-1", locale: "en" },
-            output: { status: "not_payable", content: null, qrUrl: null },
-            effects: [
-                {
-                    kind: "work-item.raise",
-                    payload: {
-                        action: "order_not_payable",
-                        title: "Order o9 cannot be paid yet: it is not confirmed or has no amount",
-                        payload: { orderId: "o9", status: "missing" },
-                    },
-                },
-            ],
         },
     ],
 })

@@ -6,9 +6,9 @@ export type { AgentGraphDecideForm, AgentGraphProposalData } from "./agentGraph"
 export type { AgentGraphFormChange, AgentGraphRowForm, AgentGraphTermForm } from "./agentGraph"
 export type { AgentGraphOnTimeout, AgentGraphOp, AgentGraphThen } from "./agentGraph"
 export type { AgentGraphLayoutView, AgentGraphPaint, AgentGraphPhoneView, AgentGraphSideTab } from "./agentGraph"
-export type { AgentGraphRunData, AgentGraphWords } from "./agentGraph"
+export type { AgentGraphRunData, AgentGraphWaitData, AgentGraphWords } from "./agentGraph"
 export type { AgentGraphAction, AgentGraphCommands } from "./agentGraphView"
-export type { AgentGraphCanvasView, AgentGraphModeView, AgentGraphPanelView } from "./agentGraphView"
+export type { AgentGraphCanvasView, AgentGraphLegendItem, AgentGraphModeView, AgentGraphPanelView } from "./agentGraphView"
 export type { AgentGraphAdderView, AgentGraphBranchesView } from "./agentGraphView"
 export type { AgentGraphAnswerView, AgentGraphDecideEditorView, AgentGraphOptionView } from "./agentGraphView"
 export type { AgentGraphDetailView, AgentGraphHeadView, AgentGraphProblemsView } from "./agentGraphView"
@@ -28,25 +28,25 @@ export type { ConsoleIconName, ConsoleNavItem, ConsoleSessionView, ConsoleWorksp
 export { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "./console"
 export type { Access, Environment, Provider, ProviderKind, Purpose, AgentOption, Connection } from "./connections"
 export type { ConnectionStatus, ConnectionTone, ConnectionCheck } from "./connections"
-export type { ConnectionFactView, ConnectionHeadView, ConnectionPageHeadView } from "./connections"
-export type { ConnectionPageHeadCommands, ConnectionLineView, ConnectionRailLinesView } from "./connections"
-export type { ConnectionRefusalView, ConnectionNotice, ConnectionTilesView, ConnectorAudience } from "./connections"
+export type { ConnectionFactView, ConnectionHeadView } from "./connections"
+export type { ConnectionLineView, ConnectionRailLinesView } from "./connections"
+export type { ConnectionRefusalView, ConnectionNotice, ConnectorAudience } from "./connections"
 export type { ConnectorCategory, ConnectorGlyph, ConnectorStatus, FirstEvent, FirstEventState } from "./connections"
 export type { WebhookTestVerdict, MetaCheckSummary, SepayKeys, LibraryCard, LibraryCategory } from "./connections"
-export type { InboxRowView } from "./inbox"
+export type { ConnectionPageTabId, ConnectionPageTabsView, ConnectionSetupView } from "./connections"
+export type { InboxAgentView, InboxApprovalView, InboxChipView, InboxDetailView, InboxFactView } from "./inbox"
+export type { InboxJourneyEntryView, InboxLeadRowView, InboxListView } from "./inbox"
+export type { InboxOptionView, InboxOrderView, InboxReadStatus, InboxStepView, InboxWebsiteView } from "./inbox"
+export type { WebsiteFormStatus, WebsiteFormValues } from "./inbox"
 export type { PaneGridLayout, WorkbenchAsideActions, WorkbenchAsideView } from "./panes"
 export type {
-    ConnectionAgentRow,
     ConnectionFilterChoice,
     ConnectionGrantsView,
+    ConnectionLifecycle,
+    ConnectionLifecycleChip,
     ConnectionListRow,
 } from "./connections-panes"
-export type {
-    ConnectionNextStep,
-    ConnectionPaneTone,
-    ConnectionsListView,
-    ConnectionsOverviewView,
-} from "./connections-panes"
+export type { ConnectionNextStep, ConnectionsFigures, ConnectionsListView } from "./connections-panes"
 export type {
     AccessAgentView,
     AccessView,
@@ -66,7 +66,7 @@ export type { MoneyGuideView, MoneyWizardCopy } from "./connection-wizard"
 export type { SmtpAccountView, SmtpGuideView, SmtpOption, SmtpText, TelegramConnected } from "./connection-wizard"
 export type { TelegramUserChatsView, TelegramUserLoginView, TelegramUserWizardCopy } from "./connection-wizard"
 export type { WebhookView, WizardConnection, WizardNote, WizardResume, ZaloWizardConnection } from "./connection-wizard"
-export type { MetaCheck, MetaWizardConnection } from "./connection-wizard"
+export type { MetaCheck, MetaWizardConnection, WizardPhases } from "./connection-wizard"
 export type { DataSlot, SlotLabels, SlotRead } from "./slot"
 export type { FlowRuleMode } from "./flow"
 export type {
@@ -84,7 +84,7 @@ export type {
 export { FACT_SCOPES, FACT_SUBJECT_TYPES } from "./brain"
 export type { DocumentPassage, KnowledgeDocument, KnowledgeDocumentDetail, NivoEntry } from "./knowledge"
 export type { NivoItemKind, DocumentKind, DocumentStatus, IdeaDecision, BatchBytesView } from "./knowledge"
-export type { LinkRowView, QueueRowView, StoppedUploadsView, RowActionView, RowPartView } from "./knowledge"
+export type { LinkRowView, QueueRowView, StoppedUploadsView, RowActionView } from "./knowledge"
 export type { KnowledgeRowView, KnowledgeListView } from "./knowledge"
 export type { DocBodyView, DocChipView, DocFactView, DocGlyph, DocHeadView, DocIdeaView } from "./knowledge-docs"
 export type { DocIdeasView, DocListView, DocMainView, DocMenuItemView, DocOpenedView } from "./knowledge-docs"
@@ -93,8 +93,14 @@ export type { DocRowView, DocTabId, DocTabView, DocsCopy, DocsSelection, Knowled
 export type { NivoBodyView } from "./knowledge-docs"
 export type { KnowledgeAddDrawerView } from "./knowledge-add"
 export type { AskAgentOption, AskPassageView, AskSeesLane, AskSeesView, BrainAskCopy, BrainAskView } from "./brain-ask"
-export type { PublicAskView, PublicBrainCopy, PublicBrainView, PublicDraftView } from "./brain-public"
-export type { PublicFormView, PublicPickerDrawerView, PublicWriteDrawerView } from "./brain-public"
+export type { PublicAskView, PublicBrainCopy, PublicBrainView, PublicCardState, PublicDraftView } from "./brain-public"
+export type {
+    PublicFormView,
+    PublicPickerDrawerView,
+    PublicTableRowView,
+    PublicTableView,
+    PublicWriteDrawerView,
+} from "./brain-public"
 export type {
     SetupFactWrite,
     SetupResolution,
@@ -122,16 +128,15 @@ export type { GraphQLResponse } from "./outcome"
 export type { SetupWriteDraft } from "./setup-write-draft"
 export type { ModuleIconName } from "./module-icon"
 export type { ProfileRegionBaseProps } from "./agent-profile"
-export type { AdminBadgeView, AdminCardView, AdminInviteRef, AdminRowView, AdminWorkspaceRowView } from "./admin"
 export type { BillingPlanView, BillingRowView, BillingTone, PlanCardView, PlanGroupView } from "./billing"
+export type { AgentSetupChatContent } from "./setupChat"
 export type {
     SetupGatesCardProps,
     SetupSideGate,
-    SetupSideKnowledge,
     SetupSideNotice,
-    SetupSideVersions,
     SetupSideView,
     AgentSetupCopy,
+    AgentSetupProposal,
 } from "./setupSide"
 export type {
     ApplyValues,
@@ -171,11 +176,22 @@ export type { AgentWorkTaskView, AgentWorkTriggerView, AgentWorkTurnView, AgentW
 export type { AgentWorkView, WorkspaceAgentWorkView } from "./agentWork"
 export type { WorkbenchWhyView } from "./workbench"
 export type { WorkbenchRowData } from "./workbench"
-export type { BrainPageHeading, BrainPageHeaderView, FactDrawerView } from "./brain-page"
-export type { QueueActionView, QueueAsideView, QueueDetailView, QueueEntryView, QueueFilterView } from "./brain-queue"
-export type { QueueGlyph, QueueQuoteView, QueueSource, QueueTileView, QueueView } from "./brain-queue"
-export type { BrainChipView, BrainFilterView, BrainHeadView, FactDetailView, FactEntryView } from "./brain-lists"
-export type { FactHistoryView, FactsView, LessonActionView, LessonDetailView, LessonDrawerView } from "./brain-lists"
+export type {
+    BrainChipsView,
+    BrainPageHeading,
+    BrainPageHeaderView,
+    BrainTabItemView,
+    FactDrawerView,
+} from "./brain-page"
+export type { BulkApplyView, BulkGroupView } from "./brain-bulk"
+export type { ConflictDrawerView, ConflictOptionView, FactDrawerDetailView, FactPickCopy } from "./brain-inbox"
+export type { FactPickGroupView, FactPickRowView, PickBadgeView, PickConfirmView, PickSelection } from "./brain-inbox"
+export type { InboxConflictRowView, InboxCopy, InboxSideRowView, InboxView, PickSelectionBarView } from "./brain-inbox"
+export type { BrainDocsView } from "./brain-documents"
+export type { BrainDocDrawerView, BrainDocFactView, BrainDocRowView, BrainDocStepView } from "./brain-documents"
+export type { BrainDocsCopy, BrainDocStepState } from "./brain-documents"
+export type { BrainChipView, BrainFilterView, BrainHeadView } from "./brain-lists"
+export type { LessonActionView, LessonDetailView, LessonDrawerView } from "./brain-lists"
 export type { LessonEntryView, LessonsView } from "./brain-lists"
 
 export type { BookingDetailFact, BookingDeskData, BookingDeskActions } from "./booking-workbench"
@@ -206,13 +222,133 @@ export type { HiringWorkbenchCopy } from "./hiring-model-workbench-copy"
 export type { ChatParty, ChatPartyKind, TeamChatApprovalStatus, TeamChatApprovalView } from "./team-chat"
 export type { TeamChatMessageRow, TeamChatRoomRow, TeamChatVerdict } from "./team-chat"
 export type {
+    BubbleReactionLabels,
+    BubbleReactionProps,
+    MessageReactionActions,
     TeamChatComposerProps,
+    TeamChatComposerReply,
+    TeamChatGroupPosition,
     TeamChatMessagesCopy,
-    NewChatOption,
-    TeamChatNewChatProps,
-    TeamChatRoomCopy,
-    TeamChatRoomViewProps,
-    TeamChatRoomHandlers,
-    TeamChatRoomsViewProps,
-    TeamChatRoomsHandlers,
+    TeamChatReactionCopy,
+    TeamChatReactionView,
+    TeamChatReplyView,
 } from "./team-chat"
+export type {
+    NewChatOption,
+    TeamChatForwardTarget,
+    TeamChatForwardView,
+    TeamChatAsideSource,
+    TeamChatAsideView,
+    TeamChatHeadView,
+    TeamChatMarkView,
+    TeamChatMemberView,
+    TeamChatNewChatProps,
+    TeamChatPanel,
+    TeamChatPanelsView,
+    TeamChatRoomCopy,
+    TeamChatRoomHandlers,
+    TeamChatRoomViewProps,
+    TeamChatRoomsCopy,
+    TeamChatRoomsHandlers,
+    TeamChatRoomsViewProps,
+} from "./team-chat-room"
+export type {
+    ConnectionProviderAbout,
+    ConnectionAgentUse,
+    ConnectionProviderRow,
+    ConnectionProviderHead,
+    ConnectionProviderFigure,
+    ConnectionProviderView,
+} from "./connection-provider"
+export type { WorkspaceMenuView, WorkspaceRenameView } from "./workspaces-menu"
+export type { PendingInviteView, WorkspaceReasonView } from "./workspaces-invites"
+export type { WorkspaceDeleteImpactRow, WorkspaceDeleteView, WorkspaceLeaveOwnerView, WorkspaceLeaveView } from "./workspaces-dialogs"
+export type {
+    WorkspaceMenuCommand,
+    WorkspaceTableRowView,
+    WorkspaceTableStatus,
+    WorkspacesTableCopy,
+    WorkspacesTableData,
+} from "./workspaces-table"
+export type { WorkspaceRowSheetView, WorkspacesStackCopy } from "./workspaces-phone"
+export type {
+    OverviewAgentView,
+    OverviewApprovalView,
+    OverviewBarView,
+    OverviewChannelView,
+    OverviewFactView,
+    OverviewFunnelStepView,
+    OverviewKpiView,
+    OverviewSavingsView,
+    OverviewView,
+} from "./overview"
+export type {
+    RunCanvasView,
+    RunChipView,
+    RunDecisionView,
+    RunDetailView,
+    RunBranchView,
+    RunFactView,
+    RunFigureView,
+    RunGraphNode,
+    RunHeadView,
+    RunLegendItem,
+    RunLogLineView,
+    RunParamView,
+    RunFieldView,
+    RunRowView,
+    RunStatus,
+    RunStepDetailView,
+    RunStepStatus,
+    RunStepView,
+    RunSwitchView,
+    RunTab,
+    RunWorkflowView,
+    RunsFilter,
+    RunsTableCopy,
+    RunsView,
+} from "./agentRuns"
+export type {
+    WorkflowCreateView,
+    WorkflowDetailView,
+    WorkflowDiffReadView,
+    WorkflowDiffStepView,
+    WorkflowDiffView,
+    WorkflowDrawerView,
+    WorkflowHeadView,
+    WorkflowListView,
+    WorkflowMark,
+    WorkflowNoticeView,
+    WorkflowRowView,
+    WorkflowStatus,
+    WorkflowTemplateDetailView,
+    WorkflowTemplateRowView,
+    WorkflowTemplatesView,
+    WorkflowTemplateVersionView,
+    WorkflowVersionRowView,
+} from "./agentWorkflows"
+export type {
+    StepBinding,
+    StepBindingView,
+    StepCallView,
+    StepPickerView,
+    StepRefOptionView,
+    StepTriggerView,
+    StepBranchView,
+    StepAction,
+    StepDrawerView,
+    StepFieldInput,
+    StepFieldUnit,
+    StepFieldValue,
+    StepFieldView,
+    StepsMapView,
+} from "./workflowSteps"
+export type {
+    WorkflowCallParamView,
+    WorkflowCallView,
+    WorkflowChipView,
+    WorkflowInputView,
+    WorkflowOverviewRowView,
+    WorkflowOverviewView,
+    WorkflowTableRowView,
+} from "./agentWorkflowPages"

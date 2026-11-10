@@ -35,10 +35,13 @@ export class WorkApprovalService {
     ) {}
 
     /**
-     * Whether the approval hook posted a card for the decision of this ask. The card is then the one message of the ask; an ask with no
-     * decision, or whose decision has no card (no request opened, nobody to show it to), is said as one line to the owner.
+     * Whether a card stands for this ask in the team chat: the producer posts its own (`ownCard`: the card of a stopped workflow, which
+     * carries the freeze decisions), or the approval hook posted one for the decision of this ask. The card is then the one message of
+     * the ask; an ask with no card of its producer and no decision, or whose decision has no card (no request opened, nobody to show
+     * it to), is said as one line to the owner.
      */
-    private async cardPosted(ctx: WorkContext, decisionId: string | undefined): Promise<boolean> {
+    private async cardPosted(ctx: WorkContext, proposal: Proposal, decisionId: string | undefined): Promise<boolean> {
+        if (proposal.execution?.ownCard === true) return true
         if (decisionId === undefined) return false
         return (await this.cards.cardRooms(ctx.workspaceId, decisionId)) > 0
     }
@@ -79,7 +82,7 @@ export class WorkApprovalService {
             summary: `${reason}: ${proposal.summary}`,
             evidence: notes.length === 0 ? null : notes.join(SEPARATOR),
         })
-        if (!(await this.cardPosted(ctx, judgement.branchDecisionId))) {
+        if (!(await this.cardPosted(ctx, proposal, judgement.branchDecisionId))) {
             await this.lines.say(ctx, {
                 department: waiting.department,
                 installationId: waiting.installation_id,

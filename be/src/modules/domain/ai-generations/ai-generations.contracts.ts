@@ -1,4 +1,16 @@
-import type { RunUsage } from "@modules/integrations/openclaw"
+/** What one generation cost at the AI endpoint: prompt tokens include the cached ones. */
+export interface RunUsage {
+    /** Prompt tokens, cached ones included. */
+    readonly prompt_tokens: number
+    /** Completion tokens. */
+    readonly completion_tokens: number
+    /** Prompt tokens served from the provider's cache. */
+    readonly cached_tokens: number
+    /** The provider cost of the call. */
+    readonly cost: number
+    /** The model that answered. */
+    readonly model: string | null
+}
 import type { Locale } from "@modules/platform/i18n"
 
 /** Trusted application metadata stored with a queued generation. */
@@ -65,7 +77,7 @@ export interface GenerationSuccess {
 }
 
 /** Why a generation did not produce text. */
-export type GenerationFailureReason = "quota" | "engine_offline" | "timeout" | "error" | "not_configured"
+export type GenerationFailureReason = "quota" | "timeout" | "error" | "not_configured"
 
 /** A refusal to write a text, or null when the text can be written. */
 export type OptionalGenerationFailure = GenerationFailure | null
@@ -174,7 +186,7 @@ export type PollVerdict =
     | { readonly kind: "failed" }
     | { readonly kind: "timeout" }
 
-/** What the run of a turn on the gateway produced: the text and its cost, or the reason there is none. */
+/** What the model call of a generation produced: the text and its cost, or the reason there is none. */
 export interface TurnAttempt {
     /** The text, or null when the run failed. */
     readonly text: string | null

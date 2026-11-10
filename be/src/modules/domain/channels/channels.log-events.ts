@@ -20,6 +20,14 @@ export enum ChannelsLogEvent {
     ZaloSaveRetried = "channels.zalo.save-retried",
     /** The Zalo text went out but the QR image that should follow it was refused; the link in the text still works. */
     QrImageFailed = "channels.zalo.qr-image-failed",
+    /** The Zalo text went out but a picture that should follow it was refused; the pictures after it were not sent. */
+    ImageFailed = "channels.zalo.image-failed",
+    /** The collage of several photos could not be built or stored; the photos go one by one instead. */
+    CollageFailed = "channels.collage.failed",
+    /** The collage was built and stored, but Zalo refused it; the photos go one by one instead. */
+    CollageRefused = "channels.zalo.collage-refused",
+    /** The Telegram album or photo that should follow the text was refused; the text already reached the customer. */
+    AlbumFailed = "channels.telegram.album-failed",
     /** The Zalo chat window is closed and the ZNS fallback could not be used; the reason rides in the fields. */
     ZnsFallbackSkipped = "channels.zalo.zns-fallback-skipped",
     /** A message outside the chat window went out as a ZNS template message. */

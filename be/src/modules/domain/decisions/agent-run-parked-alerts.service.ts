@@ -1,6 +1,7 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { AgentRunAlertsService, AgentRunsService } from "@modules/domain/agent-runs"
+import { AgentGraphFreezeGateService } from "@modules/domain/agent-graphs"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { FlowAlerts, ParkedFlowAlert } from "@modules/platform/jobs"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -24,7 +25,8 @@ const textOf = (value: unknown): string | null => (typeof value === "string" && 
  * step. It is filed under the same business key as the review a graph node raises for the same run, so the owner sees one item per run
  * whichever of the two came first. It registers with the run engine's alerts when the module starts, so the run engine never holds it in a
  * constructor: the work engine it raises through reaches the run engine (a closed item resumes a wait), and a constructor dependency the
- * other way is a provider cycle that hangs the boot without a report.
+ * other way is a provider cycle that hangs the boot without a report. A run that froze its customer raises no review of its own: the
+ * freeze's one item per customer stands for it.
  */
 export class AgentRunParkedAlertsService implements FlowAlerts, OnModuleInit {
     constructor(
@@ -33,6 +35,7 @@ export class AgentRunParkedAlertsService implements FlowAlerts, OnModuleInit {
         private readonly engine: WorkEngineService,
         private readonly installations: InstallationRecordsService,
         @InjectMessageCatalog() private readonly catalog: MessageCatalog,
+        @Optional() private readonly freezes?: AgentGraphFreezeGateService,
     ) {}
 
     /** Registers with the run engine's alerts once the app has started. */
@@ -46,6 +49,8 @@ export class AgentRunParkedAlertsService implements FlowAlerts, OnModuleInit {
         if (alert.workspaceId === undefined) return
         const run = await this.runs.runOf(alert.workspaceId, alert.jobId)
         if (run === null) return
+        const stop = { workspaceId: run.workspaceId, runId: run.id, code: alert.reason, stepKey: null, trigger: null }
+        if ((await this.freezes?.stopped(stop)) === true) return
         const conversationId = textOf(run.context.conversationId)
         const locale: Locale = run.context.locale === "en" ? "en" : "vi"
         const installation = await this.installations.ofAgent(run.workspaceId, run.agentId)

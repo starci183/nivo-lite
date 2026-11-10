@@ -1,366 +1,119 @@
 import { defineNode } from "@nivo-lite/agent-sdk/node"
-import type { NodeContext, NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
+import type { RightsGrant } from "@nivo-lite/agent-sdk/rights"
 import { z } from "zod"
-import { channelSendEffect, paymentMarkPaidEffect } from "../../vocabulary"
-import {
-    CONVERSATION_DINH,
-    ORDER_DINH,
-    STORE_EXTENDED,
-    STORE_REAL_CASE,
-    TRANSACTION_DINH,
-    TRANSACTION_LINKED,
-    TRANSACTION_NAMED,
-} from "./payment.fixtures"
-import { READ_CONVERSATIONS, READ_ORDERS, READ_TRANSACTIONS } from "./payment.rights"
-import { AWAITING_PAYMENT, atOf } from "./payment.schemas"
-import type { ConversationRow, OrderRow, SettleMode, TransactionRow } from "./payment.schemas"
-import { MAX_BODY, MAX_ENTRIES, MAX_ID, MAX_LINE } from "../../bounds"
-import { sampleOf } from "../../messages/catalog"
+import { MAX_ID } from "../../bounds"
+import { bilingualOf, messageOf } from "../../messages/catalog"
+import { paymentMarkPaidEffect } from "../../vocabulary"
+import { TOOL } from "../../vocabulary/tool-ids"
+import type { NodeSchema } from "../node-schema.types"
+import { STORE_REAL_CASE } from "./payment.fixtures"
+import { READ_ORDERS } from "./payment.rights"
+import type { OrderRow } from "./payment.schemas"
 
-/** What to settle: the transaction, whether the match is taken (`apply`) or a person decides (`ask`), the orders named and the reasons. */
-interface SettleInput {
+/** The match to settle: the order, the bank transaction that pays it, and how the two amounts compare, as the match read them. */
+export interface SettleInput {
+    readonly orderId: string
     readonly transactionId: string
-    readonly mode: SettleMode
-    readonly candidateIds: ReadonlyArray<string>
-    readonly reasons: ReadonlyArray<string>
-    /** The claim this reconciliation answers, when a customer's word started it; the work item for the owner carries it. */
-    readonly claimId: string | null
+    /** How the transfer compares with the order: exact, short or over; null when the match did not say. */
+    readonly verdict: "exact" | "short" | "over" | null
+    /** What the order is due, VND, read from the order by the match; null when unknown. */
+    readonly expectedVnd: number | null
+    /** What arrived, VND, read from the transaction by the match; null when unknown. */
+    readonly receivedVnd: number | null
 }
 
-/** `paid`: the order was marked paid. `already-paid`: this transaction had paid it before. `raised`: the owner was asked. */
-interface SettleOutput {
-    readonly result: "paid" | "already-paid" | "raised"
-    readonly orderId: string | null
+/** The input as a graph may bind it: the comparison may be left out. */
+type SettleGiven = Pick<SettleInput, "orderId" | "transactionId"> & {
+    readonly [Key in "verdict" | "expectedVnd" | "receivedVnd"]?: SettleInput[Key] | undefined
 }
 
-/** The words the settlement says: the template of the confirmation (`{orderNo}` and `{amount}` are filled) and the title of the owner's work item. */
-interface SettleParams {
-    readonly confirmationText: string
-    readonly reviewTitle: string
+/** What the agent answers after the guard took the call: the order was paid now, or this transaction had paid it before. */
+interface SettleAnswer {
+    readonly result: "paid" | "already-paid"
 }
 
-const params: z.ZodType<SettleParams> = z.object({
-    confirmationText: z.string().max(MAX_BODY).min(1),
-    reviewTitle: z.string().max(MAX_LINE).min(1),
+/** The settled order, with its customer read from the order (the after-sale hand-off reaches that customer). */
+export interface SettleOutput extends SettleAnswer {
+    readonly orderId: string
+    readonly leadId: string | null
+}
+
+const id = z.string().min(1).max(MAX_ID)
+
+const input: NodeSchema<SettleInput, SettleGiven> = z.object({
+    orderId: id,
+    transactionId: id,
+    verdict: z.enum(["exact", "short", "over"]).nullable().default(null),
+    expectedVnd: z.number().nullable().default(null),
+    receivedVnd: z.number().nullable().default(null),
 })
-const input: z.ZodType<SettleInput, SettleInput> = z.object({
-    transactionId: z.string().max(MAX_ID),
-    mode: z.enum(["apply", "ask"]),
-    candidateIds: z.array(z.string().max(MAX_ID)).max(MAX_ENTRIES),
-    reasons: z.array(z.string().max(MAX_BODY)).max(MAX_ENTRIES),
-    claimId: z.string().max(MAX_ID).nullable(),
+
+const resultShape = z
+    .enum(["paid", "already-paid"])
+    .describe("paid: the settle tool marked the order paid now. already-paid: the tool answered already_paid (this transaction had paid it before).")
+
+const answer: NodeSchema<SettleAnswer> = z.object({ result: resultShape })
+
+const output: NodeSchema<SettleOutput> = z.object({
+    result: resultShape,
+    orderId: id.describe("The order that is paid."),
+    leadId: id.nullable().describe("The customer of the order, read from the order."),
 })
-const output: z.ZodType<SettleOutput, SettleOutput> = z.object({
-    result: z.enum(["paid", "already-paid", "raised"]),
-    orderId: z.string().max(MAX_ID).nullable(),
-})
 
-const AMOUNT = new Intl.NumberFormat("vi-VN")
+const MAX_TURNS = 3
 
-const filled = (template: string, orderNo: string, amountVnd: number): string =>
-    template.replace("{orderNo}", orderNo).replace("{amount}", AMOUNT.format(amountVnd))
-
-/** When a conversation last had a message; one with none is the oldest. */
-const lastAt = (conversation: ConversationRow): number => (conversation.lastAt === null ? 0 : atOf(conversation.lastAt))
-
-/** The conversation the customer wrote in last, if they wrote in any. */
-const conversationOf = async (context: NodeContext, leadId: string): Promise<ConversationRow | undefined> => {
-    const rows = await context.data.read<ConversationRow>("conversation", {
-        where: { leadId },
-        fields: READ_CONVERSATIONS.fields,
-        limit: 20,
-    })
-    return rows.toSorted((left, right) => lastAt(right) - lastAt(left))[0]
-}
-
-const raise = async (
-    context: NodeContext,
-    given: SettleInput,
-    settings: SettleParams,
-    amountVnd: number | null,
-    reasons: ReadonlyArray<string>,
-): Promise<SettleOutput> => {
-    await context.effect(
-        "work-item.raise",
-        {
-            action: "reconcile_payment",
-            title: settings.reviewTitle,
-            payload: { target: "order", transactionId: given.transactionId, candidateIds: given.candidateIds, reasons },
-            ...(amountVnd === null ? {} : { amountVnd }),
-            ...(given.claimId === null ? {} : { claimId: given.claimId }),
-        },
-        { dedupeKey: `payment-review:${given.transactionId}` },
-    )
-    return { result: "raised", orderId: null }
-}
-
-const SETTINGS = {
-    confirmationText: sampleOf("sampleShopDaNhanAmountDCho"),
-    reviewTitle: sampleOf("sampleKiemTraKhoanTien"),
-}
-const REASONS = [sampleOf("sampleTenSoTienVaLoiBao2")]
-
-/** The agent's grant in the examples: the node's own rights, and what the effects it runs need (the host checks the grant for them). */
-const GRANT = {
-    rights: [
-        ...paymentMarkPaidEffect.rights,
-        ...channelSendEffect.rights,
-        READ_TRANSACTIONS,
-        READ_ORDERS,
-        READ_CONVERSATIONS,
-    ],
-}
+/** The grant of the examples: the node's read and what marking an order paid writes. */
+const GRANT: RightsGrant = { rights: [READ_ORDERS, ...paymentMarkPaidEffect.rights] }
 
 /**
- * The end of a reconciliation. `apply` marks the one named order paid with the transaction (`payment.mark-paid`) and tells the customer on
- * the channel they wrote from (`channel.send`). It is idempotent: a transaction that already paid the order changes nothing, and a
- * transaction pays one order only. Whatever is not clean (the mode is `ask`, the order is not one, is no longer open, has another amount,
- * or the transaction already paid another order) is never marked paid: it raises a work item for the owner (`work-item.raise`).
+ * `payment.settle` (Đánh dấu đã trả): the agent marks the order paid with the transaction the match decided to settle, by the two ids,
+ * nothing typed beyond them. Whether to settle a short or over transfer was judged by the match (from the policy or the founder's
+ * answer); this step only carries it out. A refusal of the tool is a fact: the agent says why (`confused`) and the engine takes over.
+ * The customer is told nothing here.
  */
 export const paymentSettleNode: NodeDefinition<
-    z.ZodType<SettleInput, SettleInput>,
-    z.ZodType<SettleOutput, SettleOutput>,
-    z.ZodType<SettleParams>
+    NodeSchema<SettleInput, SettleGiven>,
+    NodeSchema<SettleOutput>,
+    z.ZodObject<Record<string, never>>
 > = defineNode({
     id: "payment.settle",
     role: "output",
-    title: { key: "paymentSettle" },
-    params,
+    title: bilingualOf("nodePaymentSettleTitle"),
+    params: z.object({}),
     input,
     output,
-    rights: [READ_TRANSACTIONS, READ_ORDERS, READ_CONVERSATIONS],
-    effects: ["payment.mark-paid", "channel.send", "work-item.raise"],
+    rights: [READ_ORDERS],
+    effects: [TOOL.paymentMarkPaid],
+    requires: [TOOL.paymentMarkPaid],
     run: async (given, context) => {
-        const settings = context.params
-        const [transaction] = await context.data.read<TransactionRow>("bank-transaction", {
-            where: { id: given.transactionId },
-            fields: READ_TRANSACTIONS.fields,
-            limit: 1,
+        const decision = await context.agent.run({
+            goal: messageOf("en", "nodePaymentSettleGoal"),
+            input: given,
+            output: answer,
+            maxTurns: MAX_TURNS,
         })
-        const [orderId] = given.candidateIds
-        if (
-            given.mode === "ask" ||
-            transaction === undefined ||
-            orderId === undefined ||
-            given.candidateIds.length !== 1
-        ) {
-            return raise(context, given, settings, transaction?.amountVnd ?? null, given.reasons)
-        }
-        if (transaction.orderId === orderId) return { result: "already-paid", orderId }
+        if (decision.kind === "confused") return context.confused(decision.confusion)
         const [order] = await context.data.read<OrderRow>("order", {
-            where: { id: orderId },
+            where: { id: given.orderId },
             fields: READ_ORDERS.fields,
             limit: 1,
         })
-        const open =
-            order !== undefined && AWAITING_PAYMENT.includes(order.status) && order.amountVnd === transaction.amountVnd
-        if (order === undefined || !open || transaction.orderId !== null) {
-            return raise(context, given, settings, transaction.amountVnd, [...given.reasons, "order_not_open"])
-        }
-        await context.effect(
-            "payment.mark-paid",
-            { orderId: order.id, transactionId: transaction.id, evidence: given.reasons },
-            { dedupeKey: `paid:${transaction.id}` },
-        )
-        const conversation = await conversationOf(context, order.leadId)
-        if (conversation !== undefined) {
-            await context.effect(
-                "channel.send",
-                {
-                    conversationId: conversation.id,
-                    text: filled(settings.confirmationText, order.orderNo, transaction.amountVnd),
-                },
-                { dedupeKey: `payment-confirmation:${order.id}` },
-            )
-        }
-        return { result: "paid", orderId: order.id }
+        return { result: decision.value.result, orderId: given.orderId, leadId: order?.leadId ?? null }
     },
     examples: [
         {
-            name: "the judge matched Dinh's order: it is marked paid with the 5,000 transaction and he is told on Zalo, in his latest conversation",
-            params: SETTINGS,
-            input: {
-                transactionId: TRANSACTION_DINH.id,
-                mode: "apply",
-                candidateIds: [ORDER_DINH.id],
-                reasons: REASONS,
-                claimId: null,
-            },
-            output: { result: "paid", orderId: ORDER_DINH.id },
-            effects: [
-                {
-                    kind: "payment.mark-paid",
-                    payload: { orderId: ORDER_DINH.id, transactionId: TRANSACTION_DINH.id, evidence: REASONS },
-                },
-                {
-                    kind: "channel.send",
-                    payload: { conversationId: CONVERSATION_DINH.id, text: sampleOf("sampleShopDaNhan5000D") },
-                },
-            ],
+            name: "marks Dinh's order paid with his 5,000 transaction, by the two ids",
+            grant: GRANT,
+            params: {},
+            input: { orderId: "order-dinh", transactionId: "tx-95958515", verdict: "exact", expectedVnd: 5000, receivedVnd: 5000 },
             store: STORE_REAL_CASE,
-            grant: GRANT,
-        },
-        {
-            name: "a customer who never wrote is marked paid and told nothing",
-            params: SETTINGS,
-            input: {
-                transactionId: TRANSACTION_NAMED.id,
-                mode: "apply",
-                candidateIds: ["order-2"],
-                reasons: [sampleOf("sampleKhop")],
-                claimId: null,
-            },
-            output: { result: "paid", orderId: "order-2" },
-            effects: [
-                {
-                    kind: "payment.mark-paid",
-                    payload: {
-                        orderId: "order-2",
-                        transactionId: TRANSACTION_NAMED.id,
-                        evidence: [sampleOf("sampleKhop")],
-                    },
-                },
+            model: [
+                { call: { tool: TOOL.paymentMarkPaid, args: { orderId: "order-dinh", transactionId: "tx-95958515" } } },
+                { done: { result: "paid" } },
             ],
-            store: STORE_EXTENDED,
-            grant: GRANT,
-        },
-        {
-            name: "a transaction that already paid the order changes nothing",
-            params: SETTINGS,
-            input: {
-                transactionId: TRANSACTION_DINH.id,
-                mode: "apply",
-                candidateIds: [ORDER_DINH.id],
-                reasons: [],
-                claimId: null,
-            },
-            output: { result: "already-paid", orderId: ORDER_DINH.id },
-            effects: [],
-            store: {
-                ...STORE_REAL_CASE,
-                "bank-transaction": [{ ...TRANSACTION_DINH, orderId: ORDER_DINH.id, status: "matched" }],
-            },
-            grant: GRANT,
-        },
-        {
-            name: "an ambiguous case from a claim is never marked paid: the owner gets a work item that carries the claim",
-            params: SETTINGS,
-            input: {
-                transactionId: TRANSACTION_DINH.id,
-                mode: "ask",
-                candidateIds: [ORDER_DINH.id, "order-2"],
-                reasons: [sampleOf("sampleHaiDonCungSoTien")],
-                claimId: "claim-dinh",
-            },
-            output: { result: "raised", orderId: null },
-            effects: [
-                {
-                    kind: "work-item.raise",
-                    payload: {
-                        action: "reconcile_payment",
-                        title: SETTINGS.reviewTitle,
-                        payload: {
-                            target: "order",
-                            transactionId: TRANSACTION_DINH.id,
-                            candidateIds: [ORDER_DINH.id, "order-2"],
-                            reasons: [sampleOf("sampleHaiDonCungSoTien")],
-                        },
-                        amountVnd: 5000,
-                        claimId: "claim-dinh",
-                    },
-                },
-            ],
-            store: STORE_REAL_CASE,
-            grant: GRANT,
-        },
-        {
-            name: "a transaction that is not found raises a work item with no amount",
-            params: SETTINGS,
-            input: {
-                transactionId: "missing",
-                mode: "apply",
-                candidateIds: [ORDER_DINH.id],
-                reasons: [],
-                claimId: null,
-            },
-            output: { result: "raised", orderId: null },
-            effects: [
-                {
-                    kind: "work-item.raise",
-                    payload: {
-                        action: "reconcile_payment",
-                        title: SETTINGS.reviewTitle,
-                        payload: {
-                            target: "order",
-                            transactionId: "missing",
-                            candidateIds: [ORDER_DINH.id],
-                            reasons: [],
-                        },
-                    },
-                },
-            ],
-            store: STORE_REAL_CASE,
-            grant: GRANT,
-        },
-        {
-            name: "an order that is no longer open is not paid twice",
-            params: SETTINGS,
-            input: {
-                transactionId: TRANSACTION_DINH.id,
-                mode: "apply",
-                candidateIds: [ORDER_DINH.id],
-                reasons: [sampleOf("sampleKhop")],
-                claimId: null,
-            },
-            output: { result: "raised", orderId: null },
-            effects: ["work-item.raise"],
-            store: { ...STORE_REAL_CASE, order: [{ ...ORDER_DINH, status: "paid" }] },
-            grant: GRANT,
-        },
-        {
-            name: "an order with another amount than the transaction is not marked paid",
-            params: SETTINGS,
-            input: {
-                transactionId: TRANSACTION_DINH.id,
-                mode: "apply",
-                candidateIds: ["order-2"],
-                reasons: [sampleOf("sampleKhop")],
-                claimId: null,
-            },
-            output: { result: "raised", orderId: null },
-            effects: ["work-item.raise"],
-            store: STORE_EXTENDED,
-            grant: GRANT,
-        },
-        {
-            name: "a named order that does not exist is not marked paid",
-            params: SETTINGS,
-            input: {
-                transactionId: TRANSACTION_DINH.id,
-                mode: "apply",
-                candidateIds: ["ghost"],
-                reasons: [sampleOf("sampleKhop")],
-                claimId: null,
-            },
-            output: { result: "raised", orderId: null },
-            effects: ["work-item.raise"],
-            store: STORE_REAL_CASE,
-            grant: GRANT,
-        },
-        {
-            name: "a transaction that already paid another order pays no second one",
-            params: SETTINGS,
-            input: {
-                transactionId: TRANSACTION_LINKED.id,
-                mode: "apply",
-                candidateIds: [ORDER_DINH.id],
-                reasons: [sampleOf("sampleKhop")],
-                claimId: null,
-            },
-            output: { result: "raised", orderId: null },
-            effects: ["work-item.raise"],
-            store: STORE_EXTENDED,
-            grant: GRANT,
+            output: { result: "paid", orderId: "order-dinh", leadId: "lead-dinh" },
+            effects: [TOOL.paymentMarkPaid],
         },
     ],
 })

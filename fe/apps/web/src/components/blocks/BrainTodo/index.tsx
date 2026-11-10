@@ -1,16 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { useTranslations } from "next-intl"
-import { useBrainPageHeader, useBrainQueue, useFactDrawer } from "@/hooks/brain"
-import { usePaneCopy } from "@/hooks/paneFrame"
+import { useBrainInbox, useBrainPageHeader, useInboxCopy } from "@/hooks/brain"
 import { navigation } from "@/modules/i18n"
 import { brainTabHref, workspaceHref } from "@/modules/routes"
 import type { BrainPageHeading } from "@/modules/types"
 import { BrainTodoBase } from "./component"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
-/** What the page hands the queue: the header without its tabs. */
+/** What the page hands the inbox: the header without its tabs. */
 interface BrainTodoProps {
     readonly header: BrainPageHeading
     /** What the address asks of the fact drawer. */
@@ -20,55 +17,36 @@ interface BrainTodoProps {
 }
 
 /**
- * The connected queue of what needs doing: the findings of the dossier review, the facts waiting, the customer questions and the
- * proposed public answers, in one work list beside the opened item. Owners and managers answer; everyone reads.
+ * The connected to-do tab: one inbox of the facts waiting (the conflicts compared one by one, the fresh facts ticked together), the
+ * customer questions without an answer and the public texts waiting. Owners and managers decide; everyone reads.
  */
 export const BrainTodo = (props: BrainTodoProps) => {
-    const q = useTranslations("brainQueue")
-    const pane = usePaneCopy()
     const router = navigation.useRouter()
     const workspaceId = useWorkspaceId()
     const header = useBrainPageHeader("todo", props.header)
-    const queue = useBrainQueue()
-    const factDrawer = useFactDrawer({ tab: "todo", fact: props.fact, edit: props.edit, answer: props.answer })
-    const [isAsideOpen, setAsideOpen] = useState(false)
+    const inbox = useBrainInbox({ fact: props.fact, edit: props.edit, answer: props.answer })
+    const copy = useInboxCopy({ progress: inbox.view.progress, isNarrowed: inbox.view.trust === "high" })
     return (
         <BrainTodoBase
-            props={{
-                header: header.props,
-                panelId: `${header.props.tabs.panelPrefix}todo`,
-                copy: {
-                    grid: q("gridLabel"),
-                    listLabel: q("listLabel"),
-                    detailLabel: q("detailLabel"),
-                    asideLabel: q("asideLabel"),
-                    searchLabel: q("searchLabel"),
-                    clearSearch: pane.clearSearch,
-                    filterLabel: q("filterLabel"),
-                    pickTitle: q("pickTitle"),
-                    pickBody: q("pickBody"),
-                    noMatchTitle: pane.noMatchTitle,
-                    noMatchBody: pane.noMatchBody,
-                    clearFilters: pane.clearFilters,
-                    emptyBody: q("emptyBody"),
-                    emptyAction: q("emptyAction"),
-                    errorBody: q("errorBody"),
-                    back: pane.backToList,
-                    moreActions: pane.moreActions,
-                    loadMore: q("loadMore"),
-                    closeAside: pane.closeAside,
-                },
-                queue: queue.view,
-                dialog: queue.dialog,
-                factDrawer,
-                isAsideOpen,
-            }}
+            props={{ header: header.props, copy, inbox: inbox.view }}
             on={{
                 reviewAll: header.on.reviewAll,
                 selectTab: header.on.selectTab,
-                ...queue.on,
+                ...inbox.on,
+                ...inbox.pick.on,
                 openSources: () => router.push(workspaceHref(workspaceId, brainTabHref("sources"))),
-                asideOpenChange: setAsideOpen,
+                open: inbox.detail.on.open,
+                closeDetail: inbox.detail.on.close,
+                edit: inbox.detail.on.edit,
+                approve: inbox.detail.on.approve,
+                reject: inbox.detail.on.reject,
+                menu: inbox.detail.on.menu,
+                confirmRetire: inbox.detail.on.confirmRetire,
+                cancelRetire: inbox.detail.on.cancelRetire,
+                compare: inbox.conflict.on.open,
+                closeConflict: inbox.conflict.on.close,
+                choose: inbox.conflict.on.choose,
+                confirmChoice: inbox.conflict.on.confirm,
             }}
         />
     )

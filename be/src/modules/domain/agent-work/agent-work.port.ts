@@ -77,10 +77,12 @@ export interface AgentWorkHandler {
  * any handler; a wake it does not take goes to the handler of its source as before.
  */
 export interface AgentWorkFlow {
-    /** True when the agent's active graph runs this wake. */
+    /** True when the agent's active graph runs this wake, or the wake is the flow's to end (an agent that runs on workflows). */
     takes(turn: AgentTurnView): Promise<boolean>
     /** Runs the wake through the graph and answers how the wake ends. */
     run(turn: AgentTurnView, signal: AbortSignal): Promise<AgentHandlerEnding>
+    /** Told when a wake the flow takes failed for good (`code`): the flow tells the people who must know, in place of any handler. */
+    stuck(turn: AgentTurnView, code: string): Promise<void>
 }
 
 /** The flow, or undefined while no capability set one. */

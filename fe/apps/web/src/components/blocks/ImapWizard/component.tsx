@@ -1,4 +1,4 @@
-import type { AgentStepView, DataSlot, SlotLabels, WizardResume } from "@/modules/types"
+import type { AgentStepView, DataSlot, SlotLabels, WizardResume, WizardPhases } from "@/modules/types"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Alert, Button, CheckboxGroup, RadioGroup, Text } from "@starci/grammar/common"
 import { ImapAccountFields, type ImapAccountFieldsProps } from "@/components/composites/ImapAccountFields"
@@ -8,6 +8,7 @@ import {
     WizardFooter,
     backAction,
     closeAction,
+    forwardAction,
     nextAction,
     type WizardAction,
 } from "@/components/branches/WizardFooter"
@@ -50,6 +51,7 @@ export interface ImapWizardBaseProps {
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
+        readonly phases: WizardPhases
         readonly index: number
         readonly step: "account" | "folders" | "schedule" | "agent"
         readonly account: ImapAccountView
@@ -107,11 +109,11 @@ const actionsOf = ({ props, on }: ImapWizardBaseProps): ReadonlyArray<WizardActi
     const back = backAction(text.back, props.isPending, () => on.go(props.index - 1))
     if (props.step === "account")
         return [
-            nextAction(text.next, () => on.go(1), { isDisabled: !props.isTested }),
+            forwardAction(text.next, () => on.go(1), { isDisabled: !props.isTested }),
             closeAction(text.close, on.close),
         ]
     if (props.step === "folders")
-        return [nextAction(text.next, () => on.go(2), { isDisabled: props.folders.value.length === 0 }), back]
+        return [forwardAction(text.next, () => on.go(2), { isDisabled: props.folders.value.length === 0 }), back]
     if (props.step === "schedule") return [nextAction(text.save, on.save, { isPending: props.isPending }), back]
     return [nextAction(text.done, on.finish, { isPending: props.isPending })]
 }
@@ -185,6 +187,7 @@ export const ImapWizardBase = (props: ImapWizardBaseProps) => {
             render={(_resume, isLoading) => (
                 <WizardFrame
                     {...frameOf(view)}
+                    phases={view.phases}
                     footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
                 >
                     {view.step === "account" ? (

@@ -144,6 +144,8 @@ describe("ChatConversationsService: changing a conversation", () => {
         await service.attachLead(CHAT_WORKSPACE, row.id, LEAD)
         expect(chat.links.get(`chat.conversation:${row.id}:lead`)).toBe(LEAD)
         expect((await service.humanOf(CHAT_WORKSPACE, row.id))?.leadId).toBe(LEAD)
+        // The nodes find a customer's conversation by the field, not the link: both are written.
+        expect((await chat.api.get("chat.conversation", row.id))?.data.leadId).toBe(LEAD)
         await expect(service.attachLead(CHAT_WORKSPACE, "gone", LEAD)).rejects.toMatchObject({
             code: ChatRecordsErrorCode.NotFound,
         })

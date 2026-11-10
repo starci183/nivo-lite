@@ -2,8 +2,10 @@
 
 import { useTranslations } from "next-intl"
 import { authActionsOf } from "@/hooks/auth"
+import { useBrainTodoCount } from "@/hooks/knowledge"
 import { useLocaleSwitch } from "@/hooks/locale"
 import { useThemeSwitch } from "@/hooks/theme"
+import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { ROLE_LABELS, accountEntriesOf, workspaceSection } from "./console.shared"
 import { useConsoleShell } from "./useConsoleShell"
 import { useCurrentConsoleSession } from "./useCurrentConsoleSession"
@@ -36,6 +38,9 @@ export interface ConsoleHeaderView {
         }[]
         themeLabel: string
         isDark: boolean
+        bellLabel: string
+        bellHref: string
+        hasWaiting: boolean
     }
     on: {
         chooseLocale: (next: string) => void
@@ -55,6 +60,7 @@ export const useConsoleHeader = (): ConsoleHeaderView => {
     const language = useLocaleSwitch()
     const theme = useThemeSwitch()
     const workspaceLogoUrl = useWorkspaceLogo()
+    const waitingCount = useBrainTodoCount()
 
     const roleLabel = t(ROLE_LABELS[session.member.role])
     const workspaces = workspaceSection(
@@ -91,6 +97,9 @@ export const useConsoleHeader = (): ConsoleHeaderView => {
             localeOptions: language.options,
             themeLabel: t("themeLabel"),
             isDark: theme.isDark,
+            bellLabel: t("bellLabel"),
+            bellHref: workspaceHref(session.currentWorkspaceId, CONSOLE_ROUTES.inbox),
+            hasWaiting: waitingCount > 0,
         },
         on: {
             chooseLocale: language.choose,

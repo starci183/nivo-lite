@@ -16,10 +16,15 @@ export interface InviteView {
     readonly next: string
     readonly title: string
     readonly body: string
+    /** The workspace the invitation is for; empty until it reads. */
+    readonly workspaceName: string
     /** The e-mail the invitation is for and the staff member it attaches to, as values of the card's description list. */
     readonly forEmail: string
     readonly asStaff?: string | undefined
     readonly forTerm: string
+    /** The role the invitation gives, and its term. */
+    readonly roleTerm: string
+    readonly roleLabel: string
     readonly staffTerm: string
     readonly signedOutHint: string
     readonly signInLabel: string
@@ -52,11 +57,12 @@ const visitorOf = (signedInEmail: string | undefined, invitedEmail: string): Inv
 /**
  * Reads what an invitation link is for (the public `invitePreview` query) and who is looking at it (the browser session), and
  * words the right next step: sign in or up when signed out, switch account when signed in with another e-mail, accept when it matches.
+ * `enabled` false reads nothing (a join field whose text is not a link yet).
  */
-export const useInviteView = (token: string): InviteView => {
+export const useInviteView = (token: string, enabled = true): InviteView => {
     const t = useTranslations("invite")
     const { data: user } = useQueryAuthUserSwr()
-    const swrRead = useQueryInvitePreviewSwr({ token })
+    const swrRead = useQueryInvitePreviewSwr({ token }, enabled)
     const { data: preview } = swrRead
     const error = readError(swrRead)
     const next = invitePath(token)
@@ -74,9 +80,12 @@ export const useInviteView = (token: string): InviteView => {
         mismatchTitle: t("mismatchTitle"),
         forEmail: "",
         forTerm: t("forTerm"),
+        roleTerm: t("roleTerm"),
+        roleLabel: "",
         staffTerm: t("staffTerm"),
         signedOutHint: "",
         mismatchBody: "",
+        workspaceName: "",
     }
     const isLoading = (preview === undefined && error === undefined) || user === undefined
     if (isLoading) return { ...base, state: "loading", title: t("eyebrow"), body: "" }
@@ -91,6 +100,8 @@ export const useInviteView = (token: string): InviteView => {
             workspace: preview.workspaceName,
             role: t(preview.role === "manager" ? "roleManager" : "roleStaff"),
         }),
+        workspaceName: preview.workspaceName,
+        roleLabel: t(preview.role === "manager" ? "roleManager" : "roleStaff"),
         forEmail: preview.email,
         asStaff: preview.staffName === null ? undefined : preview.staffName,
         signedOutHint: t("signedOutHint", { email: preview.email }),

@@ -111,6 +111,43 @@ describe("messagesOf", () => {
         ])
     })
 
+    it("reads the pictures and the order a record carries, and none for a record that carries none", () => {
+        const paths = { ...PATHS, filesPath: "files", orderPath: "order" }
+        const order = {
+            orderNo: "DH-1",
+            lines: [
+                { name: "Pot", qty: 2, unitText: "1.000", amountText: "2.000", imageUrl: "https://api/p/1/image" },
+                { name: "", qty: 1 },
+                { name: "Basket", qty: "many" },
+            ],
+            amountText: "2.000",
+            address: "25 Nguyen Hue",
+            paid: true,
+        }
+        const rows = messagesOf(
+            [
+                { id: "a", text: "x", files: [{ id: "f", url: "https://api/p/1/image", name: "Pot", contentType: "image/jpeg" }], order },
+                { id: "b", text: "y", order: { lines: [] } },
+            ],
+            paths,
+        )
+        expect(rows?.[0]?.files).toEqual([
+            { id: "f", url: "https://api/p/1/image", name: "Pot", contentType: "image/jpeg" },
+        ])
+        expect(rows?.[0]?.order).toEqual({
+            orderNo: "DH-1",
+            lines: [
+                { name: "Pot", qty: 2, unitText: "1.000", amountText: "2.000", imageUrl: "https://api/p/1/image" },
+                { name: "Basket", qty: 1, unitText: "", amountText: "", imageUrl: "" },
+            ],
+            amountText: "2.000",
+            address: "25 Nguyen Hue",
+            paid: true,
+        })
+        expect(rows?.[1]).not.toHaveProperty("order")
+        expect(rows?.[1]).not.toHaveProperty("files")
+    })
+
     it("skips a record without a text id", () => {
         expect(
             messagesOf([{ text: "orphan" }, { id: "x", text: "kept" }], PATHS)?.map((message) => message.id),

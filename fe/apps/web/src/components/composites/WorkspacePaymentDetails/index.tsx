@@ -60,7 +60,7 @@ export const WorkspacePaymentDetails = (props: WorkspacePaymentDetailsProps) => 
                     <Alert tone="cautionary" title={props.notConfiguredLabel} />
                 )}
                 {props.countdownLabel && props.countdownProgress !== undefined ? (
-                    <Cluster gap="row">
+                    <Cluster gap="inline">
                         <ProgressCircle label={props.countdownLabel} value={props.countdownProgress} />
                         <Text size="sm" tone="muted">
                             {props.countdownLabel}
@@ -71,7 +71,7 @@ export const WorkspacePaymentDetails = (props: WorkspacePaymentDetailsProps) => 
             <div className={DETAILS_CLASS_NAME}>
                 <Stack gap="row">
                     <DescriptionList items={[{ id: "amount", term: props.amountLabel, description: props.amount }]} />
-                    <Stack gap="row">
+                    <Stack gap="inline">
                         {props.fields.map((field) => (
                             <Input
                                 key={field.id}

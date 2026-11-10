@@ -4,7 +4,7 @@ import type { DropdownMenuEntry } from "@starci/grammar/common"
 /** What the workspace lockup draws and opens. */
 type ConsoleWorkspaceMenuProps = {
     readonly workspaceName: string
-    /** The uploaded workspace logo; the initials of the name stand in without one. */
+    /** The uploaded workspace logo; Grammar draws its sprout without one. */
     readonly logoUrl: string | null
     readonly roleLabel: string
     readonly entries: ReadonlyArray<DropdownMenuEntry>

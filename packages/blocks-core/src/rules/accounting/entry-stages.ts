@@ -15,6 +15,8 @@ export interface EntryRecord {
     readonly sourceId: string
     /** The source steps in the order the money moved. */
     readonly lineage: ReadonlyArray<LineageStep>
+    /** The amount of the entry, in VND, when the read gives it. */
+    readonly amountVnd?: number | undefined
     /** Whether the entry's payment may be written to the ledger again; absent offers nothing. */
     readonly canRepostLedger?: boolean | undefined
 }
@@ -38,6 +40,7 @@ export const entryRecord: z.ZodType<EntryRecord> = z.looseObject({
     sourceEntity: z.string().max(MAX_ID),
     sourceId: z.string().max(MAX_ID),
     lineage: z.array(lineageStep).max(MAX_ENTRIES),
+    amountVnd: z.number().optional(),
     canRepostLedger: z.boolean().optional(),
 })
 

@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { nodeMessagesOf, nodeMetaOf } from "./node-prompt.policy"
+import { nodeMessagesOf, nodeMetaOf, nodePromptOf } from "./node-prompt.policy"
 import { ORDER_SCHEMA } from "./ai-tasks.schema"
 
 const ASK = { purpose: "intent.classify:read", instructions: "Rules", input: { text: "hi" } }
@@ -8,7 +8,7 @@ const SUBJECT = Symbol("node-prompt.policy")
 
 const build = async () => {
     const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: { nodeMessagesOf, nodeMetaOf } }],
+        providers: [{ provide: SUBJECT, useValue: { nodeMessagesOf, nodeMetaOf, nodePromptOf } }],
     }).compile()
     return moduleRef.get<typeof import("./node-prompt.policy")>(SUBJECT)
 }
@@ -45,6 +45,29 @@ describe("node-prompt policy", () => {
         const withImages = policy.nodeMessagesOf({ ...ASK, images: ["https://files/a.jpg"] })
         expect(withImages[1]).toEqual({ role: "user", content: '{"text":"hi"}', images: ["https://files/a.jpg"] })
         expect(policy.nodeMessagesOf({ ...ASK, images: [] })[1]).not.toHaveProperty("images")
+    })
+
+    it("prompt cache: opens two calls of a step with the same system message whatever their words and data for this call", () => {
+        const first = policy.nodePromptOf({ ...ASK, input: { thread: ["hi"], at: "2026-11-10T01:00:00Z" } }, ORDER_SCHEMA)
+        const second = policy.nodePromptOf(
+            { ...ASK, volatile: "The founder answered.", input: { thread: ["hi", "còn hàng không"], leadId: "lead-9" } },
+            ORDER_SCHEMA,
+        )
+
+        expect(second.stable).toEqual(first.stable)
+        expect(JSON.stringify(second.stable)).toBe(JSON.stringify(first.stable))
+        expect(first.stable).toHaveLength(1)
+        expect(first.volatile).toEqual([{ role: "user", content: '{"thread":["hi"],"at":"2026-11-10T01:00:00Z"}' }])
+        expect(second.volatile).toEqual([
+            { role: "system", content: "The founder answered." },
+            { role: "user", content: '{"thread":["hi","còn hàng không"],"leadId":"lead-9"}' },
+        ])
+        // What is sent is the stable part, then the volatile one.
+        expect(policy.nodeMessagesOf({ ...ASK, volatile: "V" })).toEqual([
+            { role: "system", content: "Rules" },
+            { role: "system", content: "V" },
+            { role: "user", content: '{"text":"hi"}' },
+        ])
     })
 
     it("meters the call as engine work of the namespace of the node", () => {

@@ -128,7 +128,11 @@ export const HiringApplyFormBase = (props: HiringApplyFormBaseProps) => (
     <Page chrome="bleed" minHeight="none">
         <PublicShell
             label={props.props.post.title}
-            foot={props.props.say("applyFoot", { company: props.props.company })}
+            foot={
+                props.props.company === ""
+                    ? props.props.say("applyFootGeneric")
+                    : props.props.say("applyFoot", { company: props.props.company })
+            }
             measure="product"
             brand={{
                 name: "items" in props.props.slot ? props.props.company : null,

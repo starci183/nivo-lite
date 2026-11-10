@@ -2,7 +2,6 @@ import { Alert, Button, Cluster, Divider, Input, Link, Stack, Text, TextAction }
 import { AuthForm } from "@/components/frames/AuthForm"
 import { AuthPanel } from "@/components/frames/AuthPanel"
 import { EmailField } from "@/components/composites/EmailField"
-import { Icon } from "@/components/leaves/Icon"
 import { LOGIN_CENTER_CLASS_NAME } from "./classNames"
 
 /** The words and state of the sign-in card, resolved by the connected block. */
@@ -78,7 +77,6 @@ export const LoginFormBase = (props: LoginFormBaseProps) => {
                     width="fill"
                     isPending={view.isGooglePending}
                     isDisabled={busy && !view.isGooglePending}
-                    startContent={<Icon props={{ name: "google" }} />}
                     onPress={props.on.google}
                 >
                     {view.googleLabel}

@@ -6,7 +6,13 @@ import { useTranslations } from "next-intl"
 import { useSlotLabels, slotOfReads } from "@/hooks/slot"
 import { GUIDES } from "@/hooks/connection-guides"
 import { PROVIDERS, providerKey } from "@/hooks/connection-providers"
-import { agentChoicesOf, EMPTY_GUIDE_CONTEXT, guideScreensOf, useCopyLabels } from "@/hooks/connection-wizard"
+import {
+    agentChoicesOf,
+    EMPTY_GUIDE_CONTEXT,
+    guideScreensOf,
+    useCopyLabels,
+    useWizardPhases,
+} from "@/hooks/connection-wizard"
 import { useZaloWizard, ZALO_STEPS } from "@/hooks/zalo-wizard"
 import type { AgentOption } from "@/modules/types"
 import { ZaloWizardBase } from "./component"
@@ -56,6 +62,7 @@ const textOf = (
 /** Zalo OA in the shared wizard frame: name and app keys, set up the Zalo app, connect the OA, check, attach to the agents. */
 export const ZaloWizard = (props: ZaloWizardProps) => {
     const tw = useTranslations("connectionWizard")
+    const phases = useWizardPhases("zalo")
     const tc = useTranslations("connections")
     const copy = useCopyLabels()
     const slotLabelsOf = useSlotLabels()
@@ -81,6 +88,7 @@ export const ZaloWizard = (props: ZaloWizardProps) => {
             props={{
                 title: tw("title", { provider: tc(providerKey("zalo_oa", "title")) }),
                 stepLabel: tw("stepOf", { n: wizard.index + 1, total: ZALO_STEPS.length }),
+                phases,
                 steps: [
                     tw("zaloStepApp"),
                     tw("zaloStepFollow"),

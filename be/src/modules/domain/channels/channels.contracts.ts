@@ -1,5 +1,6 @@
 import type { ZaloFailure } from "@modules/integrations/zalo"
 import type { ChatConversationTarget } from "@modules/domain/chat-records"
+import type { ChannelImage } from "./channel-image.contracts"
 
 /** A started Zalo authorization. */
 export interface ZaloPkce {
@@ -123,6 +124,8 @@ export interface DeliveryRequest {
     readonly messageId: string
     /** The text to send. */
     readonly text: string
+    /** Pictures that follow the text, in order, each with the words under it: Zalo lays several into one collage image (or sends them one by one when it cannot), Telegram sends them as one album; a refusal of them is logged and does not undo the text. */
+    readonly images?: ReadonlyArray<ChannelImage>
     /** The structured notice behind the text, when there is one: on Zalo it allows the ZNS fallback outside the 48-hour window. */
     readonly notification?: RenewalNotification
 }

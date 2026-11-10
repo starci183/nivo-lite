@@ -169,6 +169,15 @@ describe("WorkApprovalService", () => {
             expect(posted.office).not.toHaveBeenCalled()
         })
 
+        it("says no line for an ask whose producer posts its own card (a stopped workflow), and asks no card of a decision", async () => {
+            const own = await build(waitingOf(), 0)
+            const proposal = proposalOf({ execution: { preset: true, forceAsk: "branch_ask", ownCard: true } })
+            await own.service.ask(ctx, itemOf(), proposal, askOf())
+            expect(own.office).not.toHaveBeenCalled()
+            expect(own.cardRooms).not.toHaveBeenCalled()
+            expect(own.evidence).toHaveBeenCalledTimes(1)
+        })
+
         it("names missing fields before the limit and skips an absent inbound event", async () => {
             const { service, evidence, inbound } = await build(waitingOf({ inbound_event_id: null }))
 

@@ -15,8 +15,9 @@ runbook carries no docker command and nobody runs docker by hand.
 | openclaw (agent gateway, relay) | container, agent workspace under the state base | 58790 |
 | api (+ the AI gateway on port + 1) | native | 18787 (gateway 18788) |
 | mcp | native | 18790 |
-| web (console) | native | 3000 |
-| landing | native | 3002 |
+| web (console) | native | 3100 |
+| landing | native | 3103 |
+| admin (platform admin, `nivo-local-admin.starci.org` on the `nivo-dev` tunnel) | native | 3105 |
 
 The ports differ from production and from the earlier local containers (`nivo-lite-dev-db` on 54322, port 8787) on purpose: `doctor` reports a port
 that something else holds and names the holder. Change a port in `local.ports` of the manifest, not in the commands.
@@ -40,9 +41,9 @@ example `%USERPROFILE%\.swc-native-cache`) in the shell that runs `up`, which ha
 | doctor | `starci app stack doctor --env dev`: read-only table of the host prerequisites with the owner-run install step per OS, the custody, the compose render and the ports. |
 | up | `starci app stack up --env dev --execute`: prepare, then the services and their health, the database role, the migrations with a receipt, the processes and readiness; prints the origins. |
 | status | `starci app stack status --env dev`: desired against running, the migration receipt and every readiness probe. |
-| logs | `starci app stack logs --env dev --service api` (api, mcp, web, landing, or db, nivo-redis, nivo-minio, nivo-openclaw; bounded and redacted). |
+| logs | `starci app stack logs --env dev --service api` (api, mcp, web, landing, admin, or db, nivo-redis, nivo-minio, nivo-openclaw; bounded and redacted). |
 | down | `starci app stack down --env dev --execute`: ends the processes and stops the compose project; volumes and sealed values stay. |
-| verification | `starci app stack verify --env dev`: the api `/healthz` and `/readyz` (the database answers), the console and the landing `/health/live`; then `npm run test` and the acceptance flows against the printed origins. |
+| verification | `starci app stack verify --env dev`: the api `/healthz` and `/readyz` (the database answers), the console, the landing and the admin `/health/live`; then `npm run test` and the acceptance flows against the printed origins. |
 
 The volumes are rebuildable development data: `starci app db migrate` recreates the schema from `db/bootstrap.sql` and `db/migrations`; the
 OpenClaw workspace lives under the local state base of the environment and `down` keeps it. Key names are in `runtime/env/KEYS.md`.

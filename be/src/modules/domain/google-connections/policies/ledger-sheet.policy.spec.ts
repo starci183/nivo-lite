@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { ledgerCategoryText, ledgerHeader, ledgerTab, ledgerVoidText } from "@modules/integrations/google"
 import { GoogleConnectionsError, GoogleConnectionsErrorCode } from "../errors/google-connections.error"
 import { googleRefusal, record } from "@tests/fixtures/builders/google-connections.builder"
 import {
@@ -7,8 +8,10 @@ import {
     dayOf,
     grantRowOf,
     grantsSheets,
+    BALANCE_FORMULA,
     isRefusedLedger,
     LEDGER_HEADER,
+    LEDGER_TAB,
     ledgerConnectionOf,
     ledgerKeeperOf,
     ledgerRowOf,
@@ -92,50 +95,101 @@ describe("spreadsheetIdOf", () => {
 })
 
 describe("the rows of the ledger", () => {
-    it("lays an entry out in the order of the header", async () => {
+    const SALE = {
+        date: "2026-11-04",
+        orderNo: "DH-7",
+        customer: "Dinh",
+        amountVnd: 5000,
+        transactionId: "sepay:1",
+        status: "paid",
+        note: "",
+        direction: "in",
+        documentNo: "DH-7",
+        description: "CK DH7 mua hoa",
+        counterpart: "Dinh",
+        category: "sale",
+    } as const
+
+    it("has the eight columns of the cash book", () => {
+        expect(LEDGER_HEADER).toHaveLength(8)
+        expect(LEDGER_HEADER).toEqual(ledgerHeader())
+        expect(LEDGER_TAB).toBe(ledgerTab())
+    })
+
+    it("lays money in out in the order of the header, with the balance as a formula that reads its own row", async () => {
         const subject = await build()
 
-        expect(LEDGER_HEADER).toHaveLength(7)
+        expect(subject.ledgerRowOf(SALE)).toEqual([
+            "2026-11-04",
+            "'DH-7",
+            "'CK DH7 mua hoa",
+            5000,
+            "",
+            "'Dinh",
+            `'${ledgerCategoryText("sale")}`,
+            BALANCE_FORMULA,
+        ])
+        expect(BALANCE_FORMULA).toBe('=SUM(D$2:INDIRECT("D"&ROW()))-SUM(E$2:INDIRECT("E"&ROW()))')
+    })
+
+    it("puts money out in the out column", async () => {
+        const subject = await build()
+
+        const row = subject.ledgerRowOf({ ...SALE, direction: "out", category: "expense" })
+        expect(row.slice(3, 5)).toEqual(["", 5000])
+        expect(row[6]).toBe(`'${ledgerCategoryText("expense")}`)
+    })
+
+    it("defaults an entry of the older shape to a sale, in, with the order number as the document and the customer as the counterpart", async () => {
+        const subject = await build()
+
         expect(
             subject.ledgerRowOf({
                 date: "2026-11-04",
                 orderNo: "DH-7",
-                customer: "=HYPERLINK(x)",
+                customer: "Dinh",
                 amountVnd: 5000,
                 transactionId: "sepay:1",
                 status: "paid",
                 note: "ghi chu",
             }),
-        ).toEqual(["2026-11-04", "DH-7", "=HYPERLINK(x)", 5000, "sepay:1", "PAID", "ghi chu"])
+        ).toEqual(["2026-11-04", "'DH-7", "'ghi chu", 5000, "", "'Dinh", `'${ledgerCategoryText("sale")}`, BALANCE_FORMULA])
     })
 
-    it("marks a void entry VOID", async () => {
+    it("keeps a formula or a number a stranger wrote in a transfer content as text, never run", async () => {
         const subject = await build()
 
-        expect(
-            subject.ledgerRowOf({
-                date: "2026-11-04",
-                orderNo: "",
-                customer: "",
-                amountVnd: 0,
-                transactionId: "t",
-                status: "void",
-                note: "",
-            })[5],
-        ).toBe("VOID")
+        const row = subject.ledgerRowOf({
+            ...SALE,
+            description: '=HYPERLINK("http://evil.test")',
+            counterpart: "+84 90",
+            documentNo: "0012",
+        })
+        expect(row[1]).toBe("'0012")
+        expect(row[2]).toBe(`'=HYPERLINK("http://evil.test")`)
+        expect(row[5]).toBe("'+84 90")
     })
 
-    it("takes a transaction back with its key and the status only", async () => {
+    it("takes a void entry back by putting its amount on the other side", async () => {
+        const subject = await build()
+
+        const row = subject.ledgerRowOf({ ...SALE, status: "void" })
+        expect(row.slice(3, 5)).toEqual(["", 5000])
+        expect(row[2]).toBe(`'${ledgerVoidText()} · CK DH7 mua hoa`)
+    })
+
+    it("takes a transaction back with its key alone, no amount", async () => {
         const subject = await build()
 
         expect(subject.voidRowOf("sepay:1", "2026-11-04")).toEqual([
             "2026-11-04",
+            "'sepay:1",
+            `'${ledgerVoidText()}`,
             "",
             "",
             "",
-            "sepay:1",
-            "VOID",
-            "Hoan tac",
+            "",
+            BALANCE_FORMULA,
         ])
     })
 

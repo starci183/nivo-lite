@@ -37,6 +37,9 @@ export interface RunView {
 /** The run, or null when there is none. */
 export type OptionalRunView = RunView | null
 
+/** The id of a run, or null when there is none. */
+export type OptionalRunId = string | null
+
 /** The run a write names, with its workspace for the job's limit. */
 export interface RunRef {
     /** The run. */
@@ -244,6 +247,30 @@ export interface OwnerResumeAnswer {
     readonly stepKey: string | null
 }
 
+/** An owner or manager request to stop a run, as their door receives it. */
+export interface OwnerCancelRequest {
+    /** The Auth account asking. */
+    readonly principalId: string
+    /** The workspace the request is made in; the run must be one of its runs. */
+    readonly workspaceId: string
+    /** The run. */
+    readonly runId: string
+}
+
+/** What the store did with a cancel: the run stopped, was already cancelled, or had ended or been given to a person and is no longer cancellable. */
+export interface RunCancelResult {
+    /** `cancelled`, `already_cancelled`, `not_cancellable` or `not_found`. */
+    readonly kind: "cancelled" | "already_cancelled" | "not_cancellable" | "not_found"
+}
+
+/** What the owner door answers to a cancel. */
+export interface OwnerCancelAnswer {
+    /** `cancelled`, `already_cancelled`, `not_cancellable` or `not_found`. */
+    readonly kind: RunCancelResult["kind"]
+    /** `effects_kept` when the run was cancelled: whatever its steps already sent or did stays as it is; null otherwise. */
+    readonly note: "effects_kept" | null
+}
+
 /** What a resume did. */
 export type ResumeResult =
     | { readonly kind: "resumed"; readonly stepKey: string; readonly workspaceId: string }
@@ -268,7 +295,7 @@ export type ResumeAnswer =
           readonly errorCode: string | null
           readonly effectKey: string
       }
-    | { readonly kind: "not_found" | "compensated" | "not_parked" | "no_failed_step" | "exhausted" }
+    | { readonly kind: "not_found" | "compensated" | "not_parked" | "no_failed_step" | "exhausted" | "superseded" }
 
 /** A parked run a pass may run again. */
 export interface ParkedRef {
@@ -310,6 +337,8 @@ export interface ParkedQuery {
     readonly byBuild: boolean
     /** How long a run has been parked, at least, seconds. */
     readonly minAgeSeconds: number
+    /** A run that serves a customer conversation is due on the chat ladder instead of `minAgeSeconds` (the sweep's pass). */
+    readonly ladder?: boolean | undefined
     /** The cap of machine resumes. */
     readonly max: number
     /** Failure codes that stay with a person. */

@@ -78,7 +78,7 @@ describe("AgentIdentityService", () => {
                 1,
                 AgentEntity,
                 { id: "a1", workspaceId: "w1" },
-                { avatarUrl: "https://cdn.example/a1.png" },
+                { avatarUrl: "https://cdn.example/a1.png", avatarPreset: null },
             )
             expect(em.update).toHaveBeenNthCalledWith(
                 2,
@@ -110,6 +110,56 @@ describe("AgentIdentityService", () => {
             const { service } = await build(mockEntityManager({ update: [AgentEntity, { affected: 0 }] }))
 
             await expect(service.setAvatar("u1", "w1", "ghost", null)).rejects.toMatchObject({
+                code: AgentsErrorCode.AgentNotFound,
+            })
+        })
+    })
+})
+
+describe("AgentIdentityService", () => {
+    describe("setAvatarPreset", () => {
+        it("dresses the agent in a preset and drops the uploaded picture, for a manager", async () => {
+            const em = mockEntityManager({ update: [AgentEntity, { affected: 1 }] })
+            const { service, members } = await build(em)
+
+            await service.setAvatarPreset("u1", "w1", "a1", "role")
+
+            expect(members.require).toHaveBeenCalledWith("u1", "w1", ["owner", "manager"])
+            expect(em.update).toHaveBeenCalledWith(
+                AgentEntity,
+                { id: "a1", workspaceId: "w1" },
+                { avatarPreset: "role", avatarUrl: null },
+            )
+        })
+
+        it("goes back to the default mark with null", async () => {
+            const em = mockEntityManager({ update: [AgentEntity, { affected: 1 }] })
+            const { service } = await build(em)
+
+            await service.setAvatarPreset("u1", "w1", "a1", null)
+
+            expect(em.update).toHaveBeenCalledWith(
+                AgentEntity,
+                { id: "a1", workspaceId: "w1" },
+                { avatarPreset: null, avatarUrl: null },
+            )
+        })
+
+        it("refuses a preset that is not offered, writing nothing", async () => {
+            const em = mockEntityManager({ update: [AgentEntity, { affected: 1 }] })
+            const { service } = await build(em)
+
+            await expect(service.setAvatarPreset("u1", "w1", "a1", "dragon")).rejects.toMatchObject({
+                code: AgentsErrorCode.AvatarPresetInvalid,
+                params: { preset: "dragon" },
+            })
+            expect(em.update).not.toHaveBeenCalled()
+        })
+
+        it("refuses a preset for an agent that is not in the workspace", async () => {
+            const { service } = await build(mockEntityManager({ update: [AgentEntity, { affected: 0 }] }))
+
+            await expect(service.setAvatarPreset("u1", "w1", "ghost", "initials")).rejects.toMatchObject({
                 code: AgentsErrorCode.AgentNotFound,
             })
         })

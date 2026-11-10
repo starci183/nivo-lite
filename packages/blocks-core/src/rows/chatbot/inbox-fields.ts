@@ -9,6 +9,8 @@ export const THREAD_LINE_FIELDS: MessagePaths = {
     statusPath: "state",
     sidePath: "side",
     markPath: "mark",
+    filesPath: "files",
+    orderPath: "order",
 }
 
 /** The fields of the record of `chatbot.proposals`: the reply the AI proposed, with what the customer asked. */

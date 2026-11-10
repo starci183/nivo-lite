@@ -16,6 +16,15 @@ import { ResendInviteHandler } from "./application/resend-invite.handler"
 import { RevokeInviteHandler } from "./application/revoke-invite.handler"
 import { SaveStaffHandler } from "./application/save-staff.handler"
 import { SetMemberStatusHandler } from "./application/set-member-status.handler"
+import { DeclineInviteHandler } from "./application/decline-invite.handler"
+import { DeleteWorkspaceHandler } from "./application/delete-workspace.handler"
+import { JoinInviteHandler } from "./application/join-invite.handler"
+import { LeaveWorkspaceHandler } from "./application/leave-workspace.handler"
+import { ListMyInvitesHandler } from "./application/list-my-invites.handler"
+import { RenameWorkspaceHandler } from "./application/rename-workspace.handler"
+import { ListDeclinedInvitesHandler } from "./application/list-declined-invites.handler"
+import { MyWorkInHandHandler } from "./application/my-work-in-hand.handler"
+import { RestoreWorkspaceHandler } from "./application/restore-workspace.handler"
 import { ConfigurableModuleClass } from "./workspaces.module-definition"
 
 @Module({
@@ -37,6 +46,15 @@ import { ConfigurableModuleClass } from "./workspaces.module-definition"
         RevokeInviteHandler,
         SaveStaffHandler,
         SetMemberStatusHandler,
+        DeclineInviteHandler,
+        DeleteWorkspaceHandler,
+        JoinInviteHandler,
+        LeaveWorkspaceHandler,
+        ListMyInvitesHandler,
+        RenameWorkspaceHandler,
+        ListDeclinedInvitesHandler,
+        MyWorkInHandHandler,
+        RestoreWorkspaceHandler,
     ],
 })
 /** The workspaces feature: the handlers of its application. */

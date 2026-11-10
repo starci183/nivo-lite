@@ -203,6 +203,8 @@ export const PLATFORM_FIXTURES: ModuleFixtures = {
         "platform.agent-done": { ready: DONE_VIEW, empty: DONE_NONE },
         "platform.agent-connections": { ready: CONNECTIONS_VIEW, empty: CONNECTIONS_NONE },
         "platform.agent-knowledge": { ready: KNOWLEDGE_VIEW, empty: KNOWLEDGE_NONE },
+        "platform.installation-connections": { ready: CONNECTIONS_VIEW, empty: CONNECTIONS_NONE },
+        "platform.installation-knowledge": { ready: KNOWLEDGE_VIEW, empty: KNOWLEDGE_NONE },
         "platform.parked-runs": {
             ready: PARKED_RUNS_VIEW,
             readyIn: { vi: PARKED_RUNS_VIEW, en: PARKED_RUNS_VIEW_EN },

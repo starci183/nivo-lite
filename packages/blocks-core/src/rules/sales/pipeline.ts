@@ -62,6 +62,8 @@ const fill = (template: string, value: string): string => template.replaceAll("{
 /** A channel code as a name: its first letter in capitals. */
 export const channelName = (channel: string): string => `${channel.slice(0, 1).toUpperCase()}${channel.slice(1)}`
 
+const ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 const joined = (parts: ReadonlyArray<string>): string => parts.filter((part) => part !== "").join(" \u00b7 ")
 
 const amountLine = (record: unknown, words: PipelineWords, formats: PipelineFormats): string => {
@@ -82,7 +84,9 @@ const nextLine = (record: unknown, words: PipelineWords, formats: PipelineFormat
 const detailOf = (stage: string, record: unknown, words: PipelineWords, formats: PipelineFormats): string => {
     switch (stage) {
         case "new": {
-            const owner = textOf(valueAt(record, "owner"))
+            const raw = textOf(valueAt(record, "owner"))
+            // An owner that is only an id says nothing to a person: leave it out until a name stands in its place.
+            const owner = ID_PATTERN.test(raw) ? "" : raw
             return joined([
                 channelName(textOf(valueAt(record, "channel"))),
                 owner === "" ? "" : fill(words.owner, owner),

@@ -32,4 +32,8 @@ export class ChatRoomMemberEntity extends AbstractEntity {
     /** Whether the member muted the room. */
     @Column({ type: "boolean", default: () => "false" })
     muted!: boolean
+
+    /** Whether an agent may post in this group (a manager grants it; a seat alone is not the right); always false for a person. */
+    @Column({ name: "may_post", type: "boolean", default: () => "false" })
+    mayPost!: boolean
 }

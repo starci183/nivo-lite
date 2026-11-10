@@ -19,6 +19,8 @@ export enum WorkspaceInvitesErrorCode {
     Used = "WORKSPACE_INVITES_USED",
     /** The invitation expired. */
     Expired = "WORKSPACE_INVITES_EXPIRED",
+    /** The invited person declined the invitation. */
+    Declined = "WORKSPACE_INVITES_DECLINED",
     /** The signed-in address is not the invited one. */
     EmailMismatch = "WORKSPACE_INVITES_EMAIL_MISMATCH",
     /** The database gave no random uuid for the invitation token. */
@@ -33,6 +35,7 @@ export const WORKSPACE_INVITES_ERROR_KINDS: Record<WorkspaceInvitesErrorCode, Er
     [WorkspaceInvitesErrorCode.NotFound]: "not-found",
     [WorkspaceInvitesErrorCode.Invalid]: "not-found",
     [WorkspaceInvitesErrorCode.Revoked]: "conflict",
+    [WorkspaceInvitesErrorCode.Declined]: "conflict",
     [WorkspaceInvitesErrorCode.Used]: "conflict",
     [WorkspaceInvitesErrorCode.Expired]: "conflict",
     [WorkspaceInvitesErrorCode.EmailMismatch]: "forbidden",

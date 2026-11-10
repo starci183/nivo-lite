@@ -17,7 +17,7 @@ export const MoneyFollowStep = (props: MoneyFollowStepProps) => (
     <>
         <div className={classNames.buttons}>
             {props.providerHref === null ? null : (
-                <Button
+                <Button endArrow
                     intent="neutral"
                     href={props.providerHref}
                     target="_blank"

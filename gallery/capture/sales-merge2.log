@@ -1,0 +1,21 @@
+installation /workspaces/<ws>/agents/sales/12732e05-8cf1-44da-969b-cf289b2b85fa
+page 14 /workspaces/<ws>/agents/sales/<inst>/workflows/consult links=15 (overlay 0, in-page 3)
+page 15 /workspaces/<ws>/agents/sales/<inst>/workflows/after-sale links=15 (overlay 0, in-page 3)
+page 16 /workspaces/<ws>/agents/sales/<inst>/workflows/web-order links=15 (overlay 0, in-page 3)
+page 17 /workspaces/<ws>/agents/sales/<inst>/workflows/consult/map links=14 (overlay 0, in-page 0)
+page 18 /workspaces/<ws>/agents/sales/<inst>/workflows/consult/versions links=16 (overlay 1, in-page 15)
+page 19 /workspaces/<ws>/agents/sales/<inst>/workflows/consult/runs links=29 (overlay 0, in-page 1)
+page 20 /workspaces/<ws>/agents/sales/<inst>/workflows/after-sale/map links=14 (overlay 0, in-page 4)
+page 21 /workspaces/<ws>/agents/sales/<inst>/workflows/after-sale/versions links=16 (overlay 1, in-page 1)
+page 22 /workspaces/<ws>/agents/sales/<inst>/workflows/after-sale/runs links=21 (overlay 0, in-page 2)
+page 23 /workspaces/<ws>/agents/sales/<inst>/workflows/web-order/map links=14 (overlay 0, in-page 0)
+page 24 /workspaces/<ws>/agents/sales/<inst>/workflows/web-order/versions links=16 (overlay 1, in-page 1)
+page 25 /workspaces/<ws>/agents/sales/<inst>/workflows/web-order/runs links=21 (overlay 0, in-page 2)
+page 26 /workspaces/<ws>/agents/sales/<inst>/work/runs/<id> links=13 (overlay 0, in-page 0)
+  bounce /workspaces/<ws>/agents/sales/<inst> -> /workspaces/<ws>/agents/sales/<inst>/workbench (retry)
+page 27 /workspaces/<ws>/agents/sales/<inst>/workflows/<id> links=15 (overlay 0, in-page 3)
+page 28 /workspaces/<ws>/agents/sales/<inst>/workflows/<id>/map links=14 (overlay 0, in-page 0)
+page 29 /workspaces/<ws>/agents/sales/<inst>/workflows/<id>/versions links=16 (overlay 1, in-page 15)
+page 30 /workspaces/<ws>/agents/sales/<inst>/workflows/<id>/runs links=29 (overlay 0, in-page 1)
+non-GET requests 
+done pages 30 links 467 blocked mutations 0 skipped 67

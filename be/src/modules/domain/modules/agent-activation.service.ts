@@ -1,8 +1,11 @@
 import { Injectable } from "@nestjs/common"
-import { AgentsService } from "@modules/domain/agents"
+import { AgentBindingsService } from "@modules/domain/agent-connections"
+import type { OptionalResumeKeep } from "@modules/domain/agent-connections"
+import { AgentDirectoryService, AgentsService } from "@modules/domain/agents"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
+import type { InstallationView } from "./modules.contracts"
 import { ModuleInstallService } from "./module-install.service"
 
 const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
@@ -19,16 +22,57 @@ export class AgentActivationService {
         private readonly installs: ModuleInstallService,
         private readonly agents: AgentsService,
         private readonly members: WorkspaceMembersService,
+        private readonly bindings: AgentBindingsService,
+        private readonly directory: AgentDirectoryService,
     ) {}
 
-    /** Resumes (`active`) or pauses the agent. */
-    async setActive(principalId: string, workspaceId: string, agentId: string, active: boolean): Promise<void> {
+    /**
+     * Resumes (`active`) or pauses the agent. A resume that would give a channel two agents of one role is refused with a conflict that
+     * lists the channels, unless `keep` says whom to keep: "resumed" (this agent takes the channels) or "current" (the agent that answers
+     * them now keeps them and this one drops them).
+     */
+    async setActive(
+        principalId: string,
+        workspaceId: string,
+        agentId: string,
+        active: boolean,
+        keep: OptionalResumeKeep = null,
+    ): Promise<void> {
         await this.members.require(principalId, workspaceId, GOVERNORS)
+        const conflicts = active ? await this.channelConflictsOf(workspaceId, agentId, keep) : []
         const installation = await this.installations.ofAgent(workspaceId, agentId)
         if (installation === null) {
             await this.agents.setStatus(principalId, workspaceId, agentId, active)
-            return
+        } else {
+            await this.installs.setLive(principalId, workspaceId, installation.id, active)
         }
-        await this.installs.setLive(principalId, workspaceId, installation.id, active)
+        await this.bindings.settleResume(workspaceId, agentId, conflicts, keep)
+    }
+
+    /**
+     * The same switch from the agent page, which names the installation: resumes (`live`) or pauses it, with the same channel check and
+     * the same choice of whom to keep. Answers the installation as the page shows it.
+     */
+    async setInstallationLive(
+        principalId: string,
+        workspaceId: string,
+        installationId: string,
+        live: boolean,
+        keep: OptionalResumeKeep = null,
+    ): Promise<InstallationView> {
+        await this.members.require(principalId, workspaceId, GOVERNORS)
+        const installation = await this.installations.find(workspaceId, installationId)
+        const agentId = installation?.agentId ?? null
+        const conflicts = live && agentId !== null ? await this.channelConflictsOf(workspaceId, agentId, keep) : []
+        const view = await this.installs.setLive(principalId, workspaceId, installationId, live)
+        if (agentId !== null) await this.bindings.settleResume(workspaceId, agentId, conflicts, keep)
+        return view
+    }
+
+    /** The channels the agent shares with another agent of its role once active; refused when the caller has not chosen. */
+    private async channelConflictsOf(workspaceId: string, agentId: string, keep: OptionalResumeKeep) {
+        const [card] = await this.directory.cardsOf(workspaceId, [agentId])
+        if (card === undefined) return []
+        return this.bindings.requireResumeChoice(workspaceId, card, keep)
     }
 }

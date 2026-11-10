@@ -80,4 +80,6 @@ export interface DossierDeskView {
     readonly aside: DossierAsideView | null
     /** The first reads have no data yet: every region draws its skeleton at once. */
     readonly isWaiting: boolean
+    /** The workspace holds a document: an empty catalogue then asks for the import, not for documents. */
+    readonly hasDocuments: boolean
 }

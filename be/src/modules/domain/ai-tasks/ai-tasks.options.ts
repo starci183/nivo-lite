@@ -13,8 +13,6 @@ export interface AiTasksOptions {
 
 /** What the prompt library needs at registration: its tunables and the providers of the doors it generates through. */
 export interface AiTasksWiring extends AiTasksOptions {
-    /** Provider of the `AiTaskTextGenerator` port (the OpenClaw generations capability). */
-    readonly generator: InjectionToken
     /** Provider of the `AiTaskRecall` port (the agent knowledge lens). */
     readonly recall: InjectionToken
     /** Provider of the `AiTaskMeter` port (the usage gate). */

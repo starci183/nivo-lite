@@ -6,6 +6,7 @@ import { HiringGraphqlModule } from "@features/api/hiring"
 import { AdminGraphqlModule } from "@features/api/admin"
 import { WorkspacesGraphqlModule } from "@features/api/workspaces"
 import { InboxGraphqlModule } from "@features/api/inbox"
+import { WorkspaceDashboardGraphqlModule } from "@features/api/workspace-dashboard"
 import { AgentWorkGraphqlModule } from "@features/api/agent-work"
 import { AgentRunsGraphqlModule } from "@features/api/agent-runs"
 import { TeamChatGraphqlModule } from "@features/api/team-chat"
@@ -18,11 +19,14 @@ import { KnowledgeGraphqlModule } from "@features/api/knowledge"
 import { PublicDocumentsGraphqlModule } from "@features/api/public-documents"
 import { DossierReviewGraphqlModule } from "@features/api/dossier-review"
 import { EvidenceGraphqlModule } from "@features/api/evidence"
+import { LeadFreezesGraphqlModule } from "@features/api/lead-freezes"
 import { AgentGraphsGraphqlModule } from "@features/api/agent-graphs"
+import { AgentWorkflowsGraphqlModule } from "@features/api/agent-workflows"
 import { TemplateMarketplaceGraphqlModule } from "@features/api/template-marketplace"
 import { McpGatewayGraphqlModule } from "@features/api/mcp-gateway"
 import { AuthHttpModule } from "@features/api/auth"
 import { GoogleConnectionsHttpModule } from "@features/api/google-connections"
+import { ProductImagesHttpModule } from "@features/api/product-images"
 import { MetaConnectionsHttpModule } from "@features/api/meta-connections"
 import { MetaHttpModule } from "@features/webhooks/meta"
 import { ConnectionsGraphqlModule } from "@features/api/connections"
@@ -44,6 +48,7 @@ export const apiModules = (): Array<DynamicModule> => [
     TelegramConnectionPageGraphqlModule.register({}),
     DataHubGraphqlModule.register({}),
     InboxGraphqlModule.register({}),
+    WorkspaceDashboardGraphqlModule.register({}),
     AgentWorkGraphqlModule.register({}),
     AgentRunsGraphqlModule.register({}),
     TeamChatGraphqlModule.register({}),
@@ -53,11 +58,14 @@ export const apiModules = (): Array<DynamicModule> => [
     PublicDocumentsGraphqlModule.register({}),
     DossierReviewGraphqlModule.register({}),
     EvidenceGraphqlModule.register({}),
+    LeadFreezesGraphqlModule.register({}),
     McpGatewayGraphqlModule.register({}),
     AgentGraphsGraphqlModule.register({}),
+    AgentWorkflowsGraphqlModule.register({}),
     TemplateMarketplaceGraphqlModule.register({}),
     AuthHttpModule.register({}),
     GoogleConnectionsHttpModule.register({}),
+    ProductImagesHttpModule.register({}),
     MetaConnectionsHttpModule.register({}),
     MetaHttpModule.register({}),
     FlowsGraphqlModule.register({}),

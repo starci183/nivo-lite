@@ -1,17 +1,14 @@
-import type { ReactElement } from "react"
 import { SepayConnectionPage } from "@/features/pages/SepayConnectionPage"
 
-/** The document title of the SePay connection page. */
+/** The document title of this page. */
 export { sepayConnectionMetadata as generateMetadata } from "@/features/pages/SepayConnectionPage"
 
 type PageProps = {
-    readonly params: Promise<{ workspaceId: string; id: string }>
+    readonly params: Promise<{ readonly id: string }>
+    readonly searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-/** One SePay connection: its setup steps in back end order, its health and its live webhook events, on one page. */
-const Page = async (props: PageProps): Promise<ReactElement> => {
-    const { workspaceId, id } = await props.params
-    return <SepayConnectionPage workspaceId={workspaceId} connectionId={id} />
-}
+/** Adapts the SePay connection route to its page owner; the query names the open tab. */
+const Page = (props: PageProps) => <SepayConnectionPage params={props.params} searchParams={props.searchParams} />
 
 export default Page

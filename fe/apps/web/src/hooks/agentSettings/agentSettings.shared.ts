@@ -1,7 +1,6 @@
 import { agentHref, isSetupPending } from "@/modules/installations"
 import type { Installation, InstallationLifecycle } from "@/modules/installations"
 import { workspaceHref } from "@/modules/routes"
-import type { ConnectionStatus } from "@/modules/types"
 
 /** The shortest name of an agent. */
 export const AGENT_NAME_MIN = 2
@@ -36,39 +35,12 @@ export const holdingMessageOf = (settings: unknown): string => {
     return typeof saved === "string" ? saved : ""
 }
 
-const CONNECTION_STATUSES: ReadonlyArray<ConnectionStatus> = ["pending", "connected", "error", "disconnected"]
-
-/** One connection the agent can work through. */
-export interface AgentConnectionView {
-    readonly id: string
-    readonly label: string
-    readonly status: ConnectionStatus
-    /** What the agent does through it; empty when it is only a data source. */
-    readonly purpose: string
-    /** The level of the agent: one of read, ask, auto, or empty for none. */
-    readonly access: string
+/** The working hours text an installation holds in its settings (JSON of the ranges per day); null when it holds none. */
+export const workingHoursOf = (settings: unknown): string | null => {
+    const saved = isRecord(settings) ? settings.workingHours : undefined
+    if (typeof saved === "string") return saved
+    return isRecord(saved) ? JSON.stringify(saved) : null
 }
-
-interface AgentConnectionWire {
-    readonly id: string
-    readonly name: string
-    readonly status: string
-    readonly purpose: string
-    readonly access: string
-}
-
-/** One back end connection of an agent; a status outside the closed set reads as an error. */
-export const toAgentConnection = (row: AgentConnectionWire): AgentConnectionView => ({
-    id: row.id,
-    label: row.name,
-    status: CONNECTION_STATUSES.find((status) => status === row.status) ?? "error",
-    purpose: row.purpose,
-    access: row.access,
-})
-
-/** Whether the agent talks through at least one live connection. */
-export const hasBoundConnection = (rows: ReadonlyArray<AgentConnectionView>): boolean =>
-    rows.some((row) => row.status !== "disconnected" && row.access !== "")
 
 /** Where the OpenClaw copy of an agent stands. */
 export type AgentSyncState = "none" | "syncing" | "ok" | "error"
@@ -128,8 +100,12 @@ export interface AgentInstallationView {
     /** The one display name of the agent. */
     readonly name: string
     readonly agentHandle: string
-    /** The picture the owner gave the agent; null draws the NIVO unicorn mascot. */
+    /** The picture the owner gave the agent; null draws the default sprout. */
     readonly agentAvatarUrl: string | null
+    /** The preset the owner chose ("initials" draws the initials); null when none was chosen. */
+    readonly agentAvatarPreset: string | null
+    /** The role of the agent, for its role mark. */
+    readonly moduleKey: string
     /** The type allows several instances. */
     readonly isMulti: boolean
     readonly mode: AgentMode
@@ -144,6 +120,8 @@ export interface AgentInstallationView {
     readonly hasVersion: boolean
     readonly timeoutSec: number
     readonly holdingMessage: string
+    /** The weekly working hours text (JSON of the ranges per day); null when none is saved. */
+    readonly workingHours: string | null
 }
 
 /** The settings facts of an installed agent. */
@@ -153,6 +131,8 @@ export const toAgentInstallationView = (installation: Installation, workspaceId:
     name: installation.name,
     agentHandle: installation.agentHandle,
     agentAvatarUrl: installation.agentAvatarUrl,
+    agentAvatarPreset: installation.agentAvatarPreset,
+    moduleKey: installation.moduleKey,
     isMulti: installation.isMulti,
     mode: installation.operatingMode,
     isLive: installation.lifecycle === "running",
@@ -162,4 +142,5 @@ export const toAgentInstallationView = (installation: Installation, workspaceId:
     hasVersion: !isSetupPending(installation.lifecycle),
     timeoutSec: replyTimeoutOf(installation.settings),
     holdingMessage: holdingMessageOf(installation.settings),
+    workingHours: workingHoursOf(installation.settings),
 })

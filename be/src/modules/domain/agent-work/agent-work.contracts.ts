@@ -119,6 +119,8 @@ export interface AgentWake {
     readonly actorMemberId: string | null
     /** The lock scope the adapter wants; absent derives it from the source and the context. */
     readonly scopeKey?: string
+    /** How long the drain of the wake waits, milliseconds (a wake held for the agent's next working hour); absent takes the burst window. */
+    readonly delayMs?: number
 }
 
 /** A wake as a handler sees it: what woke the agent and for whom, with or without a turn behind it. */

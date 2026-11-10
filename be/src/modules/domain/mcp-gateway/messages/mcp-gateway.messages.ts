@@ -15,6 +15,7 @@ export const MCP_GATEWAY_MESSAGES: MessageBundle = {
         "errors.MCP_GATEWAY_CATALOG_CHANGED":
             "Danh sách công cụ chưa được đọc hoặc vừa thay đổi; hãy đọc lại rồi duyệt.",
         "errors.MCP_GATEWAY_NATIVE_REFUSED": "Công cụ từ chối yêu cầu này: {reason}.",
+        "errors.MCP_GATEWAY_ATTACHMENT_REFUSED": "Không đổi được quyền của agent trên kết nối này: {reason}.",
     },
     en: {
         "errors.MCP_GATEWAY_INVALID_ARGUMENTS": "The tool arguments are not valid.",
@@ -29,5 +30,6 @@ export const MCP_GATEWAY_MESSAGES: MessageBundle = {
         "errors.MCP_GATEWAY_CATALOG_CHANGED":
             "The tool catalog was not read or just changed; read it again, then approve.",
         "errors.MCP_GATEWAY_NATIVE_REFUSED": "The tool refused this request: {reason}.",
+        "errors.MCP_GATEWAY_ATTACHMENT_REFUSED": "The agent's rights on this provider cannot be changed: {reason}.",
     },
 }

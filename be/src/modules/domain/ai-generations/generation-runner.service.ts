@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
-import { InjectOpenclawGateway, threadKeyFor } from "@modules/integrations/openclaw"
-import type { GatewayClient } from "@modules/integrations/openclaw"
+import { InjectAi } from "@modules/integrations/ai"
+import type { AiService } from "@modules/integrations/ai"
 import { InjectClock } from "@modules/platform/clock"
 import { InjectEventBus } from "@modules/platform/event-bus"
 import type { EventBus } from "@modules/platform/event-bus"
@@ -12,22 +12,13 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { isGenerateWithAgentPayload } from "@modules/queues/agents"
-import { AgentSyncService } from "@modules/domain/openclaw-agent-sync"
 import { AiGenerationCompletedEvent } from "@modules/events/api"
 import type { AiGenerationCompletedPayload } from "@modules/events/api"
 import type { GenerationRunStatus, QueuedGeneration, TurnAttempt } from "./ai-generations.contracts"
 import { InjectUsage } from "./ai-generations.decorators"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
 import type { UsageGate } from "./ai-generations.port"
-import {
-    composeTurn,
-    failureTextOf,
-    isTimeoutCause,
-    isWaiting,
-    queuedOf,
-    turnTimeoutOf,
-    untilAborted,
-} from "./generation.policy"
+import { isWaiting, promptOf, queuedOf, runUsageOf, turnTimeoutOf } from "./generation.policy"
 import { AiGenerationEntity } from "./persistence/entities"
 
 /** The generations that still wait for a text, so a cancel, a failure or a finish may change them. */
@@ -50,14 +41,14 @@ const meteringOf = (raw: unknown): Metering | undefined => {
     return typeof usage_kind === "string" && typeof module === "string" ? { usage_kind, module } : undefined
 }
 
-const NOT_CONFIGURED = "openclaw_not_configured"
-const EMPTY_ANSWER = "empty answer"
-const TIMEOUT = "timeout"
+/** Why a generation has no text, as the row keeps it. */
+const NOT_CONFIGURED = "ai_not_configured"
+const NO_ANSWER = "no_answer"
 
 @Injectable()
 /**
- * Runs one queued generation: the prompt the app wrote goes once into a one-shot session of the workspace's internal "nivo" agent
- * (no history, nothing carried between requests) and the text lands on the `ai_generations` row the caller is looking at. It never
+ * Runs one queued generation: the prompt the app wrote goes once to the AI endpoint (`AiService.chat`, a plain model answer: no
+ * tools, no history, nothing carried between requests) and the text lands on the `ai_generations` row the caller is looking at. It never
  * retries: the caller waits a bounded time and gives up on its own, so any failure is written on the row as the answer. A row the
  * caller already cancelled is left alone, and only text that was delivered is metered. The end of a generation is published as
  * `ai_generation_completed` in the transaction that writes it, so the capability that asked (content, video) applies the result
@@ -69,8 +60,7 @@ export class GenerationRunnerService {
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         @InjectUsage() private readonly usage: UsageGate,
-        @InjectOpenclawGateway() private readonly gateway: GatewayClient,
-        private readonly sync: AgentSyncService,
+        @InjectAi() private readonly ai: AiService,
         @InjectEventBus() private readonly bus: EventBus,
     ) {}
 
@@ -109,42 +99,34 @@ export class GenerationRunnerService {
             : this.finish(generation, attempt, attempt.text, startedAt)
     }
 
+    /**
+     * One call of the model within the caller's deadline. The endpoint never throws: it answers nothing when the call failed, the
+     * deadline passed or the text is empty, so a missing answer at or after the deadline is the timeout and any other is a failure.
+     */
     private async attempt(generation: QueuedGeneration, startedAt: number): Promise<TurnAttempt> {
-        if (!this.gateway.enabled)
+        if (!this.ai.available())
             return { text: null, usage: null, timings: {}, reason: NOT_CONFIGURED, timedOut: false }
-        // One deadline for the whole call: the agent set-up counts against it as much as the turn does.
-        const signal = AbortSignal.timeout(generation.input.timeoutMs)
-        try {
-            const agentId = await untilAborted(this.sync.ensureInternalAgent(generation.workspaceId), signal)
-            const readyMs = this.clock.now().getTime() - startedAt
-            const turn = await this.gateway.runTurn(
-                {
-                    agentId,
-                    threadKey: threadKeyFor(agentId, `explicit:model-run-${generation.id}`),
-                    message: composeTurn(generation.input),
-                    idempotencyKey: `gen-${generation.id}`,
-                    timeoutMs: turnTimeoutOf(Math.max(0, generation.input.timeoutMs - readyMs)),
-                },
-                signal,
-            )
-            const blank = turn.text.trim() === ""
-            return {
-                text: blank ? null : turn.text,
-                usage: turn.usage,
-                timings: { ...turn.timings, ready_ms: readyMs },
-                reason: blank ? EMPTY_ANSWER : "",
-                timedOut: false,
-            }
-        } catch (cause) {
-            this.logger.error(AiGenerationsLogEvent.GenerationFailed, cause, { purpose: generation.purpose })
-            const timedOut = signal.aborted || isTimeoutCause(cause)
-            return {
-                text: null,
-                usage: null,
-                timings: {},
-                reason: timedOut ? TIMEOUT : failureTextOf(cause),
-                timedOut,
-            }
+        const timeoutMs = turnTimeoutOf(generation.input.timeoutMs)
+        const answer = await this.ai.chat({
+            messages: promptOf(generation.input),
+            json: generation.input.responseFormat === "json",
+            schema: null,
+            timeoutMs,
+            context: null,
+            affinity: generation.workspaceId,
+        })
+        const modelMs = this.clock.now().getTime() - startedAt
+        if (answer === null) {
+            const timedOut = modelMs >= timeoutMs
+            this.logger.warn(AiGenerationsLogEvent.GenerationUnanswered, { purpose: generation.purpose, timedOut })
+            return { text: null, usage: null, timings: { model_ms: modelMs }, reason: NO_ANSWER, timedOut }
+        }
+        return {
+            text: answer.text,
+            usage: runUsageOf(answer.usage, answer.model),
+            timings: { model_ms: modelMs },
+            reason: "",
+            timedOut: false,
         }
     }
 

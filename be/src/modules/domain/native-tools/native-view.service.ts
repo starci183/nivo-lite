@@ -19,11 +19,14 @@ export class NativeViewService {
 
     /**
      * The view of a caller of an internal tool: the same as `of`, and a customer conversation or an agent whose view is the
-     * customer's is refused `internal_only`. The gateway hides and refuses these tools first; this keeps them closed if it ever does not.
+     * customer's is refused `internal_only`. A workflow step (`graphStep`) is judged by its agent alone: the conversation it carries is
+     * its run's, so the step of an internal agent passes whoever started the run, and the step of a customer-facing agent never does.
+     * The gateway hides and refuses these tools first; this keeps them closed if it ever does not.
      */
     async internalOf(workspaceId: string, caller: NativeCaller): Promise<NativeView> {
-        if (caller.conversationId !== null) throw nativeRefusal("internal_only")
-        const view = await this.of(workspaceId, caller)
+        const step = caller.graphStep === true
+        if (caller.conversationId !== null && !step) throw nativeRefusal("internal_only")
+        const view = await this.of(workspaceId, step ? { ...caller, conversationId: null } : caller)
         if (view.audience === "customer") throw nativeRefusal("internal_only")
         return view
     }

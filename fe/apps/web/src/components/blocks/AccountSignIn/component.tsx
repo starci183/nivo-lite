@@ -1,15 +1,4 @@
-import {
-    Alert,
-    Button,
-    Dialog,
-    DescriptionList,
-    EmptyNotice,
-    Form,
-    Input,
-    Stack,
-    SurfaceCard,
-    Text,
-} from "@starci/grammar/common"
+import { Alert, Button, Dialog, EmptyNotice, Form, Input, Stack, SurfaceCard } from "@starci/grammar/common"
 import type { ListRowData } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { nivoIconSource } from "@/components/leaves/Icon"
@@ -172,30 +161,16 @@ export const AccountSignInBase = (props: AccountSignInBaseProps) => (
                     label={props.props.title}
                     headingLevel={2}
                     isLoading={isSkeleton}
-                    headers={[
+                    note={props.props.emailHint}
+                    items={[
                         {
-                            kind: "custom",
-                            children: (
-                                <Stack gap="row">
-                                    <DescriptionList
-                                        layout="stacked"
-                                        isLoading={isSkeleton}
-                                        items={[
-                                            {
-                                                id: "email",
-                                                term: props.props.emailLabel,
-                                                description: <Text isStrong>{view.email}</Text>,
-                                            },
-                                        ]}
-                                    />
-                                    <Text size="sm" tone="muted">
-                                        {props.props.emailHint}
-                                    </Text>
-                                </Stack>
-                            ),
+                            id: "email",
+                            title: props.props.emailLabel,
+                            description: view.email,
+                            leading: { icon: nivoIconSource("email", "leading") },
                         },
+                        ...methodRows(props, view),
                     ]}
-                    items={methodRows(props, view)}
                     empty={<EmptyNotice message={props.props.labels.empty} />}
                 />
             )}

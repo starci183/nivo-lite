@@ -10,7 +10,6 @@ import {
     Stepper,
     Text,
 } from "@starci/grammar/common"
-import { Icon } from "@/components/leaves/Icon"
 import type { DocBodyView, DocHeadView, NivoBodyView } from "@/modules/types"
 import { PHONE_ONLY_CLASS_NAME } from "./classNames"
 
@@ -48,7 +47,6 @@ export const KnowledgeDocBody = (props: KnowledgeDocBodyProps) => {
                             <Button
                                 intent="neutral"
                                 width="fill"
-                                startContent={<Icon props={{ name: "retry", usage: "leading" }} />}
                                 isPending={props.reindex.isPending}
                                 isDisabled={props.reindex.isDisabled}
                                 onPress={props.onReindex}

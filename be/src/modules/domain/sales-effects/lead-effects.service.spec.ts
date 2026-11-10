@@ -63,6 +63,8 @@ const build = async () => {
     const tx = mock<ScopedTx>()
     engine.scoped.mockImplementation((_workspace, work) => work(tx))
     ports.entitiesApi.mockReturnValue(api)
+    api.get.mockResolvedValue(recordOf(CONVERSATION, { name: "Guest 7", channel: "zalo", leadId: LEAD }))
+    api.update.mockResolvedValue(written(CONVERSATION, false))
     const moduleRef = await Test.createTestingModule({
         providers: [
             LeadEffectsService,
@@ -75,7 +77,9 @@ const build = async () => {
     const executor = registry.addExecutor.mock.calls[0]?.[0]
     const resolver = registry.addSubjectResolver.mock.calls[0]?.[0]
     assert(executor !== undefined && resolver !== undefined, "The service must register an executor and a resolver")
-    return { engine, registry, api, executor, resolver }
+    const updater = registry.addExecutor.mock.calls[1]?.[0]
+    assert(updater !== undefined, "The service must register the executor of lead.update")
+    return { engine, registry, api, executor, resolver, updater }
 }
 
 const ensure = (executor: NodeEffectExecutor, payload: Readonly<Record<string, unknown>>): Promise<SubjectRef> =>
@@ -114,6 +118,7 @@ describe("LeadEffectsService lead.ensure makes the customer", () => {
         expect(api.list).toHaveBeenCalledWith(expect.objectContaining({ from: "chat.conversation" }))
         expect(api.ensure).not.toHaveBeenCalled()
         expect(api.insert).not.toHaveBeenCalled()
+        expect(api.update).not.toHaveBeenCalled()
     })
 
     it("makes the customer through the phone match key, normalised, and links the conversation to it", async () => {
@@ -155,6 +160,32 @@ describe("LeadEffectsService lead.ensure makes the customer", () => {
         await ensure(executor, { conversationId: CONVERSATION, phone: "n/a", channel: "zalo" })
 
         expect(api.insert).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("LeadEffectsService lead.ensure writes the leadId field the nodes read", () => {
+    // The live Zalo order of 2026-11-09: the conversation was tied to its customer by the link only, its leadId field empty, so the nodes
+    // that find a customer's conversation by that field (the after-sale thanks) found none and the customer heard nothing after paying.
+    it("writes the leadId field of a conversation the link alone tied to its customer", async () => {
+        const { executor, api } = await build()
+        api.list.mockResolvedValue(conversationPage(LEAD))
+        api.get.mockResolvedValue(recordOf(CONVERSATION, { name: "Guest 7", channel: "zalo" }))
+
+        await ensure(executor, { conversationId: CONVERSATION, channel: "zalo" })
+
+        expect(api.update).toHaveBeenCalledWith("chat.conversation", CONVERSATION, "1", { leadId: LEAD })
+    })
+
+    it("writes the leadId field beside the link when it makes the customer", async () => {
+        const { executor, api } = await build()
+        api.list.mockResolvedValue(conversationPage(null))
+        api.insert.mockResolvedValue(written(LEAD))
+        api.link.mockResolvedValue(written(CONVERSATION, false))
+        api.get.mockResolvedValue(recordOf(CONVERSATION, { name: "Guest 7", channel: "zalo" }))
+
+        await ensure(executor, { conversationId: CONVERSATION, channel: "zalo" })
+
+        expect(api.update).toHaveBeenCalledWith("chat.conversation", CONVERSATION, "1", { leadId: LEAD })
     })
 })
 
@@ -217,5 +248,79 @@ describe("LeadEffectsService the subject of a turn", () => {
         await expect(resolver.subjectOf(TURN)).resolves.toBeNull()
         api.list.mockResolvedValue({ rows: [], next: null })
         await expect(resolver.subjectOf(TURN)).resolves.toBeNull()
+    })
+})
+
+describe("LeadEffectsService lead.update writes the consult", () => {
+    it("writes the consult stage and facts under the version it read and answers the customer", async () => {
+        const { updater, api } = await build()
+        api.get.mockResolvedValue(recordOf(LEAD, { contactName: "Lan" }))
+        api.update.mockResolvedValue(written(LEAD, false))
+        const facts = { recipient: "mother", budgetVnd: 500_000 }
+
+        expect(updater.effect).toBe("lead.update")
+        await expect(
+            updater.execute(TURN, { leadId: LEAD, consultStage: "recommend", consultFacts: facts }, CALL),
+        ).resolves.toEqual({
+            kind: "sales-lead",
+            id: LEAD,
+        })
+        expect(api.update).toHaveBeenCalledWith("sales.lead", LEAD, "1", {
+            consultStage: "recommend",
+            consultFacts: facts,
+        })
+    })
+
+    it("refuses a customer the workspace does not hold, a lost write, and a stage the consult does not know", async () => {
+        const { updater, api } = await build()
+        api.get.mockResolvedValueOnce(null)
+        await expect(updater.execute(TURN, { leadId: LEAD, consultStage: "close" }, CALL)).rejects.toMatchObject({
+            code: "SALES_EFFECTS_LEAD_NOT_FOUND",
+        })
+        api.get.mockResolvedValue(recordOf(LEAD))
+        api.update.mockResolvedValue({ ok: false, reason: "stale" })
+        await expect(updater.execute(TURN, { leadId: LEAD, consultStage: "close" }, CALL)).rejects.toMatchObject({
+            code: "SALES_EFFECTS_WRITE_REFUSED",
+        })
+        await expect(updater.execute(TURN, { leadId: LEAD, consultStage: "dreaming" }, CALL)).rejects.toMatchObject({
+            code: "SALES_EFFECTS_INVALID_PAYLOAD",
+        })
+    })
+})
+
+describe("LeadEffectsService lead.stage.update moves a deal and decides nothing", () => {
+    const stageExecutor = async () => {
+        const built = await build()
+        const mover = built.registry.addExecutor.mock.calls.map(([one]) => one).find((one) => one.effect === "lead.stage.update")
+        assert(mover !== undefined, "The service must register lead.stage.update")
+        return { ...built, mover }
+    }
+    const lead = (stage: string) => recordOf(LEAD, { contactName: "Lan", channel: "zalo", stage, closedReason: "giá cao" })
+
+    it("writes the stage named, drops the closed reason of a deal that leaves lost, and answers the stage before and after", async () => {
+        const { mover, api } = await stageExecutor()
+        api.get.mockResolvedValue(lead("lost"))
+        api.update.mockResolvedValue(written(LEAD, false))
+
+        await expect(mover.execute(TURN, { leadId: LEAD, stage: "won" }, CALL)).resolves.toEqual({
+            kind: "sales-lead",
+            id: LEAD,
+            facts: { stage: "won", previousStage: "lost" },
+        })
+        expect(api.update).toHaveBeenCalledWith("sales.lead", LEAD, "1", { stage: "won", closedReason: null })
+    })
+
+    it("writes nothing for a deal already at the stage, and refuses a customer the workspace has not as a fact", async () => {
+        const { mover, api } = await stageExecutor()
+        api.get.mockResolvedValueOnce(lead("won")).mockResolvedValueOnce(null)
+        await expect(mover.execute(TURN, { leadId: LEAD, stage: "won" }, CALL)).resolves.toMatchObject({
+            facts: { stage: "won", previousStage: "won" },
+        })
+        await expect(mover.execute(TURN, { leadId: LEAD, stage: "won" }, CALL)).resolves.toEqual({
+            kind: "refused",
+            id: "lead_missing",
+            facts: { leadId: LEAD },
+        })
+        expect(api.update).not.toHaveBeenCalled()
     })
 })

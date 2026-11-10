@@ -1,4 +1,4 @@
-import { Button, ChoiceChips, Grid, NumberField, Section, Text } from "@starci/grammar/common"
+import { Button, ChoiceChips, Grid, NumberField, Section, Stack } from "@starci/grammar/common"
 import { AuthoritySection } from "@/components/frames/AuthoritySection"
 import type { AuthoritySectionView } from "@/components/frames/AuthoritySection"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -73,48 +73,45 @@ export const AuthorityScopeBase = (props: AuthorityScopeBaseProps) => {
                             {view.section.saveLabel}
                         </Button>
                     }
-                >
-                    {groups.map((group) => (
-                        <Section
-                            key={group.department}
-                            title={group.title}
-                            headingLevel={3}
-                            {...(group.shared === "" ? {} : { description: group.shared })}
-                            isLoading={isSkeleton}
-                        >
-                            {group.rows.map((row) => (
-                                <Section key={row.key} title={row.name} headingLevel={4}>
-                                    <Grid kind="form" columns={2}>
-                                        <ChoiceChips
-                                            label={row.modeLabel}
-                                            isLoading={isSkeleton}
-                                            isLabelHidden
-                                            empty={row.modeLabel}
-                                            options={row.modes}
-                                            value={row.mode}
-                                            onValueChange={(value) => props.on.mode(row.key, value)}
-                                        />
-                                        {row.hasLimit ? (
-                                            <NumberField
-                                                label={view.limitLabel}
-                                                minValue={0}
-                                                step={1_000_000}
-                                                formatOptions={WHOLE}
+                    cards={groups.map((group, index) => ({
+                        id: group.department,
+                        label: group.title,
+                        note: [group.shared, index === groups.length - 1 ? view.limitHint : ""]
+                            .filter((part) => part !== "")
+                            .join(" "),
+                        children: (
+                            <Stack gap="section">
+                                {group.rows.map((row) => (
+                                    <Section key={row.key} title={row.name} headingLevel={4}>
+                                        <Grid kind="form" columns={2}>
+                                            <ChoiceChips
+                                                label={row.modeLabel}
                                                 isLoading={isSkeleton}
-                                                isDisabled={row.isLimitOff}
-                                                value={row.limit}
-                                                onValueChange={(value) => props.on.limit(row.key, value)}
+                                                isLabelHidden
+                                                empty={row.modeLabel}
+                                                options={row.modes}
+                                                value={row.mode}
+                                                onValueChange={(value) => props.on.mode(row.key, value)}
                                             />
-                                        ) : null}
-                                    </Grid>
-                                </Section>
-                            ))}
-                        </Section>
-                    ))}
-                    <Text size="xs" tone="muted">
-                        {view.limitHint}
-                    </Text>
-                </AuthoritySection>
+                                            {row.hasLimit ? (
+                                                <NumberField
+                                                    label={view.limitLabel}
+                                                    minValue={0}
+                                                    step={1_000_000}
+                                                    formatOptions={WHOLE}
+                                                    isLoading={isSkeleton}
+                                                    isDisabled={row.isLimitOff}
+                                                    value={row.limit}
+                                                    onValueChange={(value) => props.on.limit(row.key, value)}
+                                                />
+                                            ) : null}
+                                        </Grid>
+                                    </Section>
+                                ))}
+                            </Stack>
+                        ),
+                    }))}
+                />
             )}
         />
     )

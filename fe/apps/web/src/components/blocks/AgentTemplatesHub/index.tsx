@@ -5,14 +5,22 @@ import { useState } from "react"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { useTemplatesHub } from "@/hooks/templates"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
-import { AgentTemplatesHubBase } from "./component"
-import type { AgentTemplatesHubData, HubDialog } from "./component"
+import {
+    AgentTemplatesHubBase,
+    type AgentTemplatesHubBaseProps,
+    type AgentTemplatesHubData,
+    type HubDialog,
+} from "./component"
 
 /** The shape of the hub while its first read loads: the skeleton reuses the ready tree. */
 const PLACEHOLDER: AgentTemplatesHubData = {
     templates: [{ key: "-", name: "-", versions: [{ version: 1, line: "-" }] }],
     offers: [],
 }
+
+/** A hub with no template still draws its two cards (each with its own empty answer), never one bare notice in their place. */
+const withEmptyCards = (slot: AgentTemplatesHubBaseProps["props"]["slot"]): AgentTemplatesHubBaseProps["props"]["slot"] =>
+    "isEmpty" in slot ? { items: { templates: [], offers: [] } } : slot
 
 /** The connected hub of the templates of the caller: install, offer on the marketplace, and take the updates offered, branch by branch. */
 export const AgentTemplatesHub = () => {
@@ -26,7 +34,7 @@ export const AgentTemplatesHub = () => {
     return (
         <AgentTemplatesHubBase
             props={{
-                slot: mapSlot(hub.slot, (templates): AgentTemplatesHubData => ({
+                slot: withEmptyCards(mapSlot(hub.slot, (templates): AgentTemplatesHubData => ({
                     templates: templates.map((template) => ({
                         key: template.key,
                         name: locale === "vi" ? template.name.vi : template.name.en,
@@ -57,7 +65,7 @@ export const AgentTemplatesHub = () => {
                                   })),
                               }))
                             : [],
-                })),
+                }))),
                 placeholder: PLACEHOLDER,
                 slotLabels: slotLabels(t("empty")),
                 mineTitle: t("mineTitle"),

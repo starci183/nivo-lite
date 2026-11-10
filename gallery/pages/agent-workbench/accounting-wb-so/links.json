@@ -1,0 +1,173 @@
+[
+ {
+  "label": "Tổng quan",
+  "box": {
+   "x": 268,
+   "y": 96,
+   "w": 69,
+   "h": 20
+  },
+  "to": "overview/overview",
+  "kind": "page"
+ },
+ {
+  "label": "Agent",
+  "box": {
+   "x": 357,
+   "y": 96,
+   "w": 39,
+   "h": 20
+  },
+  "to": "agents-catalog/agents-running",
+  "kind": "page"
+ },
+ {
+  "label": "Bàn làm việc",
+  "box": {
+   "x": 268,
+   "y": 188,
+   "w": 92,
+   "h": 40
+  },
+  "to": "agent-workbench/accounting-wb-hom-nay",
+  "kind": "page"
+ },
+ {
+  "label": "Công việc",
+  "box": {
+   "x": 360,
+   "y": 188,
+   "w": 86,
+   "h": 40
+  },
+  "to": "agent-work/accounting-work",
+  "kind": "page"
+ },
+ {
+  "label": "Graph",
+  "box": {
+   "x": 446,
+   "y": 188,
+   "w": 63,
+   "h": 40
+  },
+  "to": "agent-graph/accounting-graph",
+  "kind": "page"
+ },
+ {
+  "label": "Quy trình",
+  "box": {
+   "x": 509,
+   "y": 188,
+   "w": 84,
+   "h": 40
+  },
+  "to": "agent-workflows/accounting-list",
+  "kind": "page"
+ },
+ {
+  "label": "Trò chuyện",
+  "box": {
+   "x": 593,
+   "y": 188,
+   "w": 93,
+   "h": 40
+  },
+  "to": null,
+  "kind": "page",
+  "note": "trỏ tới trang chưa có trong gallery",
+  "route": "/agents/accounting/<inst>/chat"
+ },
+ {
+  "label": "Kết nối 1",
+  "box": {
+   "x": 686,
+   "y": 188,
+   "w": 104,
+   "h": 40
+  },
+  "to": "agent-connections/accounting-connections-cap-quyen",
+  "kind": "page"
+ },
+ {
+  "label": "Tri thức 73",
+  "box": {
+   "x": 790,
+   "y": 188,
+   "w": 113,
+   "h": 40
+  },
+  "to": "agent-knowledge/accounting-knowledge",
+  "kind": "page"
+ },
+ {
+  "label": "Thiết lập",
+  "box": {
+   "x": 903,
+   "y": 188,
+   "w": 79,
+   "h": 40
+  },
+  "to": "agent-setup/accounting-huong-dan",
+  "kind": "page"
+ },
+ {
+  "label": "Hôm nay",
+  "box": {
+   "x": 268,
+   "y": 229,
+   "w": 70,
+   "h": 40
+  },
+  "to": "agent-workbench/accounting-wb-hom-nay",
+  "kind": "page"
+ },
+ {
+  "label": "Tổng quan kỳ",
+  "box": {
+   "x": 338,
+   "y": 229,
+   "w": 111,
+   "h": 40
+  },
+  "to": "agent-workbench/accounting-wb-tong-quan-ky",
+  "kind": "page"
+ },
+ {
+  "label": "Chứng từ",
+  "box": {
+   "x": 448,
+   "y": 229,
+   "w": 84,
+   "h": 40
+  },
+  "to": "agent-workbench/accounting-wb-chung-tu",
+  "kind": "page"
+ },
+ {
+  "label": "Quy tắc",
+  "box": {
+   "x": 572,
+   "y": 229,
+   "w": 73,
+   "h": 40
+  },
+  "to": null,
+  "kind": "page",
+  "note": "trỏ tới trang chưa có trong gallery",
+  "route": "/agents/accounting/<inst>/workbench?tab=settings"
+ },
+ {
+  "label": "Tháng trước",
+  "box": {
+   "x": 914,
+   "y": 334,
+   "w": 110,
+   "h": 32
+  },
+  "to": null,
+  "kind": "overlay",
+  "note": "mở lớp phủ nhưng chưa có thư mục trạng thái",
+  "route": "/agents/accounting/<inst>/workbench?tab=ledger"
+ }
+]

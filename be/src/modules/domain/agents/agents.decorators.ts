@@ -3,6 +3,7 @@ import type { TypedParameterDecorator } from "@modules/platform/composition"
 import type {
     AgentConnectionsDirectory,
     AgentRooms,
+    ConversationChannelOwners,
     InstallationDirectory,
     KnowledgeLens,
     ModuleProfiles,
@@ -56,3 +57,10 @@ export const AGENTS_ROOMS: unique symbol = Symbol("domain.agents.rooms")
 
 /** Injects the team-chat room directory port. Parameter type: AgentRooms. */
 export const InjectAgentRooms = (): TypedParameterDecorator<AgentRooms> => injector<AgentRooms>(AGENTS_ROOMS)
+
+/** Token of the conversation channel owners port (the agent-instances capability). */
+export const AGENTS_CHANNEL_OWNERS: unique symbol = Symbol("domain.agents.channel-owners")
+
+/** Injects the conversation channel owners port. Parameter type: ConversationChannelOwners. */
+export const InjectChannelOwners = (): TypedParameterDecorator<ConversationChannelOwners> =>
+    injector<ConversationChannelOwners>(AGENTS_CHANNEL_OWNERS)

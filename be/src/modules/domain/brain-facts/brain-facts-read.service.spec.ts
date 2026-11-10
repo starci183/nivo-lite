@@ -168,3 +168,23 @@ describe("BrainFactsReadService", () => {
     registerViews()
     registerSources()
 })
+
+describe("BrainFactsReadService ofInstance", () => {
+    it("reads the facts kept for one agent instance alone in the statuses asked, never the shared ones", async () => {
+        const em = mockEntityManager({ find: [BrainFactEntity, [facts.rowOf()]] })
+        const service = await build(em)
+
+        await expect(service.ofInstance(facts.WS, "i1", ["active", "scheduled"])).resolves.toEqual([facts.factOf()])
+
+        expect(namedCalls(em.find.mock.calls)).toEqual([
+            [
+                "BrainFactEntity",
+                {
+                    where: { workspaceId: facts.WS, installationId: "i1", status: In(["active", "scheduled"]) },
+                    order: { createdAt: "ASC", id: "ASC" },
+                    take: 2000,
+                },
+            ],
+        ])
+    })
+})

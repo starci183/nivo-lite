@@ -215,6 +215,30 @@ export class AuthorityRulesService {
             .execute()
     }
 
+    /**
+     * Gives a new agent the permission levels of a sibling of the same department ("copy the setup of"): every rule of the department
+     * that lists the sibling lists the new agent too. A rule that lists no agent already applies to the whole department. Answers how
+     * many rules now list the new agent.
+     */
+    async extendToAgent(
+        workspaceId: string,
+        department: string,
+        fromAgentId: string,
+        toAgentId: string,
+    ): Promise<number> {
+        const result = await this.entityManager
+            .createQueryBuilder(AuthorityRuleEntity, "ar")
+            .update()
+            .set({ agents: () => "array_append(agents, :toAgentId::uuid)" })
+            .where("workspace_id = :workspaceId AND department = :department", { workspaceId, department })
+            .andWhere(":fromAgentId::uuid = ANY(agents) AND NOT (:toAgentId::uuid = ANY(agents))", {
+                fromAgentId,
+                toAgentId,
+            })
+            .execute()
+        return result.affected ?? 0
+    }
+
     /** Grants the default rules of a module to the workspace; a rule the owner already set is never overwritten. */
     async seedDefaults(workspaceId: string, department: string, rules: ReadonlyArray<DefaultRule>): Promise<void> {
         if (rules.length === 0) return

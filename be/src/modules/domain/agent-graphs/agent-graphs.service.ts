@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto"
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import { EntityEngineService } from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import { eachInOrder } from "@modules/platform/primitives"
 import { AgentGraphRecordsService } from "./agent-graph-records.service"
+import { AgentWorkflowRecordsService } from "./agent-workflow-records.service"
+import type { WorkflowVersionDocument } from "./agent-workflows.contracts"
 import { chunksOf, jsonOf } from "./agent-graphs.mapper"
 import type { GraphRecord, VersionRecord } from "./agent-graphs-records.contracts"
 import { graphDocumentSchema } from "./agent-graphs.schema"
@@ -21,6 +23,9 @@ import type { DecisionView } from "./agent-graph-decisions.service"
 import { branchApproverOf } from "./policies/branch-approver.policy"
 import { withoutStrayStops } from "./policies/stray-stops.policy"
 import { sourcesIndexOf } from "./policies/sources-index.policy"
+import { EMPTY_GRANT, ownRunGrantOf, workflowRunGrantOf } from "./policies/workflow-grant.policy"
+import { agentToolsOf } from "./policies/flow.policy"
+import type { RunGrant } from "./policies/workflow-grant.policy"
 
 /** The most versions one listing answers. */
 const VERSION_LIMIT = 100
@@ -134,6 +139,7 @@ export class AgentGraphsService {
         private readonly engine: EntityEngineService,
         private readonly records: AgentGraphRecordsService,
         @InjectClock() private readonly clock: Clock,
+        @Optional() private readonly workflows?: AgentWorkflowRecordsService,
     ) {}
 
     /** The graph of the installation, or null when it has none or it cannot be read. */
@@ -160,10 +166,13 @@ export class AgentGraphsService {
 
     /** The graph of the agent, or null when it has none or it cannot be read. */
     stateOfAgent(workspaceId: string, agentId: string): Promise<OptionalGraphState> {
-        return this.engine.scoped(workspaceId, async (tx) => {
-            const graph = await this.records.graphOf(tx, agentId)
-            return graph === null ? null : this.stateOf(tx, graph)
-        })
+        return this.engine.scoped(workspaceId, (tx) => this.stateOfAgentIn(tx, agentId))
+    }
+
+    /** The graph of the agent read in the caller's transaction, or null when it has none or it cannot be read. */
+    async stateOfAgentIn(tx: ScopedTx, agentId: string): Promise<OptionalGraphState> {
+        const graph = await this.records.graphOf(tx, agentId)
+        return graph === null ? null : this.stateOf(tx, graph)
     }
 
     /**
@@ -216,20 +225,28 @@ export class AgentGraphsService {
 
     /** Freezes a graph as the next version, makes it the one that decides and keeps it as the draft. Checks are the caller's. */
     publish(input: PublishInput): Promise<GraphVersionView> {
+        if (!graphDocumentSchema.safeParse(input.document).success)
+            return Promise.reject(new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid }))
+        return this.engine.scoped(input.workspaceId, (tx) => this.publishIn(tx, input))
+    }
+
+    /**
+     * `publish` in the caller's transaction, so a write that must move with the agent graph (a version of the primary workflow) commits
+     * or rolls back together with it: the two can never diverge. Checks are the caller's.
+     */
+    async publishIn(tx: ScopedTx, input: PublishInput): Promise<GraphVersionView> {
         const parsed = graphDocumentSchema.safeParse(input.document)
-        if (!parsed.success) return Promise.reject(new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid }))
-        return this.engine.scoped(input.workspaceId, async (tx) => {
-            const graph = await this.records.graphOf(tx, input.agentId)
-            if (graph === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
-            const version = await this.insertVersion(tx, { ...input, document: parsed.data })
-            const moved = await this.records.patchGraph(tx, graph, {
-                activeVersionId: version.id,
-                draft: jsonOf(parsed.data),
-                draftRev: graph.draftRev + 1,
-            })
-            if (moved === null) throw conflict()
-            return viewOf(version)
+        if (!parsed.success) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid })
+        const graph = await this.records.graphOf(tx, input.agentId)
+        if (graph === null) throw new AgentGraphsError({ code: AgentGraphsErrorCode.GraphNotFound })
+        const version = await this.insertVersion(tx, { ...input, document: parsed.data })
+        const moved = await this.records.patchGraph(tx, graph, {
+            activeVersionId: version.id,
+            draft: jsonOf(parsed.data),
+            draftRev: graph.draftRev + 1,
         })
+        if (moved === null) throw conflict()
+        return viewOf(version)
     }
 
     /** The number of the newest version of the agent; 0 before the first. */
@@ -292,12 +309,46 @@ export class AgentGraphsService {
     /** One version with its number and its graph, for the trace of a run; refused when it is not the agent's or cannot be read. */
     versionAt(workspaceId: string, agentId: string, versionId: string): Promise<VersionAt> {
         return this.engine.scoped(workspaceId, async (tx) => {
-            const row = await this.records.version(tx, versionId)
+            const row = (await this.records.version(tx, versionId)) ?? (await this.workflowVersionAt(tx, versionId))
             if (row?.agentId !== agentId) throw new AgentGraphsError({ code: AgentGraphsErrorCode.VersionNotFound })
             const parsed = graphDocumentSchema.safeParse(row.document)
             if (!parsed.success) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid })
             return { version: row.number, document: parsed.data }
         })
+    }
+
+    /**
+     * What a step of a run read by this version may reach. A version of the agent's own graph (the primary workflow) runs under its
+     * grant as it stands. A version of any other workflow runs under what its own graph declares, its tools and effects bounded by the
+     * tool set the agent's module declares (`workflowRunGrantOf`): a workflow never reaches past the agent, and never depends on what
+     * the primary workflow happens to use. Refused when the version is not the agent's or cannot be read.
+     */
+    runGrantOf(workspaceId: string, agentId: string, versionId: string): Promise<RunGrant> {
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const own = await this.records.version(tx, versionId)
+            const row = own ?? (await this.workflowVersionAt(tx, versionId))
+            if (row?.agentId !== agentId) throw new AgentGraphsError({ code: AgentGraphsErrorCode.VersionNotFound })
+            const parsed = graphDocumentSchema.safeParse(row.document)
+            if (!parsed.success) throw new AgentGraphsError({ code: AgentGraphsErrorCode.DocumentInvalid })
+            const declared = parsed.data.flow?.grant ?? EMPTY_GRANT
+            if (own !== null) return ownRunGrantOf(declared)
+            return workflowRunGrantOf(declared, agentToolsOf(parsed.data.flow?.moduleKey ?? ""))
+        })
+    }
+
+    /**
+     * A workflow version read as an agent graph version: a run of a workflow other than the primary one is pinned to the workflow
+     * version itself, and its steps read their graph by that id. The snapshot is the flow; the document holds no rule-derived nodes.
+     */
+    private async workflowVersionAt(tx: ScopedTx, versionId: string): Promise<WorkflowVersionDocument | null> {
+        const version = this.workflows === undefined ? null : await this.workflows.version(tx, versionId)
+        return version === null
+            ? null
+            : {
+                  agentId: version.agentId,
+                  number: version.number,
+                  document: { nodes: [], rights: [], flow: version.document },
+              }
     }
 
     /** Sets whether the graph decides (`enforced`) or only records (`shadow`), and keeps who set it; a publish never touches this. */

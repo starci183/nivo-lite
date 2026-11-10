@@ -5,9 +5,11 @@ export {
 } from "./errors/knowledge-sources.error"
 export { MAX_SOURCE_CHARS, MAX_UPLOAD_BYTES, StoredNote } from "./knowledge-sources.contracts"
 export type {
+    AddSourceInput,
     DossierDocumentCount,
     KnowledgeUsage,
     MaybeSource,
+    ReadableSummary,
     SourceBrief,
     SourceCategory,
     SourceDetail,
@@ -35,6 +37,12 @@ export { KNOWLEDGE_SOURCES_MESSAGES } from "./messages/knowledge-sources.message
 export { knowledgeSourcesEntities } from "./persistence/entities"
 export { KnowledgeSourcesAdminReadService } from "./knowledge-sources-admin-read.service"
 export { KnowledgeSourcesReadService } from "./knowledge-sources-read.service"
-export type { ChangedPublicSource, OriginSource, SourceDocument, SourceState } from "./knowledge-sources-read.contracts"
+export type {
+    ChangedPublicSource,
+    InstanceDocument,
+    OriginSource,
+    SourceDocument,
+    SourceState,
+} from "./knowledge-sources-read.contracts"
 export { PublishedSourcesService } from "./published-sources.service"
 export { KnowledgeSourcesReadableService } from "./knowledge-sources-readable.service"

@@ -88,10 +88,13 @@
           },
           {
             "id": "pane",
-            "block": "core.list-card",
+            "block": "core.table",
             "props": {
               "label": {
                 "key": "list_label"
+              },
+              "title": {
+                "key": "customers_section"
               },
               "empty": {
                 "key": "list_empty"
@@ -100,10 +103,7 @@
                 "key": "list_empty_search"
               },
               "idPath": "id",
-              "titlePath": "name",
-              "descriptionPath": "lastText",
-              "selectParam": "selected",
-              "badgePath": "status",
+              "searchParam": "q",
               "labels": {
                 "status": {
                   "needs": {
@@ -134,47 +134,39 @@
                   }
                 }
               },
-              "avatar": true,
-              "chipPaths": ["channel"],
-              "badgeTones": {
-                "needs": "warning",
-                "handled": "info",
-                "ai": "neutral"
-              },
-              "search": true,
-              "searchParam": "q",
-              "searchLabel": {
-                "key": "search_label"
-              },
-              "title": {
-                "key": "customers_section"
-              },
-              "filterParam": "status",
-              "filterLabel": {
-                "key": "status_filter_label"
-              },
-              "filterAll": {
-                "key": "filter_all"
-              },
-              "filters": [
+              "columns": [
                 {
-                  "value": "needs",
-                  "label": {
-                    "key": "status_needs"
+                  "term": {
+                    "key": "col_customer"
                   },
-                  "attention": true
+                  "path": "name",
+                  "subPath": "lastText",
+                  "width": "fill",
+                  "minWidth": 200,
+                  "truncate": true
                 },
                 {
-                  "value": "handled",
-                  "label": {
-                    "key": "status_handled"
-                  }
+                  "term": {
+                    "key": "col_status"
+                  },
+                  "path": "status",
+                  "width": "fit",
+                  "tones": {
+                    "needs": "warning",
+                    "handled": "info",
+                    "ai": "neutral"
+                  },
+                  "format": "badge",
+                  "priority": "low"
                 },
                 {
-                  "value": "today",
-                  "label": {
-                    "key": "inbox_tab_today"
-                  }
+                  "term": {
+                    "key": "col_channel"
+                  },
+                  "path": "channel",
+                  "width": "fit",
+                  "hideBelow": "tablet",
+                  "priority": "low"
                 }
               ]
             },
@@ -184,12 +176,6 @@
                 "variables": {
                   "q": "$q",
                   "status": "$status"
-                }
-              },
-              "counts": {
-                "read": "chatbot.thread-counts",
-                "variables": {
-                  "q": "$q"
                 }
               }
             }
@@ -204,80 +190,101 @@
       },
       "root": {
         "id": "unanswered-page",
-        "block": "core.section",
+        "block": "core.table",
         "props": {
+          "label": {
+            "key": "list_label"
+          },
           "title": {
             "key": "unanswered_section"
-          }
-        },
-        "children": [
-          {
-            "id": "waiting-threads",
-            "block": "core.record-list",
-            "props": {
-              "label": {
-                "key": "list_label"
+          },
+          "empty": {
+            "key": "list_empty"
+          },
+          "emptySearch": {
+            "key": "list_empty_search"
+          },
+          "idPath": "id",
+          "labels": {
+            "status": {
+              "needs": {
+                "key": "row_needs"
               },
-              "empty": {
-                "key": "list_empty"
+              "handled": {
+                "key": "row_handled"
               },
-              "emptySearch": {
-                "key": "list_empty_search"
+              "ai": {
+                "key": "row_ai"
+              }
+            },
+            "channel": {
+              "zalo": {
+                "key": "channel_zalo"
               },
-              "idPath": "id",
-              "titlePath": "name",
-              "descriptionPath": "lastText",
-              "badgePath": "status",
-              "labels": {
-                "status": {
-                  "needs": {
-                    "key": "row_needs"
-                  },
-                  "handled": {
-                    "key": "row_handled"
-                  },
-                  "ai": {
-                    "key": "row_ai"
-                  }
-                },
-                "channel": {
-                  "zalo": {
-                    "key": "channel_zalo"
-                  },
-                  "telegram": {
-                    "key": "channel_telegram"
-                  },
-                  "facebook": {
-                    "key": "channel_facebook"
-                  },
-                  "instagram": {
-                    "key": "channel_instagram"
-                  },
-                  "website": {
-                    "key": "channel_website"
-                  }
-                }
+              "telegram": {
+                "key": "channel_telegram"
               },
-              "avatar": true,
-              "chipPaths": ["channel"],
-              "badgeTones": {
+              "facebook": {
+                "key": "channel_facebook"
+              },
+              "instagram": {
+                "key": "channel_instagram"
+              },
+              "website": {
+                "key": "channel_website"
+              }
+            }
+          },
+          "columns": [
+            {
+              "term": {
+                "key": "col_customer"
+              },
+              "path": "name",
+              "subPath": "lastText",
+              "width": "fill",
+              "minWidth": 200,
+              "truncate": true
+            },
+            {
+              "term": {
+                "key": "col_status"
+              },
+              "path": "status",
+              "tones": {
                 "needs": "warning",
                 "handled": "info",
                 "ai": "neutral"
               },
-              "surface": "card"
+              "width": "fit",
+              "format": "badge",
+              "priority": "low"
             },
-            "bind": {
-              "rows": {
-                "read": "chatbot.threads",
-                "variables": {
-                  "q": "$q",
-                  "status": "needs"
-                }
-              }
+            {
+              "term": {
+                "key": "col_channel"
+              },
+              "path": "channel",
+              "width": "fit",
+              "hideBelow": "tablet",
+              "priority": "low"
+            }
+          ]
+        },
+        "bind": {
+          "rows": {
+            "read": "chatbot.threads",
+            "variables": {
+              "q": "$q",
+              "status": "needs"
             }
           }
-        ]
+        }
+      },
+      "count": {
+        "read": "chatbot.thread-counts",
+        "path": "counts.needs",
+        "isAttention": true
       }
     },
     {

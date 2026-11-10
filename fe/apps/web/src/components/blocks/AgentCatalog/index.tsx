@@ -1,157 +1,139 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useCatalogEntries, useInstallAgent, isSetupPending, setupLabelKey } from "@/hooks/installations"
-import type { CatalogRole } from "@/hooks/installations"
-import { isManager, useMember } from "@/hooks/member"
-import { ALL_CATEGORIES, useCatalogView } from "@/hooks/modules"
-import { mapSlot, useSlotLabels } from "@/hooks/slot"
+import { useState } from "react"
+import { useOpenAgentCreate } from "@/hooks/agentCreate"
 import { navigation } from "@/modules/i18n"
+import { useAgentCatalog, type AgentCatalogRoleEntry, type AgentCatalogRow } from "@/hooks/agentCatalog"
+import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { AGENT_ROLES_ANCHOR } from "@/modules/routes"
-import { AgentCatalogBase } from "./component"
-import type { AgentCatalogData } from "./component"
-
-/** The translator of the catalogue copy. */
-type CatalogCopy = ReturnType<typeof useTranslations<"modulesCore">>
-
-/** The state a role card shares with the whole catalogue. */
-type RoleCardState = { readonly canInstall: boolean }
-
-/** One role of the catalogue as the view filters it and the card draws it. */
-const roleItemOf = (role: CatalogRole, t: CatalogCopy, state: RoleCardState) => ({
-    key: role.key,
-    categoryKey: role.categoryKey,
-    searchText: role.searchText,
-    card: {
-        name: role.name,
-        description: role.description,
-        mascot: role.mascot,
-        isEarly: role.isEarly,
-        earlyLabel: t("earlyBadge"),
-        stateLabel: role.installed ? t("roleInstalledCount", { count: role.installedCount }) : t("roleNotInstalled"),
-        isInstalled: role.installed,
-        canInstall: state.canInstall,
-        installLabel: role.addHref === null ? t("roleCreate") : t("roleAddAnother"),
-    },
-})
+import { AgentCatalogBase, type AgentCatalogBaseProps } from "./component"
 
 /** One fake role of the same shape as a real one: the skeleton reuses the ready tree. */
-const placeholderRoleOf = (key: string): AgentCatalogData["roles"][number] => ({
+const placeholderRoleOf = (key: string): AgentCatalogRoleEntry => ({
     key,
     card: {
         name: "-",
         description: "-",
-        mascot: "",
-        isEarly: false,
-        earlyLabel: "-",
+        moduleKey: "chatbot",
         stateLabel: "-",
         isInstalled: false,
+        needsLabel: "-",
         canInstall: true,
         installLabel: "-",
     },
 })
 
 /** One fake installed agent of the same shape as a real one. */
-const placeholderAgentOf = (key: string): AgentCatalogData["team"][number] => ({
+const placeholderAgentOf = (key: string): AgentCatalogRow => ({
     key,
-    row: {
-        name: "-",
-        seed: key,
-        avatarUrl: null,
-        description: "-",
-        statusLabel: "-",
-        statusTone: "neutral",
-        progressLabel: "-",
-        confirmed: 0,
-        total: 8,
-        actionLabel: "-",
-        href: "#",
-    },
+    name: "-",
+    emblem: "/agents/chatbot.webp",
+    emblemKind: "chatbot",
+    roleKey: "chatbot",
+    picture: null,
+    isInitials: false,
+    seed: key,
+    subtitle: "-",
+    grants: [{ id: key, logo: null, label: "-", brand: "-", level: "-" }],
+    roleName: "-",
+    missingLabels: [],
+    tasks7d: 0,
+    waiting: 0,
+    canAddSame: false,
+    liveAction: "none",
+    countLabel: "-",
+    overflowLabel: "",
+    menuLabel: "-",
+    grantHref: "#",
+    knowledgeLine: "-",
+    knowledgeNote: "",
+    waitingLabel: "",
+    statusLabel: "-",
+    statusTone: "neutral",
+    href: "#",
+    isMissingConnection: false,
+    hasWaitingFacts: false,
+    searchText: "",
 })
 
-const PLACEHOLDER: AgentCatalogData = {
-    team: ["a", "b", "c"].map(placeholderAgentOf),
-    roles: ["a", "b", "c"].map(placeholderRoleOf),
+const PLACEHOLDER: AgentCatalogBaseProps["props"]["placeholder"] = {
+    rows: ["a", "b", "c"].map((key) => placeholderAgentOf(key)),
+    hasFilters: false,
+    roles: ["a", "b", "c"].map((key) => placeholderRoleOf(key)),
 }
 
 /**
- * The connected agent catalogue: the installed agents as rows (role and channel, setup progress, status, next step), then the
- * roles to add; search and group kept in the URL; install opens the new agent, and an installed role of several agents opens
- * its list to add another.
+ * The connected agent catalogue: the installed agents as one table (what each may use, what it reads, whether it runs; chips and
+ * search narrow it), then the roles to add by group; the group and search stay in the URL, install opens the new agent, and an
+ * installed role of several agents opens its list to add another.
  */
 export const AgentCatalog = () => {
-    const t = useTranslations("modulesCore")
-    const router = navigation.useRouter()
-    const member = useMember()
-    const { agents, roles, categories, slot, reload } = useCatalogEntries()
+    const t = useTranslations("agentCatalog")
     const slotLabels = useSlotLabels()
-    const installing = useInstallAgent()
-    const items = roles.map((role) => roleItemOf(role, t, { canInstall: isManager(member) }))
-    const view = useCatalogView(items, categories, "isLoading" in slot)
+    const router = navigation.useRouter()
+    const openCreate = useOpenAgentCreate()
+    const tc = useTranslations("modulesCore")
+    const { slot, reload, table, roles, cardActions } = useAgentCatalog()
+    const [removing, setRemoving] = useState<{ readonly key: string; readonly name: string } | null>(null)
     return (
         <AgentCatalogBase
             props={{
                 yoursTitle: t("yoursTitle"),
-                yoursEmptyTitle: t("yoursEmptyTitle"),
-                yoursEmptyHint: t("yoursEmptyHint"),
-                addTitle: t("addTitle"),
-                addId: AGENT_ROLES_ANCHOR,
-                searchLabel: t("filterSearch"),
-                searchPlaceholder: t("filterSearchPlaceholder"),
-                clearLabel: t("filterClear"),
-                query: view.filters.query,
-                categoryLabel: t("filterCategory"),
-                categoryOptions: [
-                    { value: ALL_CATEGORIES, label: t("filterCategoryAll"), count: items.length },
-                    ...categories.map((category) => ({
-                        value: category.key,
-                        label: category.label,
-                        count: items.filter((item) => item.categoryKey === category.key).length,
-                    })),
-                ],
-                category: view.filters.category,
+                filterLabel: t("filterLabel"),
+                filters: table.options,
+                filter: table.filter,
+                searchLabel: t("searchLabel"),
+                searchPlaceholder: t("searchPlaceholder"),
+                searchClear: t("searchClear"),
+                query: table.query,
+                openLabel: t("cardOpen"),
+                addLabel: t("cardAdd"),
+                pauseLabel: t("cardPause"),
+                resumeLabel: t("cardResume"),
+                removeLabel: t("cardRemove"),
+                removing:
+                    removing === null
+                        ? null
+                        : { ...removing, title: tc("removeDialogTitle", { name: removing.name }) },
+                removeBody: tc("removeBody1"),
+                removeConfirm: tc("removeConfirm"),
+                removeCancel: tc("removeCancel"),
+                isBusy: cardActions.isBusy,
+                tasksLabel: t("cardTasks"),
+                waitingLabel: t("cardWaiting"),
+                noCount: t("cardNoCount"),
                 emptyTitle: t("emptyTitle"),
                 emptyHint: t("emptyHint"),
-                emptyAction: view.filters.isFiltered ? t("emptyAction") : undefined,
-                slot: mapSlot(slot, (): AgentCatalogData => ({
-                    team: agents.map((agent) => {
-                        const channels = agent.channels
-                        const { confirmed, total } = agent.setupProgress
-                        return {
-                            key: agent.id,
-                            row: {
-                                name: agent.name,
-                                seed: agent.seed,
-                                avatarUrl: agent.avatarUrl,
-                                description: `${agent.roleName} · ${channels.length === 0 ? t("headerNoChannels") : channels.join(", ")}`,
-                                statusLabel: t(`lifecycle_${agent.lifecycle}`),
-                                statusTone: agent.tone,
-                                progressLabel: t("setupProgress"),
-                                confirmed,
-                                total,
-                                actionLabel: isSetupPending(agent.lifecycle)
-                                    ? t(setupLabelKey(agent.lifecycle))
-                                    : t("openModule"),
-                                href: agent.href,
-                            },
-                        }
-                    }),
-                    roles: view.cards,
-                })),
+                emptyAction: t("emptyAction"),
+                noAgentsTitle: t("noAgentsTitle"),
+                noAgentsHint: t("noAgentsHint"),
+                addTitle: t("addTitle"),
+                addId: AGENT_ROLES_ANCHOR,
+                categoryLabel: t("categoryLabel"),
+                categoryOptions: roles.options,
+                category: roles.category,
+                rolesEmptyTitle: t("rolesEmptyTitle"),
+                rolesEmptyHint: t("rolesEmptyHint"),
+                slot: mapSlot(slot, () => ({ rows: table.rows, hasFilters: table.hasFilters, roles: roles.entries })),
                 placeholder: PLACEHOLDER,
                 slotLabels: { ...slotLabels(t("emptyTitle")), error: t("loadFailed") },
-                busyKey: installing.busyKey,
+                busyKey: roles.busyKey,
             }}
             on={{
-                query: view.filters.setQuery,
-                category: (value) => view.filters.setCategory(value),
-                clear: view.filters.clear,
+                filter: table.setFilter,
+                query: table.setQuery,
+                clear: table.clear,
+                category: roles.setCategory,
                 retry: reload,
-                install: (key) => {
-                    const role = roles.find((candidate) => candidate.key === key)
-                    if (role === undefined) return
-                    if (role.addHref === null) void installing.install(role.key)
-                    else router.push(role.addHref)
+                install: roles.install,
+                open: (href) => router.push(href),
+                add: openCreate,
+                setLive: (id, live) => void cardActions.setLive(id, live),
+                askRemove: setRemoving,
+                confirmRemove: (id) => {
+                    setRemoving(null)
+                    void cardActions.remove(id)
                 },
             }}
         />

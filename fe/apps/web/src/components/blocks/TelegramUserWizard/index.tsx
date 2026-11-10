@@ -5,9 +5,9 @@ import type { SlotRead } from "@/hooks/slot"
 import { TelegramUserWizardBase, type TelegramUserWizardBaseProps } from "./component"
 import { useTranslations } from "next-intl"
 import { providerKey } from "@/hooks/connection-providers"
-import { agentChoicesOf } from "@/hooks/connection-wizard"
+import { agentChoicesOf, useWizardPhases } from "@/hooks/connection-wizard"
 import { useSlotLabels, slotOfReads } from "@/hooks/slot"
-import type { AgentOption, SlotLabels } from "@/modules/types"
+import type { AgentOption, SlotLabels, WizardPhases } from "@/modules/types"
 import { MAX_CHATS } from "@/hooks/telegram-chats"
 import { useTelegramUserWizard } from "@/hooks/telegram-user-wizard"
 
@@ -31,6 +31,7 @@ type TelegramUserWizardControllerInput = {
     readonly tc: ReturnType<typeof useTranslations<"connections">>
     readonly wizard: ReturnType<typeof useTelegramUserWizard>
     readonly slotLabelsOf: (empty: string) => SlotLabels
+    readonly phases: WizardPhases
 }
 
 /** Setup of a personal Telegram connection (owner only): consent, phone login, chat picks, schedule, agents. */
@@ -48,10 +49,11 @@ const createTelegramUserWizardController = (input: TelegramUserWizardControllerI
 export const TelegramUserWizard = (props: TelegramUserWizardProps) => {
     const t = useTranslations("connectorTelegramUser")
     const tw = useTranslations("connectionWizard")
+    const phases = useWizardPhases("telegramUser")
     const tc = useTranslations("connections")
     const slotLabelsOf = useSlotLabels()
     const wizard = useTelegramUserWizard({ resumeId: props.resumeId, onClose: props.onClose })
-    const context = createTelegramUserWizardController({ props, t, tw, tc, wizard, slotLabelsOf })
+    const context = createTelegramUserWizardController({ props, t, tw, tc, wizard, slotLabelsOf, phases })
 
     return <TelegramUserWizardBase {...createTelegramUserWizardView(context)} />
 }
@@ -122,11 +124,12 @@ const createTelegramUserWizardView = (
 ): React.ComponentProps<typeof TelegramUserWizardBase> => {
     const { props } = context
 
-    const { t, tw, tc, wizard, login, picks, on, steps, sentLine, slotLabelsOf } = context
+    const { t, tw, tc, wizard, login, picks, on, steps, sentLine, slotLabelsOf, phases } = context
     return {
         props: {
             title: tw("title", { provider: tc(providerKey("telegram_user", "title")) }),
             stepLabel: tw("stepOf", { n: wizard.index + 1, total: steps.length }),
+            phases,
             steps,
             index: wizard.index,
             boot: slotOfReads([...props.dependencyReads, ...wizard.reads], () => wizard.bootData),

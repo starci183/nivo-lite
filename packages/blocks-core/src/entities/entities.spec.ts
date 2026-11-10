@@ -8,7 +8,7 @@ const catalog = new Map<string, AnyEntityDefinition>(FLOW_F_ENTITIES.map((entity
 const entityNamed = (name: string): AnyEntityDefinition | undefined => catalog.get(name)
 
 describe("flow F entity declarations", () => {
-    it("declares the twenty-nine entities once each", () => {
+    it("declares the thirty-two entities once each", () => {
         expect(FLOW_F_ENTITIES.map((entity) => entity.name)).toEqual([
             "sales.lead",
             "sales.order",
@@ -38,6 +38,12 @@ describe("flow F entity declarations", () => {
             "agent.graph-source",
             "agent.graph-proposal",
             "agent.graph-decision",
+            "agent.workflow",
+            "agent.workflow-version",
+            "agent.run-workflow",
+            "agent.lead-freeze",
+            "agent.conversation-hold",
+            "agent.lead-memory",
             "workspace.settings",
         ])
         expect(catalog.size).toBe(FLOW_F_ENTITIES.length)
@@ -169,6 +175,20 @@ describe("flow F entity declarations", () => {
         )
     })
 
+    it("keeps one workflow per agent and key, one version number per workflow, and pins a run to its workflow version", () => {
+        expect(entityNamed("agent.workflow")?.constraints).toContainEqual(
+            expect.objectContaining({ kind: "unique", on: ["agentId", "key"], refusal: "workflow-exists" }),
+        )
+        expect(entityNamed("agent.workflow-version")?.constraints).toContainEqual(
+            expect.objectContaining({ kind: "unique", on: ["workflowId", "number"], refusal: "version-taken" }),
+        )
+        expect(entityNamed("agent.workflow-version")?.fields["document"]?.nullable).toBe(false)
+        expect(entityNamed("agent.run-workflow")?.constraints).toContainEqual(
+            expect.objectContaining({ kind: "unique", on: ["runId"], refusal: "run-pinned" }),
+        )
+        expect(entityNamed("agent.run")?.fields["workflowId"]).toBeUndefined()
+    })
+
     it("records a graph decision once per work item or per dedupe key, and never without either", () => {
         const decision = entityNamed("agent.graph-decision")
         expect(decision?.matchKeys).toEqual([
@@ -199,6 +219,8 @@ describe("flow F entity declarations", () => {
                 name: "conversation_status_sent",
                 on: ["conversationId", "status", { desc: "sentAt" }, { desc: "id" }],
             },
+            { name: "conversation_role_sent", on: ["conversationId", "role", { desc: "sentAt" }, { desc: "id" }] },
+            { name: "conversation_status_created", on: ["conversationId", "status", { desc: "createdAt" }, { desc: "id" }] },
             { name: "channel_ref", on: ["channelRef", "id"] },
             { name: "reply_of", on: ["conversationId", "inReplyTo", { desc: "sentAt" }, { desc: "id" }] },
             { name: "role_recent", on: ["role", { desc: "sentAt" }, { desc: "id" }] },

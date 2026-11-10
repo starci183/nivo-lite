@@ -1,4 +1,4 @@
-import type { DataSlot, SlotLabels } from "@/modules/types"
+import type { DataSlot, SlotLabels, WizardPhases } from "@/modules/types"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { Alert, Button, Cluster, Grid, Input, Section, Text } from "@starci/grammar/common"
 import { WizardConsentCopy } from "@/components/composites/WizardConsentCopy"
@@ -12,6 +12,7 @@ export interface GoogleWizardBaseProps {
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
+        readonly phases: WizardPhases
         /** 0 asks for the consent, 1 is the landing after Google answered. */
         readonly index: number
         /** The negative sentence when Google did not connect, null otherwise. */
@@ -148,6 +149,7 @@ const renderGoogleWizard = (props: GoogleWizardBaseProps, isLoading: boolean) =>
             title={view.title}
             stepLabel={view.stepLabel}
             steps={view.steps}
+            phases={view.phases}
             index={view.index}
             footer={renderFooter(view, props.on, isLoading)}
         >

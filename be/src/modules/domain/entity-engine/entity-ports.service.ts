@@ -5,7 +5,7 @@ import { OUTBOX_PORT_ID } from "@nivo-lite/agent-sdk/mutation"
 import type { EntityManager } from "typeorm"
 import type { JobRef, Mutation, MutationBy, OutboxApi } from "@nivo-lite/agent-sdk/mutation"
 import { ENTITIES_PORT_ID } from "@nivo-lite/agent-sdk/entity/port"
-import type { EngineResult, EntitiesApi } from "@nivo-lite/agent-sdk/entity/port"
+import type { EngineResult, EntitiesApi, EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { DeclaredPorts, JobPorts, RunIn } from "./entity-engine.contracts"
 import { InjectEntityEngineOptions } from "./entity-engine.decorators"
 import type { EntityEngineOptions } from "./entity-engine.options"
@@ -56,6 +56,11 @@ export class EntityPortsService {
             link: (entity, key, relation, to) => write({ op: "link", entity, key, relation, to }),
             unlink: (entity, key, relation, to) => write({ op: "unlink", entity, key, relation, to }),
         }
+    }
+
+    /** The handle of one declared entity over one scope, as the port `engine.entity.<name>` gives it. */
+    entityApi(runIn: RunIn, by: MutationBy, entity: string): EntityApi {
+        return entityApiOf(this.entitiesApi(runIn, by), this.engine.definition(entity).name)
     }
 
     /** The outbox handle over one scope: a declared job is validated, then written to the queue outbox in the scope's transaction. */

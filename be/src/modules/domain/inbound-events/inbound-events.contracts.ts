@@ -88,6 +88,10 @@ export interface InboundInput {
     readonly externalRef: string | null
     /** The channel's own event id: the idempotency key. */
     readonly eventId: string
+    /** The customer the input groups under when it names no lead yet, or null. */
+    readonly customerKey?: string | null
+    /** Where the input came from (page, campaign, device), or nothing. */
+    readonly source?: Readonly<Record<string, string>>
 }
 
 /** An inbound event as the engine reads it. */

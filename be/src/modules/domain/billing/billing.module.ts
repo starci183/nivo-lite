@@ -10,6 +10,7 @@ import { BankFeedReceiptsService } from "./bank-feed-receipts.service"
 import { BankFeedService } from "./bank-feed.service"
 import { BillingReadService } from "./billing-read.service"
 import { BillingService } from "./billing.service"
+import { LobbyMembershipsService } from "./lobby-memberships.service"
 import { ConfigurableModuleClass, MODULE_OPTIONS_TOKEN, OPTIONS_TYPE } from "./billing.module-definition"
 import { PaymentSecretsService } from "./payment-secrets.service"
 import { EntitlementsService } from "./entitlements.service"
@@ -29,6 +30,7 @@ export class BillingModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 BillingEventsReadService,
                 BillingService,
+                LobbyMembershipsService,
                 BillingReadService,
                 EntitlementsService,
                 PaymentProofService,
@@ -48,6 +50,7 @@ export class BillingModule extends ConfigurableModuleClass {
                 BillingEventsReadService,
                 MODULE_OPTIONS_TOKEN,
                 BillingService,
+                LobbyMembershipsService,
                 BillingReadService,
                 EntitlementsService,
                 PaymentProofService,

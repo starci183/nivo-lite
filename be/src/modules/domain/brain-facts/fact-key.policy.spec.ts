@@ -87,6 +87,15 @@ describe("fact keys", () => {
         ["eight", "8", false],
         ["8", "eight", false],
         ["first", "second", false],
+        ["5.000 \u20ab m\u1ed9t ch\u1eadu", "5.000 \u20ab", true],
+        ["5.000 \u20ab/ch\u1eadu", "5.000 \u0111", true],
+        ["5.000 \u20ab m\u1ed9t ch\u1eadu", "5000 VND", true],
+        ["5k m\u1ed7i ly", "5.000 \u0111", true],
+        ["5k moi ly", "5.000 \u0111", true],
+        ["5.000 \u20ab m\u1ed9t ch\u1eadu", "6.000 \u20ab", false],
+        ["5.000 \u20ab m\u1ed9t ch\u1eadu", "6.000 \u20ab m\u1ed9t ch\u1eadu", false],
+        ["5 tr\u1ee9ng", "5 tri\u1ec7u", false],
+        ["5 ph\u00fat", "5 gi\u1edd", false],
     ])("compares %s and %s", async (first, second, expected) => {
         const subject = await build()
 

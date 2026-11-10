@@ -40,7 +40,7 @@ export const attentionConnections = (items: ReadonlyArray<Connection>): Readonly
 
 /** The console destinations the Connections page links to. */
 export const CONNECTION_ROUTES = {
-    workspaceHome: "/agents",
+    workspaceHome: "/overview",
     connections: "/connections",
 } as const
 
@@ -52,7 +52,7 @@ const PAGE_SEGMENT: Readonly<Partial<Record<Provider, string>>> = {
 }
 
 /** The providers whose page is the only one of the workspace (a single grant), so its address carries no connection id. */
-const SINGLE_PAGE: Readonly<Partial<Record<Provider, string>>> = { google_drive: "drive" }
+const SINGLE_PAGE: Readonly<Partial<Record<Provider, string>>> = { google_drive: "google", google: "google" }
 
 /**
  * The page of one connection when its provider has one (SePay, Zalo OA, Telegram, Google Drive) and the page has something to show,

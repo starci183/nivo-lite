@@ -1,5 +1,4 @@
 export { useConnectionsList } from "./useConnectionsList"
-export { useConnectionsHome } from "./useConnectionsHome"
-export { visibleRowsOf } from "./connectionsPanes.shared"
+export { listRowOf, rowHrefOf, visibleRowsOf } from "./connectionsPanes.shared"
 export { useConnectionGrantsBand } from "./useConnectionGrantsBand"
-export { useConnectionOpen } from "./useConnectionOpen"
+export { useConnectionOpenPage } from "./useConnectionOpenPage"

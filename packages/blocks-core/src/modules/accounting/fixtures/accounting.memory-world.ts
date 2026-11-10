@@ -1,5 +1,5 @@
 import type { RecordRow, WriteLinks } from "@nivo-lite/agent-sdk/entity/port"
-import type { DoorCallResult } from "@nivo-lite/agent-sdk/mutation"
+import type { DoorCallResult, WorkflowStart } from "@nivo-lite/agent-sdk/mutation"
 import type { RunContext } from "@nivo-lite/agent-sdk/port"
 import type { EntityCatalog } from "@nivo-lite/agent-sdk/query"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
@@ -75,6 +75,8 @@ export interface MemoryWorld {
     readonly jobs: Array<MemoryJob>
     /** What the door was asked for. */
     readonly calls: Array<MemoryCall>
+    /** The workflows the workflow port was asked to start (a repeated dedupe key is kept once, as the engine wakes once). */
+    readonly starts: Array<WorkflowStart>
     /** What the door answers for a tool; a tool it does not name is unknown. */
     readonly answers: Map<string, DoorCallResult>
 }
@@ -86,6 +88,7 @@ export const memoryWorld = (): MemoryWorld => ({
     members: new Map([[ACCOUNTANT_ID, { displayName: "Lan", isManager: false }]]),
     jobs: [],
     calls: [],
+    starts: [],
     answers: new Map(),
 })
 

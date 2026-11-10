@@ -10,7 +10,7 @@ export const normaliseEmail = (email: string): string => email.trim().toLowerCas
 export const isEmailAddress = (email: string): boolean => hasEmailAddressShape(email)
 
 /**
- * Judges an invitation for the signed-in person: it must exist, be neither revoked, used nor expired, and name the
+ * Judges an invitation for the signed-in person: it must exist, be neither revoked, declined, used nor expired, and name the
  * address the person signed in with.
  */
 export const judgeInvite = (
@@ -20,6 +20,7 @@ export const judgeInvite = (
 ): Outcome<InviteState, WorkspaceInvitesErrorCode> => {
     if (invite === undefined) return refused(WorkspaceInvitesErrorCode.Invalid)
     if (invite.revokedAt !== null) return refused(WorkspaceInvitesErrorCode.Revoked)
+    if (invite.declinedAt !== null) return refused(WorkspaceInvitesErrorCode.Declined)
     if (invite.acceptedAt !== null) return refused(WorkspaceInvitesErrorCode.Used)
     if (new Date(invite.expiresAt).getTime() < now.getTime()) return refused(WorkspaceInvitesErrorCode.Expired)
     if (normaliseEmail(signedInEmail) !== normaliseEmail(invite.email)) {

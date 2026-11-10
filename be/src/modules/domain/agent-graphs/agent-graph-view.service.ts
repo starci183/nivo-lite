@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common"
 import { InjectInstallations } from "@modules/domain/agents"
 import type { InstallationDirectory } from "@modules/domain/agents"
 import { BrainFactsService } from "@modules/domain/brain-facts"
+import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { MemberGrantsService } from "@modules/domain/member-grants"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
@@ -16,7 +17,7 @@ import { contractWarnings } from "./policies/contract-problems.policy"
 import { unheldRulesOf } from "./policies/unheld-rules.policy"
 import type { UnheldRule } from "./policies/unheld-rules.policy"
 import { graphProblems } from "./policies/graph-problems.policy"
-import { nodeCardOf } from "./policies/node-card.policy"
+import { flowNodeCardOf, nodeCardOf } from "./policies/node-card.policy"
 
 /** The passage a graph cites for a Brain fact: what the owner confirmed, or null when no node cites it. */
 const citedPassageOf = (graph: GraphDocument, factId: string): string | null => {
@@ -30,7 +31,7 @@ const citedPassageOf = (graph: GraphDocument, factId: string): string | null => 
 @Injectable()
 /**
  * The graph of an agent as the owner opens it: the draft, what is wrong with it, what is still vague, each node as a card that reads
- * plainly, and the proposals waiting for a person. Every number and name on a card comes from the registries and the people of the
+ * plainly (the decision nodes, then the nodes of its flow with their group and wait), and the proposals waiting for a person. Every number and name on a card comes from the registries and the people of the
  * workspace, never from a model.
  */
 export class AgentGraphViewService {
@@ -43,6 +44,7 @@ export class AgentGraphViewService {
         private readonly members: MemberGrantsService,
         private readonly brain: BrainFactsService,
         @InjectInstallations() private readonly directory: InstallationDirectory,
+        private readonly nodes: GraphNodeRegistryService,
     ) {}
 
     /** The view of the graph of an agent for the editor. */
@@ -72,7 +74,10 @@ export class AgentGraphViewService {
             problems: graphProblems(state.draft, context),
             warnings: contractWarnings(state.draft),
             unheldRules: await this.unheldRulesOf(state.draft, installation.activeContextVersionId),
-            cards: state.draft.nodes.map((node) => nodeCardOf(node, nameOf(node.approver?.group.members[0]), say)),
+            cards: [
+                ...state.draft.nodes.map((node) => nodeCardOf(node, nameOf(node.approver?.group.members[0]), say)),
+                ...(state.draft.flow?.nodes ?? []).map((node) => flowNodeCardOf(node, this.titleOf(node.step, locale))),
+            ],
             proposals: await Promise.all(
                 proposals.map((proposal) => this.withPassages(workspaceId, state.draft, proposal)),
             ),
@@ -84,6 +89,13 @@ export class AgentGraphViewService {
                 allowed: spec.allowed ?? [],
             })),
         }
+    }
+
+    /** The title of an installed node in the owner's language, or null for a step no installed node is (the stop). */
+    private titleOf(step: string, locale: Locale): string | null {
+        const title = this.nodes.installed().nodes.get(step)?.title
+        if (title === undefined) return null
+        return "key" in title ? this.catalog.get(title.key, {}, locale) : locale === "en" ? title.en : title.vi
     }
 
     /** A conflict with the two passages it is about, so the owner reads the old rule and the new one side by side. */

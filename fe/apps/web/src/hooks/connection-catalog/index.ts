@@ -3,17 +3,20 @@ export {
     CATALOG,
     CURRENT_CONNECTORS,
     catalogKey,
-    CATEGORIES,
     entryById,
     matchesWords,
     searchWords,
 } from "./connection-catalog.shared"
 
 export {
-    asCategory,
+    asGroup,
+    CONNECTION_GROUPS,
     audienceLineOf,
-    catalogStatusOf,
     catalogTagOf,
-    checkProvidersOf,
     connectionCountsOf,
+    FOLDED_CONNECTORS,
+    groupOfEntry,
+    providersOfEntry,
+    unitOfEntry,
 } from "./connection-catalog.shared"
+export { useLibraryLife } from "./useLibraryLife"

@@ -1,5 +1,7 @@
 import { defineModule } from "@nivo-lite/agent-sdk/module"
 import type { ModuleDeclaration } from "@nivo-lite/agent-sdk/module"
+import { TOOL } from "../../vocabulary/tool-ids"
+import { guidanceOf } from "../agent-policy"
 import { APPROVE_AND_SEND } from "./actions/approve-and-send.action"
 import { DECIDE } from "./actions/decide.action"
 import { HANDOFF } from "./actions/handoff.action"
@@ -31,6 +33,25 @@ export const CHATBOT_PERMISSIONS: ReadonlyArray<string> = ["chatbot.view", "chat
 export const chatbotModule: ModuleDeclaration = defineModule({
     key: CHATBOT_MODULE_KEY,
     namespace: CHATBOT_MODULE_KEY,
+    agent: {
+        tools: [TOOL.agentTag, TOOL.customerMessageSend, TOOL.teamMessagePost, TOOL.brainSearch],
+        abilities: {
+            kinds: { messaging: { "customer.send": "auto" } },
+        },
+        policy: {
+            limits: {},
+            guidance: guidanceOf({
+                vi:
+                    "Chỉ trả lời khách từ thông tin công khai của tiệm; không bịa giá, chính sách, ngày hay lời hứa, không xác nhận đơn, tiền hay giao hàng. " +
+                    "Tài liệu không có câu trả lời: nhắn khách một câu rằng em hỏi lại chủ tiệm rồi báo, và hỏi chủ tiệm. " +
+                    "Khiếu nại: xin lỗi khách, không nhận lỗi cũng không chối lỗi, không hứa đền bù; báo đội để chủ tiệm xử lý.",
+                en:
+                    "Answer customers only from the shop's public information; never invent a price, policy, date or promise, never confirm an order, a payment or a delivery. " +
+                    "When the documents do not answer: tell the customer in one line you will check with the shop owner, and ask the owner. " +
+                    "A complaint: apologise to the customer, neither admit nor deny fault, promise no compensation; tell the team so the owner handles it.",
+            }),
+        },
+    },
     permissions: CHATBOT_PERMISSIONS,
     reads: [
         THREADS,

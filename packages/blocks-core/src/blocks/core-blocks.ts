@@ -1,5 +1,6 @@
 import type { BlockDefinition } from "@nivo-lite/agent-sdk/block"
 import { accountingBlocks } from "./accounting/accounting-blocks"
+import { agentMessageBlock } from "./agent-message.block"
 import { asideDetailBlock } from "./aside-detail.block"
 import { boardBlock } from "./board.block"
 import { cardGridBlock } from "./card-grid.block"
@@ -10,6 +11,7 @@ import { detailBlock } from "./detail.block"
 import { explanationBlock } from "./explanation.block"
 import { figuresBlock } from "./figures.block"
 import { formBlock } from "./form.block"
+import { linkBlock } from "./link.block"
 import { listCardBlock } from "./list-card.block"
 import { listEditorBlock } from "./list-editor.block"
 import { masterDetailBlock } from "./master-detail.block"
@@ -27,6 +29,7 @@ import { salesBlocks } from "./sales/sales-blocks"
 /** The definitions of every core block and of the blocks of each module, React-free so the back end validates specs against them without loading React. */
 export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     stackBlock,
+    linkBlock,
     cardGridBlock,
     sectionBlock,
     figuresBlock,
@@ -42,6 +45,7 @@ export const coreBlocks: ReadonlyArray<BlockDefinition> = [
     ...chatbotBlocks,
     waitingBlock,
     decisionQueueBlock,
+    agentMessageBlock,
     dashboardCardsBlock,
     masterDetailBlock,
     explanationBlock,

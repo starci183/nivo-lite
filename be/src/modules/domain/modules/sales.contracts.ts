@@ -33,7 +33,8 @@ export const SALES_MODULE: ModuleDefinition = {
     },
     connectionProviders: ["telegram", "zalo_oa", "meta"],
     defaultOperatingMode: "assist",
-    multiInstance: false,
+    // One role, many agents (owner ruling 2026-11-09): each Sales agent has its own name, picture, handle and channels.
+    multiInstance: true,
     tags: ["accounting"],
     agent: {
         label: catalogText("modulesCatalog.sales.agent.label"),

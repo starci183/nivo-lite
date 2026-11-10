@@ -70,3 +70,21 @@ export interface SourceDocument extends SourceState {
 
 /** A document with its text and lane, or null when the workspace has no such document. */
 export type MaybeSourceDocument = SourceDocument | null
+
+/** A ready document kept for one agent instance alone, with the text a copy of it needs. */
+export interface InstanceDocument {
+    /** The source id. */
+    readonly id: string
+    /** text, faq, file or url. */
+    readonly kind: string
+    /** The title. */
+    readonly title: string
+    /** The text (the address of a link source). */
+    readonly content: string
+    /** The topic, or null. */
+    readonly topic: string | null
+    /** The tags. */
+    readonly tags: ReadonlyArray<string>
+    /** public or internal. */
+    readonly visibility: string
+}

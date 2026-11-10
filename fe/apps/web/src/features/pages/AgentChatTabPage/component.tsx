@@ -1,21 +1,22 @@
-import { Pane, PaneGrid } from "@starci/grammar/common"
-import { AgentTeamChatRoom } from "@/components/blocks/TeamChatRoom"
-import type { ModuleKey } from "@/modules/catalog"
+import { AgentTeamChatPanes } from "@/components/blocks/TeamChatRoom"
 
-/** The type and the instance whose chat the tab draws. */
+/** The instance whose chat the tab draws, and the names of its panes. */
 export interface AgentChatTabPageBaseProps {
     readonly props: {
-        readonly module: ModuleKey
         readonly installationId: string
-        readonly label: string
+        readonly gridLabel: string
+        readonly roomLabel: string
     }
 }
 
-/** Draws the chat tab of an agent: the room block in one pane, flush under the tab line of the instance frame. */
-export const AgentChatTabPageBase = (props: AgentChatTabPageBaseProps) => (
-    <PaneGrid label={props.props.label} areas={["room"]}>
-        <Pane area="room" surface>
-            <AgentTeamChatRoom module={props.props.module} installationId={props.props.installationId} />
-        </Pane>
-    </PaneGrid>
+/**
+ * Draws the chat tab of an agent, flush under the tab line of the instance frame: the one chat room of the app opened on the
+ * direct room with the agent, a pane whose body is the thread and whose footer is the composer.
+ */
+export const AgentChatTabPageBase = (page: AgentChatTabPageBaseProps) => (
+    <AgentTeamChatPanes
+        installationId={page.props.installationId}
+        gridLabel={page.props.gridLabel}
+        roomLabel={page.props.roomLabel}
+    />
 )

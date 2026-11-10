@@ -1,0 +1,10 @@
+{
+  "name": "nivo-ui-audit",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Machine audit of the NIVO UI laws (Playwright DOM probes).",
+  "scripts": {
+    "audit": "node run.mjs"
+  }
+}

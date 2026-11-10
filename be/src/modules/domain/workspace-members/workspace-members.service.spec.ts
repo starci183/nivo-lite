@@ -402,7 +402,7 @@ describe("WorkspaceMembersService / seat changes", () => {
         expect(em.update).toHaveBeenCalledWith(
             WorkspaceMemberEntity,
             { workspaceId: "ws-1", userId: "user-2" },
-            { status },
+            expect.objectContaining({ status, disabledByDeletion: false }),
         )
         expect(events.record).toHaveBeenCalledWith({ workspaceId: "ws-1", kind, actor: "Chu", summary: "Binh" })
     })

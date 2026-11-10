@@ -1,5 +1,5 @@
 import type { ReactElement } from "react"
 import { ConnectionsHome } from "@/components/blocks/ConnectionsHome"
 
-/** The overview pane while the route loads: the block draws its own skeletons. */
+/** The Connected tab while the route loads, under the band its layout draws: the block draws its own skeletons. */
 export const ConnectionsLoadingPage = (): ReactElement => <ConnectionsHome />

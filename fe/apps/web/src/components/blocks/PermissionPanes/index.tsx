@@ -6,6 +6,7 @@ import { paneGridOf, usePaneCopy } from "@/hooks/paneFrame"
 import { usePermissionBoard, usePermissionDrawer } from "@/hooks/permissions"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
+import { consoleBreadcrumbsOf } from "@/modules/page-header"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { PermissionPanesBase } from "./component"
 import type { PermissionPanesCopy } from "./component"
@@ -16,9 +17,17 @@ const copyOf = (
     t: ReturnType<typeof useTranslations<"permissions">>,
     team: ReturnType<typeof useTranslations<"team">>,
     pane: ReturnType<typeof usePaneCopy>,
+    shell: ReturnType<typeof useTranslations<"shell">>,
     workspaceId: string,
 ): PermissionPanesCopy => ({
     grid: t("gridLabel"),
+    breadcrumbs: consoleBreadcrumbsOf({
+        workspaceId,
+        label: shell("crumbLabel"),
+        home: shell("crumbHome"),
+        trail: [{ id: "team", label: team("title"), path: CONSOLE_ROUTES.team }],
+        current: t("tabPermissions"),
+    }),
     title: team("title"),
     description: team("description"),
     tabsLabel: t("tabsLabel"),
@@ -48,6 +57,7 @@ export const PermissionPanes = () => {
     const t = useTranslations("permissions")
     const team = useTranslations("team")
     const pane = usePaneCopy()
+    const shell = useTranslations("shell")
     const slotLabels = useSlotLabels()
     const router = navigation.useRouter()
     const workspaceId = useWorkspaceId()
@@ -61,7 +71,7 @@ export const PermissionPanes = () => {
     return (
         <PermissionPanesBase
             props={{
-                copy: copyOf(t, team, pane, workspaceId),
+                copy: copyOf(t, team, pane, shell, workspaceId),
                 grid: paneGridOf({ hasList: true, hasAside: false, phone: drawer.openedId === null ? "list" : "main" }),
                 isLocked: board.isLocked,
                 slot: board.slot,

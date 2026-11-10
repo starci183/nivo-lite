@@ -16,9 +16,10 @@ import { WorkspacesService } from "@modules/domain/workspaces"
 import { WorkspaceSeedError, WorkspaceSeedErrorCode } from "./errors/workspace-seed.error"
 import { GraphSeedService } from "./graph-seed.service"
 import { ProfileActivationService } from "./profile-activation.service"
-import { SEED_AGENTS, SEED_TOOL_GRANTS, WORKSPACE_SEED_OPTIONS } from "./workspace-seed.decorators"
+import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
+import { SEED_AGENTS, WORKSPACE_SEED_OPTIONS } from "./workspace-seed.decorators"
 import type { ProfileStatuses } from "./workspace-profile.contracts"
-import type { SeedAgentRecords, SeedToolGrants } from "./workspace-seed.port"
+import type { SeedAgentRecords } from "./workspace-seed.port"
 import { installationRecordOf } from "@tests/fixtures/builders/module-install.builder"
 
 const NODES: NodeInstall = { nodes: [], effects: [], tools: [], dataKinds: [] }
@@ -100,8 +101,8 @@ const build = async (scenario: Scenario = {}) => {
     const tagGrants = mock<ModuleTagGrantsService>()
     tagGrants.grantFor.mockResolvedValue(undefined)
     flows.holds.mockResolvedValue(scenario.holds ?? false)
-    const toolGrants = mock<SeedToolGrants>()
-    toolGrants.insertMissing.mockResolvedValue(0)
+    const abilities = mock<ProviderAbilitiesService>()
+    abilities.attachDefaults.mockResolvedValue({ ok: true, attached: [] })
     const print = jest.fn<void, [string]>()
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -119,7 +120,7 @@ const build = async (scenario: Scenario = {}) => {
             { provide: AgentGraphFlowService, useValue: flows },
             { provide: AgentBindingsService, useValue: bindings },
             { provide: ModuleTagGrantsService, useValue: tagGrants },
-            { provide: SEED_TOOL_GRANTS, useValue: toolGrants },
+            { provide: ProviderAbilitiesService, useValue: abilities },
         ],
     }).compile()
     return {
@@ -133,7 +134,7 @@ const build = async (scenario: Scenario = {}) => {
         bindings,
         modules,
         tagGrants,
-        toolGrants,
+        abilities,
     }
 }
 
@@ -142,35 +143,39 @@ const failure = (code: WorkspaceSeedErrorCode) => new WorkspaceSeedError({ code 
 const LEDGER_SPEC = {
     ...SPEC,
     moduleKey: "accounting",
-    grant: { rights: [], tools: ["ledger.append", "ledger.void", "ledger.status", "payment.instruction"], effects: [] },
+    grant: {
+        rights: [],
+        tools: ["ledger.append", "ledger.void", "ledger.status", "chat.send"],
+        effects: [],
+    },
 }
 const LEDGER_TEXT = `${JSON.stringify({ documents: [{ path: "data/graphs/accounting.json", document: LEDGER_SPEC }] })}\n`
 
-describe("GraphSeedService > tool grants", () => {
-    it("gives the agent an auto grant of the ledger tools its graph declares, and of no other tool, only when missing", async () => {
-        const { service, toolGrants } = await build()
+describe("GraphSeedService > default provider rights", () => {
+    it("attaches the agent to the connected providers its module names, by the module's defaults and only where it holds none", async () => {
+        const { service, abilities, print } = await build()
+        abilities.attachDefaults.mockResolvedValue({
+            ok: true,
+            attached: [{ provider: "google", abilities: { "ledger.write": "auto" } }],
+        })
 
         await service.run(LEDGER_TEXT, "NIVO")
 
-        expect(toolGrants.insertMissing).toHaveBeenCalledWith(
-            ["ledger.append", "ledger.void", "ledger.status"].map((tool) => ({
-                workspaceId: "ws-1",
-                agentId: "agent-1",
-                tool,
-                mode: "auto",
-                limitVnd: null,
-                constraints: [],
-            })),
+        expect(abilities.attachDefaults).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", agentId: "agent-1", moduleKey: expect.any(String) },
+            null,
+            null,
         )
+        expect(print).toHaveBeenCalledWith(expect.stringContaining("attached to google"))
     })
 
-    it("grants them on a rerun too, when the module is live and already runs the flow", async () => {
-        const { service, toolGrants, activation } = await build({ held: [record({ status: "live" })], holds: true })
+    it("does it on a rerun too, when the module is live and already runs the flow", async () => {
+        const { service, abilities, activation } = await build({ held: [record({ status: "live" })], holds: true })
 
         await service.run(LEDGER_TEXT, "NIVO")
 
         expect(activation.activate).not.toHaveBeenCalled()
-        expect(toolGrants.insertMissing).toHaveBeenCalledTimes(1)
+        expect(abilities.attachDefaults).toHaveBeenCalledTimes(1)
     })
 })
 
@@ -239,7 +244,7 @@ describe("GraphSeedService > run", () => {
         expect(flows.publish.mock.calls[0]?.[0].installed.nodes).toBeInstanceOf(Map)
         expect(agents.ensureByHandle).not.toHaveBeenCalled()
         expect(installations.insert).not.toHaveBeenCalled()
-        expect(print.mock.calls).toEqual([["sales agent agent-1 live, graph created, 0 connections assigned"]])
+        expect(print.mock.calls).toEqual([["sales agent agent-1 live, graph created, 1 connections assigned"]])
     })
 
     it("costs reads only when the module is live and already runs the flow: no rule, activation or publish", async () => {
@@ -326,9 +331,9 @@ describe("GraphSeedService > run on a workspace without the module", () => {
         await silent.service.run(TEXT, "NIVO")
 
         expect(waiting.print).toHaveBeenCalledWith(
-            "sales agent agent-1 needs_connection, graph created, 0 connections assigned",
+            "sales agent agent-1 needs_connection, graph created, 1 connections assigned",
         )
-        expect(silent.print).toHaveBeenCalledWith("sales agent agent-1 unknown, graph created, 0 connections assigned")
+        expect(silent.print).toHaveBeenCalledWith("sales agent agent-1 unknown, graph created, 1 connections assigned")
     })
 })
 
@@ -413,15 +418,31 @@ describe("GraphSeedService > connection assignment", () => {
         ])
     })
 
+    it("assigns the sales agent to the SePay account as a data source it only reads", async () => {
+        const { service, bindings, print, text } = await asModule("sales")
+
+        await service.run(text, "NIVO")
+
+        expect(bindings.grant).toHaveBeenCalledTimes(1)
+        expect(bindings.grant).toHaveBeenCalledWith("owner-1", {
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            connectionId: SEPAY,
+            purpose: "data_source",
+            access: "read",
+        })
+        expect(print).toHaveBeenCalledWith("sales agent agent-1 live, graph created, 1 connections assigned")
+    })
+
     it("assigns again on a rerun without error, and assigns nothing for a module with no connection", async () => {
         const rerun = await asModule("accounting")
-        const sales = await build()
+        const other = await asModule("care")
 
         await rerun.service.run(rerun.text, "NIVO")
-        await sales.service.run(TEXT, "NIVO")
+        await other.service.run(other.text, "NIVO")
 
         expect(rerun.bindings.grant).toHaveBeenCalledTimes(1)
-        expect(sales.bindings.grant).not.toHaveBeenCalled()
+        expect(other.bindings.grant).not.toHaveBeenCalled()
     })
 
     it("skips a connection the workspace does not hold and still assigns the others, but stops on any other refusal", async () => {

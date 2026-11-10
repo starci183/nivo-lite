@@ -1,4 +1,4 @@
-import { Button, NumberField, Textarea, Grid } from "@starci/grammar/common"
+import { Button, NumberField, Textarea, Grid, Stack } from "@starci/grammar/common"
 import { AuthoritySection } from "@/components/frames/AuthoritySection"
 import type { AuthoritySectionView } from "@/components/frames/AuthoritySection"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -55,7 +55,11 @@ export const AuthorityGoalsBase = (props: AuthorityGoalsBaseProps) => {
                             {view.section.saveLabel}
                         </Button>
                     }
-                >
+                    cards={[
+                        {
+                            id: "goals",
+                            children: (
+                                <Stack gap="section">
                     <Grid kind="form" columns={2}>
                         <NumberField
                             isLoading={isSkeleton}
@@ -94,7 +98,11 @@ export const AuthorityGoalsBase = (props: AuthorityGoalsBaseProps) => {
                         value={view.note}
                         onValueChange={props.on.note}
                     />
-                </AuthoritySection>
+                                </Stack>
+                            ),
+                        },
+                    ]}
+                />
             )}
         />
     )

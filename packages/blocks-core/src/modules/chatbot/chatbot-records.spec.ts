@@ -97,6 +97,24 @@ describe("messageRecordOf", () => {
         })
     })
 
+    it("reads the pictures kept in an object as a list, and the order card as the order of the line", () => {
+        const files = [{ id: "file-1", url: "https://api/p/1/image", name: "Pot", contentType: "image/jpeg" }]
+        const orderCard = {
+            orderNo: "DH-1",
+            lines: [{ name: "Pot", qty: 1, imageUrl: "https://api/p/1/image" }],
+            amountText: "1.000",
+            address: "",
+            paid: false,
+        }
+        const read = messageRecordOf(recordOf({ ...LINE, files: { items: files }, orderCard }))
+        expect(read?.files).toEqual(files)
+        expect(read?.order).toEqual(orderCard)
+        expect(read).not.toHaveProperty("orderCard")
+        const plain = messageRecordOf(recordOf({ ...LINE, files: null, orderCard: null }))
+        expect(plain?.files).toBeUndefined()
+        expect(plain).not.toHaveProperty("order")
+    })
+
     it("answers null for fields that are not a line's", () => {
         expect(messageRecordOf(recordOf({ ...LINE, role: "robot" }))).toBeNull()
     })

@@ -1,7 +1,7 @@
 import { Alert, Button, Cluster, Grid, Input, Text } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import { WizardAgentStep } from "@/components/composites/WizardAgentStep"
-import { WizardFooter, backAction, closeAction, nextAction } from "@/components/branches/WizardFooter"
+import { WizardFooter, backAction, closeAction, forwardAction, nextAction } from "@/components/branches/WizardFooter"
 import type { WizardAction } from "@/components/branches/WizardFooter"
 import { frameOf, WizardFrame } from "@/components/frames/WizardFrame"
 import { WizardGuideView } from "@/components/composites/WizardGuideView"
@@ -14,6 +14,7 @@ import type {
     SlotLabels,
     WizardNote,
     WizardResume,
+    WizardPhases,
 } from "@/modules/types"
 
 /** Copy, state and commands of the Zalo wizard. */
@@ -22,6 +23,7 @@ export interface ZaloWizardBaseProps {
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
+        readonly phases: WizardPhases
         readonly index: number
         readonly step: "app" | "follow" | "authorize" | "verify" | "agent"
         /** The stored connection a resumed wizard reads back; a new one is ready at once. */
@@ -95,7 +97,7 @@ const actionsOf = ({ props, on }: ZaloWizardBaseProps): ReadonlyArray<WizardActi
     const back = backAction(text.back, props.isPending, () => on.go(props.index - 1))
     if (props.step === "app") {
         return [
-            nextAction(text.next, on.create, { isPending: props.isPending, isDisabled: !props.canCreate }),
+            forwardAction(text.next, on.create, { isPending: props.isPending, isDisabled: !props.canCreate }),
             closeAction(text.close, on.close),
         ]
     }
@@ -124,7 +126,7 @@ const actionsOf = ({ props, on }: ZaloWizardBaseProps): ReadonlyArray<WizardActi
             intent: "dismiss",
             onPress: () => on.go(4),
         }
-        return [props.received === null ? checkLater : nextAction(text.next, () => on.go(4)), back]
+        return [props.received === null ? checkLater : forwardAction(text.next, () => on.go(4)), back]
     }
     return [nextAction(text.done, on.finish, { isPending: props.isPending }), back]
 }
@@ -180,6 +182,7 @@ export const ZaloWizardBase = (props: ZaloWizardBaseProps) => {
             render={(_resume, isLoading) => (
                 <WizardFrame
                     {...frameOf(view)}
+                    phases={view.phases}
                     footer={<WizardFooter actions={actionsOf(props)} isLoading={isLoading} />}
                 >
                     <ZaloStepContent {...props} isLoading={isLoading} />
@@ -196,7 +199,7 @@ interface ZaloProviderLinkProps {
 }
 const ZaloProviderLink = (props: ZaloProviderLinkProps) => (
     <Cluster gap="inline">
-        <Button intent="neutral" href={props.href} target="_blank" rel="noreferrer">
+        <Button endArrow intent="neutral" href={props.href} target="_blank" rel="noreferrer">
             {props.label}
         </Button>
     </Cluster>

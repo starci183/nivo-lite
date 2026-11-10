@@ -14,6 +14,12 @@ export { agentGraphProposalEntity, PROPOSAL_KINDS, PROPOSAL_STATUSES } from "./a
 export { agentGraphSourceEntity } from "./agent/graph-source.entity"
 export { agentGraphVersionEntity, GRAPH_CHANGE_KINDS } from "./agent/graph-version.entity"
 export { agentGraphEntity, GRAPH_MODES } from "./agent/graph.entity"
+export {
+    agentWorkflowVersionEntity,
+    WORKFLOW_AUTHOR_KINDS,
+    WORKFLOW_CHANGE_KINDS,
+} from "./agent/workflow-version.entity"
+export { agentWorkflowEntity, WORKFLOW_STATUSES } from "./agent/workflow.entity"
 export { loyaltyMemberEntity } from "./loyalty/member.entity"
 export { loyaltyLedgerEntryEntity } from "./loyalty/ledger-entry.entity"
 export { loyaltyRewardEntity } from "./loyalty/reward.entity"
@@ -23,6 +29,10 @@ export { loyaltyDecisionEntity } from "./loyalty/decision.entity"
 export { agentNodeEffectEntity } from "./agent/node-effect.entity"
 export { agentRunStepEntity, RUN_STEP_STATUSES } from "./agent/run-step.entity"
 export { agentRunEntity, RUN_STATUSES } from "./agent/run.entity"
+export { agentRunWorkflowEntity } from "./agent/run-workflow.entity"
+export { agentLeadFreezeEntity, LEAD_FREEZE_STATUSES } from "./agent/lead-freeze.entity"
+export { agentConversationHoldEntity } from "./agent/conversation-hold.entity"
+export { agentLeadMemoryEntity, LEAD_MEMORY_KINDS } from "./agent/lead-memory.entity"
 export { turnEntity } from "./agent/turn.entity"
 export { conversationEntity } from "./chat/conversation.entity"
 export { messageEntity } from "./chat/message.entity"

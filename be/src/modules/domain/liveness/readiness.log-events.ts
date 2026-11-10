@@ -2,4 +2,6 @@
 export enum ReadinessLogEvent {
     /** A dependency failed, timed out, or returned no check timestamp. */
     CheckFailed = "liveness.readiness-check-failed",
+    /** The AI endpoint is not configured (no gateway address or no virtual key): the process is not ready. */
+    AiUnconfigured = "liveness.readiness-ai-unconfigured",
 }

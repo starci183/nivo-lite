@@ -47,7 +47,7 @@ export const useTeamPanesData = (interaction: ReturnType<typeof useInviteInterac
         isPending: interaction.commands.isPending,
         shown: interaction.shown,
     }
-    const all = listRowsOf(t, format, team.views.members, team.views.invites, viewer)
+    const all = listRowsOf(t, format, team.views.members, team.views.invites, viewer, team.views.declined)
     const data = panesDataOf({
         rows: all,
         filter,

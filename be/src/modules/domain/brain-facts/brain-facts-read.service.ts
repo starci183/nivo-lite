@@ -51,6 +51,20 @@ export class BrainFactsReadService {
         return rows.map(toFactRecord)
     }
 
+    /** The facts kept for one agent instance alone (never the shared ones) in the given statuses, oldest first. */
+    async ofInstance(
+        workspaceId: string,
+        installationId: string,
+        statuses: ReadonlyArray<FactStatus>,
+    ): Promise<ReadonlyArray<FactRecord>> {
+        const rows = await this.entityManager.find(BrainFactEntity, {
+            where: { workspaceId, installationId, status: In([...statuses]) },
+            order: { createdAt: "ASC", id: "ASC" },
+            take: LIST_MAX,
+        })
+        return rows.map(toFactRecord)
+    }
+
     /** How many cards of the owner's review the proposals waiting in the workspace make, read as four columns of each and never the evidence. */
     async waitingCards(workspaceId: string): Promise<number> {
         const rows = await this.entityManager.find(BrainFactEntity, {

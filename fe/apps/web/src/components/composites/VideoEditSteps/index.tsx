@@ -12,7 +12,7 @@ import { Alert, Button, Stepper, Stack, Cluster } from "@starci/grammar/common"
 export const VideoEditSteps = (props: VideoEditStepsProps) => (
     <Stack gap="section">
         <Cluster gap="inline" align="center">
-            <Button isLoading={props.isLoading} intent="neutral" size="sm" href={props.libraryHref}>
+            <Button endArrow isLoading={props.isLoading} intent="neutral" size="sm" href={props.libraryHref}>
                 {props.toLibrary}
             </Button>
         </Cluster>

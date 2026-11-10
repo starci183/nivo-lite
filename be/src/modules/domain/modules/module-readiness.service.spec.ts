@@ -64,7 +64,13 @@ const build = async () => {
     gateway.readiness.mockResolvedValue(readinessOf())
     const agents = mock<AgentDirectoryService>()
     agents.identitiesOf.mockResolvedValue([
-        { id: "agent-1", name: "AI Accounting", handle: "accounting", avatarUrl: "https://cdn.test/a.png" },
+        {
+            id: "agent-1",
+            name: "AI Accounting",
+            handle: "accounting",
+            avatarUrl: "https://cdn.test/a.png",
+            avatarPreset: null,
+        },
     ])
     const versions = mock<ContextVersionsService>()
     versions.numbersOf.mockResolvedValue([{ id: "version-1", version: 3 }])
@@ -127,6 +133,7 @@ describe("ModuleReadinessService.needsOf", () => {
             agentName: "AI Accounting",
             agentHandle: "accounting",
             agentAvatarUrl: "https://cdn.test/a.png",
+            agentAvatarPreset: null,
             activeVersion: 3,
             connectionNeeds: [{ role: "payment.credits.list", providers: ["SePay"] }],
             lifecycle: "needs_connection",

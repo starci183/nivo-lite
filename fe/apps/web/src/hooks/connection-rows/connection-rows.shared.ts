@@ -64,8 +64,9 @@ export const connectionFactsOf = (c: Connection, t: RowTranslate, bankName: (cod
         case "imap":
         case "openapi":
         case "payos":
-        case "telegram_user":
         case "telegram":
+            return c.meta.bot_username === undefined ? "" : `@${c.meta.bot_username}`
+        case "telegram_user":
         default:
             return ""
     }

@@ -36,7 +36,7 @@ const build = async (role: WorkspaceRole) => {
 
 describe("BrainTodoService count", () => {
     it.each(["owner", "manager"] as const)(
-        "sums findings, fact cards, open questions and proposals for a %s",
+        "sums fact cards, open questions and proposals for a %s, the findings beside the total",
         async (role) => {
             const { service, members } = await build(role)
 
@@ -45,14 +45,14 @@ describe("BrainTodoService count", () => {
                 facts: 3,
                 questions: 2,
                 proposals: 1,
-                total: 10,
+                total: 6,
             })
 
             expect(members.require).toHaveBeenCalledWith("u1", WS)
         },
     )
 
-    it("counts the findings alone for a member who cannot see the facts or the questions", async () => {
+    it("gives no inbox to a member who cannot see the facts or the questions, the findings beside it", async () => {
         const { service, facts, gaps, documents } = await build("staff")
 
         await expect(service.count("u1", WS)).resolves.toEqual({
@@ -60,7 +60,7 @@ describe("BrainTodoService count", () => {
             facts: 0,
             questions: 0,
             proposals: 0,
-            total: 4,
+            total: 0,
         })
 
         expect(facts.waitingCards).not.toHaveBeenCalled()

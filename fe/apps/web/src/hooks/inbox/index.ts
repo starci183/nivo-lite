@@ -1,1 +1,1 @@
-export { useInboxFeed } from "./useInboxFeed"
+export { useInboxPage } from "./useInboxPage"

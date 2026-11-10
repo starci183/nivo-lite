@@ -1,24 +1,20 @@
-import { defineJob, outboxPort } from "@nivo-lite/agent-sdk/mutation"
-import type { JobDefinition, OutboxApi } from "@nivo-lite/agent-sdk/mutation"
+import { defineJob, workflowPort } from "@nivo-lite/agent-sdk/mutation"
+import type { JobDefinition, WorkflowApi } from "@nivo-lite/agent-sdk/mutation"
 import type { EntityApi } from "@nivo-lite/agent-sdk/entity/port"
 import type { PortDefinition } from "@nivo-lite/agent-sdk/port"
 import { z } from "zod"
-import {
-    ambiguousSource,
-    amountText,
-    questionText,
-    rematchOf,
-    sinceOf,
-    wrongAmountSource,
-} from "../../../rules/accounting/rematch"
-import type { TransactionRecord } from "../../../rules/accounting/accounting.types"
-import { askQuestionOnce, orderById, unmatchedCreditsSince, workspaceSettings } from "../accounting-data"
-import { settleOnOrder } from "../actions/settle.action"
-import { copyOf } from "../messages/copy"
-import { CLAIMS, ORDERS, QUESTIONS, SETTINGS, TRANSACTIONS } from "../ports"
+import { creditsNamingCode, sinceOf } from "../../../rules/accounting/rematch"
+import { orderById, unmatchedCreditsSince, workspaceSettings } from "../accounting-data"
+import { ORDERS, SETTINGS, TRANSACTIONS } from "../ports"
 
 /** The name of the job: the outbox enqueues it by this name. */
 const JOB_NAME = "payment.rematch"
+
+/** The workflow every transfer goes to. */
+const RECONCILE = { moduleKey: "accounting", workflow: "reconcile" } as const
+
+/** The key that makes one credit start the reconciliation once per order. */
+export const rematchKeyOf = (transactionId: string, orderId: string): string => `rematch:${transactionId}:${orderId}`
 
 /** How many times the queue delivers the job before it is parked. */
 const ATTEMPTS = 5
@@ -37,77 +33,42 @@ type RematchPorts = {
     readonly transactions: PortDefinition<EntityApi>
     /** The orders. */
     readonly orders: PortDefinition<EntityApi>
-    /** The customers' payment claims, which a settlement answers. */
-    readonly claims: PortDefinition<EntityApi>
-    /** The outbox the jobs that follow a settlement are enqueued on. */
-    readonly outbox: PortDefinition<OutboxApi>
-    /** The questions the department asks the owner. */
-    readonly questions: PortDefinition<EntityApi>
     /** The rules the workspace chose, which say how many days back a code looks. */
     readonly settings: PortDefinition<EntityApi>
+    /** The start of a workflow run. */
+    readonly workflow: PortDefinition<WorkflowApi>
 }
 
-const ports: RematchPorts = {
-    transactions: TRANSACTIONS,
-    orders: ORDERS,
-    claims: CLAIMS,
-    outbox: outboxPort,
-    questions: QUESTIONS,
-    settings: SETTINGS,
-}
-
-const payerOf = (credit: TransactionRecord): string => credit.payer ?? copyOf("rematch_unknown_payer", "vi")
+const ports: RematchPorts = { transactions: TRANSACTIONS, orders: ORDERS, settings: SETTINGS, workflow: workflowPort }
 
 /**
- * `payment.rematch`: a payment code was just issued for an order, so a credit that arrived BEFORE the code existed is looked for. It
- * sweeps the unmatched credits of the last days (the workspace's `rematchDays`, counted back from `at`, the instant the code was issued)
- * and judges each by the same code rule the arrival path uses. A credit that names the code with exactly the amount due settles the order
- * through the same path as an arrival (`settleOnOrder`: the order paid, the ledger line, the book entry, the notice). A credit that names
- * it with another amount (a partial or an over payment) goes to the owner as a question and is never settled; when several credits name
- * the code with the amount due, none is settled and the owner is asked once. It is safe to run again: a settled credit is no longer
- * unmatched, a settlement of an order already paid changes nothing, and each question is asked once for its source. The queue retries
- * and parks it, not the job.
+ * `payment.rematch`: a payment code was just issued for an order, so the credits that arrived BEFORE the code existed and name it are
+ * looked for, in the unmatched credits of the workspace's last `rematchDays` (counted back from `at`, the instant the code was issued).
+ * It does no business: it never pays an order, never judges an amount and never asks the owner. For each credit found it starts the
+ * reconciliation workflow again (the first run, when the credit arrived, found no order because the order had no code yet); the agent
+ * of that workflow is the only path that pays an order, and settle's guards stop a second run from paying twice. The start is keyed
+ * `rematch:<transactionId>:<orderId>`, so a credit is handed over once per order however often the job is delivered. It writes nothing.
  */
 export const rematchJob: JobDefinition<typeof input, RematchPorts> = defineJob({
     name: JOB_NAME,
     input,
     ports,
     attempts: ATTEMPTS,
-    run: async ({ transactions, orders, claims, outbox, questions, settings }, given) => {
+    run: async ({ transactions, orders, settings, workflow }, given) => {
         const order = await orderById(orders, given.orderId)
         if (order === null) return
         const days = (await workspaceSettings(settings)).rematchDays
-        const credits = await unmatchedCreditsSince(transactions, sinceOf(given.at, days), REMATCH_SWEPT)
-        const plan = rematchOf(order, credits)
-        const due = order.amountVnd ?? 0
-        await Promise.all(
-            plan.wrongAmount.map((credit) =>
-                askQuestionOnce(
-                    questions,
-                    wrongAmountSource(credit.id),
-                    questionText(copyOf("rematch_wrong_amount", "vi"), {
-                        amount: amountText(credit.amountVnd),
-                        payer: payerOf(credit),
-                        orderNo: order.orderNo,
-                        due: amountText(due),
-                    }),
-                ),
-            ),
+        const credits = creditsNamingCode(
+            order,
+            await unmatchedCreditsSince(transactions, sinceOf(given.at, days), REMATCH_SWEPT),
         )
-        if (plan.ambiguous.length > 1)
-            await askQuestionOnce(
-                questions,
-                ambiguousSource(order.id),
-                questionText(copyOf("rematch_ambiguous", "vi"), {
-                    count: plan.ambiguous.length,
-                    orderNo: order.orderNo,
-                    amount: amountText(due),
-                }),
-            )
-        if (plan.settle === null) return
-        await settleOnOrder(
-            { transactions, orders, claims, outbox },
-            { transactionId: plan.settle.id, orderId: order.id },
-        )
+        for (const credit of credits)
+            await workflow.start({
+                moduleKey: RECONCILE.moduleKey,
+                workflow: RECONCILE.workflow,
+                version: "latest",
+                inputs: { transactionId: credit.id },
+                dedupeKey: rematchKeyOf(credit.id, order.id),
+            })
     },
 })

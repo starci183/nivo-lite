@@ -19,6 +19,11 @@ export const defineNode = <I extends z.ZodType, O extends z.ZodType, P extends z
 ): NodeDefinition<I, O, P> => {
     assertNamespaced(config.id)
     for (const name of [...config.effects, ...(config.tools ?? [])]) assertNamespaced(name)
+    for (const name of config.requires ?? []) {
+        if (![...config.effects, ...(config.tools ?? [])].includes(name)) {
+            throw new SdkDefinitionError("REQUIRES_UNDECLARED", name)
+        }
+    }
     if (config.role === "condition" && !holdsBranch(config.output)) {
         throw new SdkDefinitionError("NODE_CONDITION_BRANCH", config.id)
     }

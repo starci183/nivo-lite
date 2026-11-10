@@ -1,4 +1,4 @@
-import { agentTagEffect, coreDataKinds, coreEffects, coreTools, paymentInstructionTool } from "./index"
+import { agentTagEffect, coreDataKinds, coreEffects, coreTools } from "./index"
 
 describe("core vocabulary", () => {
     it("names each data kind, effect and tool once", () => {
@@ -19,12 +19,5 @@ describe("core vocabulary", () => {
             true,
         )
         expect(agentTagEffect.payload.safeParse({ toAgentId: "a", text: "hi", visibility: "page" }).success).toBe(false)
-    })
-
-    it("asks a payment instruction for a positive amount and reads only", () => {
-        expect(paymentInstructionTool.mutates).toBe(false)
-        expect(
-            paymentInstructionTool.args.safeParse({ orderNo: "A1", amountVnd: 0, transferContent: "A1" }).success,
-        ).toBe(false)
     })
 })

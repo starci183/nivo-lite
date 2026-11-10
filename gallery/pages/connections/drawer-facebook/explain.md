@@ -1,0 +1,38 @@
+---
+title: Ngăn kéo thư viện / Facebook & Instagram
+route: /workspaces/<ws>/connections (Thư viện, mở thẻ Facebook & Instagram)
+area: connections
+---
+# Ngăn kéo chi tiết nhà cung cấp: Facebook & Instagram
+
+A right-hand `Drawer` over the library (component `ConnectionOpenContent` / `ConnectionLibraryTile` detail). Shots `1440.png`, `390.png`; the older drawer iterations are in `connector-drawer-1..6` (before only), superseded by this folder and its siblings. Grammar paths under `node_modules/@starci/grammar/dist/core/`.
+
+## Nền mờ và nút đóng (×)
+Vì sao: a modal drawer dims the page and has one round close button top right; the focus stays inside it.
+Luật: `grammar-core-heroui.md`.
+Grammar: `Drawer`, `IconButton`, `node_modules/@starci/grammar/dist/core/frame/Drawer/index.d.ts`, `node_modules/@starci/grammar/dist/core/leaf/IconButton/index.d.ts`.
+
+## Đầu ngăn kéo (tên "Facebook & Instagram", biểu tượng, "Kênh chat", chip "Thử nghiệm sớm", mô tả)
+Vì sao: SAI — the drawer title "Facebook & Instagram" is 14-size plain text at the top left, then a second heading-like line "Kênh chat" with its own chip "Thử nghiệm sớm" and a description: a title, a sub-title, a chip and a sentence stacked with no clear hierarchy; the chip is at the far right edge and is clipped by the drawer padding.
+Luật: `type-scale-14-12.md`, `page-header-left-sublabel-xs.md`.
+Grammar: `Drawer title`, `IdentityLockup`, `Badge`, `node_modules/@starci/grammar/dist/core/composite/IdentityLockup/index.d.ts`.
+
+## Danh sách "Mang về / Dành cho / Cần chuẩn bị"
+Vì sao: SAI — a list card of three rows (noun title 14/500 + 12 muted value) is the right pattern (the earlier iterations used bold run-in labels), but the "Cần chuẩn bị" value, the most important text (what the owner must have before starting), is TRUNCATED with an ellipsis, so the prerequisite cannot be read without opening the wizard.
+Luật: `surfacecard-select-subtitle.md` (row title noun + subtitle), `table-heroui-native-section-head.md` (one content per card).
+Grammar: `SurfaceCard` + `ListRow`, `node_modules/@starci/grammar/dist/core/composite/ListRow/index.d.ts`.
+
+## Khối "Kết nối của bạn" (số lượng, thẻ kết nối)
+Vì sao: SAI/OK split. OK: label + grey count chip on the left, as the head law says. The body is the empty state "Chưa có kết nối nào." in a faint card (count chip "0"); that card packs four controls in a row (a neutral pill, a red link, a count pill, ⋯) with mixed shapes, and raw ids in the subtitle which belong in "Chi tiết kỹ thuật".
+Luật: `table-heroui-native-section-head.md` (raw ids; section head label + count chip), `suggestion-button-sm.md` (one pill pattern), `page-header-left-sublabel-xs.md` (sm buttons no icon: "Mở trang →" has an arrow).
+Grammar: `SurfaceCard`, `Button size="sm"`, `DropdownMenu`, `node_modules/@starci/grammar/dist/core/frame/SurfaceCard/index.d.ts`; composite `ConnectionRowBody`.
+
+## Nút chính ở cuối
+Vì sao: the primary "+ Thêm kết nối" at the end of the drawer body, left aligned and not sticky; commands of a drawer belong in the footer zone (`DrawerFooter`), not floating under the content, so the user must scroll to find it on a long list.
+Luật: `surfacecard-zones-api.md` (footers), `owner-colors-exact.md`.
+Grammar: `DrawerFooter` composite, `Drawer footer`, `node_modules/@starci/grammar/dist/core/frame/Drawer/index.d.ts`.
+
+## Bố cục điện thoại 390
+Vì sao: CHƯA RÕ — the phone drawer is in `390.png` but judged only for the shared defects above.
+Luật: `verify-against-visualize.md`.
+Grammar: `Drawer`.

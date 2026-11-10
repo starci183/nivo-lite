@@ -156,6 +156,7 @@ jobs:
           done <<'LIST'
           db db
           nivo-api api
+          nivo-admin admin
           nivo-landing landing
           nivo-mcp mcp
           nivo-web-app web
@@ -191,6 +192,7 @@ jobs:
           CI_RUN: ${{ steps.ci.outputs.run }}
           IMAGE_DB: ${{ steps.images.outputs.db }}
           IMAGE_NIVO_API: ${{ steps.images.outputs.nivo-api }}
+          IMAGE_NIVO_ADMIN: ${{ steps.images.outputs.nivo-admin }}
           IMAGE_NIVO_LANDING: ${{ steps.images.outputs.nivo-landing }}
           IMAGE_NIVO_MCP: ${{ steps.images.outputs.nivo-mcp }}
           IMAGE_NIVO_WEB_APP: ${{ steps.images.outputs.nivo-web-app }}
@@ -200,6 +202,7 @@ jobs:
           npx --no-install starci app stack deploy --env "$STACK_ENVIRONMENT" \
             --image "db=$IMAGE_DB" \
             --image "nivo-api=$IMAGE_NIVO_API" \
+            --image "nivo-admin=$IMAGE_NIVO_ADMIN" \
             --image "nivo-landing=$IMAGE_NIVO_LANDING" \
             --image "nivo-mcp=$IMAGE_NIVO_MCP" \
             --image "nivo-web-app=$IMAGE_NIVO_WEB_APP" \

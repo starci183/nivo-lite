@@ -1,5 +1,5 @@
 import { Field, InputType } from "@nestjs/graphql"
-import { IsIn } from "class-validator"
+import { IsIn, IsOptional, IsString, MaxLength } from "class-validator"
 import { MemberRefInput } from "./member-ref.input"
 
 @InputType()
@@ -9,4 +9,11 @@ export class SetMemberStatusInput extends MemberRefInput {
     @Field()
     @IsIn(["active", "disabled"])
     status!: "active" | "disabled"
+
+    /** Why the member is switched off; shown to them in the lobby. */
+    @Field(() => String, { nullable: true })
+    @IsOptional()
+    @IsString()
+    @MaxLength(500)
+    note?: string | null
 }

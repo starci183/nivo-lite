@@ -14,6 +14,7 @@ import type {
     KnowledgeGapRow,
     KnowledgeGapsView,
     KnowledgeRegionView,
+    KnowledgeSummary,
     PathStepView,
     SourceView,
     TraceView,
@@ -58,6 +59,11 @@ const connectionRow: z.ZodType<ConnectionRow> = z.object({
     statusLabel: text,
     statusTone: badgeTone,
     accessLabel: text,
+    provider: text.optional(),
+    access: text.optional(),
+    accountMasked: text.optional(),
+    isGranted: z.boolean().optional(),
+    actionLabel: text.optional(),
 })
 
 /** The shape of the connections region. */
@@ -82,6 +88,15 @@ const knowledgeGapsView: z.ZodType<KnowledgeGapsView> = z.object({
     rows: list(knowledgeGapRow),
 })
 
+const knowledgeSummary: z.ZodType<KnowledgeSummary> = z.object({
+    documentsLine: text,
+    factsLine: text,
+    approvedFacts: z.number().int().min(0),
+    totalFacts: z.number().int().min(0),
+    blocker: nullableText,
+    blockerLine: nullableText,
+})
+
 /** The shape of the knowledge region. */
 export const knowledgeRegionView: z.ZodType<KnowledgeRegionView> = z.object({
     openLabel: text,
@@ -92,6 +107,7 @@ export const knowledgeRegionView: z.ZodType<KnowledgeRegionView> = z.object({
     internalTitle: text,
     internalDescription: text,
     gaps: knowledgeGapsView.nullable(),
+    summary: knowledgeSummary.optional(),
 })
 
 const traceView: z.ZodType<TraceView> = z.object({ line: text, whyHref: nullableText })
@@ -113,6 +129,7 @@ const decisionRowView: z.ZodType<DecisionRowView> = z.object({
     title: text,
     description: text,
     leading: text.optional(),
+    logo: text.optional(),
     badges: list(badgeView),
     reason: nullableText,
     amount: nullableText,

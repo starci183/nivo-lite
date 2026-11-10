@@ -32,6 +32,7 @@ export const AgentTypeRedirectBase = (props: AgentTypeRedirectBaseProps) => (
                     message={props.props.none.title}
                     description={props.props.none.description}
                     actionLabel={props.props.none.actionLabel}
+                    actionEndArrow
                     onAction={props.on.backToCatalog}
                 />
             )}

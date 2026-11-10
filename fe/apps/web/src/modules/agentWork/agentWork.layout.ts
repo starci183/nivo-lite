@@ -1,15 +1,11 @@
 import type { PaneGridLayout } from "@/modules/types"
 
 /**
- * The arrangement (pane-grid.choose.frame grid) of the Work tab: the status band across the top, under it the work (open tasks,
- * then recent turns) taking the rest of the width beside a standard column of the goals and the schedule, each with its Add
- * command. On a phone the same panes stack in that order, and the phone tab picks the work or the goals.
+ * The arrangement (pane-grid.choose.frame grid) of the Work tab: the well, the one pane on the page ground, where white cards float
+ * (the region tabs are the second tab row of the page band).
  */
-export const agentWorkGridOf = (phoneView: "work" | "goals"): PaneGridLayout => ({
-    areas: {
-        base: phoneView === "work" ? ["status", "phonetabs", "main"] : ["status", "phonetabs", "aside"],
-        medium: ["status status", "main aside"],
-    },
-    columns: { base: ["fill"], medium: ["fill", "standard"] },
-    rows: { base: ["auto", "auto", "auto"], medium: ["auto", "fill"] },
+export const agentWorkGridOf = (): PaneGridLayout => ({
+    areas: { base: ["well"], medium: ["well"] },
+    columns: { base: ["fill"], medium: ["fill"] },
+    rows: { base: ["fill"], medium: ["fill"] },
 })

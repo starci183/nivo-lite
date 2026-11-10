@@ -9,12 +9,49 @@ import { AgentWorkHandlersService } from "@modules/domain/agent-work"
 import type { AgentHandlerEnding, AgentTurnView, AgentWorkFlow } from "@modules/domain/agent-work"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
+import { InjectLogger } from "@modules/platform/logging"
+import type { Logger } from "@modules/platform/logging"
 import type { FlowTriggerScope } from "./agent-graphs.contracts"
 import { InjectFlowTriggerMessages } from "./agent-graphs.decorators"
 import type { FlowTriggerMessages } from "./agent-graphs.port"
 import { AgentGraphsService } from "./agent-graphs.service"
-import { GRAPH_FLOW_TRIGGER, graphNodeStepOf, tagSourceOf, triggerScopeOf } from "./policies/graph-flow.policy"
+import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
+import { AgentWorkflowRunsService } from "./agent-workflow-runs.service"
+import { AgentGraphFreezeGateService } from "./agent-graph-freeze-gate.service"
+import { AgentGraphCallGuardService } from "./agent-graph-call-guard.service"
+import { AgentGraphHoursGateService } from "./agent-graph-hours-gate.service"
+import { AgentGraphConversationHoldsService } from "./agent-graph-conversation-holds.service"
+import type { WorkflowRoute } from "./agent-workflows.contracts"
+import { AgentGraphWakeNoticesService } from "./agent-graph-wake-notices.service"
+import {
+    GRAPH_FLOW_TRIGGER,
+    graphNodeStepOf,
+    namespaceOf,
+    tagSourceOf,
+    triggerScopeOf,
+} from "./policies/graph-flow.policy"
+import { CALLER_MEMBER, WAITING_MEMBER, takingTriggerOf, workflowCallOf } from "./policies/workflow-trigger.policy"
+import { tagPayloadOf } from "@modules/domain/agent-work"
 import type { GraphNodeStepInput } from "./policies/graph-flow.policy"
+
+/** The source of a wake a customer's line makes. */
+const CUSTOMER_SOURCE = "customer"
+
+/** Why a customer wake started no run: no workflow of the agent took it. */
+const NO_WORKFLOW = "no_workflow"
+
+/** True when the flow found for a wake takes it: a workflow routed it, or the agent's own graph is triggered by its source. */
+const takenBy = (active: ActiveFlow | null, turn: AgentTurnView): active is ActiveFlow =>
+    active !== null && (active.route !== null || active.flow.trigger.sources.includes(tagSourceOf(turn)))
+
+/** Why a wake started no run: its customer is frozen until the owner deals with a run that failed; the wake waits as a pending event. */
+const LEAD_FROZEN = "lead_frozen"
+
+/** Why a customer's wake started no run: the agent is off duty and does not answer after hours; it waits for the next working hour. */
+const OUTSIDE_HOURS = "outside_hours"
+
+/** Why a customer's wake started no run here: another agent keeps the conversation (an open consult), so it went on to that agent. */
+const CONVERSATION_HELD = "conversation_held"
 
 /** What joins the customer messages of a burst into one text. */
 const LINE = "\n"
@@ -23,6 +60,8 @@ const LINE = "\n"
 interface ActiveFlow {
     readonly flow: GraphSpec
     readonly versionId: string
+    /** The workflow version the run is pinned to, or null when the agent's own graph answers unpinned. */
+    readonly route: WorkflowRoute | null
 }
 
 @Injectable()
@@ -39,6 +78,13 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         private readonly handlers: AgentWorkHandlersService,
         private readonly nodes: GraphNodeRegistryService,
         @Optional() @InjectFlowTriggerMessages() private readonly messages: FlowTriggerMessages | null = null,
+        @Optional() private readonly workflows?: AgentWorkflowRunsService,
+        @Optional() @InjectLogger() private readonly logger: Logger | null = null,
+        @Optional() private readonly freezes?: AgentGraphFreezeGateService,
+        @Optional() private readonly calls?: AgentGraphCallGuardService,
+        @Optional() private readonly hours?: AgentGraphHoursGateService,
+        @Optional() private readonly holds?: AgentGraphConversationHoldsService,
+        @Optional() private readonly wakeNotices?: AgentGraphWakeNoticesService,
     ) {}
 
     /** Sets itself as the flow the drain asks before any handler, once the app has started. */
@@ -46,18 +92,75 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         this.handlers.setFlow(this)
     }
 
-    /** True when the agent's active node graph is woken from where this wake came from. */
+    /**
+     * True when a workflow of the agent takes the wake (a trigger of it, or the pin of a hand-off), or its own graph is woken from
+     * there. A customer wake of an agent that runs on workflows is this flow's too, even when no workflow takes it or the routing
+     * itself fails: such an agent is never answered by a turn outside its workflows, so `run` (which then tells the founder, or fails
+     * the wake) must be the one that ends it.
+     */
     async takes(turn: AgentTurnView): Promise<boolean> {
-        const active = await this.activeOf(turn.workspaceId, turn.agentId)
-        return active?.flow.trigger.sources.includes(tagSourceOf(turn)) === true
+        try {
+            if (takenBy(await this.flowOf(turn), turn)) return true
+            return turn.source === CUSTOMER_SOURCE && (await this.runsOnWorkflows(turn))
+        } catch (cause) {
+            this.logger?.error(AgentGraphsLogEvent.WorkflowRouteFailed, cause, { agentId: turn.agentId })
+            return true
+        }
+    }
+
+    /**
+     * A wake of this flow that failed for good (its tries are spent, or it could never run): the founder is told with the facts, in
+     * place of any handler's own words. No workflow step exists to hand to the AI core or to freeze on.
+     */
+    async stuck(turn: AgentTurnView, code: string): Promise<void> {
+        await this.wakeNotices?.failed(turn, code)
+    }
+
+    /** True when the agent has a graph of its own or at least one workflow, running or not. */
+    private async runsOnWorkflows(turn: AgentTurnView): Promise<boolean> {
+        if ((await this.activeOf(turn.workspaceId, turn.agentId)) !== null) return true
+        return ((await this.workflows?.standingOf(turn.workspaceId, turn.agentId))?.total ?? 0) > 0
+    }
+
+    /** Ends a customer wake no workflow took: the founder is told why with the facts, the customer is told nothing, nothing runs. */
+    private async untaken(turn: AgentTurnView): Promise<AgentHandlerEnding> {
+        const standing = (await this.workflows?.standingOf(turn.workspaceId, turn.agentId)) ?? {
+            total: 0,
+            running: [],
+            sources: [],
+        }
+        const reason = standing.running.length === 0 ? "no_workflow_running" : "no_trigger_takes_wake"
+        this.logger?.warn(AgentGraphsLogEvent.WakeUntaken, { agentId: turn.agentId, wakeId: turn.wakeId, code: reason })
+        await this.wakeNotices?.untaken(turn, { reason, running: standing.running, sources: standing.sources })
+        return { status: "skipped", reason: NO_WORKFLOW, outcome: null }
     }
 
     /** Opens the wake's run and writes the step of the first node; a replay of the wake finds the run and the step already there. */
     async run(turn: AgentTurnView): Promise<AgentHandlerEnding> {
-        const active = await this.activeOf(turn.workspaceId, turn.agentId)
+        const active = await this.flowOf(turn)
+        if (!takenBy(active, turn) && turn.source === CUSTOMER_SOURCE) return this.untaken(turn)
         const first = active?.flow.nodes[0]
         if (active === null || first === undefined) return { status: "skipped", reason: "no_flow", outcome: null }
-        const trigger = await this.triggerOf(turn)
+        const trigger = await this.withCaller(turn, {
+            ...(await this.triggerOf(turn)),
+            ...this.triggerKeyOf(active, turn),
+        })
+        if (await this.hours?.deferred(turn)) return { status: "held", reason: OUTSIDE_HOURS, outcome: null }
+        if (await this.holds?.redirected(turn)) return { status: "skipped", reason: CONVERSATION_HELD, outcome: null }
+        // A freeze holds one workflow of the customer: only a wake of that workflow waits, every other one runs.
+        const pinned = { ...trigger, workflowId: active.route?.workflowId ?? null }
+        if (await this.freezes?.hold(turn, pinned)) return { status: "held", reason: LEAD_FROZEN, outcome: null }
+        const waiting = (await this.freezes?.waitingOf(turn.workspaceId, trigger)) ?? []
+        const told: FlowTriggerScope = waiting.length === 0 ? trigger : { ...trigger, [WAITING_MEMBER]: waiting }
+        const refused = (await this.calls?.refusalOf(turn, trigger, active)) ?? null
+        if (refused !== null) {
+            this.logger?.warn(AgentGraphsLogEvent.CallRefused, {
+                agentId: turn.agentId,
+                wakeId: turn.wakeId,
+                code: refused,
+            })
+            return { status: "skipped", reason: refused, outcome: null }
+        }
         const runId = await this.entityManager.transaction(async (tx) => {
             const opened = await this.runs.open(tx, {
                 workspaceId: turn.workspaceId,
@@ -67,8 +170,17 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
                 versionId: active.versionId,
                 context: { ...turn.context },
             })
+            if (active.route !== null && this.workflows !== undefined) {
+                await this.workflows.pinRun(tx, turn.workspaceId, opened.id, active.route)
+            }
             await this.runs.append(turn.workspaceId, tx, opened.id, [
-                this.stepOf(first, { versionId: active.versionId, nodeKey: first.key, trigger }),
+                this.stepOf(first, {
+                    versionId: active.versionId,
+                    nodeKey: first.key,
+                    trigger: told,
+                    namespace: namespaceOf(active.flow.moduleKey, active.route?.workflowKey),
+                    workflowId: active.route?.workflowId ?? null,
+                }),
             ])
             return opened.id
         })
@@ -107,6 +219,22 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         }
     }
 
+    /** The key of the trigger of the workflow that took the wake, as `trigger.triggerKey`; nothing for a graph without typed triggers. */
+    private triggerKeyOf(active: ActiveFlow, turn: AgentTurnView): Readonly<Record<string, string>> {
+        const key = takingTriggerOf(active.flow, tagSourceOf(turn), triggerScopeOf(turn))
+        return key === null || key === "" ? {} : { triggerKey: key }
+    }
+
+    /** The trigger scope with the caller's workflow filled in, for a hand-off whose calling run is pinned to one. */
+    private async withCaller(turn: AgentTurnView, trigger: FlowTriggerScope): Promise<FlowTriggerScope> {
+        const caller: unknown = Reflect.get(trigger, CALLER_MEMBER)
+        if (typeof caller !== "object" || caller === null || this.workflows === undefined) return trigger
+        const runId: unknown = Reflect.get(caller, "runId")
+        if (typeof runId !== "string") return trigger
+        const workflow = await this.workflows.workflowKeyOfRun(turn.workspaceId, runId).catch(() => null)
+        return { ...trigger, [CALLER_MEMBER]: { ...caller, workflow } }
+    }
+
     /** The step of a node, with its saga kind: a read, compensable when every effect it runs can be undone, else a pivot. */
     stepOf(node: GraphSpecNode, input: GraphNodeStepInput): StepSpec {
         const installed = this.nodes.installed()
@@ -114,9 +242,30 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         return graphNodeStepOf(node, input, definition === undefined ? "read" : nodeSagaOf(definition, installed))
     }
 
+    /**
+     * The flow a wake runs: the workflow `AgentWorkflowsService.route` sends it to, pinned to that workflow's version; else the agent's
+     * own active node graph, unpinned. Workflows that cannot be read never stop a wake: the agent's own graph answers it.
+     */
+    private async flowOf(turn: AgentTurnView): Promise<ActiveFlow | null> {
+        const route = await this.routeOf(turn)
+        if (route !== null) return { flow: route.flow, versionId: route.versionId, route }
+        return this.activeOf(turn.workspaceId, turn.agentId)
+    }
+
+    private async routeOf(turn: AgentTurnView): Promise<WorkflowRoute | null> {
+        if (this.workflows === undefined) return null
+        const scope = triggerScopeOf(turn)
+        const wake = { source: tagSourceOf(turn), scope, pin: workflowCallOf(tagPayloadOf(turn.context)) }
+        // A routing that fails is a failure of the wake, never "no workflow": it throws, the wake is tried again, and when its tries
+        // are spent the founder is told (`stuck`).
+        return this.workflows.route(turn.workspaceId, turn.agentId, wake)
+    }
+
     private async activeOf(workspaceId: string, agentId: string): Promise<ActiveFlow | null> {
         const state = await this.graphs.stateOfAgent(workspaceId, agentId)
         const flow = state?.active?.flow
-        return flow === undefined || state?.activeVersionId == null ? null : { flow, versionId: state.activeVersionId }
+        return flow === undefined || state?.activeVersionId == null
+            ? null
+            : { flow, versionId: state.activeVersionId, route: null }
     }
 }

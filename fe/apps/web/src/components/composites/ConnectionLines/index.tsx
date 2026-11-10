@@ -1,4 +1,5 @@
 import { EmptyNotice, Section, type BadgeTone, type ListRowData } from "@starci/grammar/common"
+import { nivoIconSource } from "@/components/leaves/Icon"
 
 /** One line of a connection list: what it is, the line under it and the verdict badge. */
 interface ConnectionLine {
@@ -44,6 +45,6 @@ export const ConnectionLines = (props: ConnectionLinesProps) => (
             ],
             ...(line.action === undefined ? {} : { action: { label: line.action.label, press: line.action.run } }),
         }))}
-        empty={<EmptyNotice message={props.label} />}
+        empty={<EmptyNotice message={props.label} iconSource={nivoIconSource("link", "leading")} />}
     />
 )

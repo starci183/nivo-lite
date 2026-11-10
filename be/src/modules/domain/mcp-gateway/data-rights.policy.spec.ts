@@ -31,7 +31,6 @@ describe("data-rights.policy dataKindOfTool", () => {
         ["dossier.findings.list", "customers"],
         ["drive.files.search", "documents"],
         ["sepay.transactions.debits", "payments"],
-        ["payment.instruction", "payments"],
         ["bank.transactions", "payments"],
         ["zalo.send", "channels"],
         ["telegram.send", "channels"],
@@ -66,13 +65,12 @@ describe("data-rights.policy judgeDataRight", () => {
         })
     })
 
-    it("reads the provider-neutral payment and bank tools as payments: the Sales seed holds a payments right narrowed to the conversation, and its instruction is not refused", async () => {
+    it("reads the provider-neutral bank tool as payments: the Sales seed holds a payments right narrowed to the conversation, and it is not refused", async () => {
         const subject = await build()
         const payments: DataRight = { kind: "payments", scope: "conversation", hide: [], mask: [] }
 
-        for (const tool of ["payment.instruction", "bank.transactions"])
-            expect(subject.judgeDataRight([payments], tool, CUSTOMER)).toEqual({ kind: "narrow", right: payments })
-        expect(subject.judgeDataRight([RIGHT], "payment.instruction", CUSTOMER)).toEqual({
+        expect(subject.judgeDataRight([payments], "bank.transactions", CUSTOMER)).toEqual({ kind: "narrow", right: payments })
+        expect(subject.judgeDataRight([RIGHT], "bank.transactions", CUSTOMER)).toEqual({
             kind: "deny",
             reason: "no_right",
         })

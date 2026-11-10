@@ -1,5 +1,5 @@
 import type { BookingWaitlistData, BookingWaitlistActions } from "@/modules/types"
-import { EmptyNotice, SurfaceCard } from "@starci/grammar/common"
+import { EmptyNotice, Section } from "@starci/grammar/common"
 
 type ReadyProps = Omit<BookingWaitlistData, "slot" | "slotLabels">
 
@@ -11,10 +11,10 @@ type BookingWaitlistProps = ReadyProps & {
 
 /** Draws the waiting list: who waits for a free time, and the button that takes them off. */
 export const BookingWaitlist = (props: BookingWaitlistProps) => (
-    <SurfaceCard
+    <Section
         kind="list"
         isLoading={props.isLoading}
-        label={props.label}
+        title={props.label}
         empty={<EmptyNotice message={props.emptyTitle} description={props.emptyBody} />}
         items={props.rows.map((row) => ({
             id: row.id,

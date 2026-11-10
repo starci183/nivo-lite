@@ -5,6 +5,7 @@ import type {
     TelegramUserWizardCopy,
     TelegramUserLoginView,
     TelegramUserChatsView as ChatsView,
+    WizardPhases,
 } from "@/modules/types"
 import { Alert } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
@@ -47,6 +48,7 @@ export interface TelegramUserWizardBaseProps {
         readonly title: string
         readonly stepLabel: string
         readonly steps: ReadonlyArray<string>
+        readonly phases: WizardPhases
         readonly index: number
         /** The first reads: the server and the saved state. Not configured means no Telegram app credentials. */
         readonly boot: DataSlot<TelegramReady>
@@ -165,6 +167,7 @@ export const TelegramUserWizardBase = (props: TelegramUserWizardBaseProps) => {
             render={(ready, isLoading) => (
                 <WizardFrame
                     {...frameOf(view)}
+                    phases={view.phases}
                     footer={
                         <TelegramUserWizardFooter
                             index={view.index}

@@ -38,6 +38,250 @@
   },
   "views": [
     {
+      "id": "today",
+      "label": {
+        "key": "tab_today"
+      },
+      "root": {
+        "id": "today-root",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "children": [
+          {
+            "id": "today-figures",
+            "block": "core.figures",
+            "props": {
+              "label": {
+                "key": "today_label"
+              },
+              "variant": "ribbon",
+              "currency": "VND",
+              "items": [
+                {
+                  "term": {
+                    "key": "today_received"
+                  },
+                  "path": "receivedVnd",
+                  "format": "money",
+                  "hintPath": "receivedHint"
+                },
+                {
+                  "term": {
+                    "key": "today_matched"
+                  },
+                  "path": "matchedCount",
+                  "format": "count",
+                  "hintPath": "matchedHint"
+                },
+                {
+                  "term": {
+                    "key": "today_unmatched"
+                  },
+                  "path": "unmatchedCount",
+                  "format": "count",
+                  "hintPath": "unmatchedHint"
+                },
+                {
+                  "term": {
+                    "key": "today_waiting"
+                  },
+                  "path": "waitingCount",
+                  "format": "count",
+                  "hintPath": "waitingHint"
+                }
+              ]
+            },
+            "bind": {
+              "data": {
+                "read": "accounting.today"
+              }
+            },
+            "when": {
+              "permission": "accounting.view"
+            }
+          },
+          {
+            "id": "today-queue",
+            "block": "core.decision-queue",
+            "props": {
+              "surface": "card",
+              "label": {
+                "key": "queue_label"
+              },
+              "emptyTitle": {
+                "key": "queue_empty_title"
+              },
+              "emptyBody": {
+                "key": "queue_empty_body"
+              },
+              "seeWhy": {
+                "key": "decisions_see_why"
+              },
+              "moreMenu": {
+                "key": "decisions_more"
+              },
+              "currency": "VND",
+              "commands": [
+                {
+                  "id": "assign-order",
+                  "label": {
+                    "key": "queue_assign"
+                  },
+                  "intent": "commit"
+                },
+                {
+                  "id": "other-income",
+                  "label": {
+                    "key": "action_other_income"
+                  },
+                  "intent": "alternative"
+                }
+              ],
+              "edit": {
+                "label": {
+                  "key": "answer_label"
+                },
+                "submitLabel": {
+                  "key": "answer_submit"
+                },
+                "cancelLabel": {
+                  "key": "answer_cancel"
+                },
+                "fields": [
+                  {
+                    "name": "answer",
+                    "label": {
+                      "key": "answer_field"
+                    },
+                    "kind": "text",
+                    "required": true
+                  }
+                ]
+              },
+              "choices": [
+                {
+                  "command": "assign-order",
+                  "sends": "accounting.resolve-unmatched-payment",
+                  "pick": {
+                    "valueName": "order",
+                    "title": {
+                      "key": "picker_title"
+                    },
+                    "searchLabel": {
+                      "key": "picker_search"
+                    },
+                    "emptyBody": {
+                      "key": "picker_empty"
+                    }
+                  }
+                },
+                {
+                  "command": "other-income",
+                  "sends": "accounting.resolve-unmatched-payment",
+                  "confirm": {
+                    "title": {
+                      "key": "other_income_title"
+                    },
+                    "body": {
+                      "key": "other_income_body"
+                    },
+                    "confirmLabel": {
+                      "key": "action_other_income"
+                    },
+                    "cancelLabel": {
+                      "key": "picker_cancel"
+                    },
+                    "values": {
+                      "kind": "other-income"
+                    }
+                  }
+                }
+              ]
+            },
+            "bind": {
+              "queue": {
+                "read": "accounting.owner-queue",
+                "variables": {
+                  "installation": "$installationId"
+                }
+              },
+              "command": {
+                "action": "accounting.decide-owner-item"
+              },
+              "options": {
+                "read": "accounting.open-orders"
+              }
+            }
+          },
+          {
+            "id": "today-recent",
+            "block": "core.record-list",
+            "props": {
+              "label": {
+                "key": "recent_label"
+              },
+              "empty": {
+                "key": "recent_empty"
+              },
+              "surface": "card",
+              "idPath": "id",
+              "titlePath": "title",
+              "descriptionPath": "connection",
+              "metaPath": "time",
+              "badgePath": "status",
+              "chipPaths": ["level"],
+              "logoPath": "logo",
+              "badgeTones": {
+                "done": "success",
+                "waiting": "warning"
+              },
+              "labels": {
+                "status": {
+                  "done": {
+                    "key": "recent_done"
+                  },
+                  "waiting": {
+                    "key": "recent_waiting"
+                  }
+                },
+                "level": {
+                  "auto": {
+                    "key": "level_auto"
+                  },
+                  "ask": {
+                    "key": "level_ask"
+                  },
+                  "read": {
+                    "key": "level_read"
+                  }
+                }
+              },
+              "footerLink": {
+                "label": {
+                  "key": "recent_all"
+                },
+                "path": "./work"
+              }
+            },
+            "bind": {
+              "rows": {
+                "read": "accounting.recent",
+                "variables": {
+                  "installation": "$installationId"
+                },
+                "path": "rows"
+              }
+            },
+            "when": {
+              "permission": "accounting.view"
+            }
+          }
+        ]
+      }
+    },
+    {
       "id": "overview",
       "label": {
         "key": "tab_overview"
@@ -220,7 +464,9 @@
             "action": "accounting.answer-question"
           }
         }
-      }
+      },
+      "hidden": true,
+      "openBy": "questions"
     },
     {
       "id": "ledger",
@@ -341,7 +587,8 @@
               },
               "kind": "number"
             }
-          ]
+          ],
+          "surface": "plain"
         },
         "bind": {
           "record": {
@@ -354,7 +601,8 @@
         "when": {
           "permission": "accounting.manage"
         }
-      }
+      },
+      "openBy": "rules"
     }
   ],
   "aside": {
@@ -365,98 +613,47 @@
     },
     "children": [
       {
-        "id": "decisions",
-        "block": "core.decision-queue",
+        "id": "rail",
+        "block": "core.stack",
         "props": {
-          "surface": "section",
-          "label": {
-            "key": "decisions_label"
-          },
-          "emptyTitle": {
-            "key": "decisions_empty_title"
-          },
-          "emptyBody": {
-            "key": "decisions_empty_body"
-          },
-          "seeWhy": {
-            "key": "decisions_see_why"
-          },
-          "moreMenu": {
-            "key": "decisions_more"
-          },
-          "currency": "VND",
-          "isHeadless": true,
-          "commands": [
-            {
-              "id": "assign-order",
-              "label": {
-                "key": "action_assign_order"
-              },
-              "intent": "commit"
-            },
-            {
-              "id": "other-income",
-              "label": {
-                "key": "action_other_income"
-              },
-              "intent": "alternative"
-            }
-          ],
-          "choices": [
-            {
-              "command": "assign-order",
-              "sends": "accounting.resolve-unmatched-payment",
-              "pick": {
-                "valueName": "order",
-                "title": {
-                  "key": "picker_title"
-                },
-                "searchLabel": {
-                  "key": "picker_search"
-                },
-                "emptyBody": {
-                  "key": "picker_empty"
-                }
-              }
-            },
-            {
-              "command": "other-income",
-              "sends": "accounting.resolve-unmatched-payment",
-              "confirm": {
-                "title": {
-                  "key": "other_income_title"
-                },
-                "body": {
-                  "key": "other_income_body"
-                },
-                "confirmLabel": {
-                  "key": "action_other_income"
-                },
-                "cancelLabel": {
-                  "key": "picker_cancel"
-                },
-                "values": {
-                  "kind": "other-income"
-                }
-              }
-            }
-          ]
-        },
-        "bind": {
-          "queue": {
-            "read": "accounting.decisions"
-          },
-          "command": {
-            "action": "accounting.resolve-unmatched-payment"
-          },
-          "options": {
-            "read": "accounting.open-orders"
-          }
+          "gap": "region"
         },
         "showWhen": {
           "param": "pane",
           "is": ["list", "queue"]
-        }
+        },
+        "children": [
+          {
+            "id": "rail-cards",
+            "block": "core.dashboard-cards",
+            "props": {
+              "layout": "stack",
+              "connectionsLabel": {
+                "key": "rail_connections"
+              },
+              "knowledgeLabel": {
+                "key": "rail_knowledge"
+              },
+              "surface": "section"
+            },
+            "bind": {
+              "connections": {
+                "read": "platform.installation-connections",
+                "variables": {
+                  "installation": "$installationId",
+                  "module": "accounting"
+                }
+              },
+              "knowledge": {
+                "read": "platform.installation-knowledge",
+                "variables": {
+                  "installation": "$installationId",
+                  "module": "accounting"
+                }
+              }
+            }
+          }
+        ]
       },
       {
         "id": "entry",
@@ -494,14 +691,5 @@
         }
       }
     ]
-  },
-  "asideSummary": {
-    "read": "accounting.decisions",
-    "path": "count",
-    "previewPath": "rows.0.title",
-    "label": {
-      "key": "aside_label"
-    },
-    "opens": "queue"
   }
 }

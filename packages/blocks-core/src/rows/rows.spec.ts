@@ -11,15 +11,31 @@ describe("rowsOf", () => {
             { id: 2, title: "Second" },
         ]
         expect(rowsOf(records, PATHS, keepRaw, "?")).toEqual([
-            { id: "a", title: "First", description: "n1", badge: "open", tone: "neutral", meta: "", chips: [] },
-            { id: "2", title: "Second", description: "", badge: "", tone: "neutral", meta: "", chips: [] },
+            {
+                id: "a",
+                title: "First",
+                description: "n1",
+                badge: "open",
+                tone: "neutral",
+                meta: "",
+                chips: [],
+                logo: "",
+            },
+            { id: "2", title: "Second", description: "", badge: "", tone: "neutral", meta: "", chips: [], logo: "" },
         ])
     })
 
     it("draws no description or badge when their paths are absent", () => {
         expect(
             rowsOf([{ id: "a", title: "T", note: "n" }], { idPath: "id", titlePath: "title" }, keepRaw, "?"),
-        ).toEqual([{ id: "a", title: "T", description: "", badge: "", tone: "neutral", meta: "", chips: [] }])
+        ).toEqual([{ id: "a", title: "T", description: "", badge: "", tone: "neutral", meta: "", chips: [], logo: "" }])
+    })
+
+    it("draws the logo its path names", () => {
+        const paths = { idPath: "id", titlePath: "title", logoPath: "logo" }
+        expect(rowsOf([{ id: "a", title: "T", logo: "/x.svg" }], paths, keepRaw, "?")?.map((row) => row.logo)).toEqual([
+            "/x.svg",
+        ])
     })
 
     it("draws the short fact its path names", () => {
@@ -55,7 +71,7 @@ describe("rowsOf", () => {
 
     it("skips a record without a text id", () => {
         expect(rowsOf([{ title: "No id" }, { id: "b", title: "B" }], PATHS, keepRaw, "?")).toEqual([
-            { id: "b", title: "B", description: "", badge: "", tone: "neutral", meta: "", chips: [] },
+            { id: "b", title: "B", description: "", badge: "", tone: "neutral", meta: "", chips: [], logo: "" },
         ])
     })
 

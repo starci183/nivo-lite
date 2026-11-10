@@ -37,7 +37,8 @@ type QueryWorkspaceInvitesParams = QueryParams<QueryWorkspaceInvites>
 export const queryWorkspaceInvites = async ({
     query = QueryWorkspaceInvites.Query1,
     signal,
+    headers,
 }: QueryWorkspaceInvitesParams = {}): Promise<ApolloClient.QueryResult<QueryWorkspaceInvitesResponse>> => {
-    const apollo = createAuthApolloClient({ signal })
+    const apollo = createAuthApolloClient({ signal, headers })
     return apollo.query({ query: queryMap[query] })
 }

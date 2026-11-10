@@ -27,7 +27,10 @@ const copyProblems = (module: ModuleDefinition): ReadonlyArray<string> => {
                 module.agent.capabilities.en.length === 0,
             "agent summary, role and capabilities need both languages",
         ],
-        [module.multiInstance && module.audience !== "customer", "multiInstance is only for customer audience agents"],
+        [
+            module.multiInstance && module.audience !== "customer" && module.connectionProviders.length === 0,
+            "multiInstance is only for customer audience agents or agents that speak on channels",
+        ],
     ]
     return checks.filter(([failed]) => failed).map(([, message]) => `${module.key}: ${message}`)
 }

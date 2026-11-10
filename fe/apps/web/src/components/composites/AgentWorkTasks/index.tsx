@@ -1,4 +1,3 @@
-import { AgentWorkRowActions } from "@/components/branches/AgentWorkRowActions"
 import { AgentWorkRows } from "@/components/branches/AgentWorkRows"
 import type { AgentWorkTaskView } from "@/modules/types"
 
@@ -17,25 +16,26 @@ interface AgentWorkTasksProps {
     readonly onClose: (id: string) => void
 }
 
+/** The ways a row is acted on: the record it opened as its action, the close command as its menu, or alone as its action. */
+const taskCommandsOf = (task: AgentWorkTaskView, props: AgentWorkTasksProps) => {
+    const close = props.canEdit ? { label: props.words.closeLabel, onAction: () => props.onClose(task.id) } : null
+    if (task.workItemHref === null)
+        return close === null ? {} : { action: { label: close.label, press: close.onAction } }
+    const action = { label: props.words.openLabel, href: task.workItemHref, endArrow: true as const }
+    return close === null ? { action } : { action, menu: { label: props.words.moreLabel, entries: [{ id: "close", ...close }] } }
+}
+
 /** The open tasks of the agent. */
 export const AgentWorkTasks = (props: AgentWorkTasksProps) => (
     <AgentWorkRows
         words={props.words}
+        emptyIcon="play"
         isLoading={props.isLoading}
         rows={props.tasks.map((task) => ({
             id: task.id,
             title: task.title,
             facts: [task.detail, task.waitLabel],
-            actions: (
-                <AgentWorkRowActions
-                    menuLabel={props.words.moreLabel}
-                    isDisabled={false}
-                    link={task.workItemHref === null ? null : { label: props.words.openLabel, href: task.workItemHref }}
-                    command={
-                        props.canEdit ? { label: props.words.closeLabel, onPress: () => props.onClose(task.id) } : null
-                    }
-                />
-            ),
+            ...taskCommandsOf(task, props),
         }))}
     />
 )

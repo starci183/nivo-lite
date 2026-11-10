@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { usePaneCopy } from "@/hooks/paneFrame"
+import { useConsoleCrumbs } from "@/hooks/pageCrumbs"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import type { TeamPanesBaseProps } from "@/modules/types"
@@ -21,8 +22,10 @@ export const useTeamPanesCopy = (counts: TeamCounts): TeamPanesCopy => {
     const p = useTranslations("permissions")
     const pane = usePaneCopy()
     const workspaceId = useWorkspaceId()
+    const breadcrumbs = useConsoleCrumbs(t("title"))
     return {
         grid: t("gridLabel"),
+        breadcrumbs,
         title: t("title"),
         description: t("description"),
         tabsLabel: p("tabsLabel"),

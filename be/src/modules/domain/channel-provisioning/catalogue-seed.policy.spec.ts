@@ -53,7 +53,26 @@ describe("readCatalogueItems", () => {
         expect(items[0]).toEqual({ sku: "CHAU-MINI", name: "Mini pot", unit: "pot", sellPriceVnd: 5000 })
     })
 
+    it("reads the photo of an item as its content type and base64 bytes", () => {
+        const image = { contentType: "image/jpeg", base64: "anBlZy1ieXRlcw==" }
+
+        const [read] = policy.readCatalogueItems(envelope(document([item({ image })])))
+
+        expect(read?.image).toEqual(image)
+    })
+
     it.each([
+        ["a photo that is not an object", envelope(document([item({ image: "x" })])), "item.image"],
+        [
+            "a photo of a type no photo may have",
+            envelope(document([item({ image: { contentType: "image/gif", base64: "AAAA" } })])),
+            "item.image.contentType",
+        ],
+        [
+            "a photo that is not base64",
+            envelope(document([item({ image: { contentType: "image/png", base64: "not base64!" } })])),
+            "item.image.base64",
+        ],
         ["a document of another schema", envelope({ schema: "nivo/other@1", items: [item()] }), "schema"],
         ["a document that is not an object", envelope("x"), "schema"],
         ["a document with no items", envelope(document([])), "items"],
@@ -69,5 +88,37 @@ describe("readCatalogueItems", () => {
         ["a sku given twice", envelope(document([item(), item({ name: "Other" })])), "item.sku"],
     ])("refuses %s", (_name, text, field) => {
         expect(() => policy.readCatalogueItems(text)).toThrow(refused(field))
+    })
+})
+
+describe("readCatalogueItems: an item that shares the photo of another", () => {
+    const image = { contentType: "image/jpeg", base64: "anBlZy1ieXRlcw==" }
+
+    it("gets the photo of the item it names, wherever that item stands in the documents", async () => {
+        const policy = await build()
+
+        const items = policy.readCatalogueItems(
+            envelope(
+                document([item({ sku: "BO-HONG-20", imageOf: "BO-HONG-MINI" })]),
+                document([item({ sku: "BO-HONG-MINI", image })]),
+            ),
+        )
+
+        expect(items.map((read) => [read.sku, read.image])).toEqual([
+            ["BO-HONG-20", image],
+            ["BO-HONG-MINI", image],
+        ])
+        expect(items[0]).not.toHaveProperty("imageOf")
+    })
+
+    it.each([
+        ["an item that is not there", [item({ imageOf: "NONE" })]],
+        ["an item without a photo", [item({ imageOf: "KE-1" }), item({ sku: "KE-1" })]],
+        ["itself", [item({ imageOf: "CHAU-MINI" })]],
+        ["an item while carrying a photo of its own", [item({ imageOf: "KE-1", image }), item({ sku: "KE-1", image })]],
+    ])("refuses a shared photo of %s", async (_name, items) => {
+        const policy = await build()
+
+        expect(() => policy.readCatalogueItems(envelope(document(items)))).toThrow(refused("item.imageOf"))
     })
 })

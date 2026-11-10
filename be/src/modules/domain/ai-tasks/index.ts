@@ -12,7 +12,6 @@ export type {
     TextRequest,
 } from "./ai-tasks.contracts"
 export { AiTasksModule } from "./ai-tasks.module"
-export type { AiTaskTextGenerator } from "./ai-tasks.port"
 export { authorityBrief } from "./prompts.policy"
 
 export { AI_TASKS, InjectAiTasks } from "./ai-tasks.decorators"

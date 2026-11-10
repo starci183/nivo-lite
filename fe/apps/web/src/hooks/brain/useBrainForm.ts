@@ -22,11 +22,14 @@ interface BrainFormState {
     readonly lenses: ReadonlyArray<BrainLens>
 }
 
-/** The fact form, as the address asks for it: closed, a new fact, a new value for a fact in force, or the answer to a question. */
+/** The fact form, as the address asks for it: closed, a new fact, a new value for a fact in force or waiting, or the answer to a question. */
 export const useBrainForm = (address: BrainFormAddress): BrainFormState => {
     const board = useBrainBoard()
     const member = useWorkspaceMember()
-    const editing = board.facts.find((fact) => fact.id === address.edit && fact.status === "active") ?? null
+    const editing =
+        board.facts.find(
+            (fact) => fact.id === address.edit && (fact.status === "active" || fact.status === "proposed"),
+        ) ?? null
     const gap = board.gaps.find((one) => one.id === address.answer)
     const base = { canWrite: board.canWrite, lenses: board.lenses }
     if (editing !== null) return { ...base, isOpen: true, formKey: editing.id, editing, preset: undefined }

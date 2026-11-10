@@ -10,6 +10,9 @@ import { workspaceHref } from "@/modules/routes"
 import { toast } from "@/modules/toast"
 import { addressWithQuery, mergedQuery, reportDefect, specLocaleOf, spokenText } from "@/modules/workbench-host"
 
+/** The page next to the open one: `./work` beside `/a/b/workbench` is `/a/b/work`. */
+const siblingPath = (current: string, relative: string): string => `${current.replace(/\/[^/]*$/u, "")}/${relative.slice(2)}`
+
 /**
  * The ports a block reaches, over the app: words through next-intl (a key reads the namespace, inline words pick the locale),
  * navigation through the locale-aware router and the search params (a path a block names is a page of the workspace that is open), toasts through the app toast, defects to the page error
@@ -36,11 +39,14 @@ export const useWorkbenchBlockHost = (): BlockHost => {
             },
             locale: () => locale,
             navigation: {
-                href: (path) =>
-                    navigation.getPathname({
+                href: (path) => {
+                    if (path.startsWith("./"))
+                        return navigation.getPathname({ href: siblingPath(pathname, path), locale: appLocale })
+                    return navigation.getPathname({
                         href: workspaceId === undefined ? path : workspaceHref(workspaceId, path),
                         locale: appLocale,
-                    }),
+                    })
+                },
                 queryValue: (key) => new URLSearchParams(search).get(key),
                 setQueryValue: (key, value) => setQueryValues({ [key]: value }),
                 setQueryValues,

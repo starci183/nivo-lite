@@ -377,16 +377,18 @@ describe("GoogleClient sheet operations", () => {
 })
 
 describe("GoogleClient ledger values", () => {
-    it("appends rows to the first tab as raw values and answers the range Google wrote", async () => {
+    it("appends rows to a tab as typed values and answers the range Google wrote", async () => {
         const { client, http } = await build()
-        http.request.mockResolvedValue(answer({ updates: { updatedRange: "Sheet1!A2:G2" } }))
+        http.request.mockResolvedValue(answer({ updates: { updatedRange: "'Ledger'!A2:H2" } }))
 
-        await expect(client.appendValues("tok", "sheet 1", [["2026-11-04", 5000]])).resolves.toBe("Sheet1!A2:G2")
+        await expect(client.appendValues("tok", "sheet 1", "Ledger", [["2026-11-04", 5000]])).resolves.toBe(
+            "'Ledger'!A2:H2",
+        )
 
         expect(http.request).toHaveBeenCalledWith(
             objectLike({
                 method: "POST",
-                url: "https://sheets.googleapis.com/v4/spreadsheets/sheet%201/values/A%3AG:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS",
+                url: "https://sheets.googleapis.com/v4/spreadsheets/sheet%201/values/'Ledger'!A%3AH:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS",
                 headers: { authorization: "Bearer tok" },
                 body: { majorDimension: "ROWS", values: [["2026-11-04", 5000]] },
                 timeoutMs: 5000,
@@ -398,7 +400,48 @@ describe("GoogleClient ledger values", () => {
         const { client, http } = await build()
         http.request.mockResolvedValue(answer({}))
 
-        await expect(client.appendValues("tok", "s", [])).resolves.toBe("")
+        await expect(client.appendValues("tok", "s", "Ledger", [])).resolves.toBe("")
+    })
+
+    it("adds the tab, frozen under its header, when the spreadsheet has none of that title", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce(answer({ sheets: [{ properties: { title: "Orders" } }, "x", {}] }))
+        http.request.mockResolvedValueOnce(answer({}))
+
+        await client.ensureTab("tok", "s", "Ledger")
+
+        expect(http.request).toHaveBeenNthCalledWith(
+            1,
+            objectLike({ method: "GET", url: stringLike("/v4/spreadsheets/s?fields=sheets.properties.title") }),
+        )
+        expect(http.request).toHaveBeenNthCalledWith(
+            2,
+            objectLike({
+                method: "POST",
+                url: stringLike("/v4/spreadsheets/s:batchUpdate"),
+                body: {
+                    requests: [
+                        {
+                            addSheet: {
+                                properties: {
+                                    title: "Ledger",
+                                    gridProperties: { frozenRowCount: 1, rowCount: 1000, columnCount: 8 },
+                                },
+                            },
+                        },
+                    ],
+                },
+            }),
+        )
+    })
+
+    it("adds nothing when the tab is there, or when Google lists no tabs it can read", async () => {
+        const { client, http } = await build()
+        http.request.mockResolvedValueOnce(answer({ sheets: [{ properties: { title: "Ledger" } }] }))
+
+        await client.ensureTab("tok", "s", "Ledger")
+
+        expect(http.request).toHaveBeenCalledTimes(1)
     })
 
     it("reads a range as text rows and reads no values as no rows", async () => {
@@ -418,7 +461,7 @@ describe("GoogleClient ledger values", () => {
         const { client, http } = await build()
         http.request.mockResolvedValue(answer({ error: { status: "PERMISSION_DENIED" } }, 403))
 
-        await expect(client.appendValues("tok", "s", [])).rejects.toMatchObject({
+        await expect(client.appendValues("tok", "s", "Ledger", [])).rejects.toMatchObject({
             code: GoogleErrorCode.Refused,
             params: { status: 403, reason: "PERMISSION_DENIED" },
         })

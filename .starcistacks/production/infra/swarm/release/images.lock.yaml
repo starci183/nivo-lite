@@ -9,6 +9,7 @@ images:
   nivo-mcp: ghcr.io/starci183/nivo-lite-mcp (digest per release)
   nivo-web-app: ghcr.io/starci183/nivo-lite-web (digest per release)
   nivo-landing: ghcr.io/starci183/nivo-lite-landing (digest per release)
+  nivo-admin: ghcr.io/starci183/nivo-lite-admin (digest per release)
   nivo-openclaw: ghcr.io/openclaw/openclaw:2026.7.1@sha256:6a31d44b2944e7adcd2b582bf6fb463111264ebca97a0201795b799135bd102c
   nivo-n8n: docker.n8n.io/n8nio/n8n:1.64.3@sha256:4d9116228d426ce24c442a744e9c11ee7c1187713f93f21dd5a34a12584708c1
   ingress: traefik:v3.6@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d

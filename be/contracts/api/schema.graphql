@@ -1,5 +1,13 @@
 directive @inputBounds(version: Int = 1, maxLength: Int, maxItems: Int, min: Float, max: Float, itemMaxLength: Int, itemMaxItems: Int, itemMin: Float, itemMax: Float) on INPUT_FIELD_DEFINITION
 
+input AcceptAgentWorkflowTemplateInput {
+  expectedLatest: Int @inputBounds(min: 0, max: 100000)
+  installationId: ID! @inputBounds(maxLength: 36)
+  note: String! @inputBounds(maxLength: 500)
+  templateVersion: Int! @inputBounds(min: 1, max: 100000)
+  workflowId: ID! @inputBounds(maxLength: 36)
+}
+
 type AcceptInviteType {
   workspaceId: ID!
 }
@@ -321,6 +329,47 @@ type AgentAvatarUploadType {
   token: String!
 }
 
+type AgentCatalogEntryType {
+  agentId: ID!
+  grants: [AgentCatalogGrantType!]!
+  installationId: ID
+  knowledge: AgentCatalogKnowledgeType!
+}
+
+type AgentCatalogGrantType {
+  access: String!
+  accountMasked: String
+  botUsername: String
+  connectionId: ID!
+  name: String!
+  provider: String!
+  purpose: String!
+  status: String!
+}
+
+type AgentCatalogKnowledgeType {
+  audience: String!
+  documents: Int!
+  factsApproved: Int!
+  factsTotal: Int!
+  factsWaiting: Int!
+}
+
+type AgentChannelChoiceType {
+  botUsername: String
+  connectionId: ID!
+  name: String!
+  ownerAgentId: ID
+  ownerAgentName: String
+  provider: String!
+  purpose: String!
+  status: String!
+}
+
+input AgentChannelChoicesInput {
+  moduleKey: String! @inputBounds(maxLength: 24)
+}
+
 type AgentConnectionCandidateType {
   access: String
   accountMasked: String
@@ -510,6 +559,26 @@ type AgentGraphExcludedType {
   reason: String!
 }
 
+input AgentGraphLayoutInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+}
+
+input AgentGraphLayoutPositionInput {
+  workflowKey: String! @inputBounds(maxLength: 100)
+  x: Float! @inputBounds(min: -100000, max: 100000)
+  y: Float! @inputBounds(min: -100000, max: 100000)
+}
+
+type AgentGraphLayoutPositionType {
+  workflowKey: String!
+  x: Float!
+  y: Float!
+}
+
+type AgentGraphLayoutType {
+  positions: [AgentGraphLayoutPositionType!]!
+}
+
 type AgentGraphRunEntryType {
   action: String!
   branchKey: String!
@@ -576,10 +645,29 @@ input AgentIdInput {
   agentId: ID! @inputBounds(maxLength: 36)
 }
 
+type AgentKnowledgeDocumentType {
+  approvedFacts: Int!
+  id: ID!
+  isRead: Boolean!
+  kind: String!
+  layer: String!
+  title: String!
+  updatedAt: String!
+  waitingFacts: Int!
+}
+
 type AgentKnowledgeLaneType {
   count: Int
   lane: String!
   open: Boolean!
+}
+
+type AgentKnowledgeLayerType {
+  approvedFacts: Int!
+  documents: Int!
+  isRead: Boolean!
+  layer: String!
+  totalFacts: Int!
 }
 
 type AgentKnowledgeLensType {
@@ -591,6 +679,25 @@ type AgentKnowledgeLensType {
   lanes: [AgentKnowledgeLaneType!]!
   module: String
   name: String
+}
+
+type AgentKnowledgeOwnFactType {
+  id: ID!
+  isApproved: Boolean!
+  label: String!
+  value: String!
+}
+
+type AgentKnowledgeType {
+  agentId: ID!
+  audience: String!
+  documents: [AgentKnowledgeDocumentType!]!
+  installationId: ID
+  layers: [AgentKnowledgeLayerType!]!
+  module: String!
+  name: String!
+  ownFacts: [AgentKnowledgeOwnFactType!]!
+  waitingFacts: Int!
 }
 
 type AgentOwnerCardType {
@@ -660,9 +767,125 @@ type AgentRulesRegionType {
   ok: Boolean!
 }
 
+type AgentRunCallType {
+  failure: String
+  ok: Boolean!
+  tool: String!
+}
+
+type AgentRunCancelType {
+  kind: String!
+  note: String
+}
+
+type AgentRunDecisionType {
+  decisionId: ID!
+  options: [AgentRunDecisionVerdict!]!
+  stepKey: String
+  title: String!
+  workItemId: ID!
+}
+
+enum AgentRunDecisionVerdict {
+  approve
+  reject
+  retry
+}
+
+type AgentRunDetailType {
+  canCancel: Boolean!
+  canResume: Boolean!
+  decision: AgentRunDecisionType
+  item: AgentRunItemType
+  row: AgentRunRowType!
+  steps: [AgentRunStepType!]!
+}
+
+type AgentRunFactType {
+  key: String!
+  value: String!
+}
+
+input AgentRunInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  runId: ID! @inputBounds(maxLength: 36)
+}
+
+type AgentRunItemType {
+  action: String!
+  error: String
+  evidence: [AgentRunFactType!]!
+  id: ID!
+  reason: String
+  status: String!
+  summary: String!
+}
+
 type AgentRunResumeType {
   kind: String!
   stepKey: String
+}
+
+type AgentRunRowType {
+  cancelledAt: String
+  creditsUsed: Int!
+  durationMs: Int!
+  endedAt: String
+  errorCode: String
+  id: ID!
+  queuePosition: Int
+  source: String!
+  startedAt: String!
+  status: String!
+  stepNumber: Int!
+  stepTotal: Int!
+  title: String!
+  versionNumber: Int
+  workItemId: ID
+  workflowKey: String!
+}
+
+type AgentRunStepType {
+  attempt: Int!
+  calls: [AgentRunCallType!]!
+  durationMs: Int
+  errorCode: String
+  input: [AgentRunFactType!]!
+  maxAttempts: Int!
+  nodeKey: String!
+  ordinal: Int!
+  output: [AgentRunFactType!]!
+  startedAt: String
+  status: String!
+  stepKey: String!
+  workItemId: ID
+}
+
+type AgentRunWorkflowPinType {
+  runId: String!
+  version: Int!
+  workflowId: String!
+  workflowName: String!
+}
+
+type AgentRunWorkflowType {
+  count: Int!
+  key: String!
+  versionNumber: Int
+}
+
+input AgentRunWorkflowsInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  runIds: [String!]! @inputBounds(maxItems: 100, itemMaxLength: 36)
+}
+
+type AgentRunsType {
+  activeCount: Int!
+  concurrencyLimit: Int!
+  queuedCount: Int!
+  runningCount: Int!
+  runs: [AgentRunRowType!]!
+  workflows: [AgentRunWorkflowType!]!
 }
 
 type AgentSummaryType {
@@ -744,6 +967,41 @@ input AgentWorkInstanceInput {
   installationId: ID! @inputBounds(maxLength: 36)
 }
 
+type AgentWorkLogConnectionType {
+  id: ID!
+  name: String!
+  provider: String!
+}
+
+type AgentWorkLogEvidenceType {
+  key: String!
+  value: String!
+}
+
+type AgentWorkLogLineType {
+  action: String!
+  at: String!
+  connection: AgentWorkLogConnectionType
+  detail: String!
+  error: String
+  evidence: [AgentWorkLogEvidenceType!]!
+  evidenceCode: String
+  evidenceKind: String!
+  id: ID!
+  level: String
+  reason: String
+  resultHref: String
+  status: String!
+  steps: [AgentWorkLogStepType!]!
+  title: String!
+}
+
+type AgentWorkLogStepType {
+  at: String
+  key: String!
+  state: String!
+}
+
 type AgentWorkStateType {
   agentId: ID!
   backgroundTurns: Int!
@@ -760,6 +1018,118 @@ type AgentWorkType {
   tasks: [AgentTaskType!]!
   triggers: [AgentTriggerType!]!
   turns: [AgentTurnType!]!
+}
+
+type AgentWorkflowDetailType {
+  graphJson: String!
+  templateDiff: AgentWorkflowDiffType
+  versions: [AgentWorkflowVersionType!]!
+  workflow: AgentWorkflowType!
+}
+
+input AgentWorkflowDiffInput {
+  against: String! @inputBounds(maxLength: 20)
+  againstNumber: Int @inputBounds(min: 1, max: 100000)
+  installationId: ID! @inputBounds(maxLength: 36)
+  number: Int! @inputBounds(min: 1, max: 100000)
+  workflowId: ID! @inputBounds(maxLength: 36)
+}
+
+type AgentWorkflowDiffType {
+  afterJson: String!
+  beforeJson: String
+  effectsAdded: [String!]!
+  effectsRemoved: [String!]!
+  rightsAdded: [String!]!
+  rightsRemoved: [String!]!
+  steps: [AgentWorkflowStepDiffType!]!
+  toolsAdded: [String!]!
+  toolsRemoved: [String!]!
+  triggerChanged: Boolean!
+}
+
+input AgentWorkflowGraphInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  locale: String @inputBounds(maxLength: 2)
+}
+
+type AgentWorkflowGraphType {
+  agentAvatar: String
+  agentId: ID!
+  agentLabel: String!
+  workflows: [WorkflowGraphEntryType!]!
+}
+
+input AgentWorkflowInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  locale: String @inputBounds(maxLength: 2)
+  workflowId: ID! @inputBounds(maxLength: 36)
+}
+
+type AgentWorkflowParamChangeType {
+  afterJson: String
+  beforeJson: String
+  name: String!
+}
+
+type AgentWorkflowStepDiffType {
+  change: String!
+  key: String!
+  params: [AgentWorkflowParamChangeType!]!
+  parts: [String!]!
+  step: String!
+}
+
+input AgentWorkflowTemplatePreviewInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  locale: String @inputBounds(maxLength: 2)
+  templateVersion: Int! @inputBounds(min: 1, max: 100000)
+  workflowId: ID! @inputBounds(maxLength: 36)
+}
+
+type AgentWorkflowTemplatePreviewType {
+  changes: [WorkflowTemplateChangeType!]!
+  conflicts: [String!]!
+  diff: AgentWorkflowDiffType!
+  templateVersion: Int!
+}
+
+type AgentWorkflowType {
+  activeNumber: Int
+  id: String!
+  key: String!
+  latestNumber: Int!
+  name: String!
+  primary: Boolean!
+  status: String!
+  stepCount: Int!
+  templateChangedSteps: Int
+  templateId: String
+  templateLatest: Int
+  templateName: String
+  templateVersion: Int
+  updatedAt: String!
+}
+
+type AgentWorkflowVersionType {
+  active: Boolean!
+  authorId: String
+  authorKind: String!
+  changeKind: String!
+  changedSteps: Int
+  fromNumber: Int
+  id: String!
+  note: String!
+  number: Int!
+  publishedAt: String!
+  stepCount: Int!
+  templateId: String
+  templateVersion: Int
+}
+
+input AgentWorkflowsInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  locale: String @inputBounds(maxLength: 2)
 }
 
 type ApiKeyType {
@@ -844,6 +1214,11 @@ input AssignDossierFindingInput {
   assigneeId: ID = null @inputBounds(maxLength: 36)
   dueAt: String = null @inputBounds(maxLength: 10)
   findingId: ID! @inputBounds(maxLength: 36)
+}
+
+input AssignInboxLeadInput {
+  agentId: ID = null @inputBounds(maxLength: 36)
+  leadId: ID! @inputBounds(maxLength: 36)
 }
 
 input AttachedFileInput {
@@ -1409,6 +1784,10 @@ input BrandProposalsInput {
   installationId: ID! @inputBounds(maxLength: 36)
 }
 
+input CancelAgentRunInput {
+  runId: ID! @inputBounds(maxLength: 64)
+}
+
 input CancelBookingInput {
   id: ID! @inputBounds(maxLength: 36)
 }
@@ -1504,6 +1883,17 @@ type ChatFileUploadType {
   uploadUrl: String!
 }
 
+input ChatForwardInput {
+  messageId: ID! @inputBounds(maxLength: 36)
+  roomId: ID! @inputBounds(maxLength: 36)
+}
+
+enum ChatGroupPurpose {
+  common
+  group
+  module
+}
+
 enum ChatMemberKind {
   agent
   user
@@ -1521,6 +1911,7 @@ enum ChatMemberRole {
 
 type ChatMemberType {
   lastReadAt: String
+  mayPost: Boolean!
   memberId: ID!
   memberKind: ChatMemberKind!
   muted: Boolean!
@@ -1552,6 +1943,7 @@ type ChatMessagePayloadType {
 }
 
 type ChatMessageType {
+  agentMessage: String
   approval: ChatApprovalType
   attachments: [ChatAttachmentType!]!
   authorId: ID
@@ -1560,10 +1952,13 @@ type ChatMessageType {
   body: String!
   createdAt: String!
   editedAt: String
+  forwardedFrom: String
   id: ID!
   kind: ChatMessageKind!
   mentions: [ChatMentionType!]!
   pinned: Boolean!
+  reactions: [ChatReactionType!]!
+  replyTo: ChatReplyType
   report: ChatReportRefType
   roomId: ID!
 }
@@ -1583,6 +1978,19 @@ type ChatPageInfoType {
 input ChatPinInput {
   messageId: ID! @inputBounds(maxLength: 36)
   roomId: ID! @inputBounds(maxLength: 36)
+}
+
+input ChatReactInput {
+  emoji: String! @inputBounds(maxLength: 16)
+  messageId: ID! @inputBounds(maxLength: 36)
+  times: Int = null @inputBounds(min: 1, max: 30)
+}
+
+type ChatReactionType {
+  count: Int!
+  emoji: String!
+  mine: Boolean!
+  mineCount: Int!
 }
 
 type ChatReadPayloadType {
@@ -1607,9 +2015,20 @@ enum ChatRefusal {
   not_an_approver
   not_found
   not_member
+  post_right_needs_seat
+  purpose_invalid
+  purpose_taken
+  reaction_invalid
+  reaction_rate_limited
   storage_unavailable
   too_many_files
   too_many_mentions
+}
+
+type ChatReplyType {
+  authorName: String!
+  body: String!
+  messageId: ID!
 }
 
 type ChatReportRefType {
@@ -1636,6 +2055,13 @@ type ChatRoomPayloadType {
   room: ChatRoomType
 }
 
+enum ChatRoomPurpose {
+  common
+  direct
+  group
+  module
+}
+
 type ChatRoomType {
   createdAt: String!
   createdBy: ID!
@@ -1647,6 +2073,8 @@ type ChatRoomType {
   muted: Boolean!
   name: String!
   position: Int!
+  purpose: ChatRoomPurpose!
+  purposeModule: String
   unreadCount: Int!
 }
 
@@ -1743,6 +2171,15 @@ type ConfirmBookingType {
 input ConnectTelegramInput {
   name: String! @inputBounds(maxLength: 120)
   token: String! @inputBounds(maxLength: 200)
+}
+
+type ConnectionAgentGrantType {
+  access: String!
+  agentId: ID!
+  agentName: String!
+  connectionId: ID!
+  module: String!
+  purpose: String!
 }
 
 type ConnectionAgentType {
@@ -1990,12 +2427,43 @@ type ContextVersionType {
   version: Int!
 }
 
+type CopiedSetupType {
+  connections: Int!
+  contextVersion: Boolean!
+  fromInstallationId: ID!
+  graph: String!
+  knowledgeDocuments: Int!
+  knowledgeFacts: Int!
+  knowledgeWaiting: Int!
+  rules: Int!
+  settings: Boolean!
+}
+
 input CreateAgentInput {
   handle: String! @inputBounds(maxLength: 40)
   instructions: String! @inputBounds(maxLength: 20000)
   module: String! @inputBounds(maxLength: 60)
   name: String! @inputBounds(maxLength: 120)
   role: String! @inputBounds(maxLength: 300)
+}
+
+input CreateAgentInstallationInput {
+  avatarPath: String = null @inputBounds(maxLength: 80)
+  avatarPreset: String = null @inputBounds(maxLength: 40)
+  connectionIds: [ID!] = [] @inputBounds(maxItems: 20, itemMaxLength: 36)
+  copyFrom: ID = null @inputBounds(maxLength: 36)
+  handle: String = null @inputBounds(maxLength: 40)
+  moduleKey: String! @inputBounds(maxLength: 24)
+  name: String! @inputBounds(maxLength: 80)
+  startFrom: String = "default"
+}
+
+input CreateAgentWorkflowInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  locale: String @inputBounds(maxLength: 2)
+  name: String @inputBounds(maxLength: 120)
+  templateId: String @inputBounds(maxLength: 80)
+  templateVersion: Int @inputBounds(min: 1, max: 100000)
 }
 
 input CreateApiKeyInput {
@@ -2007,6 +2475,8 @@ input CreateChatRoomInput {
   kind: ChatRoomKind! @inputBounds(maxLength: 10)
   members: [ChatMemberRefInput!]! @inputBounds(maxItems: 200)
   name: String = null @inputBounds(maxLength: 200)
+  purpose: ChatGroupPurpose = null
+  purposeModule: String = null @inputBounds(maxLength: 200)
 }
 
 type CreateCvUploadType {
@@ -2054,6 +2524,13 @@ input CreateWorkspaceInput {
 
 type CreateWorkspaceType {
   id: ID!
+}
+
+type CreatedAgentInstallationType {
+  agentId: ID!
+  channels: Int!
+  copied: CopiedSetupType
+  installationId: ID!
 }
 
 type CreatedApiKeyType {
@@ -2219,6 +2696,17 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+input DecideAgentRunStepInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  runId: ID! @inputBounds(maxLength: 36)
+  verdict: AgentRunDecisionVerdict! @inputBounds(maxLength: 10)
+}
+
+type DecideAgentRunStepType {
+  ok: Boolean!
+  refusal: String
+}
+
 input DecideBrainFactInput {
   action: String! @inputBounds(maxLength: 40)
   id: ID! @inputBounds(maxLength: 36)
@@ -2242,6 +2730,15 @@ input DecideChatApprovalInput {
   verdict: ChatVerdict! @inputBounds(maxLength: 10)
 }
 
+input DecideLeadFreezeInput {
+  action: String! @inputBounds(maxLength: 10)
+  freezeId: ID! @inputBounds(maxLength: 36)
+}
+
+type DecideLeadFreezeType {
+  outcome: String!
+}
+
 input DecideSetupCardInput {
   cardId: ID! @inputBounds(maxLength: 36)
   change: CardDecisionInput!
@@ -2250,6 +2747,13 @@ input DecideSetupCardInput {
 input DeclineAgentGraphProposalInput {
   agentId: String! @inputBounds(maxLength: 36)
   proposalId: String! @inputBounds(maxLength: 36)
+}
+
+type DeclinedInviteType {
+  declinedAt: String!
+  email: String!
+  id: ID!
+  role: String!
 }
 
 type DeleteCandidateType {
@@ -2262,6 +2766,10 @@ input DeleteConnectionInput {
 
 input DeleteKnowledgeSourceInput {
   id: ID! @inputBounds(maxLength: 36)
+}
+
+input DeleteWorkspaceInput {
+  confirmName: String! @inputBounds(maxLength: 120)
 }
 
 type DeviceSessionType {
@@ -2949,6 +3457,123 @@ input InboundEventsInput {
   limit: Int! = 40 @inputBounds(min: 1, max: 100)
 }
 
+type InboxAgentOptionType {
+  id: ID!
+  name: String!
+}
+
+type InboxApprovalType {
+  agentName: String
+  amountVnd: Float
+  itemsText: String
+  orderId: ID
+  orderNo: String
+}
+
+type InboxCountsType {
+  all: Int!
+  needsYou: Int!
+  new: Int!
+  ordered: Int!
+  paid: Int!
+}
+
+type InboxFiguresType {
+  autoReplyPct: Int
+  avgResponseSeconds: Int
+  needsYou: Int!
+  newToday: Int!
+  visitors7d: Int!
+}
+
+type InboxLeadDetailType {
+  approval: InboxApprovalType
+  email: String
+  lead: InboxLeadRowType!
+  needs: InboxNeedsType!
+  orders: [InboxOrderType!]!
+  paidCount: Int!
+  paidVnd: Float!
+  phone: String
+  source: InboxSourceType!
+  timeline: [InboxTimelineEntryType!]!
+  zaloLinked: Boolean!
+}
+
+input InboxLeadInput {
+  id: ID! @inputBounds(maxLength: 200)
+}
+
+type InboxLeadRowType {
+  agentAvatarUrl: String
+  agentId: ID
+  agentName: String
+  amountVnd: Float
+  channel: String!
+  chips: [String!]!
+  eventCount: Int!
+  firstAt: String!
+  id: ID!
+  isUnmatched: Boolean!
+  lastAt: String!
+  name: String!
+  needsOwner: Boolean!
+  stage: String!
+  summary: String!
+  via: String
+}
+
+input InboxLeadsInput {
+  agentId: String = null @inputBounds(maxLength: 36)
+  channel: String = null @inputBounds(maxLength: 20)
+  limit: Int! = 60 @inputBounds(min: 1, max: 100)
+  search: String = null @inputBounds(maxLength: 120)
+  sort: String! = "recent" @inputBounds(maxLength: 20)
+  tab: String! = "all" @inputBounds(maxLength: 20)
+}
+
+type InboxLeadsType {
+  agents: [InboxAgentOptionType!]!
+  counts: InboxCountsType!
+  figures: InboxFiguresType!
+  leads: [InboxLeadRowType!]!
+}
+
+type InboxNeedsType {
+  delivery: String
+  items: String
+  note: String
+  summary: String
+  valueVnd: Float
+}
+
+type InboxOrderType {
+  amountVnd: Float
+  createdAt: String!
+  id: ID!
+  itemsText: String
+  orderNo: String!
+  status: String!
+}
+
+type InboxSourceType {
+  campaign: String
+  channel: String!
+  device: String
+  landing: String
+  via: String
+}
+
+type InboxTimelineEntryType {
+  amountVnd: Float
+  at: String!
+  channel: String
+  id: ID!
+  kind: String!
+  status: String
+  text: String!
+}
+
 input InstallModuleInput {
   moduleKey: String! @inputBounds(maxLength: 24)
   name: String = null @inputBounds(maxLength: 160)
@@ -2971,6 +3596,15 @@ type InstalledTemplateType {
 
 input InstanceOfRecordInput {
   recordId: ID! @inputBounds(maxLength: 36)
+}
+
+type InviteForMeType {
+  expiresAt: String!
+  id: ID!
+  invitedByName: String
+  role: String!
+  workspaceId: ID!
+  workspaceName: String!
 }
 
 type InvitePreviewType {
@@ -3081,6 +3715,24 @@ type KnowledgeSuggestionContextType {
 type KnowledgeUsageType {
   limitBytes: Int!
   usedBytes: Int!
+}
+
+input LeadFreezeInput {
+  leadId: ID @inputBounds(maxLength: 36)
+  runId: ID @inputBounds(maxLength: 36)
+}
+
+type LeadFreezeType {
+  heldBy: String
+  id: ID!
+  leadId: ID
+  pendingCount: Int!
+  reason: String
+  runId: ID
+  status: String!
+  stepTitle: String
+  workItemId: ID
+  workflowId: ID
 }
 
 type LedgerLineType {
@@ -3350,7 +4002,24 @@ type MemberType {
   workspaceId: ID!
 }
 
+type MembershipLobbyType {
+  deletedAt: String
+  disabledAt: String
+  disabledByName: String
+  disabledByRole: String
+  disabledNote: String
+  lastOpenedAt: String
+  memberCount: Int!
+  ownerCount: Int!
+  planCode: String
+  planNameEn: String
+  planNameVi: String
+  restoreBefore: String
+  seatLimit: Int
+}
+
 type MembershipType {
+  lobby: MembershipLobbyType!
   member: MemberType!
   workspace: WorkspaceType!
 }
@@ -3518,6 +4187,7 @@ input ModuleInstallationIdInput {
 type ModuleInstallationType {
   activeContextVersionId: ID
   activeVersion: Int
+  agentAvatarPreset: String
   agentAvatarUrl: String
   agentHandle: String!
   agentId: ID
@@ -3580,6 +4250,7 @@ input MoveHiringCandidateInput {
 }
 
 type Mutation {
+  acceptAgentWorkflowTemplate(input: AcceptAgentWorkflowTemplateInput!): AgentWorkflowVersionType!
   acceptInvite(input: InviteTokenInput!): AcceptInviteType!
   acceptTemplateUpdate(input: AcceptTemplateUpdateInput!): UpdateOfferType
   addBooking(input: AddBookingInput!): AddBookingType!
@@ -3602,10 +4273,12 @@ type Mutation {
   askGuide(input: AskGuideInput!): GuideAskedType!
   assignBrainDossier(input: AssignBrainDossierInput!): BrainDossierOwnerType!
   assignDossierFinding(input: AssignDossierFindingInput!): DossierFindingType!
+  assignInboxLead(input: AssignInboxLeadInput!): Boolean!
   authorizeDrive(input: AuthorizeDriveInput!): DriveAuthorizeUrlType!
   authorizeGoogle(input: AuthorizeGoogleInput!): AuthorizeUrlType!
   authorizeMeta(input: AuthorizeMetaInput!): MetaAuthorizationType!
   authorizeZalo(input: AuthorizeZaloInput!): ZaloAuthorizationType!
+  cancelAgentRun(input: CancelAgentRunInput!): AgentRunCancelType!
   cancelBooking(input: CancelBookingInput!): CancelBookingType!
   cancelHiringOffer(input: HiringOfferRefInput!): Boolean!
   cancelTelegramLogin(input: CancelTelegramLoginInput!): Boolean!
@@ -3625,6 +4298,8 @@ type Mutation {
   connectTelegram(input: ConnectTelegramInput!): TelegramConnectedType!
   copyInviteLink(input: InviteRefInput!): InviteResultType!
   createAgent(input: CreateAgentInput!): AgentSummaryType!
+  createAgentInstallation(input: CreateAgentInstallationInput!): CreatedAgentInstallationType!
+  createAgentWorkflow(input: CreateAgentWorkflowInput!): AgentWorkflowType!
   createApiKey(input: CreateApiKeyInput!): CreatedApiKeyType!
   createChatRoom(input: CreateChatRoomInput!): ChatRoomPayloadType!
   createHiringCvUpload(input: CreateHiringCvUploadInput!): CreateCvUploadType!
@@ -3633,15 +4308,19 @@ type Mutation {
   createVideoMediaUpload(input: CreateVideoMediaUploadInput!): VideoMediaUploadType!
   createVideoProject(input: CreateVideoProjectInput!): VideoProjectType!
   createWorkspace(input: CreateWorkspaceInput!): CreateWorkspaceType!
+  decideAgentRunStep(input: DecideAgentRunStepInput!): DecideAgentRunStepType!
   decideBrainFact(input: DecideBrainFactInput!): BrainFactType!
   decideBrainLesson(input: DecideBrainLessonInput!): BrainLessonType!
   decideBrandProposal(input: DecideBrandProposalInput!): BrandProposalType!
   decideChatApproval(input: DecideChatApprovalInput!): ChatDecisionPayloadType!
+  decideLeadFreeze(input: DecideLeadFreezeInput!): DecideLeadFreezeType!
   decideSetupCard(input: DecideSetupCardInput!): SetupCardType!
   declineAgentGraphProposal(input: DeclineAgentGraphProposalInput!): Boolean!
+  declineInvite(input: InviteRefInput!): Boolean!
   deleteConnection(input: DeleteConnectionInput!): Boolean!
   deleteHiringCandidate(input: HiringCandidateRefInput!): DeleteCandidateType!
   deleteKnowledgeSource(input: DeleteKnowledgeSourceInput!): Boolean!
+  deleteWorkspace(input: DeleteWorkspaceInput!): Boolean!
   disconnectConnection(input: DisconnectConnectionInput!): Boolean!
   disconnectDrive: Boolean!
   dismissContextNote(input: DismissContextNoteInput!): Boolean!
@@ -3652,13 +4331,16 @@ type Mutation {
   enqueueKnowledgeSource(input: EnqueueKnowledgeSourceInput!): SourceRefType!
   finishWebhookConnection(input: FinishWebhookConnectionInput!): Boolean!
   forkFirstPartyTemplate(input: ForkFirstPartyTemplateInput!): TemplateVersionType!
+  forwardChatMessage(input: ChatForwardInput!): ChatMessagePayloadType!
   generateHiringAd(input: HiringJobRefInput!): GenerateAdType!
   grantAgentConnection(input: GrantAgentConnectionInput!): AgentAckType!
   importAgentTemplate(input: ImportAgentTemplateInput!): InstalledTemplateType!
   importBrainDossiers(input: ImportBrainDossiersInput!): BrainDossierImportType!
   installModule(input: InstallModuleInput!): ModuleInstallResultType!
   installTemplateListing(input: InstallTemplateListingInput!): InstalledTemplateType!
+  joinInvite(input: InviteRefInput!): AcceptInviteType!
   keepCurrentBrainFact(input: KeepCurrentBrainFactInput!): Int!
+  leaveWorkspace: Boolean!
   linkHiringStaff(input: HiringCandidateRefInput!): LinkStaffType!
   logoutOtherSessions: Boolean!
   maintainBrain: Boolean!
@@ -3675,6 +4357,8 @@ type Mutation {
   postSetupMessage(input: PostSetupMessageInput!): SetupMessageType!
   proposeBrandKit(input: ProposeBrandKitInput!): BrandProposalType!
   publishAgentGraph(input: PublishAgentGraphInput!): AgentGraphVersionType!
+  publishAgentWorkflowVersion(input: PublishAgentWorkflowVersionInput!): AgentWorkflowVersionType!
+  reactToChatMessage(input: ChatReactInput!): ChatMessagePayloadType!
   recheckZaloConnection(input: RecheckZaloConnectionInput!): ZaloPageType!
   recordManualEvidence(input: RecordManualEvidenceInput!): ManualEvidenceType!
   recordTemplateLikeness(input: RecordTemplateLikenessInput!): LikenessGrantType!
@@ -3694,6 +4378,7 @@ type Mutation {
   renameAgent(input: RenameAgentInput!): AgentAckType!
   renameInstallationAgent(input: RenameInstallationAgentInput!): ModuleInstallationType!
   renameModuleInstallation(input: RenameModuleInstallationInput!): ModuleInstallationType!
+  renameWorkspace(input: RenameWorkspaceInput!): Boolean!
   reopenDossierFinding(input: DossierFindingRefInput!): DossierFindingType!
   requestAgentAvatarUpload(input: RequestAgentAvatarUploadInput!): AgentAvatarUploadType!
   requestAgentGeneration(input: RequestAgentGenerationInput!): AgentGenerationRequestedType!
@@ -3721,6 +4406,7 @@ type Mutation {
   respondHiringInterview(input: RespondHiringInterviewInput!): RespondSlotType!
   respondHiringOffer(input: RespondHiringOfferInput!): RespondOfferType!
   restoreAgentGraphVersion(input: RestoreAgentGraphVersionInput!): AgentGraphVersionType!
+  restoreWorkspace: Boolean!
   resumeAgentRun(input: ResumeAgentRunInput!): AgentRunResumeType!
   retryKnowledgeSource(input: RetryKnowledgeSourceInput!): SourceRefType!
   returnZaloAuthorization(input: ReturnZaloAuthorizationInput!): ZaloWizardConnectionType!
@@ -3730,12 +4416,14 @@ type Mutation {
   revokeApiKey(input: RevokeApiKeyInput!): ApiKeyType!
   revokeInvite(input: InviteRefInput!): Boolean!
   revokeSession(input: RevokeSessionInput!): Boolean!
+  rollbackAgentWorkflow(input: RollbackAgentWorkflowInput!): AgentWorkflowVersionType!
   rotateSepayKey(input: RotateSepayKeyInput!): SepayKeyType!
   runCsvImport(input: RunCsvImportInput!): CsvImportResultType!
   runDocumentImport(input: RunDocumentImportInput!): CsvImportResultType!
   runFlow(input: RunFlowInput!): RunFlowType!
   saveAgentGoal(input: SaveAgentGoalInput!): AgentGoalType!
   saveAgentGraphDraft(input: SaveAgentGraphDraftInput!): Int!
+  saveAgentGraphLayout(input: SaveAgentGraphLayoutInput!): AgentGraphLayoutType!
   saveAgentTrigger(input: SaveAgentTriggerInput!): AgentTriggerType!
   saveAuthorityRule(input: SaveAuthorityRuleInput!): AuthorityRuleType!
   saveBookingException(input: SaveBookingExceptionInput!): SaveBookingExceptionType!
@@ -3764,18 +4452,22 @@ type Mutation {
   saveStaff(input: SaveStaffInput!): StaffOptionType!
   saveTelegramUserSetup(input: SaveTelegramUserSetupInput!): Boolean!
   saveVideoBrand(input: SaveVideoBrandInput!): VideoBrandType!
+  saveWebsiteSite(input: SaveWebsiteSiteInput!): WebsiteSiteType!
+  saveWorkingHours(input: SaveWorkingHoursInput!): ModuleInstallationType!
   saveZaloOaSecret(input: SaveZaloOaSecretInput!): ZaloWizardConnectionType!
   saveZnsRenewal(input: SaveZnsRenewalInput!): ZnsRenewalType
   sendChatMessage(input: SendChatMessageInput!): ChatMessagePayloadType!
   sendSmtpTest(input: SendSmtpTestInput!): SmtpTestResultType!
   sendZaloTestMessage(input: SendZaloTestInput!): ZaloTestSendType!
   setAgentAvatar(input: SetAgentAvatarInput!): AgentAckType!
+  setAgentAvatarPreset(input: SetAgentAvatarPresetInput!): AgentAckType!
   setAgentConnections(input: SetAgentConnectionsInput!): Boolean!
   setAgentGraphMode(input: SetAgentGraphModeInput!): Boolean!
   setAgentOwnership(input: SetAgentOwnershipInput!): AgentAckType!
   setAgentStatus(input: SetAgentStatusInput!): AgentAckType!
   setAgentTexts(input: SetAgentTextsInput!): AgentAckType!
   setAgentWork(input: SetAgentWorkInput!): AgentWorkStateType!
+  setAgentWorkflowStatus(input: SetAgentWorkflowStatusInput!): Boolean!
   setChatRoomMuted(input: SetChatRoomMutedInput!): ChatRoomPayloadType!
   setChatTyping(input: SetChatTypingInput!): ChatTypingSignalType!
   setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
@@ -3795,6 +4487,8 @@ type Mutation {
   setSepayEnvironment(input: SetSepayEnvironmentInput!): SepayConnectionType!
   setSetupGate(input: SetSetupGateInput!): SetupSessionType!
   setSyncSchedule(input: SetSyncScheduleInput!): Boolean!
+  setTeamRoomPostRight(input: SetChatRoomPostRightInput!): ChatRoomPayloadType!
+  setTeamRoomPurpose(input: SetChatRoomPurposeInput!): ChatRoomPayloadType!
   setWorkspaceAgentWork(input: SetWorkspaceAgentWorkInput!): WorkspaceAgentWorkType!
   shareVideoProject(input: ShareVideoProjectInput!): VideoShareType!
   startFirstWorkspace: StartFirstWorkspaceType!
@@ -3807,6 +4501,7 @@ type Mutation {
   submitTelegramCode(input: SubmitTelegramCodeInput!): TelegramLoginStageType!
   submitTelegramPassword(input: SubmitTelegramPasswordInput!): TelegramLoginStageType!
   submitTemplateListing(input: SubmitTemplateListingInput!): ListingType!
+  submitWebsiteLead(input: SubmitWebsiteLeadInput!): Boolean!
   syncFirstPartyTemplates: FirstPartySyncReportType!
   syncMcpConnector(input: SyncMcpConnectorInput!): Int!
   testWebhookConnection(input: TestWebhookConnectionInput!): WebhookTestResultType!
@@ -4182,24 +4877,45 @@ input PublishAgentGraphInput {
   note: String! @inputBounds(maxLength: 500)
 }
 
+input PublishAgentWorkflowVersionInput {
+  expectedLatest: Int @inputBounds(min: 0, max: 100000)
+  graphJson: String! @inputBounds(maxLength: 400000)
+  installationId: ID! @inputBounds(maxLength: 36)
+  note: String! @inputBounds(maxLength: 500)
+  workflowId: ID! @inputBounds(maxLength: 36)
+}
+
 type Query {
   adminHealth: AdminHealthType!
   adminSession: AdminSessionType!
   adminWorkspace(input: AdminWorkspaceInput!): AdminWorkspaceDetailType!
   adminWorkspaces(input: AdminWorkspacesInput!): AdminWorkspaceListType!
+  agentCatalog: [AgentCatalogEntryType!]!
+  agentChannelChoices(input: AgentChannelChoicesInput!): [AgentChannelChoiceType!]!
   agentConnectionCandidates(input: AgentConnectionCandidatesInput!): [AgentConnectionCandidateType!]!
   agentConnections(input: AgentIdInput!): [AgentConnectionType!]!
   agentDashboard(input: AgentDashboardInput!): AgentDashboardType!
   agentEngineStatus: AgentEngineStatusType!
   agentGenerationStatus(input: AgentGenerationIdInput!): AgentGenerationStatusType!
   agentGraphCoverage(input: ListAgentGraphCoverageInput!): [AgentGraphCoverageType!]!
+  agentGraphLayout(input: AgentGraphLayoutInput!): AgentGraphLayoutType!
   agentGraphRun(input: GetAgentGraphRunInput!): AgentGraphRunType!
   agentGraphRuns(input: ListAgentGraphRunsInput!): [AgentGraphRunEntryType!]!
+  agentKnowledge(input: AgentIdInput!): AgentKnowledgeType!
   agentKnowledgeLenses: [AgentKnowledgeLensType!]!
   agentPage(input: AgentIdInput!): AgentPageType!
+  agentRun(input: AgentRunInput!): AgentRunDetailType
+  agentRunWorkflows(input: AgentRunWorkflowsInput!): [AgentRunWorkflowPinType!]!
+  agentRuns(input: AgentWorkInstanceInput!): AgentRunsType!
   agentSyncStatus(input: ModuleInstallationIdInput!): AgentSyncStatusType!
   agentTemplatePreview(input: PackageAgentTemplateInput!): PackagePreviewType!
   agentWork(input: AgentWorkInstanceInput!): AgentWorkType!
+  agentWorkLog(input: AgentWorkInstanceInput!): [AgentWorkLogLineType!]!
+  agentWorkflow(input: AgentWorkflowInput!): AgentWorkflowDetailType!
+  agentWorkflowDiff(input: AgentWorkflowDiffInput!): AgentWorkflowDiffType!
+  agentWorkflowGraph(input: AgentWorkflowGraphInput!): AgentWorkflowGraphType!
+  agentWorkflowTemplatePreview(input: AgentWorkflowTemplatePreviewInput!): AgentWorkflowTemplatePreviewType!
+  agentWorkflows(input: AgentWorkflowsInput!): [AgentWorkflowType!]!
   agents(input: ListAgentsInput!): [AgentSummaryType!]!
   apiKeys: [ApiKeyType!]!
   approverDirectory: [ApproverMemberType!]!
@@ -4222,6 +4938,7 @@ type Query {
   chatRoom(input: ChatRoomInput!): ChatRoomType
   chatRooms(input: ChatRoomsInput): [ChatRoomType!]!
   chatUnread: ChatUnreadType!
+  connectionAgentGrants: [ConnectionAgentGrantType!]!
   connectionAgents: [ConnectionAgentType!]!
   connectionFirstEvent(input: GetConnectionFirstEventInput!): FirstEventStateType!
   connections: [ConnectionType!]!
@@ -4252,6 +4969,8 @@ type Query {
   hiringCandidateDetail(input: HiringCandidateRefInput!): HiringCandidateDetailType!
   hiringWorkbench: HiringBenchType!
   inboundEvents(input: InboundEventsInput!): [InboundEventType!]!
+  inboxLead(input: InboxLeadInput!): InboxLeadDetailType!
+  inboxLeads(input: InboxLeadsInput!): InboxLeadsType!
   instanceOfRecord(input: InstanceOfRecordInput!): ID
   invitePreview(input: InviteTokenInput!): InvitePreviewType!
   knowledgeCategories: [KnowledgeCategoryType!]!
@@ -4259,6 +4978,7 @@ type Query {
   knowledgeSources(input: KnowledgeSourcesInput!): [KnowledgeSourceType!]!
   knowledgeSuggestions: KnowledgeSuggestionContextType!
   knowledgeUsage: KnowledgeUsageType!
+  leadFreeze(input: LeadFreezeInput!): LeadFreezeType
   lessonMiningStatus(input: LessonMiningStatusInput!): LessonMiningStatusType!
   listAgentGraphVersions(input: ListAgentGraphVersionsInput!): [AgentGraphVersionType!]!
   listTelegramChats(input: ListTelegramChatsInput!): [TelegramChatChoiceType!]!
@@ -4284,7 +5004,9 @@ type Query {
   myAccount: MyAccountType!
   myAgentTemplates: [TemplateType!]!
   myCreatorLedger: CreatorLedgerType!
+  myPendingInvites: [InviteForMeType!]!
   myTemplateListings: [ListingType!]!
+  myWorkInHand: Int!
   myWorkspaceRole: WorkspaceRole!
   myWorkspaces: [MembershipType!]!
   nivoKnowledge: [NivoEntryType!]!
@@ -4321,8 +5043,13 @@ type Query {
   videoScope: VideoScopeType!
   videoScriptStatus(input: VideoScriptStatusInput!): VideoScriptStatusType!
   videoSources: [VideoSourceType!]!
+  websiteSite: WebsiteSiteType!
   workbenchRead(input: WorkbenchReadInput!): WorkbenchAnswerType!
+  workflowTemplate(input: WorkflowTemplateInput!): WorkflowTemplateType!
+  workflowTemplates(input: WorkflowTemplatesInput!): [WorkflowTemplateType!]!
   workspaceAgentWork: WorkspaceAgentWorkType!
+  workspaceDashboard(input: WorkspaceDashboardInput!): WorkspaceDashboardType!
+  workspaceDeclinedInvites: [DeclinedInviteType!]!
   workspaceInvites: [PendingInviteType!]!
   workspaceMembers: [MemberListingType!]!
   workspaceShell(input: ShellWindowInput!): WorkspaceShellType!
@@ -4420,6 +5147,10 @@ input RenameInstallationAgentInput {
 input RenameModuleInstallationInput {
   installationId: ID! @inputBounds(maxLength: 36)
   name: String! @inputBounds(maxLength: 160)
+}
+
+input RenameWorkspaceInput {
+  name: String! @inputBounds(maxLength: 120)
 }
 
 type ReportDayType {
@@ -4682,6 +5413,14 @@ input RevokeSessionInput {
   sessionId: ID! @inputBounds(maxLength: 36)
 }
 
+input RollbackAgentWorkflowInput {
+  expectedLatest: Int @inputBounds(min: 0, max: 100000)
+  installationId: ID! @inputBounds(maxLength: 36)
+  note: String! @inputBounds(maxLength: 500)
+  number: Int! @inputBounds(min: 1, max: 100000)
+  workflowId: ID! @inputBounds(maxLength: 36)
+}
+
 input RotateSepayKeyInput {
   connectionId: ID! @inputBounds(maxLength: 64)
 }
@@ -4729,6 +5468,11 @@ input SaveAgentGraphDraftInput {
   agentId: String! @inputBounds(maxLength: 36)
   documentJson: String! @inputBounds(maxLength: 400000)
   rev: Int! @inputBounds(min: 0)
+}
+
+input SaveAgentGraphLayoutInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  positions: [AgentGraphLayoutPositionInput!]! @inputBounds(maxItems: 200)
 }
 
 input SaveAgentTriggerInput {
@@ -4988,6 +5732,19 @@ input SaveVideoBrandInput {
   voice: String! @inputBounds(maxLength: 80)
 }
 
+input SaveWebsiteSiteInput {
+  agentId: ID @inputBounds(maxLength: 36)
+  chatEnabled: Boolean
+  formEnabled: Boolean
+  isEnabled: Boolean
+  pricesEnabled: Boolean
+}
+
+input SaveWorkingHoursInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  value: String! @inputBounds(maxLength: 4000)
+}
+
 input SaveZaloOaSecretInput {
   connectionId: ID! @inputBounds(maxLength: 64)
   oaSecret: String! @inputBounds(maxLength: 200)
@@ -5036,6 +5793,7 @@ input SendChatMessageInput {
   clientId: String = null @inputBounds(maxLength: 64)
   fileKeys: [String!] = null @inputBounds(maxItems: 20, itemMaxLength: 300)
   mentions: [ChatMemberRefInput!] = null @inputBounds(maxItems: 40)
+  replyTo: ID = null @inputBounds(maxLength: 36)
   roomId: ID = null @inputBounds(maxLength: 36)
   to: ChatMemberRefInput = null
 }
@@ -5098,6 +5856,11 @@ input SetAgentAvatarInput {
   path: String @inputBounds(maxLength: 80)
 }
 
+input SetAgentAvatarPresetInput {
+  agentId: ID! @inputBounds(maxLength: 36)
+  preset: String = null @inputBounds(maxLength: 40)
+}
+
 input SetAgentConnectionsInput {
   agentId: ID! @inputBounds(maxLength: 64)
   connections: [ConnectionWishInput!]! @inputBounds(maxItems: 200)
@@ -5120,6 +5883,7 @@ input SetAgentOwnershipInput {
 input SetAgentStatusInput {
   active: Boolean!
   agentId: ID! @inputBounds(maxLength: 36)
+  keep: String
 }
 
 input SetAgentTextsInput {
@@ -5132,8 +5896,26 @@ input SetAgentWorkInput {
   installationId: ID! @inputBounds(maxLength: 36)
 }
 
+input SetAgentWorkflowStatusInput {
+  installationId: ID! @inputBounds(maxLength: 36)
+  status: String! @inputBounds(maxLength: 20)
+  workflowId: ID! @inputBounds(maxLength: 36)
+}
+
 input SetChatRoomMutedInput {
   muted: Boolean!
+  roomId: ID! @inputBounds(maxLength: 36)
+}
+
+input SetChatRoomPostRightInput {
+  agentId: ID! @inputBounds(maxLength: 36)
+  mayPost: Boolean!
+  roomId: ID! @inputBounds(maxLength: 36)
+}
+
+input SetChatRoomPurposeInput {
+  purpose: ChatGroupPurpose!
+  purposeModule: String = null @inputBounds(maxLength: 200)
   roomId: ID! @inputBounds(maxLength: 36)
 }
 
@@ -5195,12 +5977,14 @@ input SetMcpToolGrantInput {
 }
 
 input SetMemberStatusInput {
+  note: String @inputBounds(maxLength: 500)
   status: String!
   userId: ID! @inputBounds(maxLength: 36)
 }
 
 input SetModuleLiveInput {
   installationId: ID! @inputBounds(maxLength: 36)
+  keep: String
   live: Boolean!
 }
 
@@ -5423,6 +6207,19 @@ input SubmitTemplateListingInput {
   priceVnd: Int! @inputBounds(min: 0, max: 2000000000)
   templateKey: String! @inputBounds(maxLength: 60)
   version: Int! @inputBounds(min: 1, max: 100000)
+}
+
+input SubmitWebsiteLeadInput {
+  campaign: String = null @inputBounds(maxLength: 200)
+  device: String = null @inputBounds(maxLength: 40)
+  email: String = null @inputBounds(maxLength: 200)
+  message: String = null @inputBounds(maxLength: 4000)
+  name: String = null @inputBounds(maxLength: 200)
+  pagePath: String = null @inputBounds(maxLength: 500)
+  phone: String = null @inputBounds(maxLength: 40)
+  siteKey: String! @inputBounds(maxLength: 40)
+  submissionId: String = null @inputBounds(maxLength: 100)
+  visitor: String = null @inputBounds(maxLength: 100)
 }
 
 type SuggestionDecisionType {
@@ -5853,6 +6650,16 @@ type WebhookTestResultType {
   status: Int
 }
 
+type WebsiteSiteType {
+  agentId: ID
+  chatEnabled: Boolean!
+  formEnabled: Boolean!
+  formUrl: String!
+  isEnabled: Boolean!
+  pricesEnabled: Boolean!
+  siteKey: String!
+}
+
 type WeeklyReportType {
   channels: [String!]!
   days: [ReportDayType!]!
@@ -5897,6 +6704,98 @@ input WorkbenchReadInput {
   vars: String! @inputBounds(maxLength: 16384)
 }
 
+type WorkflowGraphCallType {
+  agent: String!
+  agentAvatar: String
+  agentLabel: String!
+  crossAgent: Boolean!
+  nodeKey: String!
+  outcome: String
+  version: String!
+  workflow: String!
+  workflowName: String
+}
+
+type WorkflowGraphEntryType {
+  activeNumber: Int
+  calls: [WorkflowGraphCallType!]!
+  entry: String!
+  entryLabel: String!
+  id: ID!
+  inputs: [WorkflowGraphInputType!]!
+  key: String!
+  name: String!
+  outcomes: [WorkflowGraphOutcomeType!]!
+  primary: Boolean!
+  status: String!
+  triggers: [WorkflowGraphTriggerType!]!
+}
+
+type WorkflowGraphInputType {
+  name: String!
+  required: Boolean!
+  type: String!
+}
+
+type WorkflowGraphOutcomeType {
+  key: String!
+  label: String!
+  outputs: [WorkflowGraphOutputType!]!
+}
+
+type WorkflowGraphOutputType {
+  name: String!
+  type: String!
+}
+
+type WorkflowGraphTriggerType {
+  connectionId: String
+  key: String!
+  sourceKind: String!
+  sourceLabel: String!
+}
+
+type WorkflowTemplateChangeType {
+  lines: [String!]!
+  version: Int!
+}
+
+type WorkflowTemplateConnectionType {
+  kind: String!
+  label: String!
+  why: String!
+}
+
+input WorkflowTemplateInput {
+  locale: String @inputBounds(maxLength: 2)
+  templateId: String! @inputBounds(maxLength: 80)
+}
+
+type WorkflowTemplateType {
+  graphJson: String!
+  id: String!
+  latestVersion: Int!
+  moduleKey: String!
+  name: String!
+  primary: Boolean!
+  requires: [WorkflowTemplateConnectionType!]!
+  shops: Int!
+  summary: String!
+  versions: [WorkflowTemplateVersionType!]!
+}
+
+type WorkflowTemplateVersionType {
+  changes: [String!]!
+  publishedAt: String!
+  stepCount: Int!
+  version: Int!
+}
+
+input WorkflowTemplatesInput {
+  locale: String @inputBounds(maxLength: 2)
+  moduleKey: String @inputBounds(maxLength: 40)
+}
+
 type WorkspaceAgentWorkType {
   agentsOff: Int!
   backgroundDailyCap: Int!
@@ -5904,6 +6803,109 @@ type WorkspaceAgentWorkType {
   pendingWakes: Int!
   road: String!
   workEnabled: Boolean!
+}
+
+type WorkspaceDashboardAgentType {
+  agentId: ID!
+  autoRate: Float
+  credits: Int!
+  errors: Int!
+  handle: String!
+  medianResponseSeconds: Float
+  minutesSaved: Float!
+  module: String!
+  name: String!
+  tasksDone: Int!
+  waiting: Int!
+}
+
+type WorkspaceDashboardApprovalType {
+  action: String!
+  agentName: String
+  createdAt: String!
+  customer: String
+  href: String!
+  id: ID!
+  summary: String
+}
+
+type WorkspaceDashboardApprovalsType {
+  items: [WorkspaceDashboardApprovalType!]!
+  total: Int!
+}
+
+type WorkspaceDashboardChannelType {
+  channel: String!
+  leads: Int!
+  revenueVnd: Float!
+}
+
+type WorkspaceDashboardComparedType {
+  current: Float!
+  previous: Float!
+}
+
+type WorkspaceDashboardDayType {
+  day: String!
+  orders: Int!
+  revenueVnd: Float!
+}
+
+type WorkspaceDashboardFunnelType {
+  consulted: Int!
+  ordered: Int!
+  paid: Int!
+  visitors: Int!
+}
+
+input WorkspaceDashboardInput {
+  period: WorkspaceDashboardPeriod! @inputBounds(maxLength: 20)
+}
+
+enum WorkspaceDashboardPeriod {
+  last_7_days
+  last_30_days
+  this_month
+  today
+}
+
+type WorkspaceDashboardRateType {
+  current: Float
+  previous: Float
+}
+
+type WorkspaceDashboardSavingLineType {
+  action: String!
+  count: Int!
+  minutesEach: Int!
+}
+
+type WorkspaceDashboardSavingsType {
+  creditsLimit: Int
+  creditsUsed: Int!
+  defaultMinutes: Int!
+  lines: [WorkspaceDashboardSavingLineType!]!
+  messagesAnswered: Int!
+  minutesSaved: Float!
+  ordersCreated: Int!
+  paymentsMatched: Int!
+}
+
+type WorkspaceDashboardType {
+  agentAutoRate: WorkspaceDashboardRateType!
+  agents: [WorkspaceDashboardAgentType!]!
+  approvals: WorkspaceDashboardApprovalsType!
+  channels: [WorkspaceDashboardChannelType!]!
+  closeRate: WorkspaceDashboardRateType!
+  days: [WorkspaceDashboardDayType!]!
+  from: String!
+  funnel: WorkspaceDashboardFunnelType!
+  newCustomers: WorkspaceDashboardComparedType!
+  orders: WorkspaceDashboardComparedType!
+  period: WorkspaceDashboardPeriod!
+  revenue: WorkspaceDashboardComparedType!
+  savings: WorkspaceDashboardSavingsType!
+  to: String!
 }
 
 enum WorkspaceRole {

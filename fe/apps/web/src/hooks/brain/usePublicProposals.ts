@@ -38,7 +38,9 @@ export const usePublicProposals = (): PublicProposalsView => {
             id: doc.id,
             title: t("proposalTitle", { question: doc.question ?? doc.title }),
             lines: [
-                t("proposalSources", { sources: sourceTitlesOf(doc).join(", ") }),
+                ...(sourceTitlesOf(doc).length === 0
+                    ? []
+                    : [t("proposalSources", { sources: sourceTitlesOf(doc).join(", ") })]),
                 ...(left.length === 0 ? [] : [t("leftOutLine", { items: left.join(", ") })]),
             ],
             badges: [{ label: t("badge_proposal"), tone: "accent" }],

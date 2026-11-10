@@ -27,7 +27,7 @@ type NewInboundEvent = Pick<InboundEventEntity, "workspaceId" | "channel" | "kin
     Partial<
         Pick<
             InboundEventEntity,
-            "senderName" | "senderContact" | "amountVnd" | "externalRef" | "eventId" | "leadId" | "status"
+            "senderName" | "senderContact" | "amountVnd" | "externalRef" | "eventId" | "leadId" | "status" | "customerKey" | "source"
         >
     >
 
@@ -236,6 +236,8 @@ export class InboundEventsService {
             externalRef: input.externalRef,
             eventId: input.eventId.trim(),
             dedupeKey: key,
+            customerKey: input.customerKey ?? null,
+            source: input.source ?? {},
         })
         if (created !== undefined) return { duplicate: false, inboundEventId: created }
         return this.countRepeat(manager, input.workspaceId, key)

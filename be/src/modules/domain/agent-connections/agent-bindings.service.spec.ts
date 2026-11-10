@@ -18,6 +18,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentBindingsService } from "./agent-bindings.service"
 import { BINDING_AGENTS } from "./agent-connections.decorators"
 import type { BindingAgentsDirectory } from "./agent-connections.port"
+import { ChannelOwnersService } from "./channel-owners.service"
 import { AgentConnectionsErrorCode } from "./errors/agent-connections.error"
 import { AgentConnectionEntity } from "./persistence/entities"
 
@@ -48,12 +49,22 @@ interface Owners {
 
 const build = async (entityManager: MockEntityManager, owners: Owners = {}) => {
     const members = mock<WorkspaceMembersService>()
+    members.require.mockResolvedValue({
+        userId: "u1",
+        workspaceId: "w1",
+        role: "owner",
+        staffId: null,
+        displayName: "Caller",
+        status: "active",
+    })
     const agents = mock<BindingAgentsDirectory>()
     agents.activeCreatedAmong.mockResolvedValue([...(owners.agents ?? [])])
     agents.holds.mockResolvedValue(owners.holdsAgent ?? true)
     const connections = mock<ConnectionBindingsReadService>()
     connections.factsOf.mockResolvedValue([...(owners.connections ?? [])])
     connections.holds.mockResolvedValue(owners.holdsConnection ?? true)
+    const channelOwners = mock<ChannelOwnersService>()
+    channelOwners.requireFree.mockResolvedValue(undefined)
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentBindingsService,
@@ -61,9 +72,10 @@ const build = async (entityManager: MockEntityManager, owners: Owners = {}) => {
             { provide: WorkspaceMembersService, useValue: members },
             { provide: BINDING_AGENTS, useValue: agents },
             { provide: ConnectionBindingsReadService, useValue: connections },
+            { provide: ChannelOwnersService, useValue: channelOwners },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentBindingsService), members, agents, connections }
+    return { service: moduleRef.get(AgentBindingsService), members, agents, connections, channelOwners }
 }
 
 const INBOUND_LINKS = inboundLinks()
@@ -383,5 +395,73 @@ describe("AgentBindingsService > stored grants", () => {
             ...READ,
             where: { workspaceId: "w1", agentId: In(["a1"]), connectionId: In(["c1"]) },
         })
+    })
+})
+
+describe("AgentBindingsService > connectionsOfAgents", () => {
+    it("lists the grants of several agents in one read, one entry per grant, in the order of the agents", async () => {
+        const links = [
+            linkOf({ agentId: "a2", connectionId: "c1", purpose: "data_source", access: "read" }),
+            linkOf({ agentId: "a1", connectionId: "c1", purpose: "bank_feed" }),
+            linkOf({ agentId: "a1", connectionId: "c2", purpose: "tool", access: "ask" }),
+        ]
+        const em = mockEntityManager({ find: [AgentConnectionEntity, links] })
+        const { service, members, connections } = await build(em, {
+            connections: [connectionOf("c1", "connected", 1), connectionOf("c2", "connected", 2)],
+        })
+
+        const grants = await service.connectionsOfAgents("u1", "w1", ["a1", "a2", "a3"])
+
+        expect(members.require).toHaveBeenCalledWith("u1", "w1")
+        expect(grants.map((grant) => [grant.agentId, grant.connection.id, grant.connection.purpose])).toEqual([
+            ["a1", "c1", "bank_feed"],
+            ["a1", "c2", "tool"],
+            ["a2", "c1", "data_source"],
+        ])
+        expect(em.find).toHaveBeenCalledTimes(1)
+        expect(connections.factsOf).toHaveBeenCalledTimes(1)
+    })
+
+    it("leaves out a disconnected connection and reads nothing for no agents", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, [linkOf()]] })
+        const { service } = await build(em, { connections: [connectionOf("c1", "disconnected", 1)] })
+
+        await expect(service.connectionsOfAgents("u1", "w1", ["a1"])).resolves.toEqual([])
+        await expect(service.connectionsOfAgents("u1", "w1", [])).resolves.toEqual([])
+        expect(em.find).toHaveBeenCalledTimes(1)
+    })
+})
+
+describe("AgentBindingsService > grantsWithAgents", () => {
+    it("lists every grant of the workspace beside its active agent, oldest grant first, in two reads", async () => {
+        const links = [
+            linkOf({ agentId: "a1", connectionId: "c1", purpose: "bank_feed", access: "auto" }),
+            linkOf({ agentId: "a2", connectionId: "c1", purpose: "data_source", access: "read" }),
+            linkOf({ agentId: "a1", connectionId: "c2", purpose: "tool", access: "ask" }),
+            linkOf({ agentId: "a3", connectionId: "c2", purpose: "tool", access: "ask" }),
+        ]
+        const em = mockEntityManager({ find: [AgentConnectionEntity, links] })
+        const { service, members, agents } = await build(em, {
+            agents: [agentOf("a1", "accounting", "Ke toan", 1), agentOf("a2", "orders", "Tro ly", 2)],
+        })
+
+        const grants = await service.grantsWithAgents("u1", "w1")
+
+        expect(members.require).toHaveBeenCalledWith("u1", "w1")
+        expect(grants.map((grant) => [grant.connectionId, grant.agentName, grant.purpose, grant.access])).toEqual([
+            ["c1", "Ke toan", "bank_feed", "auto"],
+            ["c1", "Tro ly", "data_source", "read"],
+            ["c2", "Ke toan", "tool", "ask"],
+        ])
+        expect(em.find).toHaveBeenCalledTimes(1)
+        expect(agents.activeCreatedAmong).toHaveBeenCalledTimes(1)
+    })
+
+    it("answers nothing, and reads no agents, when the workspace has no grant", async () => {
+        const em = mockEntityManager({ find: [AgentConnectionEntity, []] })
+        const { service, agents } = await build(em)
+
+        await expect(service.grantsWithAgents("u1", "w1")).resolves.toEqual([])
+        expect(agents.activeCreatedAmong).not.toHaveBeenCalled()
     })
 })

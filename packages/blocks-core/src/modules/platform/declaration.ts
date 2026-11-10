@@ -9,6 +9,7 @@ import { agentRunsRead } from "./reads/agent-runs.read"
 import { agentConnectionsRead } from "./reads/agent-connections.read"
 import { agentDoneRead } from "./reads/agent-done.read"
 import { agentKnowledgeRead } from "./reads/agent-knowledge.read"
+import { installationConnectionsRead, installationKnowledgeRead } from "./reads/installation-regions.read"
 import { installationRead } from "./reads/installation.read"
 import { parkedRunsRead } from "./reads/parked-runs.read"
 import { AGENT_RUNS_SPEC } from "./specs/agent-runs.workbench"
@@ -26,6 +27,8 @@ export const platformModule: ModuleDeclaration = defineModule({
         agentDoneRead,
         agentConnectionsRead,
         agentKnowledgeRead,
+        installationConnectionsRead,
+        installationKnowledgeRead,
         parkedRunsRead,
         agentRunsRead,
         agentRunCountsRead,

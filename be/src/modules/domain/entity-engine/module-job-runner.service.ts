@@ -3,15 +3,24 @@ import { InjectJobClaims } from "@modules/platform/jobs"
 import type { ClaimedJob, JobClaims, ParkWrite } from "@modules/platform/jobs"
 import { classifyFailure } from "@modules/platform/queue"
 import { isModuleJobPayload, MODULE_JOBS_QUEUE } from "@modules/queues/module-jobs"
-import { DOOR_PORT_ID } from "@nivo-lite/agent-sdk/mutation"
+import { DOOR_PORT_ID, WORKFLOW_PORT_ID } from "@nivo-lite/agent-sdk/mutation"
 import type { JobContext, JobDefinition } from "@nivo-lite/agent-sdk/mutation"
 import { runDeclaredJob } from "./declared-job.policy"
 import { InjectEngineFailureAlerts, InjectEntityEngineOptions } from "./entity-engine.decorators"
-import type { EngineDoorProvider, EngineFailureAlerts, JobPorts, RunIn } from "./entity-engine.contracts"
+import type {
+    EngineDoorProvider,
+    EngineFailureAlerts,
+    EngineWorkflowProvider,
+    JobPorts,
+    RunIn,
+} from "./entity-engine.contracts"
 import type { EntityEngineOptions } from "./entity-engine.options"
 import { EntityEngineService } from "./entity-engine.service"
 import { EntityPortsService } from "./entity-ports.service"
 import { EntityEngineError, EntityEngineErrorCode } from "./errors/entity-engine.error"
+
+/** The ports that reach outside the database: a job that lists one runs without a transaction around it. */
+const EXTERNAL: ReadonlyArray<string> = [DOOR_PORT_ID, WORKFLOW_PORT_ID]
 
 @Injectable()
 /**
@@ -27,6 +36,8 @@ export class ModuleJobRunnerService {
 
     private door: EngineDoorProvider | null = null
 
+    private workflow: EngineWorkflowProvider | null = null
+
     constructor(
         private readonly engine: EntityEngineService,
         private readonly ports: EntityPortsService,
@@ -40,6 +51,11 @@ export class ModuleJobRunnerService {
     /** The door capability binds itself here at boot; until it does (an app without one), a job that calls the door is parked. */
     bindDoor(provider: EngineDoorProvider): void {
         this.door = provider
+    }
+
+    /** The workflow capability binds itself here at boot; until it does, a job that starts a workflow is parked. */
+    bindWorkflow(provider: EngineWorkflowProvider): void {
+        this.workflow = provider
     }
 
     /** Runs the declared job the claimed delivery addresses; a failure a retry cannot fix parks the job. */
@@ -95,8 +111,8 @@ export class ModuleJobRunnerService {
             attempt: claimed.fencingToken,
             effectKey: (step) => `${claimed.jobId}:${step}`,
         }
-        if (Object.values(job.ports).some((port) => port.id === DOOR_PORT_ID)) {
-            await runDeclaredJob(job, this.doorPortsOf(job, payload.workspaceId, context), parsed.data, context)
+        if (Object.values(job.ports).some((port) => EXTERNAL.includes(port.id))) {
+            await runDeclaredJob(job, this.externalPortsOf(job, payload.workspaceId, context), parsed.data, context)
             return
         }
         await this.engine.scoped(payload.workspaceId, (tx) =>
@@ -110,12 +126,11 @@ export class ModuleJobRunnerService {
     }
 
     /**
-     * The handles of a job that calls the door: every entity and outbox call opens a scope of its own, and the door handle refuses a call
-     * made while one is open. An app that registered no door provider refuses the job: it can call nothing out.
+     * The handles of a job that calls the door or starts a workflow: every entity and outbox call opens a scope of its own, and the
+     * door and workflow handles refuse a call made while one is open. An app that registered no provider for a port it lists refuses
+     * the job: it can reach nothing out.
      */
-    private doorPortsOf(job: JobDefinition, workspaceId: string, context: JobContext): JobPorts {
-        if (this.door === null)
-            throw new EntityEngineError({ code: EntityEngineErrorCode.PortUnprovided, params: { id: DOOR_PORT_ID } })
+    private externalPortsOf(job: JobDefinition, workspaceId: string, context: JobContext): JobPorts {
         let open = 0
         const runIn: RunIn = (use) =>
             this.engine.scoped(workspaceId, async (tx) => {
@@ -126,12 +141,33 @@ export class ModuleJobRunnerService {
                     open -= 1
                 }
             })
-        const doorNames = Object.entries(job.ports).filter(([, port]) => port.id === DOOR_PORT_ID)
-        const rest = Object.fromEntries(Object.entries(job.ports).filter(([, port]) => port.id !== DOOR_PORT_ID))
-        const handle = this.door.doorApi({ workspaceId, effectKey: context.effectKey, scopeOpen: () => open > 0 })
-        return {
-            ...this.ports.portsFor(runIn, "job", rest),
-            ...Object.fromEntries(doorNames.map(([name]) => [name, handle])),
+        const scopeOpen = (): boolean => open > 0
+        const named = (id: string): ReadonlyArray<string> =>
+            Object.entries(job.ports)
+                .filter(([, port]) => port.id === id)
+                .map(([name]) => name)
+        const rest = Object.fromEntries(Object.entries(job.ports).filter(([, port]) => !EXTERNAL.includes(port.id)))
+        const handles: Record<string, unknown> = {}
+        const doorNames = named(DOOR_PORT_ID)
+        if (doorNames.length > 0) {
+            if (this.door === null)
+                throw new EntityEngineError({
+                    code: EntityEngineErrorCode.PortUnprovided,
+                    params: { id: DOOR_PORT_ID },
+                })
+            const door = this.door.doorApi({ workspaceId, effectKey: context.effectKey, scopeOpen })
+            for (const name of doorNames) handles[name] = door
         }
+        const workflowNames = named(WORKFLOW_PORT_ID)
+        if (workflowNames.length > 0) {
+            if (this.workflow === null)
+                throw new EntityEngineError({
+                    code: EntityEngineErrorCode.PortUnprovided,
+                    params: { id: WORKFLOW_PORT_ID },
+                })
+            const workflow = this.workflow.workflowApi({ workspaceId, scopeOpen })
+            for (const name of workflowNames) handles[name] = workflow
+        }
+        return { ...this.ports.portsFor(runIn, "job", rest), ...handles }
     }
 }

@@ -1,9 +1,11 @@
 import { Test } from "@nestjs/testing"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
-import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
+import { defineNode, nodeIndexOf } from "@nivo-lite/agent-sdk/node"
+import { z } from "zod"
+import { coreDataKinds, coreEffects, coreNodes, coreTools, TOOL } from "@nivo-lite/blocks-core"
 import { nodeOf } from "@tests/fixtures/builders/agent-graph.builder"
 import { AgentGraphsError, AgentGraphsErrorCode } from "../errors/agent-graphs.error"
-import { flowChanged, isFlowOnly, requireSoundFlow, sameFlow } from "./flow.policy"
+import { flowChanged, isFlowOnly, requireSoundFlow, requireSoundRefs, sameFlow } from "./flow.policy"
 
 /** The members of the subject under test. */
 interface Subject {
@@ -117,6 +119,30 @@ describe("flowChanged and requireSoundFlow", () => {
         const refused = refusal()
         expect(refused instanceof AgentGraphsError ? refused.code : refused).toBe(AgentGraphsErrorCode.PublishRefused)
     })
+
+    it("refuses a flow of a module whose step reaches a tool outside the tool set of the module's agent, naming the step and the tool", () => {
+        const installed = nodeIndexOf({ nodes: coreNodes, effects: coreEffects, tools: coreTools, dataKinds: coreDataKinds })
+        const ledger = { key: "ledger", kind: "output" as const, step: "accounting.post-payment", next: "end" }
+        const flow = {
+            ...FLOW,
+            moduleKey: "chatbot",
+            grant: { rights: installed.nodes.get(ledger.step)?.rights ?? [], tools: [TOOL.ledgerAppend], effects: [] },
+            nodes: [ledger, { key: "end", kind: "output" as const, step: "stop" }],
+        }
+        const refusal = (): unknown => {
+            try {
+                requireSoundFlow(flow, installed)
+                return null
+            } catch (cause) {
+                return cause
+            }
+        }
+        const refused = refusal()
+        expect(refused).toBeInstanceOf(AgentGraphsError)
+        expect(refused instanceof AgentGraphsError ? refused.params.problems : "").toContain(
+            `GRAPH_TOOL_OUTSIDE_AGENT ledger:${TOOL.ledgerAppend}`,
+        )
+    })
 })
 
 describe("isFlowOnly", () => {
@@ -129,3 +155,50 @@ describe("isFlowOnly", () => {
         expect(subject.isFlowOnly({ nodes: [], rights: [] })).toBe(false)
     })
 })
+
+describe("requireSoundRefs", () => {
+    const reply = defineNode({
+        id: "core.reply",
+        role: "output",
+        title: { key: "t" },
+        params: z.object({ text: z.string() }),
+        input: z.object({}),
+        output: z.object({}),
+        rights: [],
+        effects: [],
+        run: () => Promise.resolve({}),
+        examples: [{ name: "e", params: { text: "x" }, input: {}, output: {}, effects: [] }],
+    })
+    const index = nodeIndexOf({ nodes: [reply], effects: [], tools: [], dataKinds: [] })
+    const flowWith = (text: unknown): GraphSpec => ({
+        schema: "nivo/agent-graph@1",
+        moduleKey: "sales",
+        trigger: { kind: "tag", sources: ["channel"] },
+        grant: { rights: [], tools: [], effects: [] },
+        nodes: [
+            { key: "a", kind: "output", step: "core.reply", params: { text: "hi" }, next: "b" },
+            { key: "b", kind: "output", step: "core.reply", params: { text: text as string } },
+        ],
+    })
+
+    it("passes sound refs and refuses a broken one with its words in Vietnamese and every problem for the editor", () => {
+        expect(() => requireSoundRefs(flowWith({ $ref: "lead.address" }), index)).not.toThrow()
+        const refusal = (): unknown => {
+            try {
+                requireSoundRefs(flowWith({ $ref: "steps.ghost.output.x" }), index)
+                return null
+            } catch (cause) {
+                return cause
+            }
+        }
+        const error = refusal()
+        expect(error).toBeInstanceOf(AgentGraphsError)
+        expect(error).toMatchObject({ code: AgentGraphsErrorCode.RefsRefused, params: { count: "1" } })
+        const params = (error as AgentGraphsError).params
+        expect(params["first"]).toContain("quy trình không có bước này")
+        expect(JSON.parse(String(params["problems"]))).toEqual([
+            expect.objectContaining({ code: "REF_NODE_UNKNOWN", nodeKey: "b", field: "text", messageKey: "workflowRef.refNodeUnknown" }),
+        ])
+    })
+})
+

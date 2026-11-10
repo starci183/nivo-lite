@@ -12,6 +12,16 @@ export interface InstallRequest {
     readonly newInstance: boolean
     /** The label of the instance; the next free one when absent. */
     readonly name: string | null
+    /** The name and @handle the new agent starts with; absent for the role's default name and the next free role handle. */
+    readonly agent?: InstallAgentIdentity | undefined
+}
+
+/** Who a new agent is from the start: the name its customers see and the @handle its team tags it with. */
+export interface InstallAgentIdentity {
+    /** The display name, already cleaned. */
+    readonly name: string
+    /** The @handle, already cleaned; null for the first free handle made from the name. */
+    readonly handle: string | null
 }
 
 /** What installing a module answers. */

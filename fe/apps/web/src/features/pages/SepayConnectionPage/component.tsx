@@ -1,39 +1,65 @@
+import { Grid, Stack } from "@starci/grammar/common"
+import { ConnectionAgents } from "@/components/blocks/ConnectionAgents"
 import { SepayConnectionSteps } from "@/components/blocks/SepayConnectionSteps"
-import { SepayConsole } from "@/components/blocks/SepayConsole"
 import { SepayHealth } from "@/components/blocks/SepayHealth"
 import { SepayNotices } from "@/components/blocks/SepayNotices"
 import { SepayRail } from "@/components/blocks/SepayRail"
-import { ConnectionPaneFrame } from "@/components/frames/ConnectionPaneFrame"
+import type { ConnectionPageTabId } from "@/modules/types"
 
-/** What the SePay connection page supplies: the connection of the url, where the back control leads, and the words of its panes. */
+/** What the page owner supplies: the connection of the url and the tab the address opens. */
 export interface SepayConnectionPageBaseProps {
     readonly props: {
         readonly connectionId: string
-        readonly hubHref: string
-        readonly gridLabel: string
-        readonly mainLabel: string
-        readonly rail: { readonly label: string; readonly closeLabel: string }
+        readonly tab: ConnectionPageTabId
     }
 }
 
 /**
- * Draws the page of one SePay connection inside the Connections frame: the head band, the health tiles, the stepper and the five
- * setup steps (environment, bank account, the webhook on SePay, the test, matching and the accounting agent) and the agents with
- * their levels; the live webhook deliveries stand in the rail beside it.
+ * Draws the open tab of a SePay connection page, under the band its layout draws. Overview: the notices, the setup phases while
+ * unfinished, the connection's details and the agents, with the live webhook events beside them. Events: the events alone. Agents:
+ * the agents with their levels. Settings: the five setup steps (environment, bank account, the webhook on SePay with the API key, the
+ * test, the accounting agent).
  */
 export const SepayConnectionPageBase = (props: SepayConnectionPageBaseProps) => {
-    const id = props.props.connectionId
-    return (
-        <ConnectionPaneFrame
-            gridLabel={props.props.gridLabel}
-            mainLabel={props.props.mainLabel}
-            rail={props.props.rail}
-            head={<SepayConsole connectionId={id} hubHref={props.props.hubHref} />}
-            aside={<SepayRail connectionId={id} />}
-        >
-            <SepayNotices connectionId={id} hubHref={props.props.hubHref} />
-            <SepayHealth connectionId={id} />
-            <SepayConnectionSteps connectionId={id} />
-        </ConnectionPaneFrame>
-    )
+    const { connectionId, tab } = props.props
+    const notices = <SepayNotices connectionId={connectionId} />
+    switch (tab) {
+        case "overview":
+            return (
+                <Grid
+                    kind="main-rail"
+                    railWidth="medium"
+                    align="start"
+                    primary={
+                        <Stack gap="region">
+                            {notices}
+                            <SepayHealth connectionId={connectionId} />
+                            <ConnectionAgents connectionId={connectionId} />
+                        </Stack>
+                    }
+                    rail={<SepayRail connectionId={connectionId} />}
+                />
+            )
+        case "events":
+            return (
+                <Stack gap="region">
+                    {notices}
+                    <SepayRail connectionId={connectionId} />
+                </Stack>
+            )
+        case "agents":
+            return (
+                <Stack gap="region">
+                    {notices}
+                    <ConnectionAgents connectionId={connectionId} />
+                </Stack>
+            )
+        case "settings":
+            return (
+                <Stack gap="region">
+                    {notices}
+                    <SepayConnectionSteps connectionId={connectionId} />
+                </Stack>
+            )
+    }
 }

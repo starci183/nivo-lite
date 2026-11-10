@@ -50,6 +50,15 @@ describe("threadLineOf", () => {
         expect(threadLineOf({ ...reply, deliveryStatus: "failed" }, "Minh").state).toBe("failed")
     })
 
+    it("carries the pictures and the order of a line, and leaves them out of a line without", () => {
+        const files = [{ id: "file-1", url: "https://x/1", name: "One", contentType: "image/png" }]
+        const order = { orderNo: "DH-1", lines: [], amountText: "", address: "", paid: false }
+        expect(threadLineOf({ ...LINE, files, order }, "Minh")).toMatchObject({ files, order })
+        const bare = threadLineOf({ ...LINE, files: [] }, "Minh")
+        expect(bare).not.toHaveProperty("files")
+        expect(bare).not.toHaveProperty("order")
+    })
+
     it("draws a system line as a notice with no author", () => {
         expect(threadLineOf({ ...LINE, role: "system", text: "Ha took over" }, "Minh")).toMatchObject({
             who: "",

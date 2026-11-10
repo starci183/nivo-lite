@@ -87,6 +87,8 @@ export interface InviteState {
     readonly acceptedAt: string | null
     /** Set once revoked. */
     readonly revokedAt: string | null
+    /** Set once the invited person declined. */
+    readonly declinedAt: string | null
     /** When the link stops working, ISO 8601. */
     readonly expiresAt: string
 }
@@ -105,4 +107,32 @@ export interface ChangedInvite {
 export interface MintedToken {
     /** The raw token, shown once inside the invitation link. */
     readonly token: string
+}
+
+/** An invitation addressed to the signed-in person, as the workspaces lobby lists it. */
+export interface InviteForMe {
+    /** The invitation id. */
+    readonly id: string
+    /** The workspace it is for. */
+    readonly workspaceId: string
+    /** The workspace name. */
+    readonly workspaceName: string
+    /** The role it grants. */
+    readonly role: "manager" | "staff"
+    /** Who invited the person, when the directory knows them. */
+    readonly invitedByName: string | null
+    /** When the invitation stops working, ISO 8601. */
+    readonly expiresAt: string
+}
+
+/** An invitation the invited person declined, as the team page lists it. */
+export interface DeclinedInvite {
+    /** The invitation id. */
+    readonly id: string
+    /** The invited address. */
+    readonly email: string
+    /** The role it offered. */
+    readonly role: "manager" | "staff"
+    /** When it was declined, ISO 8601. */
+    readonly declinedAt: string
 }

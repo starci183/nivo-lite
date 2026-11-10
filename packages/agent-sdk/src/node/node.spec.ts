@@ -5,7 +5,7 @@ import type { DataRight } from "../rights/rights.types"
 import { EXAMPLE_TURN } from "../tests/fixtures/node-examples"
 import { scriptedNodePorts } from "../tests/fixtures/node-ports"
 import { defineDataKind, defineEffect } from "./effect"
-import { runNode } from "./host"
+import { callDigestOf, runNode } from "./host"
 import type { NodeRunRequest } from "./host.types"
 import { defineNode } from "./node"
 import { NodeRunError } from "./node-run-error"
@@ -176,10 +176,10 @@ describe("runNode", () => {
             effects: [{ id: "order.notify", subject: { kind: "order.notify", id: "order.notify-1" } }],
         })
         expect(fake.executed).toEqual([
-            { id: "order.notify", payload: { text: "hi" }, key: "run-1:step:0", dedupeKey: null },
+            { id: "order.notify", payload: { text: "hi" }, key: `run-1:step:${callDigestOf("order.notify", { text: "hi" })}`, dedupeKey: null },
         ])
         await runNode(requestOf("effect-once"), fake.ports)
-        expect(fake.executed[1]).toMatchObject({ key: "run-1:step:0", dedupeKey: "notify:o1" })
+        expect(fake.executed[1]).toMatchObject({ key: `run-1:step:${callDigestOf("order.notify", { text: "hi" })}`, dedupeKey: "notify:o1" })
     })
 
     it("refuses an undeclared, uninstalled, ill-formed or ungranted effect", async () => {

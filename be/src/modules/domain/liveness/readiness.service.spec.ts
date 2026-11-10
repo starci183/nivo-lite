@@ -2,6 +2,8 @@ import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
+import { AI } from "@modules/integrations/ai"
+import type { AiService } from "@modules/integrations/ai"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { TIMER } from "@modules/platform/retry"
@@ -15,7 +17,7 @@ const CHECK_READINESS_JOBS = 'SELECT * FROM "public"."job_stats"()'
 
 const JOB_ROWS = [{ job_stats: { checkedAt: "2026-10-14T00:00:00.000Z" } }]
 
-const READY_REPORT = { status: "ready", checks: { database: "ok", jobs: "ok" } }
+const READY_REPORT = { status: "ready", checks: { database: "ok", jobs: "ok", ai: "ok" } }
 
 const deferred = <T>() => {
     let resolve: (value: T) => void = () => undefined
@@ -27,7 +29,7 @@ const deferred = <T>() => {
     return { promise, resolve, reject }
 }
 
-const build = async (supplied?: MockEntityManager) => {
+const build = async (supplied?: MockEntityManager, aiConfigured = true) => {
     const entityManager = fakeTransaction(supplied ?? mockEntityManager({ query: [CHECK_READINESS_JOBS, JOB_ROWS] })).em
     const logger = mock<Logger>({ error: jest.fn() })
     const moduleRef = await Test.createTestingModule({
@@ -36,6 +38,7 @@ const build = async (supplied?: MockEntityManager) => {
             { provide: PRIMARY_ENTITY_MANAGER, useValue: entityManager },
             { provide: LOGGER, useValue: logger },
             { provide: TIMER, useValue: timeout },
+            { provide: AI, useValue: mock<AiService>({ available: jest.fn(() => aiConfigured) }) },
         ],
     }).compile()
     return { readiness: moduleRef.get(ReadinessService), entityManager, logger }
@@ -75,6 +78,13 @@ afterEach(() => {
 })
 
 describe("ReadinessService / check", () => {
+    it("is not ready without the AI endpoint, although the database answers", async () => {
+        const { readiness, logger } = await build(undefined, false)
+
+        await expect(readiness.check()).rejects.toMatchObject({ code: LivenessErrorCode.ReadinessUnavailable })
+        expect(logger.error).toHaveBeenCalledWith(ReadinessLogEvent.AiUnconfigured, null)
+    })
+
     it("reports readiness after the primary database and job statistics answer", async () => {
         const { readiness, entityManager, logger } = await build()
 

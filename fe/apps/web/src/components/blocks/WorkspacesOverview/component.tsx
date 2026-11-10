@@ -1,4 +1,4 @@
-import { Alert, Button, Heading, Mascot, Stepper, SurfaceCard, Text, Stack } from "@starci/grammar/common"
+import { Alert, Button, Cluster, Heading, Mascot, Stepper, SurfaceCard, Text, Stack } from "@starci/grammar/common"
 import { APP_ROUTES } from "@/modules/routes"
 
 /** The workspaces overview shapes, in the order the owner approved them. */
@@ -11,6 +11,8 @@ export interface WorkspacesOverviewBaseProps {
     readonly shape: WorkspacesOverviewShape
     readonly props: {
         readonly createFirstLabel: string
+        /** The short line beside the way in: how long the set-up takes. */
+        readonly createFirstNote: string
         readonly welcomeTitle: string
         readonly welcomeText: string
         readonly welcomeStepsLabel: string
@@ -39,8 +41,8 @@ const Welcome = (props: WelcomeProps) => (
             />
         }
     >
-        <Stack gap="section" align="start">
-            <Heading level={2} isLoading={props.isSkeleton}>
+        <Stack gap="row" align="start">
+            <Heading level={2} scale="title" isLoading={props.isSkeleton}>
                 {props.props.welcomeTitle}
             </Heading>
             <Text tone="muted" isLoading={props.isSkeleton}>
@@ -53,9 +55,14 @@ const Welcome = (props: WelcomeProps) => (
                 isLoading={props.isSkeleton}
                 steps={props.props.welcomeSteps.map((label, index) => ({ id: `s${index}`, label }))}
             />
-            <Button intent="commit" href={APP_ROUTES.workspaceNew} isLoading={props.isSkeleton}>
-                {props.props.createFirstLabel}
-            </Button>
+            <Cluster gap="inline">
+                <Button intent="commit" href={APP_ROUTES.workspaceNew} isLoading={props.isSkeleton}>
+                    {props.props.createFirstLabel}
+                </Button>
+                <Text tone="muted" size="sm" isLoading={props.isSkeleton}>
+                    {props.props.createFirstNote}
+                </Text>
+            </Cluster>
         </Stack>
     </SurfaceCard>
 )

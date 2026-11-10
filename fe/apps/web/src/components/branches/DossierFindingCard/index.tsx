@@ -7,14 +7,12 @@ import {
     Disclosure,
     DropdownMenu,
     Heading,
-    Icon,
     IconButton,
     Link,
     Stack,
     Text,
 } from "@starci/grammar/common"
 import { nivoIconSource } from "@/components/leaves/Icon"
-import type { IconName } from "@/components/leaves/Icon"
 
 /** One command of a card: a destination or a command, named by the id the caller answers to. */
 interface CardAction<Id extends string> {
@@ -37,9 +35,6 @@ interface CardView<Id extends string> {
     readonly open: ReadonlyArray<CardAction<Id>>
     readonly menu: ReadonlyArray<CardAction<Id>>
 }
-
-/** The glyph a command wears when it has one: the document to bring, and the draft NIVO writes. */
-const ACTION_GLYPH: Readonly<Partial<Record<string, IconName>>> = { upload: "upload", askDraft: "talents" }
 
 /** The evidence of a finding, folded: each piece and the documents it comes from. */
 const Evidence = (props: Pick<CardView<string>, "evidenceTitle" | "evidence" | "sources">) => (
@@ -93,23 +88,17 @@ const Commands = <Id extends string>(props: CommandsProps<Id>) => {
     return (
         <Cluster gap="inline">
             {open.map((action) => {
-                const glyph = ACTION_GLYPH[action.id]
-                const start =
-                    glyph === undefined
-                        ? {}
-                        : { startContent: <Icon source={nivoIconSource(glyph, "leading")} usage="leading" /> }
                 return action.href === null ? (
                     <Button
                         key={action.id}
                         size="sm"
                         intent="neutral"
-                        {...start}
                         onPress={() => props.onAction(props.row.id, action.id)}
                     >
                         {action.label}
                     </Button>
                 ) : (
-                    <Button key={action.id} size="sm" intent="neutral" {...start} href={action.href}>
+                    <Button key={action.id} size="sm" intent="neutral" href={action.href}>
                         {action.label}
                     </Button>
                 )

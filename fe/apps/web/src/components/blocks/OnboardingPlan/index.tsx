@@ -6,7 +6,7 @@ import { usePlanChoices } from "@/hooks/billing"
 import { useWorkspaceId } from "@/hooks/workspaces"
 import { workspaceHandoverPath, workspaceReadyPath } from "@/modules/routes"
 import { OnboardingPlanBase } from "./component"
-import type { OnboardingPlanCard } from "./component"
+import type { PlanOfferCard } from "@/components/composites/PlanCards"
 
 /** What the plan step reads from the connected block. */
 type OnboardingPlanProps = {
@@ -33,7 +33,7 @@ export const OnboardingPlan = (props: OnboardingPlanProps) => {
             return t("planPerYear", { price: money(plan.priceAnnualVnd) })
         return t("planPerMonth", { price: money(plan.promoPriceVnd ?? plan.priceVnd) })
     }
-    const plans: ReadonlyArray<OnboardingPlanCard> = listed.map((plan) => {
+    const plans: ReadonlyArray<PlanOfferCard> = listed.map((plan) => {
         const name = locale === "vi" ? plan.nameVi : plan.nameEn
         const extra = locale === "vi" ? plan.features.vi : plan.features.en
         const facts = plan.isCustom
@@ -48,11 +48,11 @@ export const OnboardingPlan = (props: OnboardingPlanProps) => {
             id: plan.code,
             name,
             price: priceOf(plan),
-            isPopular: plan.code === popularCode,
+            mark: plan.code === popularCode ? t("planPopular") : undefined,
             features: [...facts, ...extra],
             action: plan.isCustom
                 ? { kind: "contact", label: t("planContact"), href: props.contactHref }
-                : { kind: "buy", label: t("planChoose", { plan: name }) },
+                : { kind: "buy", label: t("planChoose", { plan: name }), isPrimary: plan.code === popularCode },
         }
     })
     return (
@@ -64,7 +64,6 @@ export const OnboardingPlan = (props: OnboardingPlanProps) => {
                 cycle: choices.cycle,
                 cycleMonthly: t("planMonthly"),
                 cycleAnnual: t("planAnnual"),
-                popularLabel: t("planPopular"),
                 plans,
                 isLoading: choices.isLoading,
                 pendingId: choices.isRequesting ? chosen : null,

@@ -1,21 +1,27 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { ConnectionBindingsReadService } from "@modules/domain/connections"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectBindingAgents } from "./agent-connections.decorators"
-import type { BindingAgentsDirectory } from "./agent-connections.port"
+import { eachInOrder } from "@modules/platform/primitives"
+import { InjectBindingAgents, InjectBindingManagers } from "./agent-connections.decorators"
+import type { BindingAgentsDirectory, BindingManagers } from "./agent-connections.port"
 import {
     INBOUND_MODULES,
     PURPOSES,
     boundAgentsOf,
     boundConnectionsOf,
+    exceedsManagerCeiling,
+    isAccess,
+    isPurpose,
     handoversFrom,
     purposesOf,
     splitRoute,
 } from "./agent-bindings.policy"
 import type {
+    AgentGrant,
+    ConnectionGrant,
     AgentsForOptions,
     BindingGrant,
     BindingTarget,
@@ -25,13 +31,18 @@ import type {
     BoundConnectionFacts,
     ConnectionsForOptions,
     InboundRoute,
+    LinkedFacts,
     ModuleRef,
     OptionalConnectionId,
+    OptionalResumeKeep,
     PurposeSelector,
+    ResumeConflict,
+    ResumingAgent,
     StoredGrant,
 } from "./agent-connections.contracts"
 import { AgentConnectionsError, AgentConnectionsErrorCode } from "./errors/agent-connections.error"
 import { AgentConnectionEntity } from "./persistence/entities"
+import { ChannelOwnersService } from "./channel-owners.service"
 
 /** Who may change which agent uses which connection. */
 const GOVERNORS = ["owner", "manager"] as const
@@ -55,6 +66,8 @@ export class AgentBindingsService {
         private readonly members: WorkspaceMembersService,
         @InjectBindingAgents() private readonly agents: BindingAgentsDirectory,
         private readonly connections: ConnectionBindingsReadService,
+        private readonly owners: ChannelOwnersService,
+        @Optional() @InjectBindingManagers() private readonly managers?: BindingManagers,
     ) {}
 
     /** The active agents bound to a connection for the purpose(s), oldest first. */
@@ -110,6 +123,64 @@ export class AgentBindingsService {
         return boundConnectionsOf(rows, {})
     }
 
+    /**
+     * Every connection granted to each of the given agents of the caller workspace, whatever the purpose, in two reads whatever the
+     * number of agents; one entry per grant, agents in the order given, each agent's grants oldest connection first. Any member may look.
+     */
+    async connectionsOfAgents(
+        userId: string,
+        workspaceId: string,
+        agentIds: ReadonlyArray<string>,
+    ): Promise<ReadonlyArray<AgentGrant>> {
+        await this.members.require(userId, workspaceId)
+        if (agentIds.length === 0) return []
+        const links = await this.entityManager.find(AgentConnectionEntity, {
+            where: { workspaceId, agentId: In([...agentIds]), purpose: In([...PURPOSES]) },
+            take: GRANTS_MAX,
+        })
+        const rows = await this.rowsOfLinks(links)
+        return agentIds.flatMap((agentId) =>
+            boundConnectionsOf(
+                rows.filter((row) => row.agentId === agentId).map((row) => row.facts),
+                {},
+            ).map((connection): AgentGrant => ({ agentId, connection })),
+        )
+    }
+
+    /**
+     * Every grant of the workspace beside the active agent that holds it, for the reverse view of a connection ("which agents use
+     * this"); one entry per grant, oldest grant first, in two reads whatever the number of connections. A grant of an agent that is
+     * not active is left out. Any member may look.
+     */
+    async grantsWithAgents(userId: string, workspaceId: string): Promise<ReadonlyArray<ConnectionGrant>> {
+        await this.members.require(userId, workspaceId)
+        const links = await this.entityManager.find(AgentConnectionEntity, {
+            where: { workspaceId, purpose: In([...PURPOSES]) },
+            order: { createdAt: "ASC" },
+            take: GRANTS_MAX,
+        })
+        if (links.length === 0) return []
+        const agents = await this.agents.activeCreatedAmong(
+            workspaceId,
+            [...new Set(links.map((link) => link.agentId))],
+            BINDINGS_MAX,
+        )
+        return links.flatMap((link) => {
+            const agent = agents.find((entry) => entry.id === link.agentId)
+            if (agent === undefined || !isPurpose(link.purpose)) return []
+            return [
+                {
+                    connectionId: link.connectionId,
+                    agentId: agent.id,
+                    agentName: agent.name,
+                    module: agent.module,
+                    purpose: link.purpose,
+                    access: isAccess(link.access) ? link.access : "read",
+                },
+            ]
+        })
+    }
+
     /** Inbound chat: the front door agent of a connection and the agents it hands over to. */
     async routeInbound(connectionId: string): Promise<InboundRoute> {
         return splitRoute(
@@ -126,8 +197,10 @@ export class AgentBindingsService {
 
     /** Grants a connection to an agent of the same workspace, or changes the grant; a manager only. */
     async grant(userId: string, grant: BindingGrant): Promise<void> {
-        await this.members.require(userId, grant.workspaceId, GOVERNORS)
-        const granted = await this.entityManager.transaction((manager) => this.upsert(manager, grant))
+        const caller = await this.members.require(userId, grant.workspaceId, GOVERNORS)
+        const byManager = caller.role !== "owner"
+        if (byManager) await this.requireManaged(userId, grant.workspaceId, grant.agentId)
+        const granted = await this.entityManager.transaction((manager) => this.upsert(manager, grant, byManager))
         if (!granted) {
             throw new AgentConnectionsError({
                 code: AgentConnectionsErrorCode.TargetNotFound,
@@ -139,6 +212,70 @@ export class AgentBindingsService {
     /** Writes a grant the caller already proved and planned, inside its transaction (the connection grants editor). */
     async writeGrant(grant: BindingGrant, manager: EntityManager = this.entityManager): Promise<void> {
         await this.upsert(manager, grant)
+    }
+
+    /**
+     * The channels a paused agent answers that another agent of its role answers now; empty when resuming it leaves each channel with
+     * one agent. Names come with the connection so the owner can be asked whom to keep.
+     */
+    async resumeConflictsOf(
+        workspaceId: string,
+        agentId: string,
+        module: string,
+    ): Promise<ReadonlyArray<ResumeConflict>> {
+        const found = await this.owners.conflictsOfAgent(workspaceId, agentId, module)
+        if (found.length === 0) return []
+        const facts = await this.connections.factsOf(
+            found.map((entry) => entry.connectionId),
+            BINDINGS_MAX,
+        )
+        return found.map((entry) => ({
+            connectionId: entry.connectionId,
+            connectionName: facts.find((fact) => fact.id === entry.connectionId)?.name ?? entry.connectionId,
+            owner: entry.owner,
+        }))
+    }
+
+    /**
+     * Refuses a resume that would give a channel two agents of one role, naming the channels and who answers them, unless the caller
+     * chose whom to keep. Returns the conflicts to settle once the agent is active (none when there are none).
+     */
+    async requireResumeChoice(
+        workspaceId: string,
+        agent: ResumingAgent,
+        keep: OptionalResumeKeep,
+    ): Promise<ReadonlyArray<ResumeConflict>> {
+        const conflicts = await this.resumeConflictsOf(workspaceId, agent.id, agent.module)
+        if (conflicts.length === 0 || keep !== null) return conflicts
+        throw new AgentConnectionsError({
+            code: AgentConnectionsErrorCode.ResumeConflict,
+            params: {
+                agent: agent.name,
+                agentId: agent.id,
+                channels: conflicts.map((conflict) => conflict.connectionName).join(", "),
+                connectionIds: conflicts.map((conflict) => conflict.connectionId).join(","),
+                owners: [...new Set(conflicts.map((conflict) => conflict.owner.agentName))].join(", "),
+            },
+        })
+    }
+
+    /**
+     * Settles the conflicts of a resume once the agent is active: "resumed" takes the channels from the agents that answer them now,
+     * "current" leaves them there and drops the resumed agent's grants on those channels. Each channel ends with one agent.
+     */
+    async settleResume(
+        workspaceId: string,
+        agentId: string,
+        conflicts: ReadonlyArray<ResumeConflict>,
+        keep: OptionalResumeKeep,
+    ): Promise<void> {
+        if (keep === null || conflicts.length === 0) return
+        await this.entityManager.transaction((manager) =>
+            eachInOrder(conflicts, (conflict) => {
+                const loser = keep === "resumed" ? conflict.owner.agentId : agentId
+                return this.removeGrant({ workspaceId, agentId: loser, connectionId: conflict.connectionId }, manager)
+            }),
+        )
     }
 
     /** The ids of the agents that use a connection of the workspace, in the order they were attached, at most `limit`. */
@@ -213,13 +350,19 @@ export class AgentBindingsService {
 
     /** Removes the grant of a connection to an agent; a manager only. */
     async revoke(userId: string, target: BindingTarget): Promise<void> {
-        await this.members.require(userId, target.workspaceId, GOVERNORS)
+        const caller = await this.members.require(userId, target.workspaceId, GOVERNORS)
+        if (caller.role !== "owner") await this.requireManaged(userId, target.workspaceId, target.agentId)
         await this.removeGrant(target)
     }
 
     /** The bindings matching `where` beside the facts of their connections, oldest connection first. */
     private async connectionRows(where: FindOptionsWhere<AgentConnectionEntity>): Promise<Array<BoundConnectionFacts>> {
         const links = await this.entityManager.find(AgentConnectionEntity, { where, take: BINDINGS_MAX })
+        return (await this.rowsOfLinks(links)).map((row) => row.facts)
+    }
+
+    /** The links beside the facts of their connections, oldest connection first; each row keeps the agent of its link. */
+    private async rowsOfLinks(links: ReadonlyArray<AgentConnectionEntity>): Promise<Array<LinkedFacts>> {
         const facts = await this.connections.factsOf(
             links.map((link) => link.connectionId),
             BINDINGS_MAX,
@@ -232,29 +375,68 @@ export class AgentBindingsService {
             .flatMap((connection) =>
                 links
                     .filter((link) => link.connectionId === connection.id)
-                    .map((link): BoundConnectionFacts => ({
-                        id: connection.id,
-                        provider: connection.provider,
-                        name: connection.name,
-                        status: connection.status,
-                        created_at: connection.createdAt.toISOString(),
-                        access: link.access,
-                        purpose: link.purpose,
-                        bot_username: connection.botUsername,
-                        account_masked: connection.accountMasked,
+                    .map((link): LinkedFacts => ({
+                        agentId: link.agentId,
+                        facts: {
+                            id: connection.id,
+                            provider: connection.provider,
+                            name: connection.name,
+                            status: connection.status,
+                            created_at: connection.createdAt.toISOString(),
+                            access: link.access,
+                            purpose: link.purpose,
+                            bot_username: connection.botUsername,
+                            account_masked: connection.accountMasked,
+                        },
                     })),
             )
+    }
+
+    /** Refuses a manager acting on an agent outside the rooms and roles it is open to; without the scope port only the owner may act. */
+    private async requireManaged(userId: string, workspaceId: string, agentId: string): Promise<void> {
+        if (this.managers !== undefined && (await this.managers.canManage(workspaceId, userId, agentId))) return
+        throw new AgentConnectionsError({ code: AgentConnectionsErrorCode.OutOfScope, params: { agentId } })
+    }
+
+    /** Refuses a manager's grant that raises the access above what the owner allows: asking first, or the level the grant already has. */
+    private async requireWithinCeiling(manager: EntityManager, grant: BindingGrant): Promise<void> {
+        const existing = await manager.findOne(AgentConnectionEntity, {
+            select: { access: true },
+            where: { agentId: grant.agentId, connectionId: grant.connectionId },
+        })
+        if (!exceedsManagerCeiling(grant.access, existing?.access ?? null)) return
+        throw new AgentConnectionsError({
+            code: AgentConnectionsErrorCode.AccessAboveCeiling,
+            params: { agentId: grant.agentId, access: grant.access },
+        })
+    }
+
+    /**
+     * Refuses a grant that would give a role a second agent answering the same channel connection (one role, many agents: each
+     * channel is answered by exactly one agent of a role). A grant that only reads, or of a purpose that is no channel, passes.
+     */
+    private async requireChannelFree(manager: EntityManager, grant: BindingGrant): Promise<void> {
+        const [agent] = await this.agents.activeCreatedAmong(grant.workspaceId, [grant.agentId], 1)
+        if (agent === undefined) return
+        await this.owners.requireFree(
+            grant.workspaceId,
+            grant.connectionId,
+            { agentId: grant.agentId, module: agent.module, purpose: grant.purpose, access: grant.access },
+            manager,
+        )
     }
 
     /**
      * Grants (or changes the grant of) a connection to an agent of the same workspace; answers false when either is not in the
      * workspace. Both rows are held while the grant is written, so neither can leave the workspace in between.
      */
-    private async upsert(manager: EntityManager, grant: BindingGrant): Promise<boolean> {
+    private async upsert(manager: EntityManager, grant: BindingGrant, byManager = false): Promise<boolean> {
         const held =
             (await this.agents.holds(grant.workspaceId, grant.agentId, manager)) &&
             (await this.connections.holds(grant.workspaceId, grant.connectionId, manager))
         if (!held) return false
+        if (byManager) await this.requireWithinCeiling(manager, grant)
+        await this.requireChannelFree(manager, grant)
         await manager
             .createQueryBuilder(AgentConnectionEntity, "ac")
             .insert()

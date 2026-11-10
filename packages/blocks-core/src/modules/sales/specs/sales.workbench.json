@@ -59,57 +59,6 @@
         },
         "children": [
           {
-            "id": "attention-figures",
-            "block": "core.figures",
-            "props": {
-              "label": {
-                "key": "figures_label"
-              },
-              "currency": "VND",
-              "items": [
-                {
-                  "term": {
-                    "key": "fig_open"
-                  },
-                  "path": "openCount",
-                  "format": "count",
-                  "hintPath": "openHint"
-                },
-                {
-                  "term": {
-                    "key": "fig_proposal"
-                  },
-                  "path": "proposalValueVnd",
-                  "format": "money",
-                  "hintPath": "proposalHint"
-                },
-                {
-                  "term": {
-                    "key": "fig_closed"
-                  },
-                  "path": "closedCount",
-                  "format": "count",
-                  "hintPath": "closedHint"
-                },
-                {
-                  "term": {
-                    "key": "fig_conversion"
-                  },
-                  "path": "conversion",
-                  "format": "percent",
-                  "hintPath": "conversionHint"
-                }
-              ],
-              "variant": "ribbon"
-            },
-            "bind": {
-              "data": {
-                "read": "sales.figures"
-              }
-            },
-            "children": []
-          },
-          {
             "id": "attention-card",
             "block": "sales.attention-card",
             "props": {
@@ -154,6 +103,106 @@
               }
             },
             "children": []
+          },
+          {
+            "id": "recent-orders",
+            "block": "core.table",
+            "props": {
+              "label": {
+                "key": "orders"
+              },
+              "empty": {
+                "key": "orders_empty"
+              },
+              "idPath": "id",
+              "currency": "VND",
+              "labels": {
+                "status": {
+                  "draft": {
+                    "key": "status_draft"
+                  },
+                  "confirmed": {
+                    "key": "status_confirmed"
+                  },
+                  "invoiced": {
+                    "key": "status_invoiced"
+                  },
+                  "paid": {
+                    "key": "status_paid"
+                  },
+                  "cancelled": {
+                    "key": "status_cancelled"
+                  },
+                  "failed_system": {
+                    "key": "status_failed_system"
+                  }
+                }
+              },
+              "pageSize": 5,
+              "columns": [
+                {
+                  "term": {
+                    "key": "col_order_no"
+                  },
+                  "path": "orderNo",
+                  "width": "fit"
+                },
+                {
+                  "term": {
+                    "key": "col_customer"
+                  },
+                  "path": "customer",
+                  "width": 200,
+                  "truncate": true
+                },
+                {
+                  "term": {
+                    "key": "col_items"
+                  },
+                  "path": "itemsText",
+                  "width": "fill",
+                  "minWidth": 160,
+                  "truncate": true,
+                  "hideBelow": "desktop"
+                },
+                {
+                  "term": {
+                    "key": "col_total"
+                  },
+                  "path": "amountVnd",
+                  "format": "money",
+                  "align": "end",
+                  "width": "fit"
+                },
+                {
+                  "term": {
+                    "key": "col_status"
+                  },
+                  "path": "status",
+                  "format": "badge",
+                  "width": "fit",
+                  "tones": {
+                    "draft": "warning",
+                    "confirmed": "info",
+                    "invoiced": "info",
+                    "paid": "success",
+                    "cancelled": "muted",
+                    "failed_system": "danger"
+                  }
+                }
+              ],
+              "title": {
+                "key": "recent_orders"
+              }
+            },
+            "bind": {
+              "rows": {
+                "read": "sales.orders",
+                "variables": {
+                  "sort": "recent"
+                }
+              }
+            }
           }
         ]
       }
@@ -211,7 +260,418 @@
               }
             },
             "children": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "orders",
+      "label": {
+        "key": "tab_orders"
+      },
+      "root": {
+        "id": "orders-root",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "children": [
+          {
+            "id": "orders-waiting",
+            "block": "core.waiting",
+            "props": {
+              "label": {
+                "key": "waiting_owner"
+              }
+            },
+            "bind": {
+              "region": {
+                "read": "sales.orders-waiting"
+              }
+            }
           },
+          {
+            "id": "order-pane",
+            "block": "core.table",
+            "props": {
+              "label": {
+                "key": "orders"
+              },
+              "empty": {
+                "key": "orders_empty"
+              },
+              "emptySearch": {
+                "key": "orders_empty_search"
+              },
+              "idPath": "id",
+              "currency": "VND",
+              "labels": {
+                "status": {
+                  "draft": {
+                    "key": "status_draft"
+                  },
+                  "confirmed": {
+                    "key": "status_confirmed"
+                  },
+                  "invoiced": {
+                    "key": "status_invoiced"
+                  },
+                  "paid": {
+                    "key": "status_paid"
+                  },
+                  "cancelled": {
+                    "key": "status_cancelled"
+                  },
+                  "failed_system": {
+                    "key": "status_failed_system"
+                  }
+                }
+              },
+              "selectParam": "order",
+              "search": true,
+              "searchParam": "orderQ",
+              "searchLabel": {
+                "key": "search_orders"
+              },
+              "filterParam": "status",
+              "filterLabel": {
+                "key": "status_label"
+              },
+              "filterAll": {
+                "key": "filter_all"
+              },
+              "filters": [
+                {
+                  "value": "draft",
+                  "label": {
+                    "key": "status_draft"
+                  }
+                },
+                {
+                  "value": "confirmed",
+                  "label": {
+                    "key": "status_confirmed"
+                  }
+                },
+                {
+                  "value": "invoiced",
+                  "label": {
+                    "key": "status_invoiced"
+                  }
+                },
+                {
+                  "value": "paid",
+                  "label": {
+                    "key": "status_paid"
+                  }
+                },
+                {
+                  "value": "cancelled",
+                  "label": {
+                    "key": "status_cancelled"
+                  }
+                },
+                {
+                  "value": "failed_system",
+                  "label": {
+                    "key": "status_failed_system"
+                  }
+                }
+              ],
+              "pageSize": 10,
+              "columns": [
+                {
+                  "term": {
+                    "key": "col_order_no"
+                  },
+                  "path": "orderNo",
+                  "width": "fit"
+                },
+                {
+                  "term": {
+                    "key": "col_customer"
+                  },
+                  "path": "customer",
+                  "width": 200,
+                  "truncate": true
+                },
+                {
+                  "term": {
+                    "key": "col_items"
+                  },
+                  "path": "itemsText",
+                  "width": "fill",
+                  "minWidth": 100,
+                  "truncate": true,
+                  "hideBelow": "desktop"
+                },
+                {
+                  "term": {
+                    "key": "col_total"
+                  },
+                  "path": "amountVnd",
+                  "format": "money",
+                  "align": "end",
+                  "width": "fit"
+                },
+                {
+                  "term": {
+                    "key": "col_status"
+                  },
+                  "path": "status",
+                  "format": "badge",
+                  "width": "fit",
+                  "tones": {
+                    "draft": "warning",
+                    "confirmed": "info",
+                    "invoiced": "info",
+                    "paid": "success",
+                    "cancelled": "muted",
+                    "failed_system": "danger"
+                  }
+                },
+                {
+                  "term": {
+                    "key": "col_date"
+                  },
+                  "path": "createdAt",
+                  "format": "day",
+                  "width": "fit",
+                  "hideBelow": "tablet"
+                }
+              ]
+            },
+            "bind": {
+              "rows": {
+                "read": "sales.orders",
+                "variables": {
+                  "q": "$orderQ",
+                  "status": "$status",
+                  "sort": "$orderSort"
+                }
+              },
+              "counts": {
+                "read": "sales.order-counts",
+                "variables": {
+                  "q": "$orderQ"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "settings",
+      "label": {
+        "key": "tab_settings"
+      },
+      "root": {
+        "id": "settings-root",
+        "block": "core.form",
+        "props": {
+          "label": {
+            "key": "settings_title"
+          },
+          "submitLabel": {
+            "key": "settings_submit"
+          },
+          "successNotice": {
+            "key": "settings_done"
+          },
+          "currency": "VND",
+          "fields": [
+            {
+              "name": "approvalThresholdVnd",
+              "label": {
+                "key": "settings_threshold"
+              },
+              "hint": {
+                "key": "settings_threshold_hint"
+              },
+              "kind": "money"
+            },
+            {
+              "name": "maxDiscountPct",
+              "label": {
+                "key": "settings_discount"
+              },
+              "hint": {
+                "key": "settings_discount_hint"
+              },
+              "kind": "number"
+            },
+            {
+              "name": "remindAfterDays",
+              "label": {
+                "key": "settings_remind"
+              },
+              "hint": {
+                "key": "settings_remind_hint"
+              },
+              "kind": "number"
+            },
+            {
+              "name": "autoWon",
+              "label": {
+                "key": "settings_auto_won"
+              },
+              "hint": {
+                "key": "settings_auto_won_hint"
+              },
+              "kind": "switch"
+            },
+            {
+              "name": "notifyAccounting",
+              "label": {
+                "key": "settings_notify"
+              },
+              "hint": {
+                "key": "settings_notify_hint"
+              },
+              "kind": "switch"
+            },
+            {
+              "name": "draftWithoutTotalNeedsApproval",
+              "label": {
+                "key": "settings_draft_without_total"
+              },
+              "kind": "switch",
+              "hint": {
+                "key": "settings_draft_without_total_hint"
+              }
+            },
+            {
+              "name": "closedDealsCanFlip",
+              "label": {
+                "key": "settings_closed_flip"
+              },
+              "kind": "switch",
+              "hint": {
+                "key": "settings_closed_flip_hint"
+              }
+            },
+            {
+              "name": "reopenNeedsApproval",
+              "label": {
+                "key": "settings_reopen"
+              },
+              "kind": "switch",
+              "hint": {
+                "key": "settings_reopen_hint"
+              }
+            }
+          ],
+          "surface": "plain"
+        },
+        "bind": {
+          "record": {
+            "read": "sales.settings"
+          },
+          "submit": {
+            "action": "sales.save-settings"
+          }
+        },
+        "when": {
+          "permission": "sales.manage"
+        }
+      }
+    }
+  ],
+  "aside": {
+    "id": "aside",
+    "block": "core.stack",
+    "props": {
+      "gap": "region"
+    },
+    "children": [
+      {
+        "id": "aside-queue",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "showWhen": {
+          "param": "selected",
+          "is": [""]
+        },
+        "children": [
+          {
+            "id": "aside-queue-orders",
+            "block": "core.stack",
+            "props": {
+              "gap": "region"
+            },
+            "showWhen": {
+              "param": "order",
+              "is": [""]
+            },
+            "children": [
+              {
+                "id": "attention-decisions",
+                "block": "core.decision-queue",
+                "props": {
+                  "surface": "section",
+                  "label": {
+                    "key": "decisions_label"
+                  },
+                  "emptyTitle": {
+                    "key": "decisions_empty_title"
+                  },
+                  "emptyBody": {
+                    "key": "decisions_empty_body"
+                  },
+                  "seeWhy": {
+                    "key": "decisions_see_why"
+                  },
+                  "moreMenu": {
+                    "key": "decisions_more"
+                  },
+                  "currency": "VND",
+                  "commands": [
+                    {
+                      "id": "approve",
+                      "label": {
+                        "key": "command_approve"
+                      }
+                    },
+                    {
+                      "id": "reject",
+                      "label": {
+                        "key": "command_reject"
+                      },
+                      "intent": "danger"
+                    }
+                  ],
+                  "isHeadless": true
+                },
+                "bind": {
+                  "queue": {
+                    "read": "sales.decisions"
+                  },
+                  "command": {
+                    "action": "sales.decide"
+                  }
+                },
+                "when": {
+                  "permission": "sales.approve"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "aside-lead",
+        "block": "core.stack",
+        "props": {
+          "gap": "region"
+        },
+        "showWhen": {
+          "param": "selected",
+          "is": ["*"]
+        },
+        "children": [
           {
             "id": "lead-detail",
             "block": "core.detail",
@@ -223,40 +683,40 @@
                 "key": "lead_idle_body"
               },
               "currency": "VND",
-              "items": [
-                {
-                  "term": {
-                    "key": "fact_name"
-                  },
-                  "path": "contactName"
-                },
-                {
-                  "term": {
-                    "key": "fact_company"
-                  },
-                  "path": "company"
-                },
-                {
-                  "term": {
-                    "key": "fact_stage"
-                  },
-                  "path": "stage",
-                  "format": "badge"
-                },
-                {
-                  "term": {
-                    "key": "fact_channel"
-                  },
-                  "path": "channel"
-                },
-                {
-                  "term": {
-                    "key": "fact_need"
-                  },
-                  "path": "need"
-                }
-              ],
+              "items": [],
               "sections": [
+                {
+                  "title": {
+                    "key": "section_customer"
+                  },
+                  "items": [
+                    {
+                      "term": {
+                        "key": "fact_company"
+                      },
+                      "path": "company"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_stage"
+                      },
+                      "path": "stage",
+                      "format": "badge"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_channel"
+                      },
+                      "path": "channel"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_need"
+                      },
+                      "path": "need"
+                    }
+                  ]
+                },
                 {
                   "title": {
                     "key": "section_contact"
@@ -349,7 +809,10 @@
                     "key": "stage_lost"
                   }
                 }
-              }
+              },
+              "closeParam": "selected",
+              "titlePath": "contactName",
+              "surface": "section"
             },
             "bind": {
               "record": {
@@ -429,7 +892,8 @@
               "requireRecord": true,
               "idle": {
                 "key": "lead_idle_body"
-              }
+              },
+              "surface": "section"
             },
             "bind": {
               "record": {
@@ -447,175 +911,38 @@
             }
           }
         ]
-      }
-    },
-    {
-      "id": "orders",
-      "label": {
-        "key": "tab_orders"
       },
-      "root": {
-        "id": "orders-root",
+      {
+        "id": "aside-order",
         "block": "core.stack",
         "props": {
           "gap": "region"
         },
+        "showWhen": {
+          "param": "order",
+          "is": ["*"]
+        },
         "children": [
           {
-            "id": "orders-waiting",
-            "block": "core.waiting",
+            "id": "order-detail",
+            "block": "core.detail",
             "props": {
+              "primaryWhen": "canConfirm",
+              "secondaryWhen": "canCancel",
               "label": {
-                "key": "waiting_owner"
-              }
-            },
-            "bind": {
-              "region": {
-                "read": "sales.orders-waiting"
-              }
-            }
-          },
-          {
-            "id": "orders-master",
-            "block": "core.master-detail",
-            "props": {
-              "emptyTitle": {
-                "key": "order_idle_title"
+                "key": "order_detail"
               },
-              "emptyBody": {
+              "idle": {
                 "key": "order_idle_body"
-              }
-            },
-            "children": [
-              {
-                "id": "order-pane",
-                "block": "core.list-card",
-                "props": {
-                  "label": {
-                    "key": "orders"
-                  },
-                  "empty": {
-                    "key": "orders_empty"
-                  },
-                  "emptySearch": {
-                    "key": "orders_empty_search"
-                  },
-                  "idPath": "id",
-                  "titlePath": "orderNo",
-                  "descriptionPath": "itemsText",
-                  "badgePath": "status",
-                  "selectParam": "order",
-                  "labels": {
-                    "status": {
-                      "draft": {
-                        "key": "status_draft"
-                      },
-                      "confirmed": {
-                        "key": "status_confirmed"
-                      },
-                      "invoiced": {
-                        "key": "status_invoiced"
-                      },
-                      "paid": {
-                        "key": "status_paid"
-                      },
-                      "cancelled": {
-                        "key": "status_cancelled"
-                      },
-                      "failed_system": {
-                        "key": "status_failed_system"
-                      }
-                    }
-                  },
-                  "search": true,
-                  "searchParam": "orderQ",
-                  "searchLabel": {
-                    "key": "search_orders"
-                  },
-                  "filterParam": "status",
-                  "filterLabel": {
-                    "key": "status_label"
-                  },
-                  "filterAll": {
-                    "key": "filter_all"
-                  },
-                  "filters": [
-                    {
-                      "value": "draft",
-                      "label": {
-                        "key": "status_draft"
-                      },
-                      "attention": true
-                    },
-                    {
-                      "value": "confirmed",
-                      "label": {
-                        "key": "status_confirmed"
-                      }
-                    },
-                    {
-                      "value": "invoiced",
-                      "label": {
-                        "key": "status_invoiced"
-                      }
-                    },
-                    {
-                      "value": "paid",
-                      "label": {
-                        "key": "status_paid"
-                      }
-                    },
-                    {
-                      "value": "cancelled",
-                      "label": {
-                        "key": "status_cancelled"
-                      }
-                    },
-                    {
-                      "value": "failed_system",
-                      "label": {
-                        "key": "status_failed_system"
-                      }
-                    }
-                  ]
-                },
-                "bind": {
-                  "rows": {
-                    "read": "sales.orders",
-                    "variables": {
-                      "q": "$orderQ",
-                      "status": "$status",
-                      "sort": "$orderSort"
-                    }
-                  },
-                  "counts": {
-                    "read": "sales.order-counts",
-                    "variables": {
-                      "q": "$orderQ"
-                    }
-                  }
-                }
               },
-              {
-                "id": "order-detail",
-                "block": "core.detail",
-                "props": {
-                  "primaryWhen": "canConfirm",
-                  "secondaryWhen": "canCancel",
-                  "label": {
-                    "key": "order_detail"
+              "currency": "VND",
+              "items": [],
+              "sections": [
+                {
+                  "title": {
+                    "key": "section_order"
                   },
-                  "idle": {
-                    "key": "order_idle_body"
-                  },
-                  "currency": "VND",
                   "items": [
-                    {
-                      "term": {
-                        "key": "fact_order_no"
-                      },
-                      "path": "orderNo"
-                    },
                     {
                       "term": {
                         "key": "fact_customer"
@@ -630,285 +957,140 @@
                     },
                     {
                       "term": {
+                        "key": "fact_deliver"
+                      },
+                      "path": "deliveryAddress"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_recipient_name"
+                      },
+                      "path": "recipientName"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_recipient_phone"
+                      },
+                      "path": "recipientPhone"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_delivery_at"
+                      },
+                      "path": "deliveryAt"
+                    },
+                    {
+                      "term": {
+                        "key": "fact_order_note"
+                      },
+                      "path": "note"
+                    }
+                  ]
+                },
+                {
+                  "title": {
+                    "key": "section_payment"
+                  },
+                  "items": [
+                    {
+                      "term": {
+                        "key": "fact_amount"
+                      },
+                      "path": "amountVnd",
+                      "format": "money"
+                    },
+                    {
+                      "term": {
                         "key": "fact_status"
                       },
                       "path": "status",
                       "format": "badge"
+                    }
+                  ]
+                },
+                {
+                  "title": {
+                    "key": "section_history"
+                  },
+                  "items": [
+                    {
+                      "term": {
+                        "key": "fact_created"
+                      },
+                      "path": "createdAt",
+                      "format": "dateTime"
                     },
                     {
                       "term": {
-                        "key": "fact_approval"
+                        "key": "fact_confirmed_by"
                       },
-                      "path": "approval",
-                      "format": "badge"
-                    }
-                  ],
-                  "sections": [
-                    {
-                      "title": {
-                        "key": "section_payment"
-                      },
-                      "items": [
-                        {
-                          "term": {
-                            "key": "fact_amount"
-                          },
-                          "path": "amountVnd",
-                          "format": "money"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_threshold"
-                          },
-                          "path": "thresholdVnd",
-                          "format": "money"
-                        }
-                      ]
+                      "path": "confirmedBy"
                     },
                     {
-                      "title": {
-                        "key": "section_history"
+                      "term": {
+                        "key": "fact_confirmed_at"
                       },
-                      "items": [
-                        {
-                          "term": {
-                            "key": "fact_created"
-                          },
-                          "path": "createdAt",
-                          "format": "dateTime"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_confirmed_at"
-                          },
-                          "path": "confirmedAt",
-                          "format": "dateTime"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_confirmed_by"
-                          },
-                          "path": "confirmedBy"
-                        },
-                        {
-                          "term": {
-                            "key": "fact_note"
-                          },
-                          "path": "note"
-                        }
-                      ]
+                      "path": "confirmedAt",
+                      "format": "dateTime"
                     }
-                  ],
-                  "labels": {
-                    "status": {
-                      "draft": {
-                        "key": "status_draft"
-                      },
-                      "confirmed": {
-                        "key": "status_confirmed"
-                      },
-                      "invoiced": {
-                        "key": "status_invoiced"
-                      },
-                      "paid": {
-                        "key": "status_paid"
-                      },
-                      "cancelled": {
-                        "key": "status_cancelled"
-                      },
-                      "failed_system": {
-                        "key": "status_failed_system"
-                      }
-                    },
-                    "approval": {
-                      "shop": {
-                        "key": "approval_shop"
-                      },
-                      "owner": {
-                        "key": "approval_owner"
-                      },
-                      "done": {
-                        "key": "approval_done"
-                      }
-                    }
+                  ]
+                }
+              ],
+              "labels": {
+                "status": {
+                  "draft": {
+                    "key": "status_draft"
+                  },
+                  "confirmed": {
+                    "key": "status_confirmed"
+                  },
+                  "invoiced": {
+                    "key": "status_invoiced"
+                  },
+                  "paid": {
+                    "key": "status_paid"
+                  },
+                  "cancelled": {
+                    "key": "status_cancelled"
+                  },
+                  "failed_system": {
+                    "key": "status_failed_system"
                   }
                 },
-                "bind": {
-                  "record": {
-                    "read": "sales.order",
-                    "variables": {
-                      "id": "$order"
-                    }
+                "approval": {
+                  "shop": {
+                    "key": "approval_shop"
                   },
-                  "primary": {
-                    "action": "sales.confirm-order"
+                  "owner": {
+                    "key": "approval_owner"
                   },
-                  "secondary": {
-                    "action": "sales.cancel-order"
+                  "done": {
+                    "key": "approval_done"
                   }
                 }
+              },
+              "closeParam": "order",
+              "titlePath": "orderNo",
+              "surface": "section"
+            },
+            "bind": {
+              "record": {
+                "read": "sales.order",
+                "variables": {
+                  "id": "$order"
+                }
+              },
+              "primary": {
+                "action": "sales.confirm-order"
+              },
+              "secondary": {
+                "action": "sales.cancel-order"
               }
-            ]
+            }
           }
         ]
       }
-    },
-    {
-      "id": "settings",
-      "label": {
-        "key": "tab_settings"
-      },
-      "root": {
-        "id": "settings-root",
-        "block": "core.form",
-        "props": {
-          "label": {
-            "key": "settings_title"
-          },
-          "submitLabel": {
-            "key": "settings_submit"
-          },
-          "successNotice": {
-            "key": "settings_done"
-          },
-          "currency": "VND",
-          "fields": [
-            {
-              "name": "approvalThresholdVnd",
-              "label": {
-                "key": "settings_threshold"
-              },
-              "hint": {
-                "key": "settings_threshold_hint"
-              },
-              "kind": "money"
-            },
-            {
-              "name": "maxDiscountPct",
-              "label": {
-                "key": "settings_discount"
-              },
-              "hint": {
-                "key": "settings_discount_hint"
-              },
-              "kind": "number"
-            },
-            {
-              "name": "remindAfterDays",
-              "label": {
-                "key": "settings_remind"
-              },
-              "hint": {
-                "key": "settings_remind_hint"
-              },
-              "kind": "number"
-            },
-            {
-              "name": "autoWon",
-              "label": {
-                "key": "settings_auto_won"
-              },
-              "hint": {
-                "key": "settings_auto_won_hint"
-              },
-              "kind": "switch"
-            },
-            {
-              "name": "notifyAccounting",
-              "label": {
-                "key": "settings_notify"
-              },
-              "hint": {
-                "key": "settings_notify_hint"
-              },
-              "kind": "switch"
-            },
-            {
-              "name": "draftWithoutTotalNeedsApproval",
-              "label": {
-                "key": "settings_draft_without_total"
-              },
-              "kind": "switch"
-            },
-            {
-              "name": "closedDealsCanFlip",
-              "label": {
-                "key": "settings_closed_flip"
-              },
-              "kind": "switch"
-            },
-            {
-              "name": "reopenNeedsApproval",
-              "label": {
-                "key": "settings_reopen"
-              },
-              "kind": "switch"
-            }
-          ]
-        },
-        "bind": {
-          "record": {
-            "read": "sales.settings"
-          },
-          "submit": {
-            "action": "sales.save-settings"
-          }
-        },
-        "when": {
-          "permission": "sales.manage"
-        }
-      }
-    }
-  ],
-  "aside": {
-    "id": "attention-decisions",
-    "block": "core.decision-queue",
-    "props": {
-      "surface": "section",
-      "label": {
-        "key": "decisions_label"
-      },
-      "emptyTitle": {
-        "key": "decisions_empty_title"
-      },
-      "emptyBody": {
-        "key": "decisions_empty_body"
-      },
-      "seeWhy": {
-        "key": "decisions_see_why"
-      },
-      "moreMenu": {
-        "key": "decisions_more"
-      },
-      "currency": "VND",
-      "commands": [
-        {
-          "id": "approve",
-          "label": {
-            "key": "command_approve"
-          }
-        },
-        {
-          "id": "reject",
-          "label": {
-            "key": "command_reject"
-          },
-          "intent": "danger"
-        }
-      ],
-      "isHeadless": true
-    },
-    "bind": {
-      "queue": {
-        "read": "sales.decisions"
-      },
-      "command": {
-        "action": "sales.decide"
-      }
-    },
-    "when": {
-      "permission": "sales.approve"
-    }
+    ]
   },
   "asideSummary": {
     "read": "sales.decisions",

@@ -6,6 +6,10 @@ import { branchSchema, kindSchema, nodeSchema } from "./agent-graph-wire-node"
 type CardSchemaShape = z.ZodObject<
     {
         id: z.ZodString
+        label: z.ZodOptional<z.ZodString>
+        kind: z.ZodOptional<
+            z.ZodEnum<{ trigger: "trigger"; condition: "condition"; execute: "execute"; output: "output" }>
+        >
         description: z.ZodString
         tone: z.ZodEnum<{
             success: "success"
@@ -23,17 +27,38 @@ type CardSchemaShape = z.ZodObject<
         }>
         count: z.ZodString
         isPlaceholder: z.ZodBoolean
+        group: z.ZodOptional<z.ZodString>
+        wait: z.ZodOptional<
+            z.ZodObject<
+                {
+                    kind: z.ZodEnum<{ reply: "reply"; payment: "payment"; other: "other" }>
+                    timeout: z.ZodOptional<z.ZodString>
+                    reminder: z.ZodOptional<z.ZodString>
+                },
+                z.core.$strip
+            >
+        >
     },
     z.core.$strip
 >
 
 const cardSchema: CardSchemaShape = z.object({
     id: z.string(),
+    label: z.string().optional(),
+    kind: kindSchema.optional(),
     description: z.string(),
     tone: z.enum(["neutral", "accent", "success", "warning", "danger", "muted"]),
     shape: z.enum(["rect", "round", "diamond", "stadium"]),
     count: z.string(),
     isPlaceholder: z.boolean(),
+    group: z.string().optional(),
+    wait: z
+        .object({
+            kind: z.enum(["reply", "payment", "other"]),
+            timeout: z.string().optional(),
+            reminder: z.string().optional(),
+        })
+        .optional(),
 })
 
 type ProblemSchemaShape = z.ZodObject<

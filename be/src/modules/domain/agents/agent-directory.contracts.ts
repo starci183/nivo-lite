@@ -46,6 +46,8 @@ export interface AgentIdentityCard {
     readonly handle: string
     /** The agent's own picture; null when it has none. */
     readonly avatarUrl: string | null
+    /** The preset picture the owner chose; null when none (the default sprout, or the uploaded picture). */
+    readonly avatarPreset: string | null
 }
 
 /** One agent with its whole sheet, as the dashboards of the workspace list it. */

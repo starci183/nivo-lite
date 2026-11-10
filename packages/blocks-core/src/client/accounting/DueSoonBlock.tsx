@@ -1,9 +1,8 @@
 import type { ReactNode } from "react"
 import { SlotView, useBlockHost } from "@nivo-lite/agent-sdk/client"
-import { Alert, EmptyNotice, Link, Section, Stack } from "@starci/grammar/common"
+import { EmptyNotice, Link, Section } from "@starci/grammar/common"
 import type { accountingDueSoonBlock } from "../../blocks/accounting/due-soon.block"
-import { dueRecord, dueRowsOf } from "../../rules/accounting/overview-view"
-import type { DueRecord } from "../../rules/accounting/overview-view"
+import { dueRecord, dueRowsOf, type DueRecord } from "../../rules/accounting/overview-view"
 import { parsedSlot } from "../../slots/slots"
 import { useBlockWords, useSlotLabels } from "../composites/useBlockWords"
 import type { RenderOf } from "../render-props"
@@ -20,44 +19,41 @@ export const DueSoonBlock = (props: RenderOf<typeof accountingDueSoonBlock>): Re
     const labels = useSlotLabels(props.props.empty)
     const read = props.slots.due
     return (
-        <Stack gap="row">
-            <SlotView
-                slot={parsedSlot(read.slot, dueRecord)}
-                labels={labels}
-                placeholder={PLACEHOLDER}
-                onRetry={read.retry}
-                render={(due, isLoading) => (
-                    <Section
-                        kind="list"
-                        title={`${words(props.props.title)} ${words(props.props.horizon)}`}
-                        headingLevel={3}
-                        isLoading={isLoading}
-                        items={dueRowsOf(due.rows, {
-                            title: {
-                                vatMonth: words({ key: "due_vat_month" }),
-                                vatQuarter: words({ key: "due_vat_quarter" }),
-                                pit: words({ key: "due_pit" }),
-                            },
-                            due: words({ key: "due_date" }),
-                            left: words({ key: "due_left" }),
-                            today: words({ key: "due_today" }),
-                        }).map((row) => ({
-                            id: row.id,
-                            title: row.title,
-                            description: row.description,
-                            badges: [{ label: row.chip, tone: "warning" }],
-                        }))}
-                        empty={<EmptyNotice message={labels.empty} />}
-                    />
-                )}
-            />
-            <Alert
-                tone="informative"
-                title={words(props.props.notice)}
-                description={
-                    <Link href={host.navigation.href(props.props.linkPath)}>{words(props.props.linkLabel)}</Link>
-                }
-            />
-        </Stack>
+        <SlotView
+            slot={parsedSlot(read.slot, dueRecord)}
+            labels={labels}
+            placeholder={PLACEHOLDER}
+            onRetry={read.retry}
+            render={(due, isLoading) => (
+                <Section
+                    kind="list"
+                    title={`${words(props.props.title)} ${words(props.props.horizon)}`}
+                    headingLevel={3}
+                    caption={words(props.props.notice)}
+                    action={
+                        <Link variant="head" href={host.navigation.href(props.props.linkPath)}>
+                            {words(props.props.linkLabel)}
+                        </Link>
+                    }
+                    isLoading={isLoading}
+                    items={dueRowsOf(due.rows, {
+                        title: {
+                            vatMonth: words({ key: "due_vat_month" }),
+                            vatQuarter: words({ key: "due_vat_quarter" }),
+                            pit: words({ key: "due_pit" }),
+                        },
+                        due: words({ key: "due_date" }),
+                        left: words({ key: "due_left" }),
+                        today: words({ key: "due_today" }),
+                    }).map((row) => ({
+                        id: row.id,
+                        title: row.title,
+                        description: row.description,
+                        badges: [{ label: row.chip, tone: "warning" }],
+                    }))}
+                    empty={<EmptyNotice message={labels.empty} />}
+                />
+            )}
+        />
     )
 }

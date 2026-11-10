@@ -5,6 +5,7 @@ import type { SlotRead } from "@/hooks/slot"
 import { slotOfReads, useSlotLabels } from "@/hooks/slot"
 
 import { useTranslations } from "next-intl"
+import { useWizardPhases } from "@/hooks/connection-wizard"
 import { useSearchParams } from "next/navigation"
 import { providerKey } from "@/hooks/connection-providers"
 import { useGoogleLedger } from "@/hooks/googleLedger"
@@ -63,6 +64,7 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
     const slotLabels = useSlotLabels()
     const t = useTranslations("googleWizard")
     const tw = useTranslations("connectionWizard")
+    const phases = useWizardPhases("google")
     const tc = useTranslations("connections")
     const params = useSearchParams()
     const ledger = useGoogleLedger()
@@ -87,6 +89,7 @@ export const GoogleWizard = (props: GoogleWizardProps) => {
                 slotLabels: slotLabels(""),
                 title: tw("title", { provider: tc(providerKey("google", "title")) }),
                 stepLabel: tw("stepOf", { n: index + 1, total: steps.length }),
+                phases,
                 steps,
                 index,
                 refusal: failure,

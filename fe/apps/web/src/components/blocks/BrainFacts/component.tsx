@@ -1,121 +1,214 @@
-import { Alert, AlertDialog, IconTile, Stack } from "@starci/grammar/common"
-import type { ListBoxItem } from "@starci/grammar/common"
+import { Alert, Stack } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { FactDetail } from "@/components/composites/FactDetail"
-import { RowTrailing } from "@/components/composites/RowTrailing"
-import { BrainPanes } from "@/components/frames/BrainPanes"
+import type { HeaderZone } from "@starci/grammar/common"
+import { ConflictDrawer } from "@/components/composites/ConflictDrawer"
+import { FactDetailDrawer } from "@/components/composites/FactDetailDrawer"
+import { FactPickTable } from "@/components/composites/FactPickTable"
+import { FactMapCard, factModeZoneOf } from "@/components/frames/FactMapCard"
+import { PickSelectionBar } from "@/components/composites/PickSelectionBar"
+import { BrainKnowledgeFrame } from "@/components/frames/BrainKnowledgeFrame"
 import { FactFormDrawer } from "@/components/frames/FactFormDrawer"
-import { filterChoiceOf } from "@/components/composites/FilterGroup"
-import { PaneBody } from "@/components/frames/PaneBody"
-import { PaneList } from "@/components/frames/PaneList"
-import { nivoIconSource } from "@/components/leaves/Icon"
-import type { BrainPageHeaderView, FactDrawerView, FactEntryView, FactsView } from "@/modules/types"
+import type { FactCardWords, FactMapView, FactMode } from "@/modules/brain"
+import type {
+    BrainPageHeaderView,
+    ConflictDrawerView,
+    DataSlot,
+    FactDrawerDetailView,
+    FactDrawerView,
+    FactPickCopy,
+    FactPickGroupView,
+    PickConfirmView,
+    PickSelectionBarView,
+    SlotLabels,
+} from "@/modules/types"
 
-/** The words of the facts page. */
-interface FactsCopy {
-    readonly grid: string
-    readonly listLabel: string
-    readonly detailLabel: string
+/** The words of the controls of the facts page. */
+interface FactsWords {
+    readonly statusLabel: string
     readonly searchLabel: string
     readonly clearSearch: string
-    readonly filterLabel: string
-    readonly moreFilters: string
-    readonly pickTitle: string
-    readonly pickBody: string
-    readonly noMatchTitle: string
-    readonly noMatchBody: string
-    readonly clearFilters: string
-    readonly emptyBody: string
-    readonly emptyAction: string
+    readonly groupingLabel: string
+    readonly bySubject: string
+    readonly byDocument: string
     readonly errorBody: string
-    readonly back: string
 }
 
 /** Props for {@link BrainFactsBase}. */
 export interface BrainFactsBaseProps {
     readonly props: {
         readonly header: BrainPageHeaderView
-        readonly panelId: string
-        readonly copy: FactsCopy
-        readonly facts: FactsView
-        /** The drawer that writes a fact or gives one a new value, which the address may open over the list. */
+        /** The groups of facts as the brain read settled: loading, failed, or ready. */
+        readonly slot: DataSlot<ReadonlyArray<FactPickGroupView>>
+        readonly labels: SlotLabels
+        readonly copy: FactPickCopy
+        readonly words: FactsWords
+        readonly count: number
+        readonly status: ReadonlyArray<{ readonly id: string; readonly label: string; readonly count: number }>
+        readonly selectedStatus: string
+        readonly query: string
+        readonly grouping: "subject" | "document"
+        readonly canWrite: boolean
+        readonly maintain: { readonly title: string; readonly body: string; readonly actionLabel: string } | null
+        readonly bar: PickSelectionBarView
+        readonly confirm: PickConfirmView | null
+        readonly conflict: ConflictDrawerView | null
+        readonly detail: FactDrawerDetailView | null
+        /** The drawer that writes a fact or gives one a new value, which the address may open. */
         readonly factDrawer: FactDrawerView | null
+        /** The words of the card around the facts, how it draws them now, and the map of the same facts. */
+        readonly card: FactCardWords
+        readonly mode: FactMode
+        readonly map: FactMapView
     }
     readonly on: {
         readonly reviewAll: () => void
         readonly selectTab: (id: string) => void
-        readonly setFilter: (id: string) => void
+        readonly setStatus: (id: string) => void
         readonly setQuery: (value: string) => void
-        readonly select: (id: string) => void
-        readonly back: () => void
+        readonly setGrouping: (id: string) => void
         readonly retry: () => void
-        readonly add: () => void
-        readonly askRetire: (id: string) => void
+        readonly maintain: () => void
+        readonly toggleRow: (key: string) => void
+        readonly toggleGroup: (groupId: string) => void
+        readonly toggleOpen: (groupId: string) => void
+        readonly clear: () => void
+        readonly askApprove: () => void
+        readonly askReject: () => void
+        readonly cancel: () => void
+        readonly confirm: () => void
+        readonly open: (factId: string) => void
+        readonly closeDetail: () => void
+        readonly edit: () => void
+        readonly approve: () => void
+        readonly reject: () => void
+        readonly menu: (id: string) => void
         readonly confirmRetire: () => void
         readonly cancelRetire: () => void
-        readonly maintain: () => void
+        readonly compare: (key: string) => void
+        readonly closeConflict: () => void
+        readonly choose: (id: string) => void
+        readonly confirmChoice: () => void
+        readonly setMode: (id: string) => void
+        readonly map: {
+            readonly setView: (id: string) => void
+            readonly select: (id: string | null) => void
+            readonly approve: () => void
+            readonly edit: () => void
+            readonly compare: () => void
+        }
     }
 }
 
-/** The list rows: the fact and one line under it, its audience at the end. */
-const itemsOf = (entries: ReadonlyArray<FactEntryView>): ReadonlyArray<ListBoxItem> =>
-    entries.map((entry) => ({
-        id: entry.id,
-        label: entry.title,
-        description: entry.line,
-        leading: <IconTile source={nivoIconSource("review", "leading")} tone="neutral" />,
-        trailing: <RowTrailing badge={entry.badge} />,
-    }))
+/** The zones above the table: the selection bar first, then the states with the search, then the grouping. */
+const headersOf = (props: BrainFactsBaseProps): ReadonlyArray<HeaderZone> => {
+    const { words } = props.props
+    const picked: ReadonlyArray<HeaderZone> =
+        props.props.bar.count === 0
+            ? []
+            : [
+                  {
+                      kind: "custom",
+                      children: (
+                          <PickSelectionBar
+                              props={{ bar: props.props.bar, confirm: props.props.confirm }}
+                              on={{
+                                  clear: props.on.clear,
+                                  askReject: props.on.askReject,
+                                  askApprove: props.on.askApprove,
+                                  cancel: props.on.cancel,
+                                  confirm: props.on.confirm,
+                              }}
+                          />
+                      ),
+                  },
+              ]
+    return [
+        factModeZoneOf(props.props.card, props.props.mode, props.on.setMode),
+        ...picked,
+        {
+            kind: "filter",
+            label: words.statusLabel,
+            items: props.props.status.map((one) => ({ id: one.id, label: one.label, count: one.count })),
+            selectedKey: props.props.selectedStatus,
+            onSelect: props.on.setStatus,
+        },
+        {
+            kind: "search",
+            label: words.searchLabel,
+            placeholder: words.searchLabel,
+            clearLabel: words.clearSearch,
+            value: props.props.query,
+            onChange: props.on.setQuery,
+        },
+        {
+            kind: "switch",
+            label: words.groupingLabel,
+            title: props.props.bar.hint,
+            items: [
+                { id: "subject", label: words.bySubject },
+                { id: "document", label: words.byDocument },
+            ],
+            selectedKey: props.props.grouping,
+            onSelect: props.on.setGrouping,
+        },
+    ]
+}
 
-/** The list pane: the notice of what is due, the search over the type tabs, then the rows. */
-const ListBody = (props: BrainFactsBaseProps) => {
-    const { copy, facts } = props.props
+/** The card of the map: the same facts, drawn as subjects, facts and the documents they cite. */
+const MapBody = (props: BrainFactsBaseProps) => (
+    <FactMapCard
+        props={{ words: props.props.card, view: props.props.map }}
+        on={{
+            setMode: props.on.setMode,
+            setView: props.on.map.setView,
+            select: props.on.map.select,
+            retry: props.on.retry,
+            approve: props.on.map.approve,
+            edit: props.on.map.edit,
+            compare: props.on.map.compare,
+        }}
+    />
+)
+
+/** The table of facts, with the notice of what is due above it; the read's own notice with its retry when it failed. */
+const Body = (props: BrainFactsBaseProps) => {
+    const { words, maintain } = props.props
+    if (props.props.mode === "map") return <MapBody {...props} />
     return (
         <SlotView
-            slot={facts.slot}
-            placeholder={facts.placeholder}
-            labels={facts.slotLabels}
-            errorDescription={copy.errorBody}
-            emptyDescription={copy.emptyBody}
+            slot={props.props.slot}
+            placeholder={[]}
+            labels={props.props.labels}
+            errorDescription={words.errorBody}
+            emptyDescription={props.props.copy.emptyBody}
             onRetry={props.on.retry}
-            render={(entries, isLoading) => (
-                <Stack gap="row">
-                    {facts.maintain === null ? null : (
+            render={(groups, isLoading) => (
+                <Stack gap="section">
+                    {maintain === null ? null : (
                         <Alert
                             tone="cautionary"
-                            title={facts.maintain.title}
-                            description={facts.maintain.body}
-                            action={{ label: facts.maintain.actionLabel, onAction: props.on.maintain }}
+                            title={maintain.title}
+                            description={maintain.body}
+                            action={{ label: maintain.actionLabel, onAction: props.on.maintain }}
                         />
                     )}
-                    <PaneList
-                        label={copy.listLabel}
-                        search={{
-                            label: copy.searchLabel,
-                            placeholder: copy.searchLabel,
-                            clearLabel: copy.clearSearch,
-                            value: facts.query,
-                            onChange: props.on.setQuery,
+                    <FactPickTable
+                        props={{
+                            copy: { ...props.props.copy, label: props.props.card.title },
+                            fact: String(props.props.count),
+                            groups,
+                            headers: headersOf(props),
+                            footers: [],
+                            canWrite: props.props.canWrite,
+                            isLoading,
                         }}
-                        choice={filterChoiceOf(
-                            facts.filters,
-                            facts.filter,
-                            { label: copy.filterLabel, moreLabel: copy.moreFilters },
-                            props.on.setFilter,
-                        )}
-                        items={itemsOf(entries)}
-                        selectedId={facts.selectedId}
-                        onSelect={props.on.select}
-                        empty={{
-                            message: copy.noMatchTitle,
-                            description: copy.noMatchBody,
-                            actionLabel: copy.clearFilters,
-                            onAction: () => {
-                                props.on.setFilter("all")
-                                props.on.setQuery("")
-                            },
+                        on={{
+                            toggleRow: props.on.toggleRow,
+                            toggleGroup: props.on.toggleGroup,
+                            toggleOpen: props.on.toggleOpen,
+                            open: props.on.open,
+                            compare: props.on.compare,
                         }}
-                        isLoading={isLoading}
                     />
                 </Stack>
             )}
@@ -123,69 +216,30 @@ const ListBody = (props: BrainFactsBaseProps) => {
     )
 }
 
-/** The props of a part that draws the opened fact. */
-interface OpenedProps extends BrainFactsBaseProps {
-    readonly entry: FactEntryView
-    readonly isWaiting: boolean
-}
-
-/** The opened fact, with the question asked before it stops being used. */
-const DetailOf = (props: OpenedProps) => {
-    const retire = props.props.facts.retire
-    return (
-        <PaneBody isWaiting={props.isWaiting}>
-            <FactDetail
-                detail={props.entry.detail}
-                isLoading={props.isWaiting}
-                onRetire={() => props.on.askRetire(props.entry.id)}
-            />
-            {retire === null ? null : (
-                <AlertDialog
-                    isOpen
-                    onOpenChange={(open) => {
-                        if (!open) props.on.cancelRetire()
-                    }}
-                    tone="negative"
-                    title={retire.title}
-                    description={retire.description}
-                    confirmLabel={retire.confirmLabel}
-                    cancelLabel={retire.cancelLabel}
-                    onConfirm={props.on.confirmRetire}
-                />
-            )}
-        </PaneBody>
-    )
-}
-
 /**
- * Draws the facts of the Second Brain as the page of its tab: the header with its tab strip, then the panes (the facts narrowed by
- * type and search, and the opened fact with its value, its history and its commands). A phone shows the list, or the opened fact
- * with a way back. A settled read with no facts, or one that failed, is one notice across the page with the one action that answers it.
+ * The facts chip of the knowledge tab: the header and the chips, then one table of every fact, the waiting ones with the ones in use,
+ * grouped by subject (or by document) with a tick per group and per row and the selection bar at the top. A row opens its detail in a
+ * drawer; a conflict opens the comparison.
  */
-export const BrainFactsBase = (props: BrainFactsBaseProps) => {
-    const { copy, facts, header, factDrawer } = props.props
-    return (
-        <BrainPanes
-            header={header}
-            panelId={props.props.panelId}
-            copy={{ ...copy, list: copy.listLabel, detail: copy.detailLabel }}
-            grid={facts.grid}
-            slot={facts.slot}
-            placeholder={facts.placeholder}
-            slotLabels={facts.slotLabels}
-            selectedId={facts.selectedId}
-            isFiltered={facts.isFiltered}
-            glyph="review"
-            on={props.on}
-            list={
-                <PaneBody
-                    isWaiting={"isLoading" in facts.slot}
-                    overlay={factDrawer === null ? null : <FactFormDrawer {...factDrawer} />}
-                >
-                    <ListBody {...props} />
-                </PaneBody>
-            }
-            renderDetail={(entry, isWaiting) => <DetailOf {...props} entry={entry} isWaiting={isWaiting} />}
+export const BrainFactsBase = (props: BrainFactsBaseProps) => (
+    <BrainKnowledgeFrame header={props.props.header} onReviewAll={props.on.reviewAll} onSelectTab={props.on.selectTab}>
+        <Body {...props} />
+        <ConflictDrawer
+            props={{ view: props.props.conflict }}
+            on={{ close: props.on.closeConflict, choose: props.on.choose, confirm: props.on.confirmChoice }}
         />
-    )
-}
+        <FactDetailDrawer
+            props={{ view: props.props.detail }}
+            on={{
+                close: props.on.closeDetail,
+                edit: props.on.edit,
+                approve: props.on.approve,
+                reject: props.on.reject,
+                menu: props.on.menu,
+                confirmRetire: props.on.confirmRetire,
+                cancelRetire: props.on.cancelRetire,
+            }}
+        />
+        {props.props.factDrawer === null ? null : <FactFormDrawer {...props.props.factDrawer} />}
+    </BrainKnowledgeFrame>
+)

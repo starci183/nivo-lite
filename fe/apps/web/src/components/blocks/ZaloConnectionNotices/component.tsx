@@ -1,7 +1,7 @@
-import { Alert, PaneSection } from "@starci/grammar/common"
+import { Alert, Stack } from "@starci/grammar/common"
 import type { PresentationState } from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
-import { ConnectionPaneLayoutNotice } from "@/components/frames/ConnectionPaneLayout"
+import { ConnectionBandRefusal } from "@/components/frames/ConnectionBand"
 import type { ConnectionRefusalView, DataSlot, SlotLabels, ZaloHeadView } from "@/modules/types"
 
 /** The head read, used only to say it failed in place. */
@@ -33,21 +33,19 @@ export const ZaloConnectionNoticesBase = (props: ZaloConnectionNoticesBaseProps)
     const failed = "isError" in head || "isForbidden" in head
     return (
         <>
-            <ConnectionPaneLayoutNotice refusal={props.props.refusal} />
+            <ConnectionBandRefusal refusal={props.props.refusal} />
             {failed ? (
-                <PaneSection>
-                    <SlotView
-                        slot={head}
-                        placeholder={ZALO_HEAD_PLACEHOLDER}
-                        labels={props.props.slotLabels}
-                        forbidden="notice"
-                        onRetry={props.on.retry}
-                        render={() => null}
-                    />
-                </PaneSection>
+                <SlotView
+                    slot={head}
+                    placeholder={ZALO_HEAD_PLACEHOLDER}
+                    labels={props.props.slotLabels}
+                    forbidden="notice"
+                    onRetry={props.on.retry}
+                    render={() => null}
+                />
             ) : null}
             {notices.length === 0 ? null : (
-                <PaneSection>
+                <Stack gap="row">
                     {notices.map((notice) => (
                         <Alert
                             key={notice.id}
@@ -56,7 +54,7 @@ export const ZaloConnectionNoticesBase = (props: ZaloConnectionNoticesBaseProps)
                             {...(notice.description === undefined ? {} : { description: notice.description })}
                         />
                     ))}
-                </PaneSection>
+                </Stack>
             )}
         </>
     )
