@@ -45,3 +45,12 @@ export const triesRemain = (tries: Tries): boolean => tries.made < MODEL_TRIES
  */
 export const failedTries = (code: AiTasksErrorCode, tries: Tries): AiTasksError =>
     new AiTasksError({ code, params: { tries: tries.made, failures: tries.failures.join(", ") } })
+
+/**
+ * Whether a try takes its name's client through the next protocol (`AiTurnRequest.fallback`): only a retry whose previous try failed
+ * at the provider or ran out of time. A profile whose candidates speak one protocol has no next one, and the try keeps its client.
+ */
+export const fallbackOf = (tries: Tries): { readonly fallback?: true } => {
+    const last = tries.failures.at(-1)
+    return last === "provider" || last === "timeout" ? { fallback: true } : {}
+}

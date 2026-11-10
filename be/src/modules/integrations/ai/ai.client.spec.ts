@@ -29,6 +29,50 @@ const vectors = (count: number): string =>
         usage: { prompt_tokens: count, total_tokens: count },
     })
 
+/** An answer of the gateway's Anthropic Messages route, with the lane the gateway names in its usage (`usage.served`). */
+const anthropicMessage = (content: string): string =>
+    JSON.stringify({
+        id: "msg_1",
+        type: "message",
+        role: "assistant",
+        model: "claude-sonnet-5-5",
+        content: [{ type: "text", text: content }],
+        stop_reason: "end_turn",
+        stop_sequence: null,
+        usage: {
+            input_tokens: 10,
+            output_tokens: 2,
+            cache_read_input_tokens: 5,
+            cache_creation_input_tokens: 3,
+            served: { provider: "anthropic", model: "claude-sonnet-5-5", attempts: 1, cost: 0.0012 },
+        },
+    })
+
+/** The names the fake gateway lists (`GET /v1/models`), each with the protocols it is served through. */
+const CATALOG: ReadonlyArray<{ readonly id: string; readonly kinds: ReadonlyArray<string>; readonly serves: ReadonlyArray<string> }> = [
+    { id: "work", kinds: ["openai"], serves: ["chat"] },
+    { id: "upstream-profile", kinds: ["openai"], serves: ["chat"] },
+    { id: "sonnet", kinds: ["openai"], serves: ["chat"] },
+    { id: "deepseek", kinds: ["openai"], serves: ["chat"] },
+    { id: "auto-light", kinds: ["openai"], serves: ["chat"] },
+    { id: "claude", kinds: ["anthropic"], serves: ["chat"] },
+    { id: "both", kinds: ["anthropic", "openai"], serves: ["chat"] },
+    { id: "embed", kinds: ["openai"], serves: ["embeddings"] },
+]
+
+const catalogBody = (): string => JSON.stringify({ object: "list", data: CATALOG.map((entry) => ({ object: "model", ...entry })) })
+
+/** A fake gateway that answers its catalog and every other request with `body`. */
+const answering = (http: ReturnType<typeof mock<HttpClient>>, body: (url: string) => unknown, headers?: Record<string, string>) => {
+    http.request.mockImplementation((request) =>
+        Promise.resolve(
+            request.method === "GET"
+                ? { status: 200, headers: { "content-type": "application/json" }, body: catalogBody() }
+                : { status: 200, ...(headers === undefined ? {} : { headers }), body: body(request.url) },
+        ),
+    )
+}
+
 /** The client over a fake gateway: a chat call answers `content`, an embeddings call two vectors. */
 const build = async (content = "hello") => {
     const endpoint = builder<AiEndpoint>({
@@ -38,10 +82,14 @@ const build = async (content = "hello") => {
         embeddingModel: "embed",
     })()
     const http = mock<HttpClient>()
-    http.request.mockImplementation((request) => {
-        const body = request.url.endsWith("/embeddings") ? vectors(2) : completion(content)
-        return Promise.resolve({ status: 200, headers: { "content-type": "application/json" }, body })
-    })
+    answering(
+        http,
+        (url) => {
+            if (url.endsWith("/embeddings")) return vectors(2)
+            return url.endsWith("/messages") ? anthropicMessage(content) : completion(content)
+        },
+        { "content-type": "application/json" },
+    )
     const moduleRef = await Test.createTestingModule({
         providers: [
             AiClient,
@@ -52,9 +100,13 @@ const build = async (content = "hello") => {
     return { client: moduleRef.get(AiClient), http }
 }
 
-/** What the n-th call of the client sent to the gateway; the body as text. */
+/** The model calls the client sent (the catalog reads left out). */
+const postsOf = (http: ReturnType<typeof mock<HttpClient>>) =>
+    http.request.mock.calls.map(([request]) => request).filter((request) => request.method !== "GET")
+
+/** What the n-th model call of the client sent to the gateway (the catalog reads left out); the body as text. */
 const sentOf = (http: ReturnType<typeof mock<HttpClient>>, at: number) => {
-    const request = http.request.mock.calls[at]?.[0]
+    const request = postsOf(http)[at]
     return {
         url: request?.url ?? "",
         timeoutMs: request?.timeoutMs ?? 0,
@@ -213,10 +265,8 @@ describe("AiClient prompt cache", () => {
 
     it("reads the upstream that served the call from the raw answer", async () => {
         const { client, http } = await build()
-        http.request.mockResolvedValue({
-            status: 200,
-            headers: { "content-type": "application/json" },
-            body: completion("ok").replace('"object"', '"provider":"DeepInfra","object"'),
+        answering(http, () => completion("ok").replace('"object"', '"provider":"DeepInfra","object"'), {
+            "content-type": "application/json",
         })
 
         await expect(client.chat(ASK_UP)).resolves.toMatchObject({ provider: "DeepInfra" })
@@ -230,7 +280,7 @@ describe("AiClient upstream routing", () => {
         await client.chat({ ...ASK_UP, affinity: "workspace-1", budget: { effort: "low" } })
         await client.chat({ ...ASK_UP, routing: {} })
         await client.chat({ ...ASK_UP, routing: { order: [], only: [] } })
-        await client.turnModel({ timeoutMs: 45_000 }).invoke([{ role: "user", content: "STEP" }])
+        await (await client.turnModel({ timeoutMs: 45_000 })).invoke([{ role: "user", content: "STEP" }])
 
         for (const at of [0, 1, 2, 3]) expect(sentOf(http, at).text).not.toContain('"provider"')
     })
@@ -246,9 +296,9 @@ describe("AiClient upstream routing", () => {
         })
         await client.chat({ ...ASK_UP, routing: { sort: "throughput" } })
         await client.chat({ ...ASK_UP, routing: { only: ["wafer", "digitalocean"], allowFallbacks: false } })
-        await client
-            .turnModel({ timeoutMs: 45_000, routing: { order: ["together", "wafer"] }, target: UPSTREAM_TARGET })
-            .invoke([{ role: "user", content: "STEP" }])
+        await (
+            await client.turnModel({ timeoutMs: 45_000, routing: { order: ["together", "wafer"] }, target: UPSTREAM_TARGET })
+        ).invoke([{ role: "user", content: "STEP" }])
 
         const sent = [0, 1, 2, 3].map((at) => {
             const read = parseJsonText(sentOf(http, at).text)
@@ -270,7 +320,7 @@ describe("AiClient upstream routing", () => {
 describe("AiClient the client of one try of an agent turn", () => {
     it("carries the try's limits and lets the loop bind its own tools: one request, no retry, the tools and the choice on the wire", async () => {
         const { client, http } = await build()
-        const model = client.turnModel({
+        const model = await client.turnModel({
             timeoutMs: 45_000,
             budget: { effort: "low", maxTokens: 4000 },
             affinity: "workspace-1",
@@ -292,8 +342,8 @@ describe("AiClient the client of one try of an agent turn", () => {
             { role: "user", content: "STEP" },
         ])
 
-        expect(http.request).toHaveBeenCalledTimes(1)
-        expect(http.request.mock.calls[0]?.[0]).toMatchObject({ timeoutMs: 45_000 })
+        expect(postsOf(http)).toHaveLength(1)
+        expect(postsOf(http)[0]).toMatchObject({ timeoutMs: 45_000 })
         const sent = sentOf(http, 0).text
         expect(sent).toContain('"name":"payment.order.settle"')
         expect(sent).toContain('"tool_choice":"auto"')
@@ -353,7 +403,7 @@ describe("AiClient chat budget", () => {
 })
 
 describe("AiClient embed", () => {
-    it("asks the embed profile for the size within the deadline and answers one vector per text", async () => {
+    it("asks the embed profile within the deadline and answers one vector per text; the vector size is the pool's, never sent", async () => {
         const { client, http } = await build()
 
         await expect(client.embed({ input: ["a", "b"], dimensions: 2, timeoutMs: 4000 })).resolves.toEqual([
@@ -362,7 +412,7 @@ describe("AiClient embed", () => {
         ])
         expect(sentOf(http, 0)).toMatchObject({ timeoutMs: 4000 })
         expect(sentOf(http, 0).text).toContain('"model":"embed"')
-        expect(sentOf(http, 0).text).toContain('"dimensions":2')
+        expect(sentOf(http, 0).text).not.toContain('"dimensions"')
     })
 })
 
@@ -383,7 +433,7 @@ describe("AiClient gateway fetch", () => {
 
     it("reads a non-text body as empty and a missing header set as none", async () => {
         const { client, http } = await build()
-        http.request.mockResolvedValue({ status: 200, body: new Uint8Array([1]) })
+        answering(http, () => new Uint8Array([1]))
 
         const answer = await client["fetcher"](1000)("http://gateway.test/v1/c", { body: new Uint8Array([1]) })
 
@@ -447,5 +497,100 @@ describe("AiClient chat, the model a call targets", () => {
 
         const sent = JSON.parse(sentOf(http, 0).text) as { messages: ReadonlyArray<{ content: unknown }> }
         expect(sent.messages[0]?.content).toBe("stable")
+    })
+})
+
+describe("AiClient over the router 0.7.0: the protocol the gateway serves a name through", () => {
+    const CLAUDE = { name: "claude", sampling: true, forcedToolChoice: false, upstreamFields: true }
+
+    it("reads the catalog once and asks a name served through Anthropic on the Messages route, under the same virtual key", async () => {
+        const { client, http } = await build()
+
+        const reply = await client.chat({ ...ASK, target: CLAUDE, budget: { effort: "low", maxTokens: 900 }, affinity: "ws-1" })
+        await client.chat({ ...ASK, target: CLAUDE })
+
+        expect(http.request.mock.calls.filter(([request]) => request.method === "GET")).toHaveLength(1)
+        const sent = sentOf(http, 0)
+        expect(sent.url).toBe("http://gateway.test/v1/messages")
+        expect(sent.headers).toMatchObject({ "x-ai-router-kind": "anthropic" })
+        // The one virtual key, in whichever header the Anthropic client sends it (the gateway takes `x-api-key` or a bearer token).
+        expect(Object.values(sent.headers).some((value) => value.includes("sk-starci-test"))).toBe(true)
+        const body = JSON.parse(sent.text) as Record<string, unknown>
+        expect(body).toMatchObject({ model: "claude", max_tokens: 900 })
+        // The `openai` kind's own fields never reach the other protocol: no temperature, no OpenRouter field.
+        for (const field of ["temperature", "reasoning", "session_id", "provider", "modelKwargs"]) expect(body).not.toHaveProperty(field)
+        expect(reply).toMatchObject({
+            content: "hello",
+            usageMetadata: { input_tokens: 18, output_tokens: 2, input_token_details: { cache_read: 5, cache_creation: 3 } },
+        })
+    })
+
+    it("marks the prompt cache on anthropic: the automatic breakpoint and a marked layer end, the text unchanged", async () => {
+        const { client, http } = await build()
+
+        await client.chat({
+            ...ASK,
+            target: CLAUDE,
+            messages: [
+                { role: "system", content: "CRAFT TOOLS SHOP STEP", cacheMark: true },
+                { role: "system", content: "this call only" },
+                { role: "user", content: "{}" },
+            ],
+        })
+
+        const body = JSON.parse(sentOf(http, 0).text) as Record<string, unknown>
+        expect(body.cache_control).toEqual({ type: "ephemeral" })
+        expect(body.system).toEqual([
+            { type: "text", text: "CRAFT TOOLS SHOP STEP", cache_control: { type: "ephemeral" } },
+            { type: "text", text: "this call only" },
+        ])
+    })
+
+    it("marks nothing on openai: the same marked prompt goes as plain text with no breakpoint anywhere", async () => {
+        const { client, http } = await build()
+
+        await client.chat({ ...ASK, messages: [{ role: "system", content: "STABLE", cacheMark: true }, { role: "user", content: "q" }] })
+
+        expect(sentOf(http, 0).url).toBe("http://gateway.test/v1/chat/completions")
+        expect(sentOf(http, 0).text).not.toContain("cache_control")
+        expect(sentOf(http, 0).text).toContain('"content":"STABLE"')
+    })
+
+    it("parses a JSON answer of the Messages route from its text (no JSON mode there) and ends the prompt with the JSON line", async () => {
+        const { client, http } = await build('```json\n{"stage":"new"}\n```')
+
+        const reply = await client.chat({ ...ASK, target: CLAUDE, json: true, schema: ANY_OBJECT })
+
+        expect(reply.parsed).toEqual({ stage: "new" })
+        expect(sentOf(http, 0).text).toContain("Answer with one JSON object only")
+        expect(sentOf(http, 0).text).not.toContain("response_format")
+    })
+
+    it("asks JSON mode on the OpenAI route for a JSON call", async () => {
+        const { client, http } = await build('{"a":1}')
+
+        await client.chat({ ...ASK, json: true })
+
+        expect(sentOf(http, 0).text).toContain('"response_format":{"type":"json_object"}')
+    })
+
+    it("takes the name's next protocol on a retry after a provider failure, and the first one otherwise", async () => {
+        const { client, http } = await build()
+
+        await client.chat({ ...ASK, target: { ...CLAUDE, name: "both" } })
+        await client.chat({ ...ASK, target: { ...CLAUDE, name: "both" }, fallback: true })
+        await client.chat({ ...ASK, target: CLAUDE, fallback: true })
+
+        expect(postsOf(http).map((request) => request.url)).toEqual([
+            "http://gateway.test/v1/messages",
+            "http://gateway.test/v1/chat/completions",
+            "http://gateway.test/v1/messages",
+        ])
+    })
+
+    it("fails loudly when the gateway does not serve the name (no Anthropic key: no chat profile is declared)", async () => {
+        const { client } = await build()
+
+        await expect(client.chat({ ...ASK, target: { ...CLAUDE, name: "haiku" } })).rejects.toMatchObject({ code: "ROUTED_NAME_UNKNOWN" })
     })
 })

@@ -133,7 +133,12 @@ const callerDeskOf = (): CallerDesk => {
 export class AgentLoopClient implements AgentLoops {
     /** Takes the turns of one step's agent. */
     async run(loop: NodeAgentLoop, model: AgentLoopModel, options: AgentLoopOptions = {}): Promise<NodeAgentLoopEnd> {
-        const built = model.model
+        // A client that cannot be had (no AI endpoint, or the router could not read its catalog) builds no agent: the model side
+        // then ends the run with its own error, through its tries.
+        const built = await Promise.resolve(model.model).then(
+            (client) => client,
+            () => undefined,
+        )
         // No AI endpoint: no agent is built and no turn is taken. The model side ends the run with its own error, as it would end
         // the first turn; it never reaches the attempt, which takes nothing if it ever did.
         if (built === undefined) return model.turn(() => Promise.resolve({ turns: 0 }))

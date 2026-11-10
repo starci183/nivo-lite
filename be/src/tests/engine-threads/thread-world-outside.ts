@@ -223,7 +223,7 @@ export class ScriptedModel {
      */
     agentTurns(scope: { readonly workspaceId: string; readonly locale: "vi" | "en" }, ask: { readonly purpose: string }): AiAgentTurns {
         const runner: ConstructorParameters<typeof AiService>[1] = {
-            turnModel: (request) => this.chatOf(ask.purpose, request),
+            turnModel: (request) => Promise.resolve(this.chatOf(ask.purpose, request)),
             chat: () => Promise.reject(new WorldError({ code: "WORLD_CHAT_UNUSED", params: {} })),
             embed: () => Promise.reject(new WorldError({ code: "WORLD_EMBED_UNUSED", params: {} })),
         }

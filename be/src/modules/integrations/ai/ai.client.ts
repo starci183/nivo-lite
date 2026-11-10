@@ -5,7 +5,7 @@ import type { BaseMessage } from "@langchain/core/messages"
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts"
 import { BaseRetriever } from "@langchain/core/retrievers"
 import { RunnableLambda, RunnableSequence } from "@langchain/core/runnables"
-import type { Runnable } from "@langchain/core/runnables"
+import { parseJsonMarkdown } from "@langchain/core/output_parsers"
 import { Injectable } from "@nestjs/common"
 import { InjectHttpClient } from "@modules/platform/http"
 import type { HttpClient } from "@modules/platform/http"
@@ -20,14 +20,16 @@ import type {
     AiRunner,
     AiTurnRequest,
     PassageSearch,
+    RoutedChat,
     RoutedModels,
 } from "./ai.contracts"
 import { InjectAiEndpointOptions } from "./ai.decorators"
 import type { AiEndpoint } from "./ai.options"
 import { ANY_OBJECT } from "./ai.schema"
-import { markedContentOf } from "./cache-marks.policy"
+import type { AiSchema } from "./ai.schema"
+import { automaticCacheFieldsOf, CACHE_MARK_KINDS, markedContentOf, withinMarkLimit } from "./cache-marks.policy"
 import { gatewayRoutedModels } from "./routed-models.adapter"
-import { fieldOf, notesBlock, withNotes } from "./reply.policy"
+import { fieldOf, notesBlock, textOf, withNotes } from "./reply.policy"
 import { providerFieldOf } from "./routing.policy"
 
 /** The retriever over the domain search: the domain owns which lanes an agent may read, LangChain only wraps the call. */
@@ -51,6 +53,30 @@ class PassageRetriever extends BaseRetriever {
 
 const titleOf = (metadata: Record<string, unknown>): string | null =>
     typeof metadata.title === "string" ? metadata.title : null
+
+/**
+ * The line a JSON call ends its prompt with, for every protocol: the OpenAI route also gets `response_format: json_object`, the
+ * Anthropic route has no JSON mode (the answer is parsed from its text). Last, so the cached prefix before it stays the same text.
+ */
+export const JSON_ONLY_LINE = "Answer with one JSON object only: no prose before or after it."
+
+/** The `response_format` of a JSON call on the `openai` protocol: one JSON object. */
+const JSON_OBJECT_FORMAT = { response_format: { type: "json_object" } }
+
+/**
+ * The JSON object of an answer's text parsed into the schema (bare or fenced), or null when it is none: the same null a structured
+ * parse that keeps the raw message gives, so the caller's loose parse and its tries decide what happens next.
+ */
+export const parsedOf = (text: string, schema: AiSchema): unknown => {
+    try {
+        // Fences stripped, then a strict parse: half an object is no answer.
+        const value: unknown = parseJsonMarkdown(text, JSON.parse)
+        const checked = schema.safeParse(value)
+        return checked.success ? checked.data : null
+    } catch {
+        return null
+    }
+}
 
 /** The sampling temperature of every chat call whose model takes one: the same prompt gives the same answer as far as it can. */
 const TEMPERATURE = 0
@@ -88,14 +114,14 @@ const urlOf = (input: string | URL | Request): string => {
     return input instanceof URL ? input.href : input.url
 }
 
-/** A system message, with its cache breakpoint when it is marked and breakpoints go on the wire (`cache-marks.policy.ts`). */
-const systemOf = (message: AiMessage): BaseMessage => {
-    const content = markedContentOf(message.content, message.cacheMark === true)
+/** A system message, with its cache breakpoint when it is marked and the protocol takes breakpoints (`cache-marks.policy.ts`). */
+const systemOf = (message: AiMessage, marks: boolean): BaseMessage => {
+    const content = markedContentOf(message.content, message.cacheMark === true, marks)
     return typeof content === "string" ? new SystemMessage(content) : new SystemMessage({ content: [...content] })
 }
 
-const messageOf = (message: AiMessage): BaseMessage => {
-    if (message.role === "system") return systemOf(message)
+const messageOf = (message: AiMessage, marks: boolean): BaseMessage => {
+    if (message.role === "system") return systemOf(message, marks)
     if (message.role === "assistant") return new AIMessage(message.content)
     const images = message.images ?? []
     if (images.length === 0) return new HumanMessage(message.content)
@@ -127,24 +153,30 @@ export class AiClient implements AiRunner {
     /** Runs one chat chain: retrieve the notes (when asked), fill the prompt, call the model. */
     async chat(request: AiChatRequest): Promise<ChainReply> {
         let retrieved = 0
+        const routed = await this.routedOf(request)
+        const marks = CACHE_MARK_KINDS[routed.kind]
+        const wire = (messages: ReadonlyArray<AiMessage>): Array<BaseMessage> =>
+            withinMarkLimit(messages).map((message) => messageOf(message, marks))
+        const asked: ReadonlyArray<AiMessage> = request.json
+            ? [...request.messages, { role: "system", content: JSON_ONLY_LINE }]
+            : request.messages
         const retrieve = RunnableLambda.from(async (messages: ReadonlyArray<AiMessage>) => {
             const { context } = request
-            if (context === null) return { messages: messages.map(messageOf) }
+            if (context === null) return { messages: wire(messages) }
             const found = await new PassageRetriever(context.search, context.limit).invoke(context.question)
             retrieved = found.length
             const block = notesBlock(
                 found.map((document) => ({ title: titleOf(document.metadata), content: document.pageContent })),
             )
-            return { messages: withNotes(messages, block).map(messageOf) }
+            return { messages: wire(withNotes(messages, block)) }
         })
         const prompt = ChatPromptTemplate.fromMessages([new MessagesPlaceholder("messages")])
-        const chain = RunnableSequence.from([retrieve, prompt, this.modelFor(request)])
-        const result: unknown = await chain.invoke(request.messages)
-        const structured = request.json
-        const raw = structured ? fieldOf(result, "raw") : result
+        const chain = RunnableSequence.from([retrieve, prompt, routed.model])
+        const raw: unknown = await chain.invoke(asked)
+        const content = fieldOf(raw, "content")
         return {
-            content: fieldOf(raw, "content"),
-            parsed: structured ? (fieldOf(result, "parsed") ?? null) : null,
+            content,
+            parsed: request.json ? parsedOf(textOf(content), request.schema ?? ANY_OBJECT) : null,
             provider: fieldOf(fieldOf(fieldOf(raw, "additional_kwargs"), "__raw_response"), "provider"),
             usageMetadata: fieldOf(raw, "usage_metadata"),
             responseMetadata: fieldOf(raw, "response_metadata"),
@@ -152,12 +184,9 @@ export class AiClient implements AiRunner {
         }
     }
 
-    /** Embeds the texts with LangChain embeddings pointed at the same endpoint. */
+    /** Embeds the texts with the router's embeddings client of the endpoint's profile (its vector length is the pool's). */
     async embed(request: AiEmbedRequest): Promise<unknown> {
-        const routed = await this.routed.embeddings(this.endpoint.embeddingModel, {
-            dimensions: request.dimensions,
-            timeoutMs: request.timeoutMs,
-        })
+        const routed = await this.routed.embeddings(this.endpoint.embeddingModel, request.timeoutMs)
         return routed.embeddings.embedDocuments([...request.input])
     }
 
@@ -165,51 +194,53 @@ export class AiClient implements AiRunner {
      * The chat client of one try of an agent turn. The agent loop binds its tools and makes the call; this client only carries what
      * holds for the try: the deadline (no retry of its own), the reasoning, the output limit, the affinity, the routing and the gateway.
      */
-    turnModel(request: AiTurnRequest): AiChatModel {
-        return this.clientOf(request)
-    }
-
-    /** The model of one call: plain, or JSON mode parsed into the schema (the raw message is kept for usage). */
-    private modelFor(request: AiChatRequest): Runnable {
-        const model = this.clientOf(request)
-        if (!request.json) return model
-        return model.withStructuredOutput(request.schema ?? ANY_OBJECT, { method: "jsonMode", includeRaw: true })
+    async turnModel(request: AiTurnRequest): Promise<AiChatModel> {
+        return (await this.routedOf(request)).model
     }
 
     /**
      * The one way a chat client is built: from the router's door, for the call's model (the endpoint's chat profile when it names
-     * none), with no retry of its own, bounded by the call's deadline and budget. At temperature 0 where every provider the model can
-     * reach takes one; the upstream's own fields (reasoning, cache affinity, upstream routing) only where an OpenAI-compatible
-     * upstream can serve it.
+     * none), with no retry of its own, bounded by the call's deadline and budget. On a retry after a provider failure or a timeout
+     * (`fallback`), the name's client through its next protocol when it has one. Each protocol's own fields ride under its kind and
+     * reach only that kind's client: for `openai`, temperature 0 where every provider of the name takes one, the upstream's own fields
+     * (reasoning, cache affinity, upstream routing) where an OpenAI-compatible upstream serves it, and JSON mode for a JSON call; for
+     * `anthropic`, the automatic cache breakpoint.
      */
-    private clientOf(request: AiTurnRequest): AiChatModel {
+    private async routedOf(request: AiTurnRequest & { readonly json?: boolean }): Promise<RoutedChat> {
         const { target } = request
-        // 0.7.0: `(await this.routed.chat(...)).model`, once `turnModel` may wait (see `routed-models.adapter.ts`).
-        return this.routed.chatNow(target?.name ?? this.endpoint.chatModel, {
+        const routed = await this.routed.chat(target?.name ?? this.endpoint.chatModel, {
             timeoutMs: request.timeoutMs,
             ...(request.budget?.maxTokens === undefined ? {} : { maxTokens: request.budget.maxTokens }),
-            // Only the `openai` kind's own fields: the sampling temperature where every provider of the name takes one, and the
-            // upstream's body fields where an OpenAI-compatible upstream can serve it. An `anthropic` client gets neither. A call
-            // with no target asks the endpoint's chat profile (`work`), which is Claude only since 2026-11-11 (Haiku 5.5 and Sonnet
-            // 5.5 refuse a non-default temperature; OpenRouter's fields mean nothing there): it gets neither either.
+            // A call with no target asks the endpoint's chat profile (`work`), Claude only since 2026-11-11 (Haiku 5.5 and Sonnet 5.5
+            // refuse a non-default temperature; OpenRouter's fields mean nothing there): it gets neither.
             fields: {
+                ...automaticCacheFieldsOf(),
                 openai: {
                     ...(target?.sampling === true ? { temperature: TEMPERATURE } : {}),
-                    modelKwargs: target?.upstreamFields === true ? upstreamFieldsOf(request) : {},
+                    // The raw answer rides along so the upstream that served the call can be read (the prompt cache is per upstream).
+                    __includeRawResponse: true,
+                    modelKwargs: {
+                        ...(target?.upstreamFields === true ? upstreamFieldsOf(request) : {}),
+                        ...(request.json === true ? JSON_OBJECT_FORMAT : {}),
+                    },
                 },
             },
-        }).model
+        })
+        return request.fallback === true ? (routed.fallbacks[0] ?? routed) : routed
     }
 
     /** A fetch over the platform HTTP port for the clients: the body goes as the bytes the client wrote, the answer comes back as text. */
     private fetcher(timeoutMs: number): AiFetch {
         return async (input, init) => {
             const headers = new Headers(init?.headers)
+            // The catalog read is a GET with no body; every model call a POST of the bytes the client wrote.
+            const asked = init?.method ?? (input instanceof Request ? input.method : undefined)
+            const method = (asked ?? (init?.body === undefined ? "GET" : "POST")).toUpperCase() === "GET" ? "GET" : "POST"
             const answer = await this.http.request({
-                method: "POST",
+                method,
                 url: urlOf(input),
                 headers: Object.fromEntries(headers.entries()),
-                bytes: Buffer.from(typeof init?.body === "string" ? init.body : ""),
+                ...(method === "GET" ? {} : { bytes: Buffer.from(typeof init?.body === "string" ? init.body : "") }),
                 read: "text",
                 timeoutMs,
             })

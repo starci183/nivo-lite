@@ -297,12 +297,12 @@ describe("AiService chat", () => {
     it("gives the loop a client per try only when the endpoint is configured, and names what a call that threw failed as", async () => {
         const { client, runner } = await build(true)
         const model = { made: true }
-        runner.turnModel.mockReturnValue(model as never)
+        runner.turnModel.mockResolvedValue(model as never)
         const request = { timeoutMs: 45_000, affinity: "ws-1" }
 
-        expect(client.turnModel(request)).toBe(model)
+        await expect(client.turnModel(request)).resolves.toBe(model)
         expect(runner.turnModel).toHaveBeenCalledWith(request)
-        expect((await build(false)).client.turnModel(request)).toBeNull()
+        await expect((await build(false)).client.turnModel(request)).resolves.toBeNull()
         expect(client.failureOfThrow(Object.assign(new Error("x"), { name: "TimeoutError" }))).toBe("timeout")
         expect(client.failureOfThrow(Object.assign(new Error("x"), { name: "AbortError" }))).toBe("timeout")
         expect(client.failureOfThrow(Object.assign(new Error("x"), { status: 502 }))).toBe("provider")

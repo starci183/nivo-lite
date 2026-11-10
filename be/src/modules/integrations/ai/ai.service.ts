@@ -25,7 +25,7 @@ import { InjectAiOptions, InjectAiRunner } from "./ai.decorators"
 import type { OptionalAiRunner } from "./ai.decorators"
 import { AiLogEvent } from "./ai.log-events"
 import type { AiOptions } from "./ai.options"
-import { fieldOf, modelOf, textOf, usageOf, vectorsOf } from "./reply.policy"
+import { cutOf, fieldOf, finishOf, laneOf, modelOf, textOf, usageOf, vectorsOf } from "./reply.policy"
 import { providerOf } from "./routing.policy"
 import { embeddingIdentityOf } from "@nivo-lite/blocks-core"
 
@@ -61,15 +61,15 @@ const headOf = (messages: AiChatRequest["messages"]): Readonly<Record<string, un
     }
 }
 
-/** The upstream that served a call, why the model stopped, and the try's time, from what the endpoint sent back. */
-const servedOf = (provider: unknown, responseMetadata: unknown, durationMs: number | null): AiServed => {
-    const finish = fieldOf(responseMetadata, "finish_reason")
-    return {
-        upstream: typeof provider === "string" && provider !== "" ? provider : null,
-        finishReason: typeof finish === "string" && finish !== "" ? finish : null,
-        durationMs,
-    }
-}
+/**
+ * The upstream that served a call, why the model stopped, and the try's time, from what the endpoint sent back: the upstream an
+ * OpenAI-compatible endpoint names in its raw answer (OpenRouter's `provider`), else the pool provider the gateway says served it.
+ */
+const servedOf = (provider: unknown, responseMetadata: unknown, durationMs: number | null): AiServed => ({
+    upstream: typeof provider === "string" && provider !== "" ? provider : laneOf(responseMetadata).provider,
+    finishReason: finishOf(responseMetadata),
+    durationMs,
+})
 
 @Injectable()
 /**
@@ -135,7 +135,7 @@ export class AiService implements OnModuleInit {
             const durationMs = elapsed()
             const text = textOf(reply.content)
             const model = modelOf(reply.responseMetadata, this.options.chatModel)
-            if (fieldOf(reply.responseMetadata, "finish_reason") === "length") {
+            if (cutOf(reply.responseMetadata)) {
                 this.logger.warn(AiLogEvent.ChatCut, { model, answerChars: text.length })
                 return { ok: false, failure: "length" }
             }
@@ -184,7 +184,7 @@ export class AiService implements OnModuleInit {
      * The chat client of one try of an agent turn, or null when no endpoint is configured. The agent loop makes the call with it;
      * `readTurn` then says what the try came to, and `failureOfThrow` what a call that threw failed as.
      */
-    turnModel(request: AiTurnRequest): AiChatModel | null {
+    async turnModel(request: AiTurnRequest): Promise<AiChatModel | null> {
         return this.runner === null ? null : this.runner.turnModel(request)
     }
 
@@ -200,7 +200,7 @@ export class AiService implements OnModuleInit {
         const text = textOf(fieldOf(message, "content"))
         const calls: unknown = fieldOf(message, "tool_calls")
         const toolCalls = Array.isArray(calls) ? calls.length : 0
-        if (fieldOf(responseMetadata, "finish_reason") === "length") {
+        if (cutOf(responseMetadata)) {
             this.logger.warn(AiLogEvent.ChatCut, { model, answerChars: text.length })
             return { ok: false, failure: "length" }
         }

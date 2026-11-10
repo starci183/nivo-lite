@@ -21,9 +21,10 @@ export interface AgentLoopModel {
     /**
      * A chat client to build the agent over: the library refuses to build one without a model. The loop never asks it anything:
      * every model turn goes through `turn`. Absent (no AI endpoint is configured), the loop builds no agent and takes no turn: the
-     * run ends as `turn` ends it, with the model side's own error.
+     * run ends as `turn` ends it, with the model side's own error. It may be a promise: the router reads the gateway's catalog to
+     * know which protocol's client the name gets (`@starci/ai-router/langchain` 0.7.0), so the model side hands it over async.
      */
-    readonly model?: BaseChatModel | undefined
+    readonly model?: BaseChatModel | PromiseLike<BaseChatModel | undefined> | undefined
     /**
      * True when the model's profile cannot take a dot in a tool name: tools are then shown under wire names (`.` -> `__`) and read
      * back. Absent or false, names are sent as written.

@@ -52,7 +52,7 @@ import { modelPickerOf } from "./model-picker.mapper"
 import type { ModelPicker } from "./model-picker.mapper"
 import type { ModelChoice } from "./model-choice.policy"
 import type { CallKind } from "./call-limits.policy"
-import { NOT_JSON, failedTries, newTries, pauseBeforeRetryMs, triesRemain } from "./model-tries.policy"
+import { NOT_JSON, failedTries, fallbackOf, newTries, pauseBeforeRetryMs, triesRemain } from "./model-tries.policy"
 import type { Tries } from "./model-tries.policy"
 import { AiTasksError, AiTasksErrorCode } from "./errors/ai-tasks.error"
 import { NodeImagesService } from "./node-images.service"
@@ -422,15 +422,18 @@ Current rules: ${currentRules}`,
         const first = this.firstChoiceOf(scope)
         // Every turn of ONE step stays on the model of its first answer (a prompt cache is per model).
         const turns: AgentTurnsState = { pinned: null, lastPromptTokens: null }
-        let built: AiChatModel | null | undefined
-        // Built when first read, once: the client a first try gets, for the loop to construct its agent over. Never asked.
-        const firstClient = (): AiChatModel | undefined => {
-            built ??= this.ai.turnModel({
-                ...callLimitsOf(this.options, "node", asked, 1),
-                affinity: request.workspaceId,
-                ...(first === null ? {} : { target: first.target }),
-            })
-            return built ?? undefined
+        let built: Promise<AiChatModel | undefined> | undefined
+        // Built when first read, once: the client a first try gets, for the loop to construct its agent over. Never asked. Async: the
+        // router reads the gateway's catalog to know which protocol's client the name gets.
+        const firstClient = (): Promise<AiChatModel | undefined> => {
+            built ??= this.ai
+                .turnModel({
+                    ...callLimitsOf(this.options, "node", asked, 1),
+                    affinity: request.workspaceId,
+                    ...(first === null ? {} : { target: first.target }),
+                })
+                .then((model) => model ?? undefined)
+            return built
         }
         // A forced tool call only where every model the step may use takes one (Anthropic's Sonnet 5.5 refuses it). A step with no
         // model of its own asks the endpoint's `work` profile, Claude only since 2026-11-11: never forced either.
@@ -438,7 +441,7 @@ Current rules: ${currentRules}`,
         return {
             toolChoice: forced ? "required" : "auto",
             turn: (attempt) => this.agentTurn(scope, request, asked, attempt, turns),
-            get model(): AiChatModel | undefined {
+            get model(): Promise<AiChatModel | undefined> {
                 return firstClient()
             },
         }
@@ -502,11 +505,18 @@ Current rules: ${currentRules}`,
             ...callLimitsOf(this.options, "node", reasoning, tries.made),
             affinity: request.workspaceId,
             ...(choice === null ? {} : { target: choice.target }),
+            ...fallbackOf(tries),
         }
-        const model = this.ai.turnModel(limits)
-        if (model === null) throw new AiTasksError({ code: AiTasksErrorCode.Unavailable })
+        // The client comes from the router's catalog: a catalog that cannot be read, or a name it does not serve, is a failed try
+        // of its own (`provider`), retried like any provider failure.
+        const client = await this.ai.turnModel(limits).then(
+            (model) => ({ model, cause: undefined }),
+            (cause: unknown) => ({ model: undefined, cause }),
+        )
+        if (client.model === null) throw new AiTasksError({ code: AiTasksErrorCode.Unavailable })
         const elapsed = this.ai.stopwatch()
-        const tried = await attempt(model, tries.made).then(
+        const asked = client.model === undefined ? Promise.reject(client.cause) : attempt(client.model, tries.made)
+        const tried = await asked.then(
             (message) => ({ message, read: this.ai.readTurn(message, limits, elapsed()) }),
             (cause: unknown) => ({
                 message: undefined,
@@ -697,6 +707,7 @@ Current rules: ${currentRules}`,
             ...call,
             ...limits,
             ...(choice === null ? {} : { target: choice.target }),
+            ...fallbackOf(tries),
         })
         if (tried.ok) return { answer: tried.answer, choice }
         tries.failures.push(tried.failure)

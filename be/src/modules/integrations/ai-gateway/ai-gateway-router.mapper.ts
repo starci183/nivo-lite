@@ -1,4 +1,4 @@
-import type { AiRouterModuleOptions, KeyConfig, ModelConfig, ProviderConfig } from "@starci/ai-router"
+import type { AiRouterModuleOptions, KeyConfig, ModelConfig, ModelCost, ProviderConfig } from "@starci/ai-router"
 import type { AiGatewayKey, AiGatewayOptions, AiGatewayProvider } from "./ai-gateway.options"
 import { EMBEDDING_PROFILES } from "@nivo-lite/blocks-core"
 import { servedProfilesOf } from "./ai-gateway-config.policy"
@@ -21,11 +21,27 @@ export const WORK_DEADLINE_MS = 130_000
 
 /**
  * Claude Haiku 5.5 list price, USD per million tokens, prompts up to 100K tokens (the Claude API skill's table cached 2026-11-03;
- * NOT re-read from the live pricing page: not verified). The gateway's cost quotas only; the app books from `usage-cost.policy.ts`.
+ * NOT re-read from the live pricing page: not verified). The cache prices are NOT in that table: derived from Anthropic's usual
+ * multipliers (read 0.1x input, five-minute write 1.25x, one-hour write 2x): not verified. The gateway's cost quotas and the cost it
+ * reports in `usage.served.cost`; the app books from `usage-cost.policy.ts`.
  */
-const CHEAP_COST = { input: 0.1, output: 0.5 }
-/** Claude Sonnet 5.5 list price, USD per million tokens (Anthropic first-party; the skill's table of 2026-11-03, not re-read live). */
-const STRONG_COST = { input: 2, output: 10 }
+const CHEAP_COST: ModelCost = { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125, cacheWrite1h: 0.2 }
+/**
+ * Claude Sonnet 5.5 list price, USD per million tokens (Anthropic first-party; the skill's table of 2026-11-03, cache reads $0.10;
+ * writes 2.5 / 4 as the router's own example prices them): not re-read live, not verified.
+ */
+const STRONG_COST: ModelCost = { input: 2, output: 10, cacheRead: 0.1, cacheWrite: 2.5, cacheWrite1h: 4 }
+
+/**
+ * What a Claude 5.5 model takes, applied by the router per attempt on both routes: no sampling field (Sonnet 5.5 and Haiku 5.5 refuse
+ * a non-default one), a forced tool choice sent as `auto` plus an instruction (Sonnet 5.5 answers 400 to a forced one; Haiku 5.5 is
+ * treated the same), and the prompt-cache breakpoints the request marks.
+ */
+const CLAUDE_REQUEST_SHAPE: Pick<ModelConfig, "omit" | "forcedToolUse" | "cacheControl"> = {
+    omit: ["temperature", "top_p", "top_k"],
+    forcedToolUse: false,
+    cacheControl: true,
+}
 
 /**
  * The `max_tokens` the router sends Anthropic when a call sets none (Anthropic requires one; the router's default is 4096). Sonnet
@@ -87,8 +103,8 @@ const modelProfileOf = (profile: ModelProfileSeats): NonNullable<AiRouterModuleO
 /** The pool over a non-empty provider list: Anthropic serves every chat profile, OpenAI the pinned embeddings profiles. */
 const poolOf = (options: AiGatewayOptions): AiRouterModuleOptions => {
     const chatCapabilities: ModelConfig["capabilities"] = ["chat", "streaming", "tools", "json", "vision"]
-    const cheap: ModelConfig = { id: options.models.work, capabilities: chatCapabilities, cost: CHEAP_COST }
-    const strong: ModelConfig = { id: options.models.strong, capabilities: chatCapabilities, cost: STRONG_COST }
+    const cheap: ModelConfig = { id: options.models.work, capabilities: chatCapabilities, cost: CHEAP_COST, ...CLAUDE_REQUEST_SHAPE }
+    const strong: ModelConfig = { id: options.models.strong, capabilities: chatCapabilities, cost: STRONG_COST, ...CLAUDE_REQUEST_SHAPE }
     const modelsOf = (provider: AiGatewayProvider): Array<ModelConfig> =>
         provider.id === ANTHROPIC_PROVIDER ? [cheap, strong] : openAiEmbedModels()
     const served = new Set(servedProfilesOf(options.providers, options.models))
