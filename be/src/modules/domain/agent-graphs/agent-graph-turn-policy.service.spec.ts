@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { FakeClock, mock } from "@starci/jest-preset"
 import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
 import type { PageRow } from "@nivo-lite/agent-sdk/entity/port"
 import { queryProblems } from "@nivo-lite/agent-sdk/query"
@@ -179,86 +179,86 @@ describe("AgentGraphTurnPolicyService: what a step that runs again already sent"
     })
 })
 
-describe("AgentGraphTurnPolicyService: what the customer was already told, from the effect ledger and the stops (D.1)", () => {
-    const RUN = "run-1"
-    const OTHER_RUN = "run-0"
-    const LEAD = "lead-1"
-    const NOW = new Date("2026-11-10T05:00:00.000Z")
-    const CHECKING = "Da nhan, shop dang kiem tra a."
-    const OUTCOME = "Shop da xac nhan don a."
+const RUN = "run-1"
+const OTHER_RUN = "run-0"
+const LEAD = "lead-1"
+const NOW = new Date("2026-11-10T05:00:00.000Z")
+const CHECKING = "Da nhan, shop dang kiem tra a."
+const OUTCOME = "Shop da xac nhan don a."
 
-    /** The real declarations of the ledger, the stops and the conversation, beside the flow's. */
-    const TOLD_CATALOG: ReadonlyMap<string, EntityDefinition> = new Map([
-        ...CATALOG,
-        ...[agentNodeEffectEntity, agentRunStopEntity, conversationEntity].map(
-            (entity): [string, EntityDefinition] => [entity.name, entity as EntityDefinition],
-        ),
-    ])
+/** The real declarations of the ledger, the stops and the conversation, beside the flow's. */
+const TOLD_CATALOG: ReadonlyMap<string, EntityDefinition> = new Map([
+    ...CATALOG,
+    ...[agentNodeEffectEntity, agentRunStopEntity, conversationEntity].map(
+        (entity): [string, EntityDefinition] => [entity.name, entity as EntityDefinition],
+    ),
+])
 
-    const rowOf = (id: string, data: Readonly<Record<string, unknown>>, createdAt = AT): PageRow => ({
-        row: { id, workspaceId: WS, version: "1", createdAt, updatedAt: createdAt, data },
-        joined: {},
-        position: [id],
-        included: {},
+const rowOf = (id: string, data: Readonly<Record<string, unknown>>, createdAt = AT): PageRow => ({
+    row: { id, workspaceId: WS, version: "1", createdAt, updatedAt: createdAt, data },
+    joined: {},
+    position: [id],
+    included: {},
+})
+
+const sendOf = (id: string, text: string, conversationId: string, at: string): PageRow =>
+    rowOf(id, { effectId: "customer.message.send", args: { conversationId, text } }, at)
+
+interface World {
+    /** Ledger rows by `<run>:<step>`. */
+    readonly ledger?: Readonly<Record<string, ReadonlyArray<PageRow>>>
+    /** Stop rows by state. */
+    readonly stops?: Readonly<Record<string, ReadonlyArray<PageRow>>>
+    /** The customer each conversation names. */
+    readonly conversations?: Readonly<Record<string, string | null>>
+}
+
+/** The service over an engine that knows the real declarations and refuses any list no declared index serves. */
+const told = async (world: World) => {
+    const engine = mock<EntityEngineService>()
+    engine.scoped.mockImplementation((_workspace, work) => work(mock<ScopedTx>()))
+    engine.definition.mockImplementation((name) => {
+        const entity = TOLD_CATALOG.get(name)
+        if (entity === undefined) throw new Error(`unknown entity ${name}`)
+        return entity
     })
+    engine.get.mockImplementation((_tx, entity, id) => {
+        const leadId = world.conversations?.[id]
+        return Promise.resolve(
+            entity === "chat.conversation" && leadId !== undefined ? rowOf(id, { leadId }).row : null,
+        )
+    })
+    engine.list.mockImplementation((_tx, query: Query) => {
+        const problems = queryProblems(query, TOLD_CATALOG)
+        if (problems.length > 0) return Promise.reject(new Error(`ENTITY_ENGINE_QUERY_INVALID ${JSON.stringify(problems)}`))
+        const pinned = Object.fromEntries(
+            (query.where?.op === "and" ? query.where.of : []).flatMap((part) =>
+                part.op === "eq" ? [[part.field, part.value]] : [],
+            ),
+        )
+        if (query.from === "agent.node-effect")
+            return Promise.resolve({ rows: world.ledger?.[`${pinned.runId}:${pinned.stepKey}`] ?? [], next: null })
+        if (query.from === "agent.run-stop")
+            return Promise.resolve({
+                rows: pinned.leadId === LEAD ? (world.stops?.[String(pinned.state)] ?? []) : [],
+                next: null,
+            })
+        return Promise.resolve({ rows: [], next: null })
+    })
+    const nodes = mock<GraphNodeRegistryService>()
+    nodes.optionalPortOf.mockReturnValue(undefined)
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AgentGraphTurnPolicyService,
+            { provide: EntityEngineService, useValue: engine },
+            { provide: GraphNodeRegistryService, useValue: nodes },
+            { provide: CLOCK, useValue: new FakeClock(NOW) },
+        ],
+    }).compile()
+    return { policy: moduleRef.get(AgentGraphTurnPolicyService), engine }
+}
 
-    const sendOf = (id: string, text: string, conversationId: string, at: string): PageRow =>
-        rowOf(id, { effectId: "customer.message.send", args: { conversationId, text } }, at)
-
-    interface World {
-        /** Ledger rows by `<run>:<step>`. */
-        readonly ledger?: Readonly<Record<string, ReadonlyArray<PageRow>>>
-        /** Stop rows by state. */
-        readonly stops?: Readonly<Record<string, ReadonlyArray<PageRow>>>
-        /** The customer each conversation names. */
-        readonly conversations?: Readonly<Record<string, string | null>>
-    }
-
-    /** The service over an engine that knows the real declarations and refuses any list no declared index serves. */
-    const told = async (world: World) => {
-        const engine = mock<EntityEngineService>()
-        engine.scoped.mockImplementation((_workspace, work) => work(mock<ScopedTx>()))
-        engine.definition.mockImplementation((name) => {
-            const entity = TOLD_CATALOG.get(name)
-            if (entity === undefined) throw new Error(`unknown entity ${name}`)
-            return entity
-        })
-        engine.get.mockImplementation((_tx, entity, id) => {
-            const leadId = world.conversations?.[id]
-            return Promise.resolve(
-                entity === "chat.conversation" && leadId !== undefined ? rowOf(id, { leadId }).row : null,
-            )
-        })
-        engine.list.mockImplementation((_tx, query: Query) => {
-            const problems = queryProblems(query, TOLD_CATALOG)
-            if (problems.length > 0) return Promise.reject(new Error(`ENTITY_ENGINE_QUERY_INVALID ${JSON.stringify(problems)}`))
-            const pinned = Object.fromEntries(
-                (query.where?.op === "and" ? query.where.of : []).flatMap((part) =>
-                    part.op === "eq" ? [[part.field, part.value]] : [],
-                ),
-            )
-            if (query.from === "agent.node-effect")
-                return Promise.resolve({ rows: world.ledger?.[`${pinned.runId}:${pinned.stepKey}`] ?? [], next: null })
-            if (query.from === "agent.run-stop")
-                return Promise.resolve({
-                    rows: pinned.leadId === LEAD ? (world.stops?.[String(pinned.state)] ?? []) : [],
-                    next: null,
-                })
-            return Promise.resolve({ rows: [], next: null })
-        })
-        const nodes = mock<GraphNodeRegistryService>()
-        nodes.optionalPortOf.mockReturnValue(undefined)
-        const moduleRef = await Test.createTestingModule({
-            providers: [
-                AgentGraphTurnPolicyService,
-                { provide: EntityEngineService, useValue: engine },
-                { provide: GraphNodeRegistryService, useValue: nodes },
-                { provide: CLOCK, useValue: { now: () => NOW } },
-            ],
-        }).compile()
-        return { policy: moduleRef.get(AgentGraphTurnPolicyService), engine }
-    }
-
+describe("AgentGraphTurnPolicyService: what the customer was already told, from the effect ledger and the stops (D.1)", () => {
     it("a step that runs again is told its earlier lines from the ledger, whatever conversation they went to (a run with none)", async () => {
         const { policy } = await told({
             ledger: { [`${RUN}:match`]: [sendOf("e-1", CHECKING, "c-9", "2026-11-10T03:01:00.000Z")] },

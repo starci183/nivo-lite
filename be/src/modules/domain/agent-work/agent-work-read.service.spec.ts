@@ -238,3 +238,18 @@ describe("AgentWorkReadService.hasLiveWake", () => {
         expect(fake?.callsOf("andWhere")).toEqual([["w.context ->> 'subjectId' = :subjectId", { subjectId: "run-1" }]])
     })
 })
+
+describe("AgentWorkReadService.wakeContextOf", () => {
+    it("reads the context of the wake written under a source and fact key, and null when there is none", async () => {
+        const context = { eventName: "engine.thread.resume", subjectId: "run-1" }
+        const found = await build(mockEntityManager({ findOne: [AgentWakeEntity, agentWakeRowOf({ context })] }))
+        const none = await build(mockEntityManager({ findOne: [AgentWakeEntity, null] }))
+
+        await expect(found.service.wakeContextOf("ws-1", "agent-1", "thread", "thread:run-1:answer:0")).resolves.toEqual(context)
+        await expect(none.service.wakeContextOf("ws-1", "agent-1", "thread", "thread:run-1:answer:0")).resolves.toBeNull()
+        expect(found.em.findOne).toHaveBeenCalledWith(AgentWakeEntity, {
+            select: { context: true },
+            where: { workspaceId: "ws-1", agentId: "agent-1", source: "thread", eventKey: "thread:run-1:answer:0" },
+        })
+    })
+})

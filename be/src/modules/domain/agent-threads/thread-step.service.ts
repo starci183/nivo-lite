@@ -50,6 +50,7 @@ import type { ReplayPortsOf, ThreadNodeAnswer, ThreadNodeScope, ThreadState } fr
 import { FREEZE_NODE, stepExitOf, type CompiledStep } from "./template-compiler.policy"
 import { ThreadProjectionService } from "./thread-projection.service"
 import { RunStopsService } from "./stops/run-stops.service"
+import { ThreadApprovalsService } from "./thread-approvals.service"
 import type { FounderAnswerJson, StopCardContext, StopKind, StopQuestion } from "./stops/run-stop.contracts"
 
 /** The node of a thread graph one call runs, and what of the run it needs: bound to one pinned version, shared by every thread on it. */
@@ -123,6 +124,7 @@ type Ran =
     | { readonly code: string; readonly text: string }
     | { readonly failure: StepFailure }
     | { readonly confusion: NodeConfusion }
+    | { readonly ask: unknown }
 
 const textOf = (trigger: StepJson, member: string): string | null => {
     const value = trigger[member]
@@ -209,6 +211,7 @@ export class ThreadStepService {
         @Optional() private readonly conversations?: ChatConversationsService,
         @Optional() private readonly workflowRuns?: AgentWorkflowRunsService,
         @Optional() @Inject(CHECKPOINT_LIMITS) private readonly limits: CheckpointLimits = DEFAULT_CHECKPOINT_LIMITS,
+        @Optional() private readonly approvals?: ThreadApprovalsService,
     ) {}
 
     /** Steps whose last visit the checkpoint refused as too large, by `run:step`: the next visit stops them for the founder. */
@@ -252,6 +255,7 @@ export class ThreadStepService {
         // A lost lease (the drive's signal aborted) is no trouble of the step: the node ends here, silently, and the next driver runs the
         // step again from the checkpoint. Nothing is written: no AI core, no stop, no card, no projection.
         leaseHeld(scope)
+        if ("ask" in ran) return this.asked(at, view, input, node, turn, ran.ask)
         if ("trouble" in ran) return this.troubled(at, view, input, node, turn, ran.trouble)
         return this.completed(at, view, input, node, turn, ran.output, ran.effects)
     }
@@ -287,9 +291,10 @@ export class ThreadStepService {
         input: GraphNodeStepInput,
         node: GraphSpecNode,
         turn: NodeTurn,
-    ): Promise<NodeRun | { readonly trouble: StepTrouble }> {
+    ): Promise<NodeRun | { readonly trouble: StepTrouble } | { readonly ask: unknown }> {
         try {
             const ran = await this.ran(at, view, input, node, turn)
+            if ("ask" in ran) return ran
             if ("code" in ran) return { trouble: troubleOfRefusal(ran.code, ran.text) }
             if ("confusion" in ran) return { trouble: troubleOfConfusion(ran.confusion) }
             if ("failure" in ran) return { trouble: troubleOfFailure(ran.failure) }
@@ -316,6 +321,9 @@ export class ThreadStepService {
         // One replay per run of the node: the thread's wrapper of the host's ports, and in the same record the model turns of the host's
         // own agent loop (a node the AGENT_LOOP flag names), so a step that starts again asks the model nothing it already answered.
         const replayed = replayRunOf(at.replay)
+        // The run after the owner approved carries exactly the approved call's fingerprint (and so does a later run of the step).
+        const approval =
+            (await this.approvals?.approvalOf({ workspaceId: view.workspaceId, runId: view.runId }, view.stepKey)) ?? null
         try {
             return await this.host.run({
                 nodeId: node.step,
@@ -326,6 +334,7 @@ export class ThreadStepService {
                 key: `${view.runId}:${view.stepKey}`,
                 replay: replayed.replay,
                 record: replayed.record,
+                ...(approval === null ? {} : { approval }),
             })
         } catch (cause) {
             const typed = typedEndOf(cause)
@@ -333,7 +342,7 @@ export class ThreadStepService {
             if (refused(cause)) return { code: cause.code, text: cause.message }
             const refusal = domainRefusalOf(cause)
             if (refusal !== null) return { code: refusal, text: cause instanceof Error ? cause.message : refusal }
-            if (asksApproval(cause)) return { code: APPROVAL_ASKED, text: cause instanceof Error ? cause.message : APPROVAL_ASKED }
+            if (asksApproval(cause)) return { ask: cause }
             throw cause
         }
     }
@@ -437,6 +446,48 @@ export class ThreadStepService {
             { ...this.factOf(view, input, node), code: trouble.code, error: { code: trouble.code, text: trouble.text }, calls: [], waitItemId: null },
         )
         const left: ThreadTrouble = { stepKey: view.stepKey, question, locale: card.locale }
+        return { update: { trouble: { ...left } }, goto: FREEZE_NODE }
+    }
+
+    /**
+     * A call of the step asked for a person (an `ask` ability): the owner's item for exactly that call and the step's stop of kind
+     * `approval`, then the gate. A call refused before, approved and still asking, or an ask that cannot be raised is the step's
+     * trouble (the AI core reads it). Without the approvals service the ask stays the trouble it always was. The step row keeps
+     * `waitItemId` null: a wait item on a thread row would let the old engine's item hook drive the thread run.
+     */
+    private async asked(
+        at: ThreadStepNode,
+        view: StepView,
+        input: GraphNodeStepInput,
+        node: GraphSpecNode,
+        turn: NodeTurn,
+        cause: unknown,
+    ): Promise<ThreadNodeAnswer> {
+        const text = cause instanceof Error ? cause.message : APPROVAL_ASKED
+        if (this.approvals === undefined) return this.troubled(at, view, input, node, turn, troubleOfRefusal(APPROVAL_ASKED, text))
+        const locale = turn.locale === "en" ? "en" : "vi"
+        const card: StopCardContext = {
+            locale,
+            workflow: await this.workflowRefOf(at, view, turn.locale),
+            step: { key: view.stepKey, nodeId: node.step, title: this.stepTitleOf(node.step, turn.locale) ?? view.stepKey },
+            by: "engine",
+        }
+        const leadId =
+            this.memory?.subjectOf(view, input)?.leadId ?? (await this.leadOfConversation(view.workspaceId, turn.conversationId))
+        const ref = { workspaceId: view.workspaceId, runId: view.runId }
+        const asked = await this.approvals.asked(
+            { ...ref, stepKey: view.stepKey, agentId: at.agentId, workflowId: at.workflowId, leadId, turn, card },
+            cause,
+        )
+        if (asked.kind === "trouble") return this.troubled(at, view, input, node, turn, troubleOfRefusal(asked.code, asked.text))
+        await this.projection?.stepStopped(ref, {
+            ...this.factOf(view, input, node),
+            code: APPROVAL_ASKED,
+            error: { code: APPROVAL_ASKED, text: asked.question.reason },
+            calls: [],
+            waitItemId: null,
+        })
+        const left: ThreadTrouble = { stepKey: view.stepKey, question: asked.question, locale }
         return { update: { trouble: { ...left } }, goto: FREEZE_NODE }
     }
 

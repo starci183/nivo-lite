@@ -7,6 +7,7 @@ import { AgentRunRecordsService } from "./agent-run-records.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import type { StepRecord } from "./agent-runs-records.contracts"
 import { TELL_STATUSES } from "./policies/agent-runs.policy"
+import { isOldEngineRun } from "./policies/run-engine.policy"
 import type { RunDue } from "./agent-runs-engine.contracts"
 
 /** How long a stopped run or an undo waits before the sweep looks at it, milliseconds. */
@@ -18,7 +19,7 @@ const iso = (at: Date): string => at.toISOString()
 /**
  * What the minute sweep must look at in one workspace, as indexed reads: steps past their claim (a crash, or a wait whose time ran out),
  * pending steps that are ready and that no job picked up, compensations to continue, and stopped runs nobody was told about. The run of
- * each step is read to keep only those whose run still wants it.
+ * each step is read to keep only those whose run still wants it and is the old engine's (a thread run's rows are a projection).
  */
 export class AgentRunDueService {
     constructor(
@@ -150,6 +151,7 @@ export class AgentRunDueService {
         )
         return lists
             .flat()
+            .filter((run) => isOldEngineRun(run))
             .slice(0, limit)
             .map((run) => ({
                 kind: "unspoken",
@@ -174,7 +176,7 @@ export class AgentRunDueService {
         const due: Array<RunDue> = []
         await eachInOrder(steps, async (step) => {
             const run = await this.records.run(scoped, step.runId)
-            if (run === null || !statuses.includes(run.status)) return
+            if (run === null || !statuses.includes(run.status) || !isOldEngineRun(run)) return
             due.push({
                 kind,
                 runId: run.id,

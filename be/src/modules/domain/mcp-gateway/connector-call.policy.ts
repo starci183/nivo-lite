@@ -15,11 +15,17 @@ import { fullNameOf } from "./tool-name.policy"
 /** What the tick of one ability on one connected account decides about a call: not allowed, run by itself, or ask a person first. */
 export type AbilityDecision = "off" | "auto" | "ask"
 
+/** The decision of a call, or null when the tool is no provider right. */
+export type OptionalAbilityDecision = AbilityDecision | null
+
+/** The verdict of the abilities on a call, or null when the tool is no provider right. */
+export type OptionalAbilityVerdict = AbilityVerdict | null
+
 /**
  * The decision of an ability verdict as the owner ticked it: a refusal (not attached, not ticked, no default account) is `off`, a call
  * that runs by itself is `auto`, a call that waits for a person is `ask`. Null when the tool is no provider right (its tool grant decides).
  */
-export const abilityDecisionOf = (verdict: AbilityVerdict | null): AbilityDecision | null => {
+export const abilityDecisionOf = (verdict: OptionalAbilityVerdict): OptionalAbilityDecision => {
     if (verdict === null) return null
     if (verdict.kind === "refuse") return "off"
     return verdict.kind === "approval" ? "ask" : "auto"
@@ -46,18 +52,17 @@ const WORD_VALUE_MAX = 300
 const ELLIPSIS = "…"
 
 /** A text cut to its bound, marked when cut. */
-const boundedText = (text: string, max: number): string => (text.length <= max ? text : `${text.slice(0, max - 1)}${ELLIPSIS}`)
+const boundedText = (text: string, max: number): string =>
+    text.length <= max ? text : `${text.slice(0, max - 1)}${ELLIPSIS}`
 
 /** A value in plain text: a text as it is, a number or a yes/no as written, nothing as a dash, anything else as compact JSON. */
 const plainOf = (value: unknown): string => {
     if (typeof value === "string") return value.trim()
     if (typeof value === "number" || typeof value === "boolean") return String(value)
+    if (typeof value === "bigint") return value.toString()
     if (value === null || value === undefined) return "-"
-    try {
-        return JSON.stringify(value) ?? "-"
-    } catch {
-        return "-"
-    }
+    // Arguments arrive as parsed JSON (no cycle); a function or a symbol has no JSON and shows as nothing.
+    return JSON.stringify(value) ?? "-"
 }
 
 /**

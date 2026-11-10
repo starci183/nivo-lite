@@ -121,6 +121,9 @@ describe("a thread is pinned to the version it started on", () => {
         expect(rowsOf(db, runId).run).toMatchObject({ status: "failed" })
         // N-0-9-2 (fixed): the stop of the run does not stay open with live buttons on a failed run; its card is rewritten as resolved.
         expect((await stopsOf(restarted, runId)).map((stop) => stop.state)).toEqual(["resolved"])
-        expect(db.team[0]?.versions.at(-1)).toHaveProperty("resolved")
+        expect(db.team[0]?.versions.at(-1)).toMatchObject({
+            kind: "workflow.stopped",
+            rewrite: { stop: { state: "resolved", resolvedAt: expect.any(String) } },
+        })
     })
 })

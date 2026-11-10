@@ -13,6 +13,7 @@ import type { GraphThreads, ThreadView } from "@modules/integrations/langgraph"
 import { CLOCK } from "@modules/platform/clock"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { AGENT_THREADS_OPTIONS } from "./agent-threads.decorators"
 import { RunStopRecordsService } from "./stops/run-stop-records.service"
 import type { RunStop } from "./stops/run-stop.contracts"
 import { RunStopsService } from "./stops/run-stops.service"
@@ -94,23 +95,28 @@ interface World {
     readonly stepRows?: ReadonlyArray<RecordRow>
     readonly deadline?: StopDeadline | null
     readonly reader?: boolean
+    readonly workflows?: ReadonlyArray<string>
 }
 
 const build = async (world: World = {}) => {
     const tx = mock<ScopedTx>()
+    const queries: Array<Query> = []
+    const list = (_tx: ScopedTx, query: Query) => {
+        queries.push(query)
+        const rows =
+            query.from === "agent.run"
+                ? JSON.stringify(query.where).includes('"running"')
+                    ? (world.runs ?? [])
+                    : []
+                : query.from === "agent.run-stop"
+                  ? (world.openStops ?? []).map(stopRow)
+                  : (world.stepRows ?? [])
+        return Promise.resolve({ rows: rows.map((row) => ({ row })), next: null })
+    }
     const engine = mock<EntityEngineService>({
-        scoped: jest.fn((_ws: string, work: (scoped: ScopedTx) => unknown) => Promise.resolve(work(tx))),
-        list: jest.fn((_tx: ScopedTx, query: Query) => {
-            const rows =
-                query.from === "agent.run"
-                    ? JSON.stringify(query.where).includes('"running"')
-                        ? (world.runs ?? [])
-                        : []
-                    : query.from === "agent.run-stop"
-                      ? (world.openStops ?? []).map(stopRow)
-                      : (world.stepRows ?? [])
-            return Promise.resolve({ rows: rows.map((row) => ({ row })), next: null })
-        }),
+        // The engine's generic signatures take no plain double; the world only needs these three reads.
+        scoped: ((_ws: string, work: (scoped: ScopedTx) => unknown) => Promise.resolve(work(tx))) as never,
+        list: list as never,
         get: jest.fn(() =>
             Promise.resolve(
                 world.runStatus === null ? null : { ...runRow(), data: { ...runRow().data, status: world.runStatus ?? "waiting" } },
@@ -141,6 +147,7 @@ const build = async (world: World = {}) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             ThreadSweepService,
+            { provide: AGENT_THREADS_OPTIONS, useValue: { workflows: world.workflows ?? ["chatbot.front-desk"] } },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
             { provide: EntityEngineService, useValue: engine },
@@ -154,7 +161,7 @@ const build = async (world: World = {}) => {
             ...(world.reader === false ? [] : [{ provide: AgentWorkReadService, useValue: wakes }]),
         ],
     }).compile()
-    return { service: moduleRef.get(ThreadSweepService), engine, port, records, stops, projection, runs, deadlines, wakes, logger }
+    return { service: moduleRef.get(ThreadSweepService), engine, queries, port, records, stops, projection, runs, deadlines, wakes, logger }
 }
 
 describe("ThreadSweepService", () => {
@@ -322,9 +329,34 @@ describe("ThreadSweepService", () => {
 
         await world.service.sweepWorkspace("ws-1")
 
-        const queries = world.engine.list.mock.calls.map(([, query]) => query)
+        const { queries } = world
         expect(new Set(queries.map((query) => query.from))).toEqual(new Set(["agent.run", "agent.run-step", "agent.run-stop"]))
         expect(queries.flatMap((query) => queryProblems(query, catalog))).toEqual([])
+    })
+
+    it("runs the passes that ride it once per workspace, after its own, and survives a failing one", async () => {
+        const world = await build({ runs: [] })
+        const rode: Array<string> = []
+        world.service.alsoPerWorkspace(() => Promise.reject(new Error("freezes down")))
+        world.service.alsoPerWorkspace((workspaceId) => {
+            rode.push(workspaceId)
+            return Promise.resolve()
+        })
+
+        await world.service.sweep()
+
+        expect(rode).toEqual(["ws-1"])
+        expect(world.logger.error).toHaveBeenCalledTimes(1)
+    })
+
+    it("reads nothing at all while no workflow is on threads", async () => {
+        const world = await build({ runs: [runRow()], openStops: [stopOf()], workflows: [] })
+
+        await expect(world.service.sweep()).resolves.toEqual({ redriven: 0, repaired: 0, abandoned: 0, closed: 0, fired: 0 })
+
+        expect(world.queries).toEqual([])
+        expect(world.port.stateOf).not.toHaveBeenCalled()
+        expect(world.wakes.hasLiveWake).not.toHaveBeenCalled()
     })
 
     it("keeps going when one item fails, and does nothing in an app with no threads port", async () => {

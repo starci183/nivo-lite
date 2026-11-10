@@ -1,8 +1,7 @@
 import { getConfig, task } from "@langchain/langgraph"
 import type { NodeHostPorts, NodeModelRequest } from "@nivo-lite/agent-sdk/node"
 import { digestOf } from "./asked-digest.policy"
-import { THREAD_CONFIG } from "./langgraph.port"
-import type { ReplayPortsOf, ReplayRun, TurnRecord } from "./langgraph.port"
+import { THREAD_CONFIG, type OptionalTurnRecord, type ReplayPortsOf, type ReplayRun, type TurnRecord } from "./langgraph.port"
 
 /** The name every recorded call is stored under; the library tells calls apart by their position in the node, not by this name. */
 const RECORD_NAME = "nivo.call"
@@ -15,6 +14,12 @@ const NODE_CALL_KEY = "__pregel_call"
  * effort), as a digest. Two calls with the same purpose and other content (a founder's answer, a new customer line) are two calls.
  */
 const askedOf = (request: NodeModelRequest): string => digestOf(request)
+
+/** The turn record of one run of a node, once its ports were wrapped. */
+interface HeldRecord {
+    /** The record, or null before the wrap (or outside the run of a node). */
+    record: OptionalTurnRecord
+}
 
 /** The record of the host's own agent turns that belongs to each set of ports the wrapper made, in the same record as their calls. */
 const turnRecords = new WeakMap<NodeHostPorts, TurnRecord>()
@@ -121,7 +126,7 @@ export const replayPortsOf = (ports: NodeHostPorts, left?: ReplayLeft): NodeHost
  * @param ports - Ports the wrapper made.
  * @returns The turn record, or null.
  */
-export const turnRecordOf = (ports: NodeHostPorts): TurnRecord | null => turnRecords.get(ports) ?? null
+export const turnRecordOf = (ports: NodeHostPorts): OptionalTurnRecord => turnRecords.get(ports) ?? null
 
 /**
  * The replay of one run of a node with its agent turns: `replay` delegates to the thread's wrapper and keeps the turn record of the
@@ -131,7 +136,7 @@ export const turnRecordOf = (ports: NodeHostPorts): TurnRecord | null => turnRec
  * @returns The pair the node host is handed as `replay` and `record`.
  */
 export const replayRunOf = (replay: ReplayPortsOf): ReplayRun => {
-    const held: { record: TurnRecord | null } = { record: null }
+    const held: HeldRecord = { record: null }
     return {
         replay: (ports) => {
             const wrapped = replay(ports)

@@ -47,7 +47,13 @@ export class GraphNodesModule extends ConfigurableModuleClass {
                     ? []
                     : [{ provide: GRAPH_NODE_AGENT_LOOPS, useExisting: options.agentLoop.loops }]),
             ],
-            exports: [GraphNodeRegistryService, GraphNodeHostService, GraphNodeRunTokensService, GRAPH_EFFECT_ONCE],
+            exports: [
+                GraphNodeRegistryService,
+                GraphNodeHostService,
+                GraphNodeRunTokensService,
+                GraphNodeEffectsService,
+                GRAPH_EFFECT_ONCE,
+            ],
         }
     }
 }

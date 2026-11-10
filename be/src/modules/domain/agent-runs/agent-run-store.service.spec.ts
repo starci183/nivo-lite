@@ -340,6 +340,7 @@ describe("AgentRunStoreService reads", () => {
     it("lists the open waits of the workspace, the oldest deadline first", async () => {
         const { store, records } = await build()
         records.stepsOfStatus.mockResolvedValue([stepRecordOf({ waitItemId: "item-1", status: "running" })])
+        records.run.mockResolvedValue(runRecordOf())
         await expect(store.openWaits("ws-1", 5)).resolves.toMatchObject([{ waitItemId: "item-1" }])
         expect(records.stepsOfStatus).toHaveBeenCalledWith(
             scoped,
@@ -407,6 +408,7 @@ describe("AgentRunStoreService resume", () => {
     it("answers false when no step waits or the step moved on first", async () => {
         const { store, records, queue, em } = await build()
         records.stepsWaitingOn.mockResolvedValueOnce([]).mockResolvedValueOnce([waiting])
+        records.run.mockResolvedValue(runRecordOf())
         records.patchStep.mockResolvedValue(null)
         await expect(store.resume(em, "ws-1", "item-1", { result: {}, next: [] })).resolves.toBe(false)
         await expect(store.resume(em, "ws-1", "item-1", { result: {}, next: [] })).resolves.toBe(false)
@@ -525,5 +527,40 @@ describe("AgentRunStoreService cancel", () => {
 
         expect(records.patchRun).not.toHaveBeenCalled()
         expect(records.patchStep).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentRunStoreService: a run on a LangGraph thread is never moved by the old engine", () => {
+    const thread = runRecordOf({ engine: "langgraph" })
+    const waiting = stepRecordOf({ status: "running", waitItemId: "item-1" })
+
+    it("finds no step waiting on a work item when the step is a thread run's projection", async () => {
+        const { store, records, em } = await build()
+        records.stepsWaitingOn.mockResolvedValue([waiting])
+        records.run.mockResolvedValue(thread)
+
+        await expect(store.waitingOn("ws-1", "item-1", em)).resolves.toBeNull()
+    })
+
+    it("finishes no wait of a thread run and writes no job", async () => {
+        const { store, records, queue, em } = await build()
+        records.stepsWaitingOn.mockResolvedValue([waiting])
+        records.run.mockResolvedValue(thread)
+
+        await expect(store.resume(em, "ws-1", "item-1", { result: {}, next: [] })).resolves.toBe(false)
+        expect(records.patchStep).not.toHaveBeenCalled()
+        expect(queue.enqueueAdvance).not.toHaveBeenCalled()
+    })
+
+    it("lists no open wait of a thread run, and says which runs the old engine drives", async () => {
+        const { store, records } = await build()
+        records.stepsOfStatus.mockResolvedValue([waiting, stepRecordOf({ runId: "run-2", status: "running", waitItemId: "item-2" })])
+        records.run.mockImplementation((_tx, runId) => Promise.resolve(runId === "run-2" ? runRecordOf({ id: "run-2" }) : thread))
+
+        await expect(store.openWaits("ws-1", 5)).resolves.toMatchObject([{ waitItemId: "item-2" }])
+        await expect(store.drivesOldEngine("ws-1", "run-1")).resolves.toBe(false)
+        await expect(store.drivesOldEngine("ws-1", "run-2")).resolves.toBe(true)
+        records.run.mockResolvedValue(null)
+        await expect(store.drivesOldEngine("ws-1", "run-9")).resolves.toBe(false)
     })
 })

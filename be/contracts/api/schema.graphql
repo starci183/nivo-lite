@@ -881,6 +881,11 @@ type AgentRunStepType {
   workItemId: ID
 }
 
+type AgentRunStopDecisionType {
+  outcome: String!
+  stepKey: String
+}
+
 type AgentRunWorkflowPinType {
   runId: String!
   version: Int!
@@ -1992,6 +1997,7 @@ type ChatMessageType {
   replyTo: ChatReplyType
   report: ChatReportRefType
   roomId: ID!
+  stop: ChatStopCardType
 }
 
 input ChatMessagesInput {
@@ -2118,6 +2124,110 @@ type ChatRoomUnreadType {
 input ChatRoomsInput {
   kind: ChatRoomKind = null @inputBounds(maxLength: 10)
   member: ID = null @inputBounds(maxLength: 36)
+}
+
+type ChatStopApprovalType {
+  ability: String!
+  account: String!
+  args: [ChatStopFactType!]!
+  tool: String!
+  workItemId: ID!
+}
+
+enum ChatStopAuthor {
+  ai
+  engine
+}
+
+type ChatStopCardType {
+  approval: ChatStopApprovalType
+  by: ChatStopAuthor!
+  conversationId: ID
+  facts: [ChatStopFactType!]!
+  firstAt: String!
+  headline: String!
+  kind: ChatStopKind!
+  leadId: ID
+  message: String!
+  moduleKey: String!
+  needs: ChatStopNeedsType!
+  question: String
+  repeats: Int!
+  replies: [ChatStopReplyType!]!
+  resolvedAt: String
+  revision: Int!
+  runId: ID!
+  state: ChatStopState!
+  stepKey: String!
+  stepTitle: String!
+  stopId: ID
+  stoppedAt: String!
+  suggestions: [ChatStopSuggestionType!]!
+  workflowTitle: String!
+}
+
+enum ChatStopDecision {
+  retry
+  skip
+  take_over
+}
+
+type ChatStopFactType {
+  name: String!
+  value: String!
+}
+
+enum ChatStopHandler {
+  person
+  workflow
+}
+
+enum ChatStopKind {
+  ai_error
+  ai_report
+  approval
+}
+
+type ChatStopNeedsType {
+  answer: Boolean!
+  decisions: [ChatStopDecision!]!
+  verdicts: [ChatStopVerdict!]!
+}
+
+enum ChatStopReplyKind {
+  answer
+  approve
+  refuse
+  retry
+  skip
+  take_over
+  timeout
+}
+
+type ChatStopReplyType {
+  at: String!
+  by: String!
+  byName: String!
+  kind: ChatStopReplyKind!
+  text: String
+}
+
+enum ChatStopState {
+  answered
+  open
+  resolved
+  skipped
+  timed_out
+}
+
+type ChatStopSuggestionType {
+  handledBy: ChatStopHandler!
+  text: String!
+}
+
+enum ChatStopVerdict {
+  approve
+  refuse
 }
 
 type ChatTypingSignalType {
@@ -2772,6 +2882,13 @@ input DecideLeadFreezeInput {
 
 type DecideLeadFreezeType {
   outcome: String!
+}
+
+input DecideRunStopInput {
+  action: String! @inputBounds(maxLength: 20)
+  runId: ID! @inputBounds(maxLength: 64)
+  stepKey: String @inputBounds(maxLength: 200)
+  text: String @inputBounds(maxLength: 4000)
 }
 
 input DecideSetupCardInput {
@@ -4362,6 +4479,7 @@ type Mutation {
   decideBrandProposal(input: DecideBrandProposalInput!): BrandProposalType!
   decideChatApproval(input: DecideChatApprovalInput!): ChatDecisionPayloadType!
   decideLeadFreeze(input: DecideLeadFreezeInput!): DecideLeadFreezeType!
+  decideRunStop(input: DecideRunStopInput!): AgentRunStopDecisionType!
   decideSetupCard(input: DecideSetupCardInput!): SetupCardType!
   declineAgentGraphProposal(input: DeclineAgentGraphProposalInput!): Boolean!
   declineInvite(input: InviteRefInput!): Boolean!

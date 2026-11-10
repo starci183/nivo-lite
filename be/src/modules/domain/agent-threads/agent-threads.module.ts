@@ -1,10 +1,14 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { AGENT_THREADS_OPTIONS } from "./agent-threads.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-threads.module-definition"
 import { RunStopRecordsService } from "./stops/run-stop-records.service"
 import { RunStopsService } from "./stops/run-stops.service"
+import { StopAnswersService } from "./stops/stop-answers.service"
 import { StopCardsService } from "./stops/stop-cards.service"
+import { StopDoorService } from "./stops/stop-door.service"
 import { ThreadDeadlineQueueModule } from "@modules/queues/thread-deadline"
+import { ThreadApprovalsService } from "./thread-approvals.service"
 import { ThreadDeadlinesService } from "./thread-deadlines.service"
 import { ThreadGraphsService } from "./thread-graphs.service"
 import { ThreadProjectionService } from "./thread-projection.service"
@@ -26,6 +30,8 @@ export class AgentThreadsModule extends ConfigurableModuleClass {
     /** Registers the capability once per app that runs wakes. */
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
+        // The people's doors to a stop need the app's members, access and run cancel: only an app that serves people registers them.
+        const doors = options.doors === true ? [StopDoorService, StopAnswersService] : []
         return {
             ...base,
             imports: [...(base.imports ?? []), ThreadDeadlineQueueModule],
@@ -34,6 +40,8 @@ export class AgentThreadsModule extends ConfigurableModuleClass {
                 RunStopRecordsService,
                 StopCardsService,
                 RunStopsService,
+                ThreadApprovalsService,
+                ...doors,
                 ThreadProjectionService,
                 ThreadStepService,
                 ThreadGraphsService,
@@ -42,7 +50,10 @@ export class AgentThreadsModule extends ConfigurableModuleClass {
                 ThreadSweepService,
             ],
             exports: [
+                AGENT_THREADS_OPTIONS,
                 RunStopsService,
+                ThreadApprovalsService,
+                ...doors,
                 ThreadProjectionService,
                 ThreadStepService,
                 ThreadGraphsService,

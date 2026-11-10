@@ -497,7 +497,16 @@ describe("TeamChatRoomsService replies to a line an agent wrote under a key", ()
         valueOf(await subject.send(WS, ANA, sendOf({ replyTo: MSG2, body: "cho qua" })))
 
         expect(heard).toHaveBeenCalledTimes(1)
-        expect(heard).toHaveBeenCalledWith({ workspaceId: WS, byUserId: ANA, lineKey: "line-key-1" })
+        // The reply itself travels with it: its id, the words stored and the database time, so two replies at once never mix.
+        const stored = messageOf({ id: MSG, replyTo: MSG2 })
+        expect(heard).toHaveBeenCalledWith({
+            workspaceId: WS,
+            byUserId: ANA,
+            lineKey: "line-key-1",
+            messageId: MSG,
+            text: stored.body,
+            at: stored.createdAt.toISOString(),
+        })
         store.sentBefore.mockResolvedValue(messageOf({ id: MSG }))
         valueOf(await subject.send(WS, ANA, sendOf({ replyTo: MSG2, body: "cho qua", clientId: "c1" })))
         expect(heard).toHaveBeenCalledTimes(1)

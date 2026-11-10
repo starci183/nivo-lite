@@ -14,6 +14,7 @@ import { wakeProgressOf } from "./agent-work.policy"
 import { AgentTurnEntity, AgentWakeEntity, AgentWorkStateEntity } from "./persistence/entities"
 import type {
     AgentTurnRecord,
+    AgentWakeContext,
     AgentWakeStatus,
     AgentWorkView,
     OptionalCustomerWakeProgress,
@@ -83,6 +84,20 @@ export class AgentWorkReadService {
             })
             .getCount()
         return count > 0
+    }
+
+    /** The context of the wake an agent was written under a source and fact key, or null when no such wake exists. */
+    async wakeContextOf(
+        workspaceId: string,
+        agentId: string,
+        source: string,
+        eventKey: string,
+    ): Promise<AgentWakeContext | null> {
+        const wake = await this.entityManager.findOne(AgentWakeEntity, {
+            select: { context: true },
+            where: { workspaceId, agentId, source, eventKey },
+        })
+        return wake?.context ?? null
     }
 
     /** The work of one agent of the workspace. */

@@ -10,6 +10,7 @@ import {
 } from "@modules/domain/agent-work"
 import type { AgentTriggerRecord, AgentWorkDue } from "@modules/domain/agent-work"
 import { AgentRunSweepService } from "@modules/domain/agent-runs"
+import { ThreadSweepService } from "@modules/domain/agent-threads"
 import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
@@ -50,7 +51,11 @@ const record = (over: Partial<AgentTriggerRecord> = {}): AgentTriggerRecord => (
     ...over,
 })
 
-const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRecord | null = record()) => {
+const build = async (
+    items: ReadonlyArray<AgentWorkDue>,
+    trigger: AgentTriggerRecord | null = record(),
+    threads = true,
+) => {
     const tx = fakeTransaction(mockEntityManager())
     const outbox = jobRecordingOutbox()
     const real = new AgentTurnQueue(outbox)
@@ -72,9 +77,13 @@ const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRe
     const runSweep = mock<AgentRunSweepService>({
         sweep: jest.fn().mockResolvedValue({ expired: 0, ready: 0, compensating: 0, unspoken: 0, recovered: 0 }),
     })
+    const threadSweep = mock<ThreadSweepService>({
+        sweep: jest.fn().mockResolvedValue({ redriven: 0, repaired: 0, abandoned: 0, closed: 0, fired: 0 }),
+    })
     const container = await Test.createTestingModule({
         providers: [
             AgentWorkSweepService,
+            ...(threads ? [{ provide: ThreadSweepService, useValue: threadSweep }] : []),
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
@@ -99,6 +108,7 @@ const build = async (items: ReadonlyArray<AgentWorkDue>, trigger: AgentTriggerRe
         retention,
         sync,
         runSweep,
+        threadSweep,
         queue,
         outbox,
         logger,
@@ -359,5 +369,28 @@ describe("AgentWorkSweepService.sweep, durable runs", () => {
         expect(logger.error).toHaveBeenCalledWith(AgentSchedulesLogEvent.SweepItemFailed, expect.any(Error), {
             kind: "runs",
         })
+    })
+})
+
+describe("AgentWorkSweepService.sweep, thread runs", () => {
+    it("sweeps the thread runs in the same pass; a failing thread sweep stops neither the run sweep nor the work sweep", async () => {
+        const { service, runSweep, threadSweep, logger } = await build([])
+
+        threadSweep.sweep.mockRejectedValueOnce(new Error("db down"))
+        await expect(service.sweep()).resolves.toMatchObject({ drains: 0 })
+        await service.sweep()
+
+        expect(threadSweep.sweep).toHaveBeenCalledTimes(2)
+        expect(runSweep.sweep).toHaveBeenCalledTimes(2)
+        expect(logger.error).toHaveBeenCalledWith(AgentSchedulesLogEvent.SweepItemFailed, expect.any(Error), {
+            kind: "threads",
+        })
+    })
+
+    it("runs as before in an app that composes no thread runs", async () => {
+        const { service, runSweep } = await build([], record(), false)
+
+        await expect(service.sweep()).resolves.toMatchObject({ drains: 0 })
+        expect(runSweep.sweep).toHaveBeenCalledTimes(1)
     })
 })

@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { AgentRunCancelService, AgentRunsService, AgentRunsViewService } from "@modules/domain/agent-runs"
-import type { OwnerCancelAnswer, RunView } from "@modules/domain/agent-runs"
+import type { RunView } from "@modules/domain/agent-runs"
 import { AgentWorkAccessService } from "@modules/domain/agent-work"
 import { ChatConversationsService } from "@modules/domain/chat-records"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
@@ -26,8 +26,8 @@ const stopOf = (over: Partial<RunStop> = {}): RunStop => ({
     conversationId: null,
     kind: "ai_report",
     state: "open",
-    reason: "Khoản 1.000đ, nội dung không chỉ đơn nào",
-    question: "Khoản này của đơn nào?",
+    reason: "1,000 VND, the note names no order",
+    question: "Which order is this for?",
     detail: { suggestions: [], facts: [] },
     cardMessageId: "msg-1",
     customerLines: [],
@@ -47,7 +47,6 @@ interface World {
     readonly stops?: ReadonlyArray<RunStop>
     readonly admission?: ThreadWakeAdmission
     readonly after?: RunStop | null
-    readonly cancelled?: OwnerCancelAnswer
 }
 
 const build = async (world: World = {}) => {
@@ -74,9 +73,7 @@ const build = async (world: World = {}) => {
     const threads = mock<ThreadRunsService>({
         resume: jest.fn().mockResolvedValue(world.admission ?? { kind: "admitted", fresh: true }),
     })
-    const cancels = mock<AgentRunCancelService>({
-        cancel: jest.fn().mockResolvedValue(world.cancelled ?? { kind: "thread_run", note: null }),
-    })
+    const cancels = mock<AgentRunCancelService>()
     const conversations = mock<ChatConversationsService>({ setHolder: jest.fn().mockResolvedValue(undefined) })
     const moduleRef = await Test.createTestingModule({
         providers: [
@@ -100,13 +97,13 @@ describe("StopDoorService: a person's decision on the stop of a thread run", () 
         const { door, access, threads } = await build()
 
         await expect(
-            door.decide("user-1", { ...ASK, action: "answer", text: "Đây là tiền cọc đơn DH-1", at: "2026-11-10T09:30:00.000Z" }),
+            door.decide("user-1", { ...ASK, action: "answer", text: "This is the deposit of order DH-1", at: "2026-11-10T09:30:00.000Z" }),
         ).resolves.toEqual({ outcome: "admitted", stepKey: "match" })
 
         expect(access.manager).toHaveBeenCalledWith("user-1", "ws-1")
         expect(threads.resume).toHaveBeenCalledWith(ASK, {
             kind: "answer",
-            text: "Đây là tiền cọc đơn DH-1",
+            text: "This is the deposit of order DH-1",
             by: "member-1",
             at: "2026-11-10T09:30:00.000Z",
         })
@@ -140,6 +137,9 @@ describe("StopDoorService: a person's decision on the stop of a thread run", () 
         expect(bankFed.conversations.setHolder).not.toHaveBeenCalled()
     })
 
+})
+
+describe("StopDoorService: what is refused, and why", () => {
     it("refuses politely a decision for a stop already resolved, and resumes nothing", async () => {
         const { door, threads } = await build({ stops: [stopOf({ state: "resolved", resolvedAt: NOW })] })
 
@@ -154,12 +154,19 @@ describe("StopDoorService: a person's decision on the stop of a thread run", () 
         expect(threads.resume).not.toHaveBeenCalled()
     })
 
-    it("says stop_closed when the stop resolved between the read and the wake, and step_running while the step runs again", async () => {
+    it("says stop_closed when the stop resolved first, already_answered when another decision won, step_running while the step runs again", async () => {
         const closed = await build({
             admission: { kind: "refused", code: "thread_not_stopped" },
             after: stopOf({ state: "resolved" }),
         })
         await expect(closed.door.decide("user-1", { ...ASK, action: "retry" })).resolves.toMatchObject({ outcome: "stop_closed" })
+
+        const answered = await build({ admission: { kind: "refused", code: "already_answered" }, after: stopOf() })
+        await expect(answered.door.decide("user-1", { ...ASK, action: "skip" })).resolves.toEqual({
+            outcome: "already_answered",
+            stepKey: "match",
+        })
+        expect(answered.conversations.setHolder).not.toHaveBeenCalled()
 
         const running = await build({ admission: { kind: "refused", code: "thread_not_stopped" }, after: stopOf() })
         await expect(running.door.decide("user-1", { ...ASK, action: "retry" })).resolves.toMatchObject({ outcome: "step_running" })
@@ -215,30 +222,30 @@ describe("StopDoorService: a person's decision on the stop of a thread run", () 
     })
 })
 
-describe("StopDoorService.cancelRun: the run page's Cancel", () => {
+describe("StopDoorService.skipRun: the run page's Cancel of a thread run", () => {
     const REQUEST = { principalId: "user-1", workspaceId: "ws-1", runId: "run-1" }
 
-    it("answers the old engine's cancel as it is for a run of the old engine", async () => {
-        const { door, cancels, threads } = await build({ cancelled: { kind: "cancelled", note: "effects_kept" } })
+    it("registers with the runs' cancel door at start", async () => {
+        const { door, cancels } = await build()
 
-        await expect(door.cancelRun(REQUEST)).resolves.toEqual({ kind: "cancelled", note: "effects_kept" })
-        expect(cancels.cancel).toHaveBeenCalledWith(REQUEST)
-        expect(threads.resume).not.toHaveBeenCalled()
+        door.onModuleInit()
+
+        expect(cancels.setThreadStops).toHaveBeenCalledWith(door)
     })
 
     it("cancels a thread run by its stop's skip, as the same person; a closed stop is not cancellable", async () => {
         const { door, threads } = await build()
-        await expect(door.cancelRun(REQUEST)).resolves.toEqual({ kind: "cancelled", note: "effects_kept" })
+        await expect(door.skipRun(REQUEST)).resolves.toEqual({ kind: "cancelled", note: "effects_kept" })
         expect(threads.resume).toHaveBeenCalledWith(ASK, { kind: "skip", by: "member-1", at: NOW })
 
         const closed = await build({ stops: [stopOf({ state: "resolved" })] })
-        await expect(closed.door.cancelRun(REQUEST)).resolves.toEqual({ kind: "not_cancellable", note: null })
+        await expect(closed.door.skipRun(REQUEST)).resolves.toEqual({ kind: "not_cancellable", note: null })
     })
 
     it("maps every outcome of the skip to the cancel's kinds", () => {
         expect(cancelOfSkip("already_admitted")).toEqual({ kind: "cancelled", note: "effects_kept" })
         expect(cancelOfSkip("not_found")).toEqual({ kind: "not_found", note: null })
-        for (const outcome of ["stop_closed", "step_running", "not_stopped", "not_thread", "invalid"] as const)
+        for (const outcome of ["already_answered", "stop_closed", "step_running", "not_stopped", "not_thread", "invalid"] as const)
             expect(cancelOfSkip(outcome)).toEqual({ kind: "not_cancellable", note: null })
     })
 })
@@ -258,7 +265,7 @@ describe("targetStopOf / stopDecisionOfAsk", () => {
     })
 
     it("builds the stop's typed decisions; an answer needs words", () => {
-        expect(stopDecisionOfAsk("answer", "m-1", NOW, "chốt")).toEqual({ kind: "answer", text: "chốt", by: "m-1", at: NOW })
+        expect(stopDecisionOfAsk("answer", "m-1", NOW, "agreed")).toEqual({ kind: "answer", text: "agreed", by: "m-1", at: NOW })
         expect(stopDecisionOfAsk("skip", "m-1", NOW, "ignored")).toEqual({ kind: "skip", by: "m-1", at: NOW })
         expect(stopDecisionOfAsk("answer", "m-1", NOW, null)).toBeNull()
     })

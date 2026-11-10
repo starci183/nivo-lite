@@ -370,8 +370,7 @@ Current rules: ${currentRules}`,
             schema,
             "node",
             newTries(),
-            ask.reasoning,
-            ask.purpose,
+            ask,
         )
     }
 
@@ -611,15 +610,14 @@ Current rules: ${currentRules}`,
         schema: TaskSchema,
         call: CallKind = "task",
         tries: Tries = newTries(),
-        reasoning?: NodeAsk["reasoning"],
-        purpose?: string,
+        node?: Pick<NodeAsk, "reasoning" | "purpose">,
     ): Promise<JsonRecord> {
         const options: CallOptions = {
             schema,
             question: null,
             call,
-            reasoning,
-            ...(purpose === undefined ? {} : { purpose }),
+            reasoning: node?.reasoning,
+            ...(node === undefined ? {} : { purpose: node.purpose }),
         }
         const ran = await this.run(scope, messages, true, meta, options, tries)
         const parsed = ran.parsed ?? this.parseObject(ran.text)
@@ -627,7 +625,7 @@ Current rules: ${currentRules}`,
         tries.failures.push(NOT_JSON)
         if (!triesRemain(tries)) throw failedTries(AiTasksErrorCode.JsonNotReturned, tries)
         const again: ChatMessage = { role: "system", content: JSON_AGAIN }
-        return this.completeJson(scope, [...messages, again], meta, schema, call, tries, reasoning, purpose)
+        return this.completeJson(scope, [...messages, again], meta, schema, call, tries, node)
     }
 
     /** The JSON object of an answer: bare, fenced, or the first {...} block inside prose. */

@@ -1,6 +1,6 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
 import { IsIn, IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator"
-import { STOP_ACTIONS } from "@modules/domain/agent-threads/stops"
+import { STOP_ACTIONS } from "@modules/domain/agent-threads"
 
 @InputType()
 /** The bounded arguments of decideRunStop. */
@@ -22,6 +22,7 @@ export class DecideRunStopInput {
     /** `answer` (with text), `retry`, `take_over` or `skip`. */
     @Field(() => String)
     @IsIn([...STOP_ACTIONS])
+    @MaxLength(20)
     action!: string
 
     /** The founder's words, for `answer`. */

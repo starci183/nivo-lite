@@ -251,11 +251,12 @@ describe("reconcile on a thread: what is not clear stops for the founder (DEFAUL
         expect(rowsOf(db, runId).run).toMatchObject({ engine: "langgraph", status: "waiting" })
     })
 
-    // RED, P5 (1-6, D.1): a line the stopped STEP sent (not the AI core's holding line) is never written on the stop: `customerLines`
-    // is filled only by `ThreadStepService.customerLine`; 8.3 item 2 wants it read from the effect ledger, across conversations.
-    it.todo(
-        "the stop remembers the line the step told the order's customer (bank-fed: a conversation the run does not have) — P5 / D.1",
-    )
+    it("the stop remembers the line the step told the order's customer (bank-fed: a conversation the run does not have)", async () => {
+        const db = moneyDbOf(books())
+        const { process, runId } = await wrongCode(db)
+        const [stop] = await stopsOf(process, runId)
+        expect(stop?.customerLines.map((line) => [line.conversationId, line.text])).toEqual([["conv-1", CHECKING]])
+    })
 
     it("a confused stop is never auto-resumed: three re-drives move nothing, ask no model, send nothing", async () => {
         const db = moneyDbOf(books())
@@ -294,7 +295,9 @@ describe("reconcile on a thread: what is not clear stops for the founder (DEFAUL
         expect(stop).toMatchObject({ state: "resolved", decision: { kind: "answer" } })
         // The stop's card is rewritten in place; the paid card is the only other message.
         expect(db.team.map((message) => message.key)).toEqual([`run-stuck:${runId}:match`, expect.any(String)])
-        expect(db.team[0]?.versions.at(-1)).toHaveProperty("resolved")
+        // One card, rewritten in place (P6's typed card): its last version carries the founder's reply; never a second card.
+        expect(db.team[0]?.versions.length).toBeGreaterThan(1)
+        expect(JSON.stringify(db.team[0]?.versions.at(-1))).toContain("ghi nhan di")
         expect(rowsOf(db, runId).run).toMatchObject({ engine: "langgraph", status: "done" })
     })
 })

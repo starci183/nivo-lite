@@ -25,6 +25,7 @@ const RUN_SELECT: ReadonlyArray<string> = [
     "graphVersionId",
     "planning",
     "status",
+    "engine",
     "context",
     "error",
     "deadLetteredAt",

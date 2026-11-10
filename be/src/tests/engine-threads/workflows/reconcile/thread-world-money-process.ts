@@ -21,6 +21,7 @@ import {
     AgentRunsViewService,
     type RunDetail,
     type RunOpen,
+    type RunView,
     type StepSpec,
 } from "@modules/domain/agent-runs"
 import {
@@ -60,7 +61,7 @@ import { LOGGER, type Logger } from "@modules/platform/logging"
 import { leadMemoryWorldOf } from "../../../fixtures/builders/lead-memory-world.builder"
 import { registerOutside, rightsProvidersOf } from "../../thread-world-outside"
 import { WorldError } from "../../thread-world-records"
-import { LEAD, openedRun, type ThreadProcess } from "../../thread-world"
+import { LEAD, type ThreadProcess } from "../../thread-world"
 import type { MoneyDb } from "./thread-world-money"
 
 // The PROCESS of the money world (package P7): one app process over a `MoneyDb`, composed as the 0-9 world's `processOf` composes one
@@ -146,7 +147,11 @@ const moneyExecutorOf = (db: MoneyDb, executor: NodeEffectExecutor): NodeEffectE
             const conversation = (db.store.conversation ?? []).find((row) => row.leadId === payload.leadId)
             const { leadId: _lead, channel: _channel, ...rest } = payload
             const resolved: EffectPayload = { ...rest, conversationId: textOf(conversation?.id) }
-            return executor.execute(turn, resolved, call)
+            const sent = await executor.execute(turn, resolved, call)
+            // As `ChannelSendExecutorService` answers: the message, with the conversation it went to among its facts.
+            return sent.kind === "message"
+                ? { ...sent, facts: { ...sent.facts, conversationId: resolved.conversationId } }
+                : sent
         }
         const subject = await executor.execute(turn, payload, call)
         if (executor.effect === TOOL.orderRecord) return orderRecorded(db, payload)
@@ -207,6 +212,36 @@ const graphsOf = (db: MoneyDb): AgentGraphsService => {
     })
 }
 
+/**
+ * Opens the run of a wake (once per wake), as the 0-9 world's `openedRun` does, but under a UUID as the run table gives it: the effect
+ * ledger reads the run and the step of a call from its key only for a run id of that shape (`placeOf`, D.1).
+ */
+const moneyRunOf = (db: MoneyDb, input: RunOpen): RunView => {
+    const known = [...db.runs.values()].find((run) => run.wakeId === input.wakeId)
+    if (known !== undefined) return known
+    const id = `00000000-0000-4000-8000-${String(db.runs.size + 1).padStart(12, "0")}`
+    const view: RunView = {
+        id,
+        workspaceId: input.workspaceId,
+        agentId: input.agentId,
+        wakeId: input.wakeId,
+        trigger: "graph_flow",
+        versionId: input.versionId,
+        status: "running",
+        context: structuredClone(input.context),
+        errorCode: null,
+        spoken: false,
+    }
+    db.runs.set(id, view)
+    db.records.put("agent.run", id, {
+        agentId: input.agentId,
+        wakeId: input.wakeId,
+        status: "running",
+        engine: "legacy",
+    })
+    return view
+}
+
 /** The run table and the work core, as far as the engine reads them (the 0-9 world's). */
 const workProvidersOf = (db: MoneyDb): Array<Provider> => [
     {
@@ -236,7 +271,7 @@ const workProvidersOf = (db: MoneyDb): Array<Provider> => [
         provide: AgentRunsService,
         useValue: mock<AgentRunsService>({
             holds: () => Promise.resolve(true),
-            open: (_tx: unknown, input: RunOpen) => Promise.resolve(openedRun(db, input)),
+            open: (_tx: unknown, input: RunOpen) => Promise.resolve(moneyRunOf(db, input)),
             runOf: (_ws: string, id: string) => Promise.resolve(db.runs.get(id) ?? null),
             runIdOfWake: (_ws: string, wakeId: string) =>
                 Promise.resolve([...db.runs.values()].find((run) => run.wakeId === wakeId)?.id ?? null),

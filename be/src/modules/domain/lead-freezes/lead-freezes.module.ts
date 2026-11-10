@@ -6,6 +6,7 @@ import { LeadFreezeItemsService } from "./lead-freeze-items.service"
 import { LeadFreezePerformerService } from "./lead-freeze-performer.service"
 import { LeadFreezeRecordsService } from "./lead-freeze-records.service"
 import { LeadFreezeRunsService } from "./lead-freeze-runs.service"
+import { LeadFreezeStopHoldsService } from "./lead-freeze-stop-holds.service"
 import { LeadFreezeStopsService } from "./lead-freeze-stops.service"
 import { LeadFreezeWakesService } from "./lead-freeze-wakes.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./lead-freezes.module-definition"
@@ -29,6 +30,7 @@ export class LeadFreezesModule extends ConfigurableModuleClass {
                 LeadFreezeItemsService,
                 LeadFreezeRunsService,
                 LeadFreezeStopsService,
+                LeadFreezeStopHoldsService,
                 LeadFreezeWakesService,
                 LeadFreezesService,
                 LeadFreezePerformerService,

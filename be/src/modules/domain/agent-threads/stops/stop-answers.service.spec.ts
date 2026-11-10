@@ -1,8 +1,10 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
+import { queryProblems } from "@nivo-lite/agent-sdk/query"
+import { agentRunStopEntity } from "@nivo-lite/blocks-core/entities"
 import { EntityEngineService } from "@modules/domain/entity-engine"
-import { lineKeyOf, TeamChatRoomsService } from "@modules/domain/team-chat"
+import { lineKeyOf } from "@modules/domain/team-chat"
 import { DomainError } from "@modules/platform/errors"
 import { stopCardKeyOf } from "./stop-cards.service"
 import { StopAnswersService, stopOfLine } from "./stop-answers.service"
@@ -25,8 +27,8 @@ const rowOf = (runId: string, stepKey: string, state: "open" | "resolved"): Reco
             conversationId: null,
             kind: "ai_report",
             state,
-            reason: "Khoản tiền không chỉ đơn nào",
-            question: "Của đơn nào?",
+            reason: "The transfer names no order",
+            question: "Which order?",
             detail: { suggestions: [], facts: [] },
             cardMessageId: "msg-1",
             customerLines: { lines: [] },
@@ -42,12 +44,15 @@ const replyTo = (runId: string, stepKey: string, over: Partial<StopReply> = {}):
     workspaceId: "ws-1",
     byUserId: "user-owner",
     lineKey: lineKeyOf(stopCardKeyOf(runId, stepKey)),
+    messageId: "msg-9",
+    text: "This is the deposit of order DH-1",
+    at: "2026-11-10T09:05:00.000Z",
     ...over,
 })
 
 class RoleForbidden extends DomainError<"WORKSPACE_MEMBERS_ROLE_FORBIDDEN"> {}
 
-const build = async (rows: ReadonlyArray<RecordRow>, withChat = true) => {
+const build = async (rows: ReadonlyArray<RecordRow>) => {
     const engine = mock<EntityEngineService>()
     engine.scoped.mockImplementation(((_ws: string, work: (tx: unknown) => unknown) => work({})) as never)
     engine.list.mockImplementation(((_tx: unknown, query: { where: { value: string } }) =>
@@ -55,50 +60,43 @@ const build = async (rows: ReadonlyArray<RecordRow>, withChat = true) => {
             rows: rows.filter((row) => row.data.state === query.where.value).map((row) => ({ row })),
         })) as never)
     const door = mock<StopDoorService>({ decide: jest.fn().mockResolvedValue({ outcome: "admitted", stepKey: "match" }) })
-    const chat = mock<TeamChatRoomsService>({
-        repliesToAgentLine: jest.fn().mockResolvedValue([
-            { text: "Câu cũ", at: "2026-11-10T09:01:00.000Z" },
-            { text: "Đây là tiền cọc đơn DH-1", at: "2026-11-10T09:05:00.000Z" },
-        ]),
-    })
     const moduleRef = await Test.createTestingModule({
         providers: [
             StopAnswersService,
             { provide: EntityEngineService, useValue: engine },
             { provide: StopDoorService, useValue: door },
-            ...(withChat ? [{ provide: TeamChatRoomsService, useValue: chat }] : []),
         ],
     }).compile()
-    return { service: moduleRef.get(StopAnswersService), door, chat }
+    return { service: moduleRef.get(StopAnswersService), door, engine }
 }
 
 describe("StopAnswersService.replied: the founder's words in the team chat resume the stopped step", () => {
-    it("hands the newest reply under the card to the stop door as an answer of the person who wrote it", async () => {
-        const { service, door, chat } = await build([rowOf("run-9", "other", "open"), rowOf("run-1", "match", "open")])
+    it("hands the reply's own words and moment to the stop door as an answer of the person who wrote it", async () => {
+        const { service, door } = await build([rowOf("run-9", "other", "open"), rowOf("run-1", "match", "open")])
 
         await expect(service.replied(replyTo("run-1", "match"))).resolves.toEqual({
             runId: "run-1",
             stepKey: "match",
             outcome: "admitted",
         })
-        expect(chat.repliesToAgentLine).toHaveBeenCalledWith("ws-1", "run-stuck:run-1:match")
         expect(door.decide).toHaveBeenCalledWith("user-owner", {
             workspaceId: "ws-1",
             runId: "run-1",
             stepKey: "match",
             action: "answer",
-            text: "Đây là tiền cọc đơn DH-1",
+            text: "This is the deposit of order DH-1",
             at: "2026-11-10T09:05:00.000Z",
         })
     })
 
-    it("takes the words and the moment the team chat hands with the reply, when it does", async () => {
-        const { service, door, chat } = await build([rowOf("run-1", "match", "open")])
+    it("reads only lists an index serves (state_stopped), checked by the real validator", async () => {
+        const { service, engine } = await build([rowOf("run-1", "match", "resolved")])
 
-        await service.replied(replyTo("run-1", "match", { text: "Ghi cho SO-3", at: "2026-11-10T09:07:00.000Z" }))
+        await service.replied(replyTo("run-1", "match"))
 
-        expect(chat.repliesToAgentLine).not.toHaveBeenCalled()
-        expect(door.decide).toHaveBeenCalledWith("user-owner", expect.objectContaining({ text: "Ghi cho SO-3", at: "2026-11-10T09:07:00.000Z" }))
+        const catalog = new Map([[agentRunStopEntity.name, agentRunStopEntity]])
+        expect(engine.list).toHaveBeenCalledTimes(2)
+        expect(engine.list.mock.calls.flatMap(([, query]) => queryProblems(query, catalog))).toEqual([])
     })
 
     it("tells a reply to the card of a resolved stop that it is closed, and resumes nothing", async () => {
@@ -130,10 +128,11 @@ describe("StopAnswersService.replied: the founder's words in the team chat resum
         await expect(service.replied(replyTo("run-1", "match"))).rejects.toThrow("database down")
     })
 
-    it("answers invalid when no words can be read for the reply (an app without the team chat)", async () => {
-        const { service, door } = await build([rowOf("run-1", "match", "open")], false)
+    it("answers invalid for a reply that carries no words", async () => {
+        const { service, door } = await build([rowOf("run-1", "match", "open")])
 
-        await expect(service.replied(replyTo("run-1", "match"))).resolves.toMatchObject({ outcome: "invalid" })
+        await expect(service.replied(replyTo("run-1", "match", { text: "  " }))).resolves.toMatchObject({ outcome: "invalid" })
+        await expect(service.replied(replyTo("run-1", "match", { text: undefined }))).resolves.toMatchObject({ outcome: "invalid" })
         expect(door.decide).not.toHaveBeenCalled()
     })
 })

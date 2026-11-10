@@ -4,7 +4,7 @@ import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import type { NodeHostPorts } from "@nivo-lite/agent-sdk/node"
 import { AgentGraphAiCoreService, AgentGraphsService, AgentWorkflowRunsService } from "@modules/domain/agent-graphs"
 import { ChatConversationsService } from "@modules/domain/chat-records"
-import { GraphNodeHostService, GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import { GraphNodeHostService, GraphNodeRegistryService, GraphNodesError, GraphNodesErrorCode } from "@modules/domain/graph-nodes"
 import type { NodeEffectExecutor, NodeRunInput } from "@modules/domain/graph-nodes"
 import { CLOCK } from "@modules/platform/clock"
 import { DomainError } from "@modules/platform/errors"
@@ -16,6 +16,7 @@ import type { StopBuild } from "./stops/run-stop-records.service"
 import type { RunStop, StopOpen } from "./stops/run-stop.contracts"
 import { RunStopsService } from "./stops/run-stops.service"
 import { StopCardsService } from "./stops/stop-cards.service"
+import { ThreadApprovalsService } from "./thread-approvals.service"
 import { workflowTemplateOf } from "@nivo-lite/blocks-core/modules"
 import { FREEZE_NODE, type CompiledStep } from "./template-compiler.policy"
 import { ThreadProjectionService } from "./thread-projection.service"
@@ -84,6 +85,8 @@ interface World {
     readonly blocking?: boolean
     readonly workflowName?: string
     readonly conversationLead?: string | null
+    /** The approvals of `ask` calls (package 1-3); absent, an ask stays the step's trouble. */
+    readonly approvals?: ThreadApprovalsService
 }
 
 const build = async (world: World = {}) => {
@@ -163,6 +166,7 @@ const build = async (world: World = {}) => {
             { provide: AgentWorkflowRunsService, useValue: workflowRuns },
             { provide: ChatConversationsService, useValue: conversations },
             { provide: ThreadProjectionService, useValue: projection },
+            ...(world.approvals === undefined ? [] : [{ provide: ThreadApprovalsService, useValue: world.approvals }]),
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) }) },
         ],
@@ -453,5 +457,63 @@ describe("ThreadStepService.gate and the founder's decisions", () => {
         expect(built.projection.takenOver).toHaveBeenCalledWith({ workspaceId: "ws-1", runId: "run-1" }, "owner-1")
         expect(built.projection.resumed).not.toHaveBeenCalled()
         expect(built.stopOf()?.state).toBe("open")
+    })
+})
+
+describe("ThreadStepService.run: a call that asks the owner first (an `ask` ability)", () => {
+    const ASK = new GraphNodesError({
+        code: GraphNodesErrorCode.ToolApprovalRequired,
+        params: { tool: "payment.qr.create", fingerprint: "fp-1", reason: "ask_mode" },
+    })
+    const QUESTION = { reason: "Cho phep tao QR?", question: null, suggestions: [], decisions: ["retry", "take_over", "skip"] }
+
+    it("goes to the approvals: one approval stop at the gate, no AI core, and the step row keeps no wait item", async () => {
+        const approvals = mock<ThreadApprovalsService>()
+        approvals.approvalOf.mockResolvedValue(null)
+        approvals.asked.mockResolvedValue({ kind: "stopped", question: QUESTION, workItemId: "item-1" } as never)
+        const { steps, host, core, projection } = await build({ approvals })
+        host.run.mockRejectedValue(ASK)
+
+        const answered = await steps.run(AT, stateOf(), scopeOf())
+
+        expect(answered).toEqual({
+            update: { trouble: { stepKey: "match", question: QUESTION, locale: "vi" } },
+            goto: FREEZE_NODE,
+        })
+        expect(approvals.asked).toHaveBeenCalledWith(
+            expect.objectContaining({ workspaceId: "ws-1", runId: "run-1", stepKey: "match", agentId: "agent-1" }),
+            ASK,
+        )
+        expect(core.decide).not.toHaveBeenCalled()
+        expect(projection.stepStopped).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ code: "tool_approval_required", waitItemId: null }),
+        )
+        expect(hostInputOf(host)).not.toHaveProperty("approval")
+    })
+
+    it("runs the step again with the approved call's fingerprint once the owner approved it", async () => {
+        const approvals = mock<ThreadApprovalsService>()
+        approvals.approvalOf.mockResolvedValue({ by: "owner-1", fingerprint: "fp-1" })
+        const { steps, host } = await build({ approvals })
+        host.run.mockResolvedValue({ output: { orderId: "o-1" }, effects: [] })
+
+        await steps.run(AT, stateOf(), scopeOf())
+
+        expect(approvals.approvalOf).toHaveBeenCalledWith({ workspaceId: "ws-1", runId: "run-1" }, "match")
+        expect(hostInputOf(host)?.approval).toEqual({ by: "owner-1", fingerprint: "fp-1" })
+    })
+
+    it("a call refused before (or approved and still asking) is the step's trouble: the AI core reads it", async () => {
+        const approvals = mock<ThreadApprovalsService>()
+        approvals.approvalOf.mockResolvedValue(null)
+        approvals.asked.mockResolvedValue({ kind: "trouble", code: "tool_approval_refused", text: "refused" })
+        const { steps, host, core } = await build({ approvals })
+        host.run.mockRejectedValue(ASK)
+
+        await steps.run(AT, stateOf(), scopeOf())
+
+        expect(core.decide).toHaveBeenCalled()
+        expect(JSON.stringify(core.decide.mock.calls[0])).toContain("tool_approval_refused")
     })
 })

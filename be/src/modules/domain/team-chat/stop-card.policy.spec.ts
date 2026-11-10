@@ -1,3 +1,4 @@
+import { Test } from "@nestjs/testing"
 import {
     countedSectionOf,
     givenSectionOf,
@@ -11,18 +12,37 @@ import {
 } from "./stop-card.policy"
 import type { StopCardSection, StopCardSectionGiven } from "./stop-card.contracts"
 
+const SUBJECT = Symbol("stop-card.policy")
+
+const policy = {
+    countedSectionOf,
+    givenSectionOf,
+    legacySectionOf,
+    resolvedSectionOf,
+    stopCardViewOf,
+    stopIntentOf,
+    stopReplyUsersOf,
+    storedStopCardOf,
+    typedPayloadOf,
+}
+
+const buildSubject = async (): Promise<typeof policy> => {
+    const moduleRef = await Test.createTestingModule({ providers: [{ provide: SUBJECT, useValue: policy }] }).compile()
+    return moduleRef.get<typeof policy>(SUBJECT)
+}
+
 const AT = "2026-11-10T10:00:00.000Z"
 
 const BASE = {
-    workflow: { moduleKey: "sales", key: "consult", title: "Tư vấn bán hàng" },
-    step: { key: "consult", nodeId: "sales.consult", title: "Tư vấn" },
+    workflow: { moduleKey: "sales", key: "consult", title: "Sales consult" },
+    step: { key: "consult", nodeId: "sales.consult", title: "Consult" },
     runId: "run-1",
     leadId: "lead-1",
     conversationId: "conv-1",
     by: "engine" as const,
-    reason: "AI không trả lời sau 3 lần gọi. Khách chưa nhận được trả lời cho tin gần nhất.",
+    reason: "The AI gave no answer after 3 calls. The customer has no reply to the last message yet.",
     question: null,
-    facts: [{ name: "Lần gọi", value: "3" }],
+    facts: [{ name: "Calls", value: "3" }],
     suggestions: [],
     decisions: ["retry" as const, "take_over" as const, "skip" as const],
     repeats: 1,
@@ -37,7 +57,7 @@ const GIVEN: StopCardSectionGiven = {
     stepKey: "consult",
     kind: "ai_error",
     state: "open",
-    headline: "Quy trình đang dừng: AI lỗi",
+    headline: "The workflow stopped: AI error",
     needs: { answer: true, decisions: ["retry", "take_over", "skip"], verdicts: [] },
     replies: [],
     repeats: 1,
@@ -47,55 +67,60 @@ const GIVEN: StopCardSectionGiven = {
 
 const NOTHING = { answer: false, decisions: [], verdicts: [] }
 
-const envelope = (payload: unknown, title = "Quy trình đang dừng"): string =>
+const envelope = (payload: unknown, title = "The workflow stopped"): string =>
     JSON.stringify({ kind: "workflow.stopped", intent: "ask", title, summary: "x", payload })
 
 describe("the typed part of a stop card", () => {
-    it("reads the part the engine handed under card.stop, and none when it is absent or wrong", () => {
-        expect(givenSectionOf({ ...BASE, stop: GIVEN })).toEqual(GIVEN)
-        expect(givenSectionOf(BASE)).toBeNull()
-        expect(givenSectionOf({ ...BASE, stop: { ...GIVEN, state: "parked" } })).toBeNull()
-        expect(givenSectionOf(null)).toBeNull()
+    it("reads the part the engine handed under card.stop, and none when it is absent or wrong", async () => {
+        const subject = await buildSubject()
+        expect(subject.givenSectionOf({ ...BASE, stop: GIVEN })).toEqual(GIVEN)
+        expect(subject.givenSectionOf(BASE)).toBeNull()
+        expect(subject.givenSectionOf({ ...BASE, stop: { ...GIVEN, state: "parked" } })).toBeNull()
+        expect(subject.givenSectionOf(null)).toBeNull()
     })
 
-    it("counts every write: the first is 1, the next one more than the stored one", () => {
-        const first = countedSectionOf(GIVEN, null)
+    it("counts every write: the first is 1, the next one more than the stored one", async () => {
+        const subject = await buildSubject()
+        const first = subject.countedSectionOf(GIVEN, null)
         expect(first.revision).toBe(1)
-        expect(countedSectionOf(GIVEN, first).revision).toBe(2)
+        expect(subject.countedSectionOf(GIVEN, first).revision).toBe(2)
     })
 
-    it("keeps the suggestions and buttons only while asked, and follows the stop's resolution", () => {
-        const open = countedSectionOf(GIVEN, null)
-        const suggestions = [{ text: "Gọi khách", handledBy: "person" as const }]
-        expect(typedPayloadOf({ ...BASE, suggestions }, open)).toMatchObject({
+    it("keeps the suggestions and buttons only while asked, and follows the stop's resolution", async () => {
+        const subject = await buildSubject()
+        const open = subject.countedSectionOf(GIVEN, null)
+        const suggestions = [{ text: "Call the customer", handledBy: "person" as const }]
+        expect(subject.typedPayloadOf({ ...BASE, suggestions }, open)).toMatchObject({
             decisions: ["retry", "take_over", "skip"],
             suggestions,
             stop: open,
         })
-        expect(stopIntentOf(open)).toBe("ask")
+        expect(subject.stopIntentOf(open)).toBe("ask")
 
         const skipped: StopCardSection = { ...open, state: "skipped", needs: NOTHING, resolvedAt: AT }
-        expect(typedPayloadOf({ ...BASE, suggestions }, skipped)).toMatchObject({
+        expect(subject.typedPayloadOf({ ...BASE, suggestions }, skipped)).toMatchObject({
             decisions: [],
             suggestions: [],
             resolvedAt: AT,
         })
-        expect(stopIntentOf(skipped)).toBe("notify")
+        expect(subject.stopIntentOf(skipped)).toBe("notify")
     })
 
-    it("marks a stored part resolved on the old resolve path, a skipped one staying skipped", () => {
-        const open = countedSectionOf(GIVEN, null)
-        expect(resolvedSectionOf(open, AT)).toMatchObject({
+    it("marks a stored part resolved on the old resolve path, a skipped one staying skipped", async () => {
+        const subject = await buildSubject()
+        const open = subject.countedSectionOf(GIVEN, null)
+        expect(subject.resolvedSectionOf(open, AT)).toMatchObject({
             state: "resolved",
             resolvedAt: AT,
             needs: NOTHING,
             revision: 2,
         })
-        expect(resolvedSectionOf({ ...open, state: "skipped" }, AT).state).toBe("skipped")
+        expect(subject.resolvedSectionOf({ ...open, state: "skipped" }, AT).state).toBe("skipped")
     })
 
-    it("reads a card of the old engine as a typed stop: engine-worded is NIVO's report, open until resolved, its buttons kept", () => {
-        expect(legacySectionOf(BASE, "Quy trình đang dừng")).toMatchObject({
+    it("reads a card of the old engine as a typed stop: engine-worded is NIVO's report, open until resolved, its buttons kept", async () => {
+        const subject = await buildSubject()
+        expect(subject.legacySectionOf(BASE, "The workflow stopped")).toMatchObject({
             stopId: null,
             kind: "ai_error",
             state: "open",
@@ -103,7 +128,7 @@ describe("the typed part of a stop card", () => {
             replies: [],
             revision: 0,
         })
-        expect(legacySectionOf({ ...BASE, by: "ai", resolvedAt: AT }, "t")).toMatchObject({
+        expect(subject.legacySectionOf({ ...BASE, by: "ai", resolvedAt: AT }, "t")).toMatchObject({
             kind: "ai_report",
             state: "resolved",
             needs: NOTHING,
@@ -112,8 +137,9 @@ describe("the typed part of a stop card", () => {
 })
 
 describe("a stored stop card as a screen shows it", () => {
-    it("shows a typed card with its replies named, and none for a line that is no stop card", () => {
-        const section = countedSectionOf(
+    it("shows a typed card with its replies named, and none for a line that is no stop card", async () => {
+        const subject = await buildSubject()
+        const section = subject.countedSectionOf(
             {
                 ...GIVEN,
                 state: "answered",
@@ -122,31 +148,36 @@ describe("a stored stop card as a screen shows it", () => {
             },
             null,
         )
-        const line = envelope(typedPayloadOf(BASE, section))
-        expect(storedStopCardOf(line)?.section).toEqual(section)
-        expect(stopReplyUsersOf(line)).toEqual(["seat-1"])
-        expect(stopCardViewOf(line, (id) => (id === "seat-1" ? "Lan" : ""))).toMatchObject({
+        const line = envelope(subject.typedPayloadOf(BASE, section))
+        expect(subject.storedStopCardOf(line)?.section).toEqual(section)
+        expect(subject.stopReplyUsersOf(line)).toEqual(["seat-1"])
+        expect(subject.stopCardViewOf(line, (id) => (id === "seat-1" ? "Lan" : ""))).toMatchObject({
             kind: "ai_error",
             by: "engine",
             state: "answered",
-            headline: "Quy trình đang dừng: AI lỗi",
-            workflowTitle: "Tư vấn bán hàng",
-            stepTitle: "Tư vấn",
+            headline: "The workflow stopped: AI error",
+            workflowTitle: "Sales consult",
+            stepTitle: "Consult",
             message: BASE.reason,
-            facts: [{ name: "Lần gọi", value: "3" }],
+            facts: [{ name: "Calls", value: "3" }],
             replies: [{ kind: "retry", text: null, byName: "Lan" }],
             revision: 1,
         })
-        expect(stopCardViewOf(JSON.stringify({ kind: "message.text", payload: { text: "x" } }), () => "")).toBeNull()
-        expect(stopCardViewOf("not json", () => "")).toBeNull()
-        expect(stopCardViewOf(null, () => "")).toBeNull()
+        expect(
+            subject.stopCardViewOf(JSON.stringify({ kind: "message.text", payload: { text: "x" } }), () => ""),
+        ).toBeNull()
+        expect(subject.stopCardViewOf("not json", () => "")).toBeNull()
+        expect(subject.stopCardViewOf(null, () => "")).toBeNull()
     })
 
-    it("shows an old-engine card the same way, its heading being the card's title", () => {
-        expect(stopCardViewOf(envelope(BASE, "Quy trình đang dừng, cần bạn trả lời"), () => "")).toMatchObject({
+    it("shows an old-engine card the same way, its heading being the card's title", async () => {
+        const subject = await buildSubject()
+        expect(
+            subject.stopCardViewOf(envelope(BASE, "A workflow stopped, it needs your answer"), () => ""),
+        ).toMatchObject({
             stopId: null,
             state: "open",
-            headline: "Quy trình đang dừng, cần bạn trả lời",
+            headline: "A workflow stopped, it needs your answer",
             needs: { answer: true, decisions: ["retry", "take_over", "skip"], verdicts: [] },
             revision: 0,
         })

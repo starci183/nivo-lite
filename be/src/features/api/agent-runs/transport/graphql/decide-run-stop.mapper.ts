@@ -1,4 +1,4 @@
-import type { StopDoorAnswer } from "@modules/domain/agent-threads/stops"
+import type { StopDoorAnswer } from "@modules/domain/agent-threads"
 import type { DecideRunStopRequest } from "../../application/decide-run-stop.contracts"
 import type { AgentRunStopDecisionType } from "./dto/agent-run-stop-decision.type"
 import type { DecideRunStopInput } from "./dto/decide-run-stop.input"
@@ -7,13 +7,10 @@ import type { DecideRunStopInput } from "./dto/decide-run-stop.input"
 export const toDecideRunStopRequest = (workspaceId: string, input: DecideRunStopInput): DecideRunStopRequest => ({
     workspaceId,
     runId: input.runId,
-    stepKey: input.stepKey ?? null,
+    stepKey: input.stepKey,
     action: input.action,
-    text: input.text ?? null,
+    text: input.text,
 })
 
 /** Maps the answer of decideRunStop to the GraphQL type. */
-export const toAgentRunStopDecisionType = (result: StopDoorAnswer): AgentRunStopDecisionType => ({
-    outcome: result.outcome,
-    stepKey: result.stepKey,
-})
+export const toAgentRunStopDecisionType = (result: StopDoorAnswer): AgentRunStopDecisionType => result

@@ -123,6 +123,9 @@ export class AgentRunsService {
      * an undo in progress is continued. At most a bounded number of steps run in one call, the rest is the job's. Claims fence other workers.
      */
     async advance(workspaceId: string, runId: string, signal: AbortSignal): Promise<RunAdvance> {
+        // A run on a LangGraph thread moves only through its thread: no old-engine job or sweep drives its projected steps.
+        if (!(await this.store.drivesOldEngine(workspaceId, runId)))
+            return { run: await this.store.runById(workspaceId, runId), retryAfterMs: null }
         const retryAfterMs = await this.drive({ workspaceId, runId }, signal, ADVANCE_MAX_STEPS)
         const run = await this.store.runById(workspaceId, runId)
         if (run?.status === "done") await this.handlers.ended(workspaceId, runId)

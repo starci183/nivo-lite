@@ -1,6 +1,8 @@
-import { Injectable } from "@nestjs/common"
-import { EntityEngineService } from "@modules/domain/entity-engine"
-import type { ScopedTx } from "@modules/domain/entity-engine"
+import { Injectable, Optional } from "@nestjs/common"
+import { AGENT_THREADS_OPTIONS } from "@modules/domain/agent-threads"
+import type { AgentThreadsOptions } from "@modules/domain/agent-threads"
+import { EntityEngineService, type ScopedTx } from "@modules/domain/entity-engine"
+import { injector } from "@modules/platform/composition"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
 import type { HeldStop } from "./lead-freezes.contracts"
@@ -10,8 +12,11 @@ const STOP = "agent.run-stop"
 /** Binds the cursor of every list of this reader: none is paged past one bounded page. */
 const LIST_SCOPE = "lead-freeze-stops"
 
-/** The most open stops of one customer, or of one run, read at once. */
+/** The most stops of one lead, or of one run, read at once. */
 const STOPS_PAGE = 50
+
+/** The most open stops of a workspace read to find those of a conversation (no index pins the conversation of a stop). */
+const OPEN_PAGE = 100
 
 const OPEN = "open"
 
@@ -26,7 +31,14 @@ const SELECT: ReadonlyArray<string> = [
     "stoppedAt",
 ]
 
+/** The order of the `lead_state` and `run` indexes after their pinned fields. */
 const BY_ID: OrderBy = [["id", "asc"]]
+
+/** The order of the `state_stopped` index after the state: newest stop first. */
+const NEWEST: OrderBy = [
+    ["stoppedAt", "desc"],
+    ["id", "desc"],
+]
 
 const eq = (field: string, value: string): FilterExpr => ({ op: "eq", field, value })
 
@@ -50,6 +62,12 @@ const heldStopOf = (row: RecordRow): HeldStop | null => {
     }
 }
 
+/** The stops once each (a stop of the lead and of the conversation is read twice), in the order first read. */
+const distinctOf = (stops: ReadonlyArray<HeldStop>): ReadonlyArray<HeldStop> =>
+    stops.filter(
+        (stop, at) => stops.findIndex((one) => one.runId === stop.runId && one.stepKey === stop.stepKey) === at,
+    )
+
 /** Who a customer is, as the reader looks them up: the lead and the conversation, either may be missing. */
 export interface StopCustomer {
     /** The lead, when known. */
@@ -61,36 +79,53 @@ export interface StopCustomer {
 @Injectable()
 /**
  * What a freeze reads of the stops of thread runs (`agent.run-stop`, written by the stops of the agent threads only): the open stops of
- * a customer (by the lead's index, or the conversation) and the open stops of one run. Reads only; a stop is never written here.
+ * a customer and the open stops of one run. Reads only. ENGAGED ONLY WITH THE THREAD ENGINE: in an app whose flag names no workflow
+ * (`AgentThreadsOptions.workflows` empty, or no thread capability at all) it reads nothing and answers none, so the old engine's hot
+ * path sends no query of this reader. Every read is served by a declared index of the entity: `lead_state` (lead, state), `run`
+ * (run, then the state in code) and `state_stopped` (open stops, newest first, the conversation matched in code).
  */
 export class LeadFreezeStopsService {
-    constructor(private readonly engine: EntityEngineService) {}
+    constructor(
+        private readonly engine: EntityEngineService,
+        @Optional() @injector<AgentThreadsOptions>(AGENT_THREADS_OPTIONS) private readonly threads?: AgentThreadsOptions,
+    ) {}
+
+    /** True when the app starts runs on threads: only then can a stop be open, and only then does this reader read. */
+    engaged(): boolean {
+        return (this.threads?.workflows.length ?? 0) > 0
+    }
 
     /** The open stops about a customer: of their lead, or of their conversation; none when the customer names neither. */
-    openOfCustomer(workspaceId: string, customer: StopCustomer): Promise<ReadonlyArray<HeldStop>> {
-        const named: ReadonlyArray<FilterExpr> = [
-            ...(customer.leadId === null ? [] : [eq("leadId", customer.leadId)]),
-            ...(customer.conversationId === null ? [] : [eq("conversationId", customer.conversationId)]),
-        ]
-        const [only] = named
-        if (only === undefined) return Promise.resolve([])
-        const who: FilterExpr = named.length === 1 ? only : { op: "or", of: named }
-        return this.engine.scoped(workspaceId, (tx) => this.open(tx, { op: "and", of: [eq("state", OPEN), who] }))
+    async openOfCustomer(workspaceId: string, customer: StopCustomer): Promise<ReadonlyArray<HeldStop>> {
+        if (!this.engaged() || (customer.leadId === null && customer.conversationId === null)) return []
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const ofLead =
+                customer.leadId === null
+                    ? []
+                    : await this.read(tx, { op: "and", of: [eq("leadId", customer.leadId), eq("state", OPEN)] }, BY_ID)
+            const ofConversation =
+                customer.conversationId === null
+                    ? []
+                    : (await this.read(tx, eq("state", OPEN), NEWEST, OPEN_PAGE)).filter(
+                          (stop) => stop.conversationId === customer.conversationId,
+                      )
+            return distinctOf([...ofLead, ...ofConversation])
+        })
     }
 
-    /** The open stops of a run, in the order they were written. */
-    openOfRun(workspaceId: string, runId: string): Promise<ReadonlyArray<HeldStop>> {
-        return this.engine.scoped(workspaceId, (tx) =>
-            this.open(tx, { op: "and", of: [eq("runId", runId), eq("state", OPEN)] }),
-        )
+    /** The open stops of a run, in the order they were written; none with the thread engine off. */
+    async openOfRun(workspaceId: string, runId: string): Promise<ReadonlyArray<HeldStop>> {
+        if (!this.engaged()) return []
+        return this.engine.scoped(workspaceId, (tx) => this.read(tx, eq("runId", runId), BY_ID))
     }
 
-    private async open(tx: ScopedTx, where: FilterExpr): Promise<ReadonlyArray<HeldStop>> {
-        const page = await this.engine.list(
-            tx,
-            { from: STOP, select: SELECT, where, order: BY_ID, page: { size: STOPS_PAGE } },
-            LIST_SCOPE,
-        )
+    private async read(
+        tx: ScopedTx,
+        where: FilterExpr,
+        order: OrderBy,
+        size: number = STOPS_PAGE,
+    ): Promise<ReadonlyArray<HeldStop>> {
+        const page = await this.engine.list(tx, { from: STOP, select: SELECT, where, order, page: { size } }, LIST_SCOPE)
         return page.rows.flatMap((listed) => heldStopOf(listed.row) ?? [])
     }
 }

@@ -53,3 +53,30 @@ export const GRAPH_NODES_ERROR_KINDS: Record<GraphNodesErrorCode, ErrorKind> = {
 
 /** The one error class of the graph-nodes capability. */
 export class GraphNodesError extends DomainError<GraphNodesErrorCode> {}
+
+/**
+ * The codes of an effect call whose outcome nobody knows (a tool call sent with no answer, a delivery with no clear receipt, a decision
+ * with no known person). They are the codes of other capabilities (`agent-runs` `TOOL_OUTCOME_UNKNOWN`, `DECISION_ACTOR_UNKNOWN`,
+ * `chat-records` `CHAT_DELIVERY_UNKNOWN`), kept as they are because both engines hand exactly these to a person.
+ */
+export enum EffectOutcomeUnknownCode {
+    /** A tool call was sent and no answer came back. */
+    Tool = "tool_outcome_unknown",
+    /** A message was handed to the channel with no clear receipt. */
+    Delivery = "delivery_outcome_unknown",
+    /** A decision was taken with no known person behind it. */
+    DecisionActor = "decision_actor_unknown",
+}
+
+/** The codes of `EffectOutcomeUnknownCode`, for a lookup by a stored string. */
+const OUTCOME_UNKNOWN_VALUES: ReadonlySet<string> = new Set(Object.values(EffectOutcomeUnknownCode))
+
+/** True for a code of `EffectOutcomeUnknownCode`. */
+export const isOutcomeUnknownCode = (code: unknown): code is EffectOutcomeUnknownCode =>
+    typeof code === "string" && OUTCOME_UNKNOWN_VALUES.has(code)
+
+/**
+ * What a call the effect ledger kept as outcome-unknown answers again: the code its act ended with the first time, so either engine
+ * hands it to a person as it did then, and no machine makes the call again.
+ */
+export class EffectOutcomeUnknownError extends DomainError<EffectOutcomeUnknownCode> {}

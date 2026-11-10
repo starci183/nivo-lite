@@ -15,6 +15,7 @@ import { AGENT_THREADS_OPTIONS } from "./agent-threads.decorators"
 import type { AgentThreadsOptions } from "./agent-threads.options"
 import type { RunStop } from "./stops/run-stop.contracts"
 import { RunStopsService } from "./stops/run-stops.service"
+import { ThreadApprovalsService } from "./thread-approvals.service"
 import { ThreadDeadlinesService } from "./thread-deadlines.service"
 import { ThreadRunsService } from "./thread-runs.service"
 import type { ThreadStoppedListener, ThreadWakeAdmission } from "./thread-runs.service"
@@ -62,6 +63,7 @@ interface World {
     readonly admission?: ThreadWakeAdmission
     readonly options?: Partial<AgentThreadsOptions>
     readonly queueless?: boolean
+    readonly expired?: Awaited<ReturnType<ThreadApprovalsService["expired"]>>
 }
 
 const build = async (world: World = {}) => {
@@ -80,6 +82,9 @@ const build = async (world: World = {}) => {
     const graphs = mock<AgentGraphsService>({
         versionAt: jest.fn().mockResolvedValue({ version: 1, document: { nodes: [], rights: [], flow: flowOf(world.wait) } }),
     })
+    const approvals = mock<ThreadApprovalsService>({
+        expired: jest.fn().mockResolvedValue(world.expired === undefined ? { kind: "admitted", fresh: true } : world.expired),
+    })
     const logger = mock<Logger>()
     const tx = fakeTransaction(mockEntityManager())
     const moduleRef = await Test.createTestingModule({
@@ -93,12 +98,13 @@ const build = async (world: World = {}) => {
             { provide: ThreadRunsService, useValue: runs },
             { provide: AgentGraphsService, useValue: graphs },
             { provide: GRAPH_THREADS, useValue: port },
+            { provide: ThreadApprovalsService, useValue: approvals },
             ...(world.queueless === true ? [] : [{ provide: ThreadDeadlineQueue, useValue: new ThreadDeadlineQueue(outbox) }]),
         ],
     }).compile()
     const service = moduleRef.get(ThreadDeadlinesService)
     service.onModuleInit()
-    return { service, outbox, runs, stops, graphs, listeners, logger }
+    return { service, outbox, runs, stops, graphs, approvals, listeners, logger }
 }
 
 describe("ThreadDeadlinesService", () => {
@@ -181,6 +187,17 @@ describe("ThreadDeadlinesService", () => {
             await expect(again.service.fire(PAYLOAD)).resolves.toBe("moved")
             await expect(early.service.fire(PAYLOAD)).resolves.toBe("early")
             expect([closed, gone, answered, again, early].map((one) => one.runs.resume.mock.calls.length)).toEqual([0, 0, 0, 0, 0])
+        })
+
+        it("hands an approval's deadline to the approvals, which close the owner's item and pass the timeout on", async () => {
+            const world = await build({ now: "2026-11-11T10:00:00.000Z", stop: stopOf({ kind: "approval" }) })
+            const decided = await build({ now: "2026-11-11T10:00:00.000Z", stop: stopOf({ kind: "approval" }), expired: null })
+
+            await expect(world.service.fire(PAYLOAD)).resolves.toBe("admitted")
+            await expect(decided.service.fire(PAYLOAD)).resolves.toBe("closed")
+
+            expect(world.approvals.expired).toHaveBeenCalledWith(REF, "match", world.runs)
+            expect(world.runs.resume).not.toHaveBeenCalled()
         })
 
         it("says so when the thread refuses the timeout (it no longer waits for a person)", async () => {

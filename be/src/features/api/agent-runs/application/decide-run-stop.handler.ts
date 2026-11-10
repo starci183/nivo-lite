@@ -1,10 +1,8 @@
 import { Optional } from "@nestjs/common"
 import { CommandHandler } from "@nestjs/cqrs"
-import { StopDoorService } from "@modules/domain/agent-threads/stops"
-import type { StopDoorAnswer } from "@modules/domain/agent-threads/stops"
+import { StopDoorService, type StopDoorAnswer } from "@modules/domain/agent-threads"
 import { ICQRSHandler } from "@modules/platform/cqrs"
-import { InjectLogger } from "@modules/platform/logging"
-import type { Logger } from "@modules/platform/logging"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { DecideRunStopCommand } from "./decide-run-stop.command"
 
 /** The answer of an app that runs no thread: every run is the old engine's. */

@@ -1,3 +1,5 @@
+import type { WorkflowStoppedPayload } from "@nivo-lite/blocks-core"
+
 /**
  * The typed part of the `workflow.stopped` card (DESIGN item D.2, package 1-7): the one thing the founder sees for a stop. The card's
  * common content (workflow, step, reason, question, facts, suggestions) keeps the blocks-core payload; this part says which of the three
@@ -90,6 +92,8 @@ export interface StopCardSection {
     readonly stoppedAt: string
     /** When the stop resolved, ISO; null while it is open or the step runs again. */
     readonly resolvedAt: string | null
+    /** What a permission request asks to do (kind `approval` only); absent or null for any other stop. */
+    readonly approval?: StopCardApproval | null | undefined
     /** How many times the card was written; the web compares it to see a rewrite. Set by the team chat. */
     readonly revision: number
 }
@@ -97,10 +101,52 @@ export interface StopCardSection {
 /** The section as the engine hands it to the team chat: the revision is the team chat's to count. */
 export type StopCardSectionGiven = Omit<StopCardSection, "revision">
 
+/** What a permission request asks to do: the work item its verdict goes through, the tool, the connected account, the ability, and the call's arguments in plain words. */
+export interface StopCardApproval {
+    /** The owner's work item; approve / refuse go through its decision, not through the stop's buttons. */
+    readonly workItemId: string
+    /** The tool the agent wants to use, in the team's words when the engine has them. */
+    readonly tool: string
+    /** The connected account the call would use. */
+    readonly account: string
+    /** The ability set to ask. */
+    readonly ability: string
+    /** The call's arguments, by name. */
+    readonly args: ReadonlyArray<{ readonly name: string; readonly value: string }>
+}
+
 /** One reply as a screen shows it: the section's reply with the name of the person (empty when unknown or a deadline). */
 export interface StopCardReplyView extends StopCardReply {
     /** The person's name; empty for a deadline or a member that left. */
     readonly byName: string
+}
+
+/** The structured content of a chat line as stored (JSON text), or null for a line that carries none. */
+export type OptionalAgentMessage = string | null
+
+/** Names the person behind the id a stop keeps for a reply (a member seat or an account); empty when unknown. */
+export type StopReplierName = (id: string) => string
+
+/** A stored line read as JSON: the value, or why it is none. */
+export type StoredJsonRead =
+    { readonly ok: true; readonly value: unknown } | { readonly ok: false; readonly cause: unknown }
+
+/** The envelope of a stored agent message, unchecked: its kind, title and payload. */
+export interface StoredEnvelope {
+    /** The registered kind of the content. */
+    readonly kind: unknown
+    /** The heading. */
+    readonly title: unknown
+    /** The content. */
+    readonly payload: unknown
+}
+
+/** A stored stop card read back: its common content (the blocks-core payload) and its typed part. */
+export interface StoredStopCard {
+    /** The common content. */
+    readonly base: WorkflowStoppedPayload
+    /** The typed part; read from the common content for a card of the old engine. */
+    readonly section: StopCardSection
 }
 
 /** The typed stop of a card as a screen shows it, the common content of the card included. */
@@ -149,6 +195,8 @@ export interface StopCardView {
     readonly stoppedAt: string
     /** When it resolved, ISO, or null. */
     readonly resolvedAt: string | null
+    /** What a permission request asks to do; null for any other stop. */
+    readonly approval: StopCardApproval | null
     /** How many times the card was written (0 on an old-engine card). */
     readonly revision: number
 }

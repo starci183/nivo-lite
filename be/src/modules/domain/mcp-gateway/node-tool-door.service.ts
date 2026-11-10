@@ -15,6 +15,7 @@ import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { audienceOfModule } from "./caller-audience.policy"
+import { callWordsOf } from "./connector-call.policy"
 import { gatewayArgumentsSchema } from "./gateway-tools.schema"
 import { runOfClaims } from "./gateway-run.policy"
 import type { StepClaims } from "./gateway-run.policy"
@@ -37,16 +38,24 @@ const CONNECTION_REFUSED = "connection_refused"
 /** The most governing seats read to judge the member behind a turn. */
 const STEWARDS_MAX = 50
 
+/**
+ * The arguments of a call a person is asked to approve, in plain words (bounded names and values, at most the card's count), so the
+ * permission request can show them, as one JSON text (error params are texts or numbers); the raw payload never rides the error.
+ */
+const askedArgsOf = (args: unknown): string =>
+    JSON.stringify(Object.fromEntries(callWordsOf(args).map((word) => [word.name, word.value])))
+
 /** The typed error of a gateway answer that is not a value. */
 const failureOf = (
     tool: string,
     fingerprint: string,
     result: Exclude<GatewayCallResult, { ok: true }>,
+    args: unknown,
 ): GraphNodesError => {
     if (result.code === "approval_required") {
         return new GraphNodesError({
             code: GraphNodesErrorCode.ToolApprovalRequired,
-            params: { tool, fingerprint, reason: result.reason },
+            params: { tool, fingerprint, reason: result.reason, args: askedArgsOf(args) },
         })
     }
     if (result.code === "not_granted")
@@ -158,7 +167,7 @@ export class NodeToolDoorService implements NodeToolDoor {
         if (verdict.kind === "approval") {
             throw new GraphNodesError({
                 code: GraphNodesErrorCode.ToolApprovalRequired,
-                params: { tool: call.effect, fingerprint, reason: "ask_mode" },
+                params: { tool: call.effect, fingerprint, reason: "ask_mode", args: askedArgsOf(call.payload) },
             })
         }
         this.failed(
@@ -212,7 +221,7 @@ export class NodeToolDoorService implements NodeToolDoor {
         const caller = await this.callerOf(claims, call.key, approvedBy)
         const result = await this.gateway.call(caller, call.tool, checked.data)
         if (result.ok) return result.value
-        const error = failureOf(call.tool, fingerprint, result)
+        const error = failureOf(call.tool, fingerprint, result, checked.data)
         if (error.code === GraphNodesErrorCode.ToolApprovalRequired) throw error
         throw this.failed(call.tool, claims, error, result.code)
     }

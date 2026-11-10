@@ -132,7 +132,10 @@ describe("a stop with a conversation", () => {
         const [resolved] = await stopsOf(process, runId)
         expect(resolved).toMatchObject({ state: "resolved", decision: { kind: "answer", text: "8h den 21h" } })
         expect(db.team).toHaveLength(1)
-        expect(db.team[0]?.versions.at(-1)).toHaveProperty("resolved")
+        expect(db.team[0]?.versions.at(-1)).toMatchObject({
+            kind: "workflow.stopped",
+            rewrite: { stop: { state: "answered", resolvedAt: expect.any(String) } },
+        })
         expect(rowsOf(db, runId).run).toMatchObject({ engine: "langgraph", status: "done" })
     })
 
@@ -161,7 +164,10 @@ describe("a stop with a conversation", () => {
         expect(db.model.askedOf(ANSWER)).toHaveLength(1)
         expect((await stopsOf(process, runId))[0]).toMatchObject({ state: "resolved", decision: { kind: "skip" } })
         expect(db.team).toHaveLength(1)
-        expect(db.team[0]?.versions.at(-1)).toHaveProperty("resolved")
+        expect(db.team[0]?.versions.at(-1)).toMatchObject({
+            kind: "workflow.stopped",
+            rewrite: { stop: { state: "skipped", resolvedAt: expect.any(String) } },
+        })
         expect(rowsOf(db, runId).run).toMatchObject({ status: "cancelled" })
         expect(db.released).toContain(FRONT)
     })

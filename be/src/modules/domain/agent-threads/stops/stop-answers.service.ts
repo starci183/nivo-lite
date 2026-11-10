@@ -1,14 +1,12 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Injectable } from "@nestjs/common"
 import type { FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
 import { EntityEngineService } from "@modules/domain/entity-engine"
-import { lineKeyOf, TeamChatRoomsService } from "@modules/domain/team-chat"
-import type { AgentLineReplied } from "@modules/domain/team-chat"
+import { lineKeyOf, type AgentLineReplied } from "@modules/domain/team-chat"
 import { DomainError } from "@modules/platform/errors"
 import { runStopOf } from "./run-stop-records.service"
 import type { RunStop, StopState } from "./run-stop.contracts"
 import { stopCardKeyOf } from "./stop-cards.service"
-import { StopDoorService } from "./stop-door.service"
-import type { StopDoorOutcome } from "./stop-door.service"
+import { StopDoorService, type StopDoorOutcome } from "./stop-door.service"
 
 const STOP = "agent.run-stop"
 
@@ -46,16 +44,8 @@ const NEWEST: OrderBy = [
 
 const stateIs = (state: StopState): FilterExpr => ({ op: "eq", field: "state", value: state })
 
-/**
- * A person's reply to an engine line in the team chat. The words and their time travel with it once the team chat hands them
- * (requested of the team chat's owner); until then the newest reply under the card is read.
- */
-export interface StopReply extends AgentLineReplied {
-    /** The words of the reply, when the team chat hands them. */
-    readonly text?: string | undefined
-    /** When the reply was written, ISO, when the team chat hands it. */
-    readonly at?: string | undefined
-}
+/** A person's reply to an engine line in the team chat, with its words and moment as the team chat hands them. */
+export type StopReply = AgentLineReplied
 
 /** How a reply to the card of a stop ended: the door's outcome, or `not_allowed` for a person who may not decide for the workspace. */
 export type StopReplyOutcome = StopDoorOutcome | "not_allowed"
@@ -69,6 +59,10 @@ export interface StopReplied {
     /** How it ended. */
     readonly outcome: StopReplyOutcome
 }
+
+/** The words of a reply and their moment, as the team chat handed them; null when it handed no words. */
+const wordsOf = (reply: StopReply): { readonly text: string; readonly at: string } | null =>
+    reply.text === undefined || reply.text.trim() === "" || reply.at === undefined ? null : { text: reply.text, at: reply.at }
 
 /** The stop whose card a reply answers, among the stops read: the card's key is the stop's run and step. */
 export const stopOfLine = (stops: ReadonlyArray<RunStop>, lineKey: string): RunStop | null =>
@@ -86,7 +80,6 @@ export class StopAnswersService {
     constructor(
         private readonly engine: EntityEngineService,
         private readonly door: StopDoorService,
-        @Optional() private readonly chat?: TeamChatRoomsService,
     ) {}
 
     /** Hands the words of a reply to the stop whose card it answers; null when it answers the card of no stop. */
@@ -97,7 +90,7 @@ export class StopAnswersService {
         if (stop === null) return null
         const replied = (outcome: StopReplyOutcome): StopReplied => ({ runId: stop.runId, stepKey: stop.stepKey, outcome })
         if (stop.state === "resolved") return replied("stop_closed")
-        const words = await this.wordsOf(reply, stop)
+        const words = wordsOf(reply)
         if (words === null) return replied("invalid")
         try {
             const answered = await this.door.decide(reply.byUserId, {
@@ -114,15 +107,6 @@ export class StopAnswersService {
             if (cause instanceof DomainError) return replied("not_allowed")
             throw cause
         }
-    }
-
-    /** The words of the reply and their moment: as the team chat handed them, else the newest reply under the stop's card. */
-    private async wordsOf(reply: StopReply, stop: RunStop): Promise<{ readonly text: string; readonly at: string } | null> {
-        if (reply.text !== undefined && reply.text.trim() !== "" && reply.at !== undefined)
-            return { text: reply.text, at: reply.at }
-        const replies = (await this.chat?.repliesToAgentLine(reply.workspaceId, stopCardKeyOf(stop.runId, stop.stepKey))) ?? []
-        const newest = replies.at(-1)
-        return newest === undefined || newest.text.trim() === "" ? null : { text: newest.text, at: newest.at }
     }
 
     /** The newest stops of a state of the workspace, by the entity's index on state and moment. */

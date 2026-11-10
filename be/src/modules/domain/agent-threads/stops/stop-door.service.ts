@@ -1,12 +1,10 @@
-import { Injectable, Optional } from "@nestjs/common"
-import { AgentRunCancelService, AgentRunsService, AgentRunsViewService } from "@modules/domain/agent-runs"
-import type { OwnerCancelAnswer } from "@modules/domain/agent-runs"
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
+import { AgentRunCancelService, AgentRunsService, AgentRunsViewService, type OwnerCancelAnswer } from "@modules/domain/agent-runs"
 import { AgentWorkAccessService } from "@modules/domain/agent-work"
 import { ChatConversationsService } from "@modules/domain/chat-records"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock, type Clock } from "@modules/platform/clock"
-import { ThreadRunsService } from "../thread-runs.service"
-import type { ThreadWakeRefusal } from "../thread-runs.service"
+import { ThreadRunsService, type ThreadWakeRefusal } from "../thread-runs.service"
 import { RunStopRecordsService } from "./run-stop-records.service"
 import type { OptionalRunStop, RunStop, StopDecision } from "./run-stop.contracts"
 import { stopDecisionOf } from "./stop-gate.policy"
@@ -43,7 +41,8 @@ export interface StopActor {
 
 /**
  * How a decision on a stop ended. `admitted`: a wake of the run carries it, the thread moves under its lease. `already_admitted`: a
- * decision for this stop is already queued and not yet applied (the same one again, or another one first). `stop_closed`: the stop was
+ * decision for this stop is already queued and not yet applied (the same one again). `already_answered`: someone already answered this
+ * stop with another decision, which is the one applied; this one is not kept. `stop_closed`: the stop was
  * resolved; nothing moved and nothing will. `step_running`: the stop is open but its step runs again right now (after an earlier
  * answer); a decision is taken once the thread waits again. `not_stopped`: the run waits for no person. `not_thread`: a run of the old
  * engine (its own doors answer it). `not_found`: no such run. `invalid`: no such action, or an answer with no words.
@@ -51,6 +50,7 @@ export interface StopActor {
 export type StopDoorOutcome =
     | "admitted"
     | "already_admitted"
+    | "already_answered"
     | "stop_closed"
     | "step_running"
     | "not_stopped"
@@ -78,17 +78,16 @@ export const stopDecisionOfAsk = (action: StopAction, by: string, at: string, te
  */
 export const targetStopOf = (stops: ReadonlyArray<RunStop>, stepKey: string | null): OptionalRunStop => {
     if (stepKey !== null) return stops.find((stop) => stop.stepKey === stepKey) ?? null
-    const newest = (a: string, b: string): number => (a < b ? 1 : a > b ? -1 : 0)
-    const open = stops.filter((stop) => stop.state === "open").toSorted((a, b) => newest(a.stoppedAt, b.stoppedAt))
+    const open = stops.filter((stop) => stop.state === "open").toSorted((a, b) => b.stoppedAt.localeCompare(a.stoppedAt))
     if (open.length > 0) return open[0] ?? null
-    return stops.toSorted((a, b) => newest(a.resolvedAt ?? "", b.resolvedAt ?? "")).at(0) ?? null
+    return stops.toSorted((a, b) => (b.resolvedAt ?? "").localeCompare(a.resolvedAt ?? "")).at(0) ?? null
 }
 
 /** A cancel of a thread run, answered by its stop's `skip`: the run ends as skipped once the thread applies it; effects are kept. */
-export const cancelOfSkip = (outcome: StopDoorOutcome): OwnerCancelAnswer =>
-    outcome === "admitted" || outcome === "already_admitted"
-        ? { kind: "cancelled", note: "effects_kept" }
-        : { kind: outcome === "not_found" ? "not_found" : "not_cancellable", note: null }
+export const cancelOfSkip = (outcome: StopDoorOutcome): OwnerCancelAnswer => {
+    if (outcome === "admitted" || outcome === "already_admitted") return { kind: "cancelled", note: "effects_kept" }
+    return { kind: outcome === "not_found" ? "not_found" : "not_cancellable", note: null }
+}
 
 /** An owner's or manager's request to stop a run, as the owner door of the runs takes it. */
 type OwnerCancelRequest = Parameters<AgentRunCancelService["cancel"]>[0]
@@ -96,6 +95,7 @@ type OwnerCancelRequest = Parameters<AgentRunCancelService["cancel"]>[0]
 /** What a refusal of the thread runs means for the person, given the stop as it stands after it. */
 const refusedOutcomeOf = (code: ThreadWakeRefusal, after: OptionalRunStop): StopDoorOutcome => {
     if (code === "decision_invalid") return "invalid"
+    if (code === "already_answered") return "already_answered"
     if (code === "run_missing") return "not_found"
     if (code === "run_not_thread") return "not_thread"
     if (after?.state === "resolved") return "stop_closed"
@@ -110,9 +110,9 @@ const refusedOutcomeOf = (code: ThreadWakeRefusal, after: OptionalRunStop): Stop
  * runs here. Only an owner or a manager of the workspace may decide, as for the freezes. A stop is one record per run and step: a
  * decision for a stop already resolved is refused with `stop_closed` and never resumes anything. A take-over also hands the run's
  * conversation to the person by name, so the AI stays quiet in it while they hold it. The door carries; the step decides what the words
- * mean.
+ * mean. It registers with the runs' cancel door at start, so the run page's Cancel of a thread run is its stop's `skip`.
  */
-export class StopDoorService {
+export class StopDoorService implements OnModuleInit {
     constructor(
         @InjectClock() private readonly clock: Clock,
         private readonly access: AgentWorkAccessService,
@@ -121,8 +121,8 @@ export class StopDoorService {
         private readonly view: AgentRunsViewService,
         private readonly records: RunStopRecordsService,
         private readonly threads: ThreadRunsService,
-        private readonly cancels: AgentRunCancelService,
         @Optional() private readonly conversations?: ChatConversationsService,
+        @Optional() private readonly cancels?: AgentRunCancelService,
     ) {}
 
     /** A person's decision: refused (typed) for anyone but an owner or a manager of the workspace, else applied as theirs. */
@@ -133,13 +133,13 @@ export class StopDoorService {
         return this.apply({ memberId, name }, ask)
     }
 
-    /**
-     * The run page's Cancel: the old engine's cancel door, except for a run on a LangGraph thread, which that door refuses
-     * (`thread_run`) and whose Cancel is its stop's `skip`, decided here as the same person.
-     */
-    async cancelRun(request: OwnerCancelRequest): Promise<OwnerCancelAnswer> {
-        const answer = await this.cancels.cancel(request)
-        if (answer.kind !== "thread_run") return answer
+    /** Registers with the runs' cancel door once the app has started. */
+    onModuleInit(): void {
+        this.cancels?.setThreadStops(this)
+    }
+
+    /** The run page's Cancel of a thread run (the cancel door hands it here): the stop's `skip`, decided as the same person. */
+    async skipRun(request: OwnerCancelRequest): Promise<OwnerCancelAnswer> {
         const skipped = await this.decide(request.principalId, {
             workspaceId: request.workspaceId,
             runId: request.runId,

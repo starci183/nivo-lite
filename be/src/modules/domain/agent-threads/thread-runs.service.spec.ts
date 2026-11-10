@@ -6,7 +6,7 @@ import { latestTemplateVersion, workflowTemplateOf } from "@nivo-lite/blocks-cor
 import { AgentGraphFlowRunsService, AgentGraphsService, AgentWorkflowRunsService } from "@modules/domain/agent-graphs"
 import type { FlowThreadRun } from "@modules/domain/agent-graphs"
 import { AgentRunsService, AgentRunsViewService } from "@modules/domain/agent-runs"
-import { AgentTagService, AgentWakeService } from "@modules/domain/agent-work"
+import { AgentTagService, AgentWakeService, AgentWorkReadService } from "@modules/domain/agent-work"
 import type { AgentTurnView, AgentWake } from "@modules/domain/agent-work"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { GRAPH_THREADS, LanggraphError, LanggraphErrorCode, THREAD_END } from "@modules/integrations/langgraph"
@@ -299,6 +299,11 @@ const build = async (world: World = {}) => {
             return Promise.resolve(fresh ? `wake-${written.length}` : null)
         }),
     })
+    const wakeReader = mock<AgentWorkReadService>({
+        wakeContextOf: jest.fn((_ws: string, _agent: string, source: string, eventKey: string) =>
+            Promise.resolve(written.find((one) => one.source === source && one.eventKey === eventKey)?.context ?? null),
+        ),
+    })
     const workflows = mock<AgentWorkflowRunsService>({
         workflowKeyOfRun: jest.fn().mockResolvedValue("front-desk"),
         pinsOf: jest.fn().mockResolvedValue([{ runId: "run-1", workflowId: "wf-1", workflowName: "Front desk", version: 4 }]),
@@ -325,6 +330,7 @@ const build = async (world: World = {}) => {
             { provide: ThreadProjectionService, useValue: projection },
             { provide: AgentWorkflowRunsService, useValue: workflows },
             { provide: AgentTagService, useValue: tags },
+            { provide: AgentWorkReadService, useValue: wakeReader },
             ...(world.portless === true ? [] : [{ provide: GRAPH_THREADS, useValue: port }]),
         ],
     }).compile()
@@ -491,6 +497,23 @@ describe("ThreadRunsService", () => {
             expect(told).toEqual(["run-1:answer"])
         })
 
+        it("tells its settled listeners after a drive that stopped and after one that ended, never failing the wake", async () => {
+            const world = await build()
+            const settled: Array<string> = []
+            world.service.whenSettled(() => Promise.reject(new Error("freezes down")))
+            world.service.whenSettled((ref) => {
+                settled.push(ref.runId)
+                return Promise.resolve()
+            })
+            world.script.outputs = { understand: { branch: "question" }, answer: STOP }
+
+            await world.service.started(world.opened(), world.live)
+            await world.service.resume(REF, { kind: "skip", by: "member-1", at: DECISION_AT })
+            await world.service.woken(world.turnOfWake(6), world.live)
+
+            expect(settled).toEqual(["run-1", "run-1"])
+        })
+
         it("writes its wakes under the engine's own `thread` source, and still runs one written under `internal` before it", async () => {
             const { world } = await stopped()
 
@@ -521,7 +544,8 @@ describe("ThreadRunsService", () => {
                         subjectId: "run-1",
                         tagContext: JSON.stringify({ decision, stepKey: "answer", answered: 0 }),
                     },
-                    actorMemberId: "member-1",
+                    // `member-1` is no member id (uuid): it stays in the payload's decision, never in the actor column.
+                    actorMemberId: null,
                 },
             ])
             expect(world.port.calls).toEqual(["start"])
@@ -600,6 +624,43 @@ describe("ThreadRunsService", () => {
             expect(world.port.calls).toEqual(["start", "resume", "drive"])
             expect(path(world.ran)).toEqual(["understand", "answer", "answer"])
             await expect(world.port.stateOf(REF)).resolves.toMatchObject({ status: "stopped" })
+        })
+
+        it("serialises two concurrent decisions on one stop: the first wins and is applied once, the other is refused as already answered", async () => {
+            const { world } = await stopped()
+            const words = { kind: "answer", text: "Quote 120k", by: "member-1", at: DECISION_AT }
+            const skip = { kind: "skip", by: "member-2", at: DECISION_AT }
+
+            const [first, second] = await Promise.all([world.service.resume(REF, words), world.service.resume(REF, skip)])
+
+            expect(first).toEqual({ kind: "admitted", fresh: true })
+            expect(second).toEqual({ kind: "refused", code: "already_answered" })
+            expect(world.written).toHaveLength(1)
+            await expect(world.service.resume(REF, words)).resolves.toEqual({ kind: "admitted", fresh: false })
+
+            await world.service.woken(world.turnOfWake(7), world.live)
+            await world.service.woken(world.turnOfWake(8), world.live)
+
+            // The step ran once before the stop and ONCE more with the winner's words: the second wake applied nothing.
+            expect(world.ran.filter((one) => one.step === "answer").map((one) => one.answers.length)).toEqual([0, 1])
+            expect(world.projection.runEnded).not.toHaveBeenCalledWith(REF, expect.objectContaining({ outcome: "skipped" }))
+        })
+
+        it("puts only a member id (uuid) in the wake's actor column; any other `by` stays in the payload alone", async () => {
+            const { world } = await stopped()
+            const member = "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b"
+
+            await world.service.resume(REF, { kind: "retry", by: member, at: DECISION_AT })
+            const first = world.written.at(-1)
+
+            expect(first?.actorMemberId).toBe(member)
+            const timeout = await build()
+            timeout.script.outputs = { understand: { branch: "question" }, answer: STOP }
+            await timeout.service.started(timeout.opened(), timeout.live)
+            await timeout.service.resume(REF, { kind: "skip", by: "engine:approvals", at: DECISION_AT })
+            const engine = timeout.written.at(-1)
+            expect(engine?.actorMemberId).toBeNull()
+            expect(engine?.context.tagContext).toContain('"by":"engine:approvals"')
         })
 
         it("refuses what is no decision, and a thread that waits for nobody, with nothing written", async () => {

@@ -1,5 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
 import { ThreadRunsService } from "@modules/domain/agent-threads"
 // Deep import until the folder's index exports the approvals (request to P4 under "PHASE1 wiring → P4"); then one import above.
 import {
@@ -7,20 +6,20 @@ import {
     THREAD_APPROVAL_ENGINE,
     TOOL_APPROVAL_ACTION,
 } from "@modules/domain/agent-threads/thread-approvals.service"
-import { InjectWorkPerformerRegistry, ModuleCatalogService } from "@modules/domain/decisions"
-import type {
-    Performed,
-    PerformedBy,
-    Prepared,
-    Proposal,
-    WorkContext,
-    WorkItem,
-    WorkPerformer,
-    WorkPerformerRegistry,
+import {
+    InjectWorkPerformerRegistry,
+    ModuleCatalogService,
+    type Performed,
+    type PerformedBy,
+    type Prepared,
+    type Proposal,
+    type WorkContext,
+    type WorkItem,
+    type WorkPerformer,
+    type WorkPerformerRegistry,
 } from "@modules/domain/decisions"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { WorkPerformersError, WorkPerformersErrorCode } from "./errors/work-performers.error"
 import { textOf } from "./performer.policy"
 
@@ -28,7 +27,7 @@ import { textOf } from "./performer.policy"
 const OWNER_ROLE = "owner"
 
 /** The member behind a decision, or null for the engine (a deadline) or a decider no seat stands for. */
-const memberOf = (by: PerformedBy): string | null => ("memberId" in by && by.memberId !== undefined ? by.memberId : null)
+const memberOf = (by: PerformedBy): string | null => ("memberId" in by ? (by.memberId ?? null) : null)
 
 /** True for the item of a thread run's approval stop; every other item of the action is the old engine's. */
 const isThreadItem = (proposal: Proposal): boolean => proposal.fields.engine === THREAD_APPROVAL_ENGINE

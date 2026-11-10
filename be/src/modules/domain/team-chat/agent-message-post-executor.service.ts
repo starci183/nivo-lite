@@ -25,11 +25,11 @@ import {
     countedSectionOf,
     givenSectionOf,
     resolvedSectionOf,
-    stopCardSectionGiven,
     stopIntentOf,
     storedSectionOf,
     typedPayloadOf,
 } from "./stop-card.policy"
+import { stopCardSectionGiven } from "./stop-card.schema"
 import type { TeamCardMessage } from "./team-chat-audience.contracts"
 import { TeamChatAudienceService } from "./team-chat-audience.service"
 import { TeamChatError, TeamChatErrorCode } from "./errors/team-chat.error"
@@ -121,6 +121,54 @@ const foldedOf = (now: WorkflowStoppedPayload, before: WorkflowStoppedPayload): 
 export const sameStopOf = (now: WorkflowStoppedPayload, before: WorkflowStoppedPayload): WorkflowStoppedPayload =>
     now.decisions.length === 0 ? before : { ...before, decisions: now.decisions }
 
+/**
+ * The common content of a stop's card against the card already stored: a first telling as given; the same occurrence told again keeps
+ * the words in the chat and takes the decisions it brings; a new occurrence folds in (one more repeat, the first time kept).
+ */
+const commonCardOf = (
+    given: WorkflowStoppedPayload,
+    before: WorkflowStoppedPayload | null,
+    sameOccurrence: boolean,
+): WorkflowStoppedPayload => {
+    if (before === null) return given
+    return sameOccurrence ? sameStopOf(given, before) : foldedOf(given, before)
+}
+
+/**
+ * The message of a stop's card to post or fold. The same stop told again keeps the words already in the chat (its title and summary
+ * too) unless it is a thread's typed stop, whose words follow its state; a stop of a thread carries its typed part (state, needs and
+ * replies), counted one write more than the stored one.
+ */
+const stoppedMessageOf = (
+    given: StoppedGiven,
+    previous: TeamCardMessage | null,
+    occurrence: string,
+): TeamCardMessage => {
+    const parsed = previous === null ? null : workflowStoppedPayload.safeParse(previous.payload)
+    const before = parsed?.success === true ? parsed.data : null
+    const kept = before !== null && previous?.occurrence === occurrence ? previous : null
+    const common = commonCardOf(given.card, before, kept !== null)
+    const section = given.section === null ? null : countedSectionOf(given.section, storedSectionOf(previous?.payload))
+    const card = section === null ? common : typedPayloadOf(common, section)
+    const words = kept !== null && section === null ? kept : given
+    return {
+        kind: STOPPED_KIND,
+        intent: section === null ? "ask" : stopIntentOf(section),
+        title: words.title,
+        summary: words.summary,
+        payload: card,
+        options: stopOptionsOf(card, section),
+        occurrence,
+    }
+}
+
+/** The repeats of a stop card message built here (its payload is always a stop card). */
+const repeatsOf = (message: TeamCardMessage): number => {
+    const repeats: unknown =
+        typeof message.payload === "object" && message.payload !== null ? Reflect.get(message.payload, "repeats") : null
+    return typeof repeats === "number" ? repeats : 1
+}
+
 /** A text member of a row, or empty. */
 const textOf = (value: unknown): string => (typeof value === "string" ? value : "")
 
@@ -190,30 +238,10 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
         if (given === null) throw new TeamChatError({ code: TeamChatErrorCode.InvalidAgentMessage })
         const key = lineKeyOf(call.dedupeKey ?? call.key)
         const previous = await this.audience.storedCard(turn.workspaceId, key)
-        const before = previous === null ? null : workflowStoppedPayload.safeParse(previous.payload)
-        // The same stop told again keeps the words already in the chat (its title and summary too); a new stop brings its own.
-        const kept = before?.success === true && previous?.occurrence === call.key ? previous : null
-        const common =
-            before?.success !== true
-                ? given.card
-                : kept !== null
-                  ? sameStopOf(given.card, before.data)
-                  : foldedOf(given.card, before.data)
-        // A stop of a thread carries its typed part: the state, the needs and the replies, counted one write more.
-        const section =
-            given.section === null ? null : countedSectionOf(given.section, storedSectionOf(previous?.payload))
-        const card = section === null ? common : typedPayloadOf(common, section)
-        const message: TeamCardMessage = {
-            kind: STOPPED_KIND,
-            intent: section === null ? "ask" : stopIntentOf(section),
-            title: kept !== null && section === null ? kept.title : given.title,
-            summary: kept !== null && section === null ? kept.summary : given.summary,
-            payload: card,
-            options: stopOptionsOf(card, section),
-            occurrence: call.key,
-        }
+        const message = stoppedMessageOf(given, previous, call.key)
         const folded = previous === null ? null : await this.audience.foldTeamCard(turn.workspaceId, key, message)
-        if (folded !== null) return { kind: "chat-message", id: folded, facts: { folded: true, repeats: card.repeats } }
+        if (folded !== null)
+            return { kind: "chat-message", id: folded, facts: { folded: true, repeats: repeatsOf(message) } }
         const posted = await this.audience.postTeamCard(turn.workspaceId, {
             agentId: turn.agentId,
             audience: DEFAULT_AUDIENCE,

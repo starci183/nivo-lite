@@ -6,8 +6,11 @@ import {
     CORE,
     FRONT_DESK,
     UNDERSTAND,
+    WS,
     actsOf,
     customerWrites,
+    drain,
+    itemsOf,
     processOf,
     refOf,
     rowsOf,
@@ -166,5 +169,81 @@ describe("rights per connected account on the prebuilt agent loop", () => {
             ["answer", "ai_report", "open"],
         ])
         expect(rowsOf(db, runId).run).toMatchObject({ status: "waiting", engine: "langgraph" })
+    })
+})
+
+// Package 1-3 on threads (P3's service, P8's route in the node function): an `ask` ability stops the step for the OWNER (one item, one
+// stop of kind `approval`), never the AI core. Approved: the step runs again carrying exactly that call's approval and the call acts
+// once. Refused: the step runs again with the refusal in words; the same call asked again is the step's trouble, never a second item.
+describe("an ask ability on a thread (approval)", () => {
+    /** The QR ability of the default account ticked `ask` instead of `auto`. */
+    const asksForQr = (db: ThreadDb): void => {
+        const at = db.rights.attachments.findIndex((one) => one.connectionId === "sepay-1")
+        const attached = db.rights.attachments[at]
+        if (attached !== undefined) db.rights.attachments.splice(at, 1, { ...attached, abilities: { "qr.create": "ask" } })
+    }
+    const QR = { call: { tool: TOOL.paymentQrCreate, args: { orderId: "order-1" } } }
+
+    /** The step asks: one item, one approval stop, the thread at the gate. */
+    const asked = async (db: ThreadDb) => {
+        asksForQr(db)
+        db.model.script(SEND_QR, QR)
+        const { process, woken } = await startsQr(db)
+        const runId = woken.runId ?? ""
+        expect(woken.error).toBeNull()
+        const [item] = itemsOf(db)
+        return { process, runId, workItemId: item?.item.id ?? "" }
+    }
+
+    it("asks the owner: one approval item and one stop of kind approval; no AI core; nothing acted; no wait item on the step", async () => {
+        const db = threadDbOf()
+        const { process, runId } = await asked(db)
+
+        expect(itemsOf(db).map((one) => one.key)).toEqual([`tool-approval:${runId}:send-qr:${String(itemsOf(db)[0]?.item.proposal.fields.fingerprint)}`])
+        expect((await stopsOf(process, runId)).map((stop) => [stop.stepKey, stop.kind, stop.state])).toEqual([["send-qr", "approval", "open"]])
+        expect(db.model.askedOf(CORE)).toHaveLength(0)
+        expect(actsOf(db, TOOL.paymentQrCreate)).toEqual([])
+        expect((await process.threads.stateOf(refOf(runId)))?.status).toBe("stopped")
+        expect(rowsOf(db, runId).steps.at(-1)).toMatchObject({ waitItemId: null })
+    })
+
+    it("approved: the step runs again with that call's approval and the QR acts exactly once; the run ends", async () => {
+        const db = threadDbOf()
+        const { process, runId, workItemId } = await asked(db)
+        db.model.script(SEND_QR, QR, { done: { orderId: "order-1", sent: true } })
+
+        const from = db.wakes.length
+        const decided = await process.approvals?.decided(
+            { workspaceId: WS, runId, stepKey: "send-qr", workItemId, verdict: "approved", by: "owner-1", text: "" },
+            process.threadRuns,
+        )
+        const ran = await drain(process, from)
+
+        expect(decided).toMatchObject({ kind: "admitted" })
+        expect(ran.map((one) => one.error)).toEqual([null])
+        expect(actsOf(db, TOOL.paymentQrCreate)).toHaveLength(1)
+        expect(itemsOf(db)).toHaveLength(1)
+        expect((await process.threads.stateOf(refOf(runId)))?.status).toBe("ended")
+        expect((await stopsOf(process, runId))[0]?.state).toBe("resolved")
+    })
+
+    it("refused: the model reads the refusal; the same call asked again is the step's trouble (AI core), no second item, nothing acted", async () => {
+        const db = threadDbOf()
+        const { process, runId, workItemId } = await asked(db)
+        db.model.script(SEND_QR, QR)
+        db.model.script(CORE, report)
+
+        const from = db.wakes.length
+        await process.approvals?.decided(
+            { workspaceId: WS, runId, stepKey: "send-qr", workItemId, verdict: "refused", by: "owner-1", text: "Khong tao QR, khach chuyen khoan" },
+            process.threadRuns,
+        )
+        await drain(process, from)
+
+        expect(JSON.stringify(db.model.askedOf(SEND_QR).at(-1)?.request)).toContain("Khong tao QR, khach chuyen khoan")
+        expect(itemsOf(db)).toHaveLength(1)
+        expect(actsOf(db, TOOL.paymentQrCreate)).toEqual([])
+        expect(JSON.stringify(db.model.askedOf(CORE).at(-1)?.request)).toContain("tool_approval_refused")
+        expect((await stopsOf(process, runId)).map((stop) => [stop.stepKey, stop.state])).toEqual([["send-qr", "open"]])
     })
 })

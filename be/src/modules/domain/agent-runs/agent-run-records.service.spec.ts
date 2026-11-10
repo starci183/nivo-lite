@@ -2,7 +2,10 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
-import type { Query } from "@nivo-lite/agent-sdk/query"
+import { queryProblems } from "@nivo-lite/agent-sdk/query"
+import type { EntityCatalog, Query } from "@nivo-lite/agent-sdk/query"
+import { agentRunEntity, agentRunStepEntity } from "@nivo-lite/blocks-core/entities"
+import type { EntityDefinition } from "@nivo-lite/agent-sdk/entity"
 import { AgentRunRecordsService } from "./agent-run-records.service"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { runRecordOf, runRowOf, stepRecordOf, stepRowOf } from "@tests/fixtures/builders/agent-runs.builder"
@@ -143,5 +146,31 @@ describe("AgentRunRecordsService writes", () => {
         await expect(service.patchStep(tx, stepRecordOf(), { status: "running" })).rejects.toMatchObject({
             code: "AGENT_RUNS_RESULT_REJECTED",
         })
+    })
+})
+
+describe("AgentRunRecordsService: the engine of a run is read with it, and every list stays index-served", () => {
+    it("reads the engine of a run (legacy when the row names none)", async () => {
+        const { service, engine } = await build()
+        engine.get.mockResolvedValueOnce(runRowOf({ engine: "langgraph" })).mockResolvedValueOnce(runRowOf())
+
+        await expect(service.run(tx, "run-1")).resolves.toMatchObject({ engine: "langgraph" })
+        await expect(service.run(tx, "run-1")).resolves.toMatchObject({ engine: "legacy" })
+    })
+
+    it("selects the engine in the run lists the sweep and the park pass read, and the real validator finds no problem", async () => {
+        const { service, engine } = await build()
+        engine.list.mockResolvedValue(page([]))
+        await service.runOfWake(tx, "wake-1")
+        await service.runsOf(tx, "parked", null, [["resumeNotBefore", "asc"], ["id", "asc"]], 10)
+        await service.stepsOfStatus(tx, "running", { op: "notNull", field: "waitItemId" }, [["claimedUntil", "asc"], ["id", "asc"]], 5)
+
+        const catalog: EntityCatalog = new Map<string, EntityDefinition>([
+            [agentRunEntity.name, agentRunEntity],
+            [agentRunStepEntity.name, agentRunStepEntity],
+        ])
+        const queries = engine.list.mock.calls.map(([, query]) => query)
+        expect(queries[0]?.select).toContain("engine")
+        expect(queries.flatMap((query) => queryProblems(query, catalog))).toEqual([])
     })
 })

@@ -268,7 +268,16 @@ describe("GraphNodeEffectsService.once, D.1: the run, the step, the arguments an
 
         expect(mutations.mutate).toHaveBeenCalledWith(
             expect.anything(),
-            expect.objectContaining({ values: expect.objectContaining({ runId: RUN, stepKey: "match" }) }),
+            expect.objectContaining({
+                values: {
+                    effectKey: "call:run:0",
+                    effectId: "core.send",
+                    runId: RUN,
+                    stepKey: "match",
+                    subjectEntity: "message",
+                    subjectId: "m-1",
+                },
+            }),
             "job",
         )
     })
@@ -292,7 +301,7 @@ describe("GraphNodeEffectsService.once, D.1: the run, the step, the arguments an
 describe("GraphNodeEffectsService.once, an outcome nobody knows", () => {
     const unknown = (code: string): Error => Object.assign(new Error("sent, no answer"), { code })
 
-    it.each([...OUTCOME_UNKNOWN_CODES])("keeps a call that ended with %s and rethrows it untouched", async (code) => {
+    it.each([...OUTCOME_UNKNOWN_CODES])("keeps a call that ended with %s and rethrows it untouched", async (code: string) => {
         const { service, engine, mutations } = await build()
         engine.list.mockResolvedValue({ rows: [], next: null })
         mutations.mutate.mockResolvedValue({ ok: true, row: recordedAs(OUTCOME_UNKNOWN_KIND, code).row, version: "1" })
@@ -334,7 +343,7 @@ describe("GraphNodeEffectsService.once, an outcome nobody knows", () => {
     })
 
     it("keeps nothing for any other throw (the call may be made again, as before); a failed keep never hides the act's error", async () => {
-        const { service, engine, mutations, logger } = await build()
+        const { service, engine, mutations } = await build()
         engine.list.mockResolvedValue({ rows: [], next: null })
         const other = Object.assign(new Error("refused"), { code: "provider_down" })
 
@@ -344,11 +353,6 @@ describe("GraphNodeEffectsService.once, an outcome nobody knows", () => {
         mutations.mutate.mockRejectedValue(new Error("db down"))
         const thrown = unknown("tool_outcome_unknown")
         await expect(service.once(WS, "agent.tag", STEP_CALL, jest.fn().mockRejectedValue(thrown))).rejects.toBe(thrown)
-        expect(logger.error).toHaveBeenCalledWith("graph_nodes.effect_unknown_not_kept", expect.any(Error), {
-            workspaceId: WS,
-            effect: "agent.tag",
-            code: "tool_outcome_unknown",
-        })
     })
 })
 

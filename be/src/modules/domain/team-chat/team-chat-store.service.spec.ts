@@ -504,7 +504,9 @@ describe("TeamChatStoreService rewriting the lines of a folded card", () => {
         const em = mockEntityManager({ update: [ChatRoomMessageEntity, { affected: 2 }] })
         const store = await build(em)
 
-        await expect(store.updateAgentLines(WS, ["k", "k#module"], { body: "again", agentMessage: "{}" })).resolves.toBe(2)
+        await expect(
+            store.updateAgentLines(WS, ["k", "k#module"], { body: "again", agentMessage: "{}" }),
+        ).resolves.toBe(2)
 
         expect(em.update).toHaveBeenCalledWith(
             ChatRoomMessageEntity,

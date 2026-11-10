@@ -260,6 +260,15 @@ export interface OwnerCancelRequest {
     readonly runId: string
 }
 
+/**
+ * The stops of the runs on LangGraph threads, as the cancel door reaches them: such a run is cancelled by its stop's skip, decided as
+ * the person who asked. The stops register it when the app starts (they hold this door, never the other way round).
+ */
+export interface ThreadRunCancels {
+    /** Skips the stop of the run as the person asking; answers as the cancel door does. */
+    skipRun(request: OwnerCancelRequest): Promise<OwnerCancelAnswer>
+}
+
 /** What the store did with a cancel: the run stopped, was already cancelled, or had ended or been given to a person and is no longer cancellable. */
 export interface RunCancelResult {
     /** `cancelled`, `already_cancelled`, `not_cancellable` or `not_found`. */

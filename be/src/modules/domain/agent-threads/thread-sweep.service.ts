@@ -11,7 +11,9 @@ import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder, isRecord } from "@modules/platform/primitives"
+import { InjectAgentThreadsOptions } from "./agent-threads.decorators"
 import { AgentThreadsLogEvent } from "./agent-threads.log-events"
+import type { AgentThreadsOptions } from "./agent-threads.options"
 import { AgentThreadsError, AgentThreadsErrorCode } from "./errors/agent-threads.error"
 import { RunStopRecordsService, runStopOf } from "./stops/run-stop-records.service"
 import type { RunStop } from "./stops/run-stop.contracts"
@@ -104,6 +106,9 @@ export interface ThreadSweepReport {
     readonly fired: number
 }
 
+/** A pass of another capability that rides the thread sweep, once per workspace (the lead freezes' release of their holds). */
+export type ThreadSweepRider = (workspaceId: string) => Promise<void>
+
 /** What handling one item did, for the report. */
 type Done = keyof ThreadSweepReport | null
 
@@ -167,7 +172,11 @@ export class ThreadSweepService {
     /** The last workspace of the previous slice. */
     private after: string | undefined
 
+    /** The passes that ride this sweep, per workspace. */
+    private readonly riders: Array<ThreadSweepRider> = []
+
     constructor(
+        @InjectAgentThreadsOptions() private readonly options: AgentThreadsOptions,
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         private readonly engine: EntityEngineService,
@@ -181,8 +190,20 @@ export class ThreadSweepService {
         @Optional() private readonly workspaces?: WorkspacesService,
     ) {}
 
-    /** One pass over the next slice of workspaces; nothing in an app with no threads port. */
+    /**
+     * Adds a pass run once per workspace after the threads' own (the lead freezes register their release here, so the threads import
+     * nothing of them). A failing rider is logged and never stops the sweep.
+     */
+    alsoPerWorkspace(rider: ThreadSweepRider): void {
+        this.riders.push(rider)
+    }
+
+    /**
+     * One pass over the next slice of workspaces. Nothing at all, not one read, while no workflow is on threads (the flag is empty: the
+     * old engine's minute tick pays nothing), and nothing in an app with no threads port.
+     */
     async sweep(): Promise<ThreadSweepReport> {
+        if (this.options.workflows.length === 0) return NONE
         if (this.port === undefined || this.workspaces === undefined) return NONE
         const found = await this.workspaces.list(WORKSPACE_SLICE, this.after)
         this.after = found.length < WORKSPACE_SLICE ? undefined : found.at(-1)?.id
@@ -218,6 +239,13 @@ export class ThreadSweepService {
         } catch (cause) {
             this.logger.error(AgentThreadsLogEvent.SweepItemFailed, cause, { kind: "workspace", workspaceId })
         }
+        await eachInOrder(this.riders, async (rider) => {
+            try {
+                await rider(workspaceId)
+            } catch (cause) {
+                this.logger.error(AgentThreadsLogEvent.SweepItemFailed, cause, { kind: "rider", workspaceId })
+            }
+        })
         const count = (kind: keyof ThreadSweepReport): number => done.filter((one) => one === kind).length
         return {
             redriven: count("redriven"),

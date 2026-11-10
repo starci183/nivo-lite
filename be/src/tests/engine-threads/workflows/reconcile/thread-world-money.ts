@@ -232,11 +232,16 @@ export const rematchWake = (transactionId: string, orderId: string): WakeIn => (
     },
 })
 
-/** One tool call as the model answers it. */
-export interface ScriptedCall {
-    /** The call: the tool and its arguments. */
-    readonly call: { readonly tool: string; readonly args: Readonly<Record<string, unknown>> }
-}
+/** A tool and its arguments, as the model names them. */
+export type ScriptedCallBody = Readonly<{
+    /** The tool. */
+    tool: string
+    /** Its arguments. */
+    args: Readonly<Record<string, unknown>>
+}>
+
+/** One tool call as the model answers it (a type, not an interface: the scripted model takes any JSON record). */
+export type ScriptedCall = Readonly<Record<"call", ScriptedCallBody>>
 
 /** A tool call of the model's script. */
 export const calls = (tool: string, args: Readonly<Record<string, unknown>>): ScriptedCall => ({ call: { tool, args } })

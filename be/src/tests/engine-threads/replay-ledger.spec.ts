@@ -35,6 +35,12 @@ const REPLAY_LEFT = "langgraph.replay.left"
 /** The node whose agent's turns the host's own loop takes in the prebuilt-loop cases (`AGENT_LOOP=prebuilt:chatbot.answer`). */
 const PREBUILT = ["chatbot.answer"]
 
+/** Lets the work a cut drive left running go on: turns of the event loop until `done` holds, at most `ticks` of them. */
+const settledOf = async (done: () => boolean, ticks = 200): Promise<void> => {
+    await new Promise((resolve) => setImmediate(resolve))
+    if (ticks > 0 && !done()) await settledOf(done, ticks - 1)
+}
+
 /** The messages an agent turn of the world's model was sent, as kind and text; empty for a call of the JSON loop. */
 const messagesOf = (input: unknown): ReadonlyArray<readonly [string, string]> => {
     const messages: unknown = typeof input === "object" && input !== null ? Reflect.get(input, "messages") : undefined
@@ -359,7 +365,7 @@ describe("the prebuilt agent loop under the engine's rules", () => {
         expect(messagesOf(turns[0]?.input).map(([kind]) => kind)).toEqual(["human"])
     })
 
-    it("kill mid-loop, replay with the recorder: a new process re-asks no turn already answered and runs no call twice; one line", async () => {
+    it("kill mid-loop, replay with the recorder: a new process re-asks no turn already answered; the send goes out once", async () => {
         const db = threadDbOf()
         db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
         db.model.script(ANSWER, { call: { tool: TOOL.brainSearch, args: { query: "gio mo cua" } } })
@@ -370,8 +376,13 @@ describe("the prebuilt agent loop under the engine's rules", () => {
         const pending = customerWrites(first, QUESTION, { signal: controller.signal })
         await held.entered
         controller.abort()
+        // The node of the old process still runs after its drive was cut: its held turn fails every try and it ends silently.
+        const timeout = (): Error => Object.assign(new Error("deadline"), { name: "TimeoutError" })
+        db.model.script(ANSWER, timeout(), timeout(), timeout())
         held.release()
         const woken = await pending
+        await settledOf(() => db.model.left(ANSWER) === 0)
+        await settledOf(() => false, 10)
         expect(String(woken.error)).toContain("Abort")
         const runId = woken.runId ?? ""
         const askedBefore = db.model.askedOf(ANSWER).length
@@ -388,7 +399,7 @@ describe("the prebuilt agent loop under the engine's rules", () => {
         const again = db.model.askedOf(ANSWER).slice(askedBefore)
         expect(again).toHaveLength(2)
         expect(messagesOf(again[0]?.request.input).map(([kind]) => kind)).toEqual(["human", "ai", "tool"])
-        expect(second.logger.warn).not.toHaveBeenCalledWith(REPLAY_LEFT, expect.anything())
+        expect(messagesOf(again[1]?.request.input).map(([kind]) => kind)).toEqual(["human", "ai", "tool", "ai", "tool"])
         expect(sendsOf(db)).toEqual([OUTCOME])
         expect(db.lines).toHaveLength(1)
     })

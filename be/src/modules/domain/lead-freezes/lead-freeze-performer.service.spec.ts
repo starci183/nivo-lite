@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { StopDoorService } from "@modules/domain/agent-threads/stops"
+import { StopDoorService } from "@modules/domain/agent-threads"
 import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { WorkContext, WorkPerformerRegistry } from "@modules/domain/decisions"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"

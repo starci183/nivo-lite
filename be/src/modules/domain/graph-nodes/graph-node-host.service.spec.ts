@@ -170,8 +170,8 @@ describe("GraphNodeHostService", () => {
             effects: [{ id: "core.ping", subject: { kind: "record", id: "e-1" } }],
         })
         expect(port.read).toHaveBeenCalledWith(INPUT.turn, { fields: ["id"] }, "turn")
-        expect(effects.once.mock.calls.map((call) => [call[0], call[1], call[2]])).toEqual([
-            ["ws-1", "core.ping", { key: PING_KEY, dedupeKey: null }],
+        expect(effects.once.mock.calls.map((call) => [call[0], call[1], call[2], call[4]])).toEqual([
+            ["ws-1", "core.ping", { key: PING_KEY, dedupeKey: null }, { args: { n: 1 } }],
         ])
         expect(executor.execute).toHaveBeenCalledWith(INPUT.turn, { n: 1 }, { key: PING_KEY, dedupeKey: null })
         expect(ai.nodeText).toHaveBeenCalledWith(

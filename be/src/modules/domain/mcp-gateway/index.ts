@@ -14,7 +14,7 @@ export {
     gatewayToolNameSchema,
 } from "./gateway-tools.schema"
 export { CALL_WORDS_MAX, abilityDecisionOf, callWordsOf, domainNameIn } from "./connector-call.policy"
-export type { AbilityDecision, CallWord } from "./connector-call.policy"
+export type { AbilityDecision, CallWord, OptionalAbilityDecision, OptionalAbilityVerdict } from "./connector-call.policy"
 export { RoutedNativeAdapter } from "./adapters/routed-native.adapter"
 export type { NativeToolHandler } from "./adapters/routed-native.adapter"
 export { argumentsOf, invalidArguments, unknownTool } from "./native-arguments.policy"

@@ -114,9 +114,12 @@ describe("toolVisibleTo", () => {
         expect(policy.toolVisibleTo({ ...carried, audience: "internal" }, specOf({ internalOnly: true }))).toBe(true)
         expect(policy.toolVisibleTo(carried, specOf({ internalOnly: true }))).toBe(true)
         expect(policy.toolVisibleTo({ ...carried, audience: "customer" }, specOf({ internalOnly: true }))).toBe(false)
-        expect(policy.toolVisibleTo({ ...CALLER, conversationId: "c1", audience: "internal" }, specOf({ internalOnly: true }))).toBe(
-            false,
-        )
+        expect(
+            policy.toolVisibleTo(
+                { ...CALLER, conversationId: "c1", audience: "internal" },
+                specOf({ internalOnly: true }),
+            ),
+        ).toBe(false)
     })
 })
 
@@ -220,10 +223,20 @@ describe("abilityDecisionOf", () => {
         expect(policy.abilityDecisionOf({ kind: "allow", ...account })).toBe("auto")
         expect(policy.abilityDecisionOf({ kind: "approval", ...account })).toBe("ask")
         expect(
-            policy.abilityDecisionOf({ kind: "refuse", reason: "ability_off", ability: "qr.create", providers: ["sepay"] }),
+            policy.abilityDecisionOf({
+                kind: "refuse",
+                reason: "ability_off",
+                ability: "qr.create",
+                providers: ["sepay"],
+            }),
         ).toBe("off")
         expect(
-            policy.abilityDecisionOf({ kind: "refuse", reason: "no_default_account", ability: "qr.create", providers: ["sepay"] }),
+            policy.abilityDecisionOf({
+                kind: "refuse",
+                reason: "no_default_account",
+                ability: "qr.create",
+                providers: ["sepay"],
+            }),
         ).toBe("off")
         expect(policy.abilityDecisionOf(null)).toBeNull()
     })

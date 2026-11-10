@@ -1,4 +1,5 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
+import { ThreadSweepService } from "@modules/domain/agent-threads"
 import { AgentRunSweepService } from "@modules/domain/agent-runs"
 import type { EntityManager } from "typeorm"
 import {
@@ -52,6 +53,7 @@ export class AgentWorkSweepService {
         private readonly sync: AgentTriggerSyncService,
         private readonly runSweep: AgentRunSweepService,
         private readonly tags: AgentTagService,
+        @Optional() private readonly threadSweep?: ThreadSweepService,
     ) {}
 
     /** Runs one pass and answers what it did. */
@@ -79,6 +81,12 @@ export class AgentWorkSweepService {
             await this.runSweep.sweep()
         } catch (cause) {
             this.logger.error(AgentSchedulesLogEvent.SweepItemFailed, cause, { kind: "runs" })
+        }
+        // The runs on LangGraph threads ride the same minute; that sweep reads nothing while no workflow is on threads.
+        try {
+            await this.threadSweep?.sweep()
+        } catch (cause) {
+            this.logger.error(AgentSchedulesLogEvent.SweepItemFailed, cause, { kind: "threads" })
         }
     }
 

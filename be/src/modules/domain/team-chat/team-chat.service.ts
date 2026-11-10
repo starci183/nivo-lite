@@ -63,6 +63,12 @@ export interface AgentLineReplied {
     readonly byUserId: string
     /** The stored key of the agent's line (`lineKeyOf` of the key it was posted under). */
     readonly lineKey: string
+    /** The reply message itself (always set by the chat; optional only so older callers still compile). */
+    readonly messageId?: string | undefined
+    /** The words of the reply (always set by the chat). */
+    readonly text?: string | undefined
+    /** When the reply was written, ISO text from the database clock (always set by the chat). */
+    readonly at?: string | undefined
 }
 
 /** What hears a person's reply to an agent's line. */
@@ -114,9 +120,9 @@ export class TeamChatRoomsService {
     }
 
     /** Tells the listener a person replied to an agent's line; what the listener does never fails the person's message. */
-    private async heard(workspaceId: string, byUserId: string, lineKey: string): Promise<void> {
+    private async heard(reply: AgentLineReplied): Promise<void> {
         try {
-            await this.replyListener?.({ workspaceId, byUserId, lineKey })
+            await this.replyListener?.(reply)
         } catch {
             // The message is written; the listener's own failure is its own to report.
         }
@@ -262,7 +268,14 @@ export class TeamChatRoomsService {
         if (!stored.ok) return chatRefusal(stored.refusal)
         if (retried === null) await this.tagAgents(workspaceId, viewerId, stored.value, mentions)
         if (retried === null && repliedTo?.authorKind === "agent" && repliedTo.clientId !== null) {
-            await this.heard(workspaceId, viewerId, repliedTo.clientId)
+            await this.heard({
+                workspaceId,
+                byUserId: viewerId,
+                lineKey: repliedTo.clientId,
+                messageId: stored.value.id,
+                text: stored.value.body,
+                at: stored.value.createdAt.toISOString(),
+            })
         }
         const view = await this.views.viewOf(workspaceId, stored.value, viewerId)
         await this.store.moveReadPosition(workspaceId, found.id, viewerId, stored.value.id)

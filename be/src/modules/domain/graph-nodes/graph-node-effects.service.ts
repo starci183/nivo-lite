@@ -4,9 +4,15 @@ import { isRefused, type EffectCall, type SubjectRef } from "@nivo-lite/agent-sd
 import { cursorScopeOf, type Query } from "@nivo-lite/agent-sdk/query"
 import type { JsonValue } from "@nivo-lite/agent-sdk/schema"
 import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
-import { DomainError, isDomainError } from "@modules/platform/errors"
+import { isDomainError } from "@modules/platform/errors"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
-import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
+import {
+    EffectOutcomeUnknownCode,
+    EffectOutcomeUnknownError,
+    GraphNodesError,
+    GraphNodesErrorCode,
+    isOutcomeUnknownCode,
+} from "./errors/graph-nodes.error"
 import type { EffectAct } from "./graph-nodes.contracts"
 import { GraphNodesLogEvent } from "./graph-nodes.log-events"
 
@@ -31,16 +37,8 @@ const LOOKUP_SCOPE = cursorScopeOf("graph-nodes.effect", {}, "id")
 /** The kind a ledger record names as its subject when its act ended with an outcome nobody knows (see `OUTCOME_UNKNOWN_CODES`). */
 export const OUTCOME_UNKNOWN_KIND = "outcome-unknown"
 
-/**
- * The codes an act ends with when its effect may or may not have happened (a tool call sent with no answer, a delivery with no clear
- * receipt, a decision with no known person): the same three both engines hand to a person (`agent-runs` `TOOL_OUTCOME_UNKNOWN`,
- * `DECISION_ACTOR_UNKNOWN`, `chat-records` `CHAT_DELIVERY_UNKNOWN`). Such a call is kept in the ledger, so no machine makes it again.
- */
-export const OUTCOME_UNKNOWN_CODES: ReadonlySet<string> = new Set([
-    "tool_outcome_unknown",
-    "delivery_outcome_unknown",
-    "decision_actor_unknown",
-])
+/** The codes an act ends with when its effect may or may not have happened (`EffectOutcomeUnknownCode`). */
+export const OUTCOME_UNKNOWN_CODES: ReadonlySet<string> = new Set(Object.values(EffectOutcomeUnknownCode))
 
 /** The run and the step a call was made for. */
 export interface CallPlace {
@@ -104,7 +102,11 @@ const jsonOf = (value: unknown, depth: number): JsonValue | undefined | typeof N
         jsonOf(item, depth + 1),
     ])
     if (entries.some(([, item]) => item === NOT_JSON)) return NOT_JSON
-    return Object.fromEntries(entries.filter(([, item]) => item !== undefined))
+    return Object.fromEntries(
+        entries.flatMap(([name, item]): Array<[string, JsonValue]> =>
+            item === undefined || item === NOT_JSON ? [] : [[name, item]],
+        ),
+    )
 }
 
 /** True for a JSON record within the ledger's bounds. */
@@ -188,12 +190,6 @@ export interface CallRecord {
     readonly place?: CallPlace | undefined
 }
 
-/**
- * What a call kept as outcome-unknown answers again: the code its act ended with the first time (one of `OUTCOME_UNKNOWN_CODES`, the
- * codes of other capabilities the engines route to a person), so either engine hands it to a person as it did then.
- */
-export class EffectOutcomeUnknownError extends DomainError<string> {}
-
 /** The code a throw carries: a domain error's, or the `code` member of another object; null when it carries none. */
 const thrownCodeOf = (cause: unknown): unknown => {
     if (isDomainError(cause)) return cause.code
@@ -203,7 +199,7 @@ const thrownCodeOf = (cause: unknown): unknown => {
 /** The outcome-unknown code an act threw, or null for any other throw. */
 const unknownCodeOf = (cause: unknown): string | null => {
     const code = thrownCodeOf(cause)
-    return typeof code === "string" && OUTCOME_UNKNOWN_CODES.has(code) ? code : null
+    return isOutcomeUnknownCode(code) ? code : null
 }
 
 /** Whether the ledger kept a call whose outcome nobody knows; the write's failure when it could not. */
@@ -245,7 +241,7 @@ export class GraphNodeEffectsService {
                 })
             }
             this.logger.info(GraphNodesLogEvent.EffectReplayed, { workspaceId, effect })
-            if (before.subject.kind === OUTCOME_UNKNOWN_KIND)
+            if (before.subject.kind === OUTCOME_UNKNOWN_KIND && isOutcomeUnknownCode(before.subject.id))
                 throw new EffectOutcomeUnknownError({ code: before.subject.id, params: { effect } })
             return before.subject
         }

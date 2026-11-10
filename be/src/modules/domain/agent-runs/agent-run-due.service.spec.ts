@@ -196,3 +196,18 @@ describe("AgentRunDueService undos and unspoken runs", () => {
         expect(records.runsOf.mock.calls.map((call) => call[1])).toEqual(["parked", "dead", "compensated"])
     })
 })
+
+describe("AgentRunDueService: runs on a LangGraph thread are never due for the old sweep", () => {
+    it("skips expired, ready and undo steps of a thread run, and its unspoken run", async () => {
+        const { service, records } = await build()
+        const old = WHEN.getTime() - 10 * MINUTE
+        byStatus(records, {
+            running: [stepRecordOf({ status: "running", claimedUntil: new Date(old) })],
+            pending: [stepRecordOf({ status: "pending", notBefore: new Date(old) })],
+        })
+        records.run.mockResolvedValue(runRecordOf({ status: "running", engine: "langgraph" }))
+        records.runsOf.mockResolvedValue([runRecordOf({ status: "failed", engine: "langgraph" })])
+
+        await expect(service.due("ws-1", 10)).resolves.toEqual([])
+    })
+})

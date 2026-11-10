@@ -9,7 +9,7 @@ import {
 } from "@modules/domain/agent-graphs"
 import type { FlowThreadRun, FlowThreads, OptionalFlowRunEngine } from "@modules/domain/agent-graphs"
 import { AgentRunsService, AgentRunsViewService } from "@modules/domain/agent-runs"
-import { AgentTagService, AgentWakeService, ENGINE_THREAD_SOURCE } from "@modules/domain/agent-work"
+import { AgentTagService, AgentWakeService, AgentWorkReadService, ENGINE_THREAD_SOURCE } from "@modules/domain/agent-work"
 import type { AgentHandlerEnding, AgentTurnView } from "@modules/domain/agent-work"
 import { InjectGraphThreads, LanggraphError, LanggraphErrorCode } from "@modules/integrations/langgraph"
 import type {
@@ -50,6 +50,12 @@ const LEGACY_THREAD_WAKE_SOURCE = "internal"
 /** Told when a drive left a thread stopped for a person at a step (the deadlines arm here); it never fails the wake. */
 export type ThreadStoppedListener = (ref: ThreadRef, stepKey: string) => Promise<void>
 
+/**
+ * Told after every drive that settled a thread (it stopped, or it ended): a capability above the threads (the lead freezes, which
+ * release a customer's held wakes once the stop closed) registers here, so the threads import nothing of it. It never fails the wake.
+ */
+export type ThreadSettledListener = (ref: ThreadRef) => Promise<void>
+
 /** The event of a wake that carries a person's decision to a stopped thread. */
 export const THREAD_RESUME_EVENT = "engine.thread.resume"
 
@@ -65,6 +71,7 @@ export type ThreadWakeRefusal =
     | "thread_not_stopped"
     | "thread_ended"
     | "scope_unknown"
+    | "already_answered"
 
 /** A decision or a re-drive a wake of the run's scope now carries: the drain runs it under the lease. */
 export interface ThreadWakeAdmitted {
@@ -151,6 +158,23 @@ const carryOf = (text: string | undefined): ResumeCarry | null => {
     return { decision, stepKey, answered }
 }
 
+/** Whether two carried decisions are the same decision for the same stop state (their JSON read back, so key order cannot differ). */
+const sameCarry = (kept: string | undefined, carry: string | null): boolean => {
+    const left = carryOf(kept)
+    const right = carry === null ? null : carryOf(carry)
+    return left !== null && right !== null && JSON.stringify(left) === JSON.stringify(right)
+}
+
+/** A member id as the wake's actor column (a uuid) takes it. */
+const MEMBER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
+
+/**
+ * Who a decision names as the wake's actor: a member id only. Anything else (`deadline`, an engine actor, an approver the log could not
+ * name) stays in the wake's payload, where the decision keeps its `by`, and the actor column is left empty.
+ */
+const actorOf = (decision: StopDecision): string | null =>
+    decision.kind !== "timeout" && MEMBER_ID.test(decision.by) ? decision.by : null
+
 /** The step a stopped thread waits on, as its stop's question names it; null for a thread that waits on nothing it can read. */
 const stoppedStepOf = (seen: ThreadView): string | null => {
     const question: unknown = seen.stop?.question
@@ -178,6 +202,9 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
     /** Who is told when a drive leaves a thread stopped. */
     private readonly stoppedListeners: Array<ThreadStoppedListener> = []
 
+    /** Who is told after each drive that left a thread stopped or ended. */
+    private readonly settledListeners: Array<ThreadSettledListener> = []
+
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         @InjectAgentThreadsOptions() private readonly options: AgentThreadsOptions,
@@ -193,6 +220,7 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
         @Optional() @InjectGraphThreads() private readonly port?: GraphThreads,
         @Optional() private readonly workflows?: AgentWorkflowRunsService,
         @Optional() private readonly tags?: AgentTagService,
+        @Optional() private readonly wakeReader?: AgentWorkReadService,
     ) {}
 
     /**
@@ -208,6 +236,11 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
     /** Adds a listener told each time a drive leaves a thread stopped at a step (the deadlines of the stops register here). */
     whenStopped(listener: ThreadStoppedListener): void {
         this.stoppedListeners.push(listener)
+    }
+
+    /** Adds a listener told after every drive that left a thread stopped or ended (the lead freezes release their holds here). */
+    whenSettled(listener: ThreadSettledListener): void {
+        this.settledListeners.push(listener)
     }
 
     /** True when a new run of the workflow starts on a thread: the flag names it. */
@@ -295,6 +328,10 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
      * deadline (`timeout`). It writes a wake of the run's own scope and runs nothing here: the drain applies the decision under the
      * lease, so two decisions, or a decision and a customer's new message, never drive one thread at once. Refused, with nothing
      * written, for a value that is no decision, a run of the old engine and a thread that does not wait for a person.
+     *
+     * ONE DECISION PER STOP STATE. The wake is keyed by the stop and its count of answers, so of two decisions on the same stop the
+     * first written wins (the database's unique key serialises them) and is the one applied under the lease. The same decision handed
+     * again is `admitted` with `fresh: false`; a DIFFERENT one is refused `already_answered`, never silently dropped, never applied.
      */
     async resume(ref: ThreadRef, value: unknown, tx?: EntityManager): Promise<ThreadWakeAdmission> {
         const decision = stopDecisionOf(value)
@@ -309,9 +346,27 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
             eventKey: `thread:${ref.runId}:${stepKey}:${carry.answered}`,
             eventName: THREAD_RESUME_EVENT,
             carry: JSON.stringify(carry),
-            actorMemberId: decision.kind === "timeout" ? null : decision.by,
+            actorMemberId: actorOf(decision),
         }
-        return this.admit(ref, run, draft, tx)
+        const admission = await this.admit(ref, run, draft, tx)
+        if (admission.kind !== "admitted" || admission.fresh) return admission
+        return (await this.sameDecisionKept(ref, run.agentId, draft)) ? admission : this.refused(ref, "already_answered")
+    }
+
+    /**
+     * Whether the wake already written for this stop state carries this very decision (read after the unique key settled the race);
+     * without the work core's reader (a test world) the earlier wake is taken as this one, as before.
+     */
+    private async sameDecisionKept(ref: ThreadRef, agentId: string, draft: WakeDraft): Promise<boolean> {
+        if (this.wakeReader === undefined) return true
+        const kept = await this.wakeReader.wakeContextOf(ref.workspaceId, agentId, THREAD_WAKE_SOURCE, draft.eventKey)
+        // A wake of the same key written under the old source before the switch.
+        const legacy =
+            kept === null
+                ? await this.wakeReader.wakeContextOf(ref.workspaceId, agentId, LEGACY_THREAD_WAKE_SOURCE, draft.eventKey)
+                : null
+        const context = kept ?? legacy
+        return context !== null && sameCarry(context.tagContext, draft.carry)
     }
 
     /**
@@ -442,9 +497,11 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
         if (outcome.status === "stopped") {
             this.logger.info(AgentThreadsLogEvent.ThreadStopped, { runId: ref.runId, node: outcome.stop.node })
             await this.toldStopped(ref, outcome.stop.question)
+            await this.toldSettled(ref)
             return doneOf(ref.runId)
         }
         await this.ended(drive, outcome.state)
+        await this.toldSettled(ref)
         return doneOf(ref.runId)
     }
 
@@ -476,6 +533,17 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
                 await listener(ref, stepKey)
             } catch (cause) {
                 this.logger.error(AgentThreadsLogEvent.StopListenerFailed, cause, { runId: ref.runId, stepKey })
+            }
+        }
+    }
+
+    /** Tells the settled listeners; a listener that fails is logged (each has its own lazy backstop). */
+    private async toldSettled(ref: ThreadRef): Promise<void> {
+        for (const listener of this.settledListeners) {
+            try {
+                await listener(ref)
+            } catch (cause) {
+                this.logger.error(AgentThreadsLogEvent.StopListenerFailed, cause, { runId: ref.runId })
             }
         }
     }

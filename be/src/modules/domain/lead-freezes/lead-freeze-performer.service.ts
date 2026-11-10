@@ -1,20 +1,17 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
-import { StopDoorService } from "@modules/domain/agent-threads/stops"
-import type { StopDoorOutcome } from "@modules/domain/agent-threads/stops"
-import { InjectWorkPerformerRegistry } from "@modules/domain/decisions"
-import type {
-    Performed,
-    PerformedBy,
-    Prepared,
-    Proposal,
-    WorkContext,
-    WorkItem,
-    WorkPerformer,
-    WorkPerformerRegistry,
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
+import { StopDoorService, type StopDoorOutcome } from "@modules/domain/agent-threads"
+import {
+    InjectWorkPerformerRegistry,
+    type Performed,
+    type PerformedBy,
+    type Prepared,
+    type Proposal,
+    type WorkContext,
+    type WorkItem,
+    type WorkPerformer,
+    type WorkPerformerRegistry,
 } from "@modules/domain/decisions"
-import { InjectMessageCatalog } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { LEAD_FROZEN_ACTION } from "./lead-freeze-items.service"
 import { LeadFreezesService } from "./lead-freezes.service"
 import type { FreezeOutcome } from "./lead-freezes.contracts"

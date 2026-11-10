@@ -249,14 +249,14 @@ describe("room views", () => {
 
 describe("message views of a stop card", () => {
     const CARD = {
-        workflow: { moduleKey: "accounting", key: "reconcile", title: "Đối soát tiền về" },
-        step: { key: "match", nodeId: "accounting.match-payment", title: "Khớp giao dịch" },
+        workflow: { moduleKey: "accounting", key: "reconcile", title: "Doi soat tien ve" },
+        step: { key: "match", nodeId: "accounting.match-payment", title: "Khop giao dich" },
         runId: RUN,
         leadId: null,
         conversationId: null,
         by: "ai",
-        reason: "Còn thiếu 500 ₫.",
-        question: "Giữ đơn mở?",
+        reason: "Con thieu 500 VND.",
+        question: "Giu don mo?",
         facts: [],
         suggestions: [],
         decisions: [],
@@ -270,10 +270,10 @@ describe("message views of a stop card", () => {
             stepKey: "match",
             kind: "ai_report",
             state: "answered",
-            headline: "Đã nhận trả lời",
+            headline: "Da nhan tra loi",
             needs: { answer: false, decisions: [], verdicts: [] },
             replies: [
-                { kind: "answer", text: "Giữ đơn mở nhé", by: "seat-ana", at: "2026-11-10T10:05:00.000Z" },
+                { kind: "answer", text: "Giu don mo nhe", by: "seat-ana", at: "2026-11-10T10:05:00.000Z" },
                 { kind: "timeout", text: null, by: "deadline", at: "2026-11-11T10:05:00.000Z" },
             ],
             repeats: 1,
@@ -285,7 +285,7 @@ describe("message views of a stop card", () => {
     const line = messageOf({
         authorKind: "agent",
         authorId: BOT,
-        ref: { agent_message: JSON.stringify({ kind: "workflow.stopped", title: "Đã nhận trả lời", payload: CARD }) },
+        ref: { agent_message: JSON.stringify({ kind: "workflow.stopped", title: "Da nhan tra loi", payload: CARD }) },
     })
 
     it("reads the repliers of the stop cards, a deadline being no person", () => {
@@ -298,11 +298,11 @@ describe("message views of a stop card", () => {
         expect(view.stop).toMatchObject({
             stopId: "stop-1",
             state: "answered",
-            workflowTitle: "Đối soát tiền về",
-            stepTitle: "Khớp giao dịch",
-            message: "Còn thiếu 500 ₫.",
+            workflowTitle: "Doi soat tien ve",
+            stepTitle: "Khop giao dich",
+            message: "Con thieu 500 VND.",
             replies: [
-                { kind: "answer", text: "Giữ đơn mở nhé", byName: "Ana" },
+                { kind: "answer", text: "Giu don mo nhe", byName: "Ana" },
                 { kind: "timeout", byName: "" },
             ],
             revision: 2,

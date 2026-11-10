@@ -272,6 +272,8 @@ export class GraphNodeHostService implements OnModuleInit {
                     async () =>
                         (await this.repeatRefusal(turn, effect.id, payload, attempt)) ??
                         executor.execute(turn, payload, call),
+                    // The ledger keeps what the effect was asked, so a later step can read what this one already did (the send guard).
+                    { args: payload },
                 )
             },
             callTool: (tool, args, key) => {

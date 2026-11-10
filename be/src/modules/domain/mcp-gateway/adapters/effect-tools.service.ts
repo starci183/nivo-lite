@@ -91,14 +91,21 @@ export class EffectToolsService {
         if (executor === undefined) return refusalOf(NOT_SERVED)
         const turn = turnOf(workspaceId, caller, run)
         const call: EffectCall = { key: opKey, dedupeKey: null }
-        return this.ledger.once(workspaceId, effect.id, call, async () => {
-            try {
-                return await executor.execute(turn, payload, call)
-            } catch (cause) {
-                const refusal = refusalOfThrow(cause)
-                if (refusal === null) throw cause
-                return refusal
-            }
-        })
+        // The ledger keeps the call's arguments beside its subject (D.1), so a step's earlier sends are read back from it.
+        return this.ledger.once(
+            workspaceId,
+            effect.id,
+            call,
+            async () => {
+                try {
+                    return await executor.execute(turn, payload, call)
+                } catch (cause) {
+                    const refusal = refusalOfThrow(cause)
+                    if (refusal === null) throw cause
+                    return refusal
+                }
+            },
+            { args: payload },
+        )
     }
 }

@@ -85,6 +85,7 @@ describe("AgentRunParkStoreService resumeRun", () => {
         ["compensated", runRecordOf({ status: "compensated" }), "compensated"],
         ["compensating", runRecordOf({ status: "compensating" }), "compensated"],
         ["not_parked", runRecordOf({ status: "running" }), "not_parked"],
+        ["a thread run as not_parked", runRecordOf({ status: "failed", engine: "langgraph" }), "not_parked"],
     ])("answers %s without a write or a job", async (_name, run, kind) => {
         const { service, records, queue } = await build()
         records.run.mockResolvedValue(run)

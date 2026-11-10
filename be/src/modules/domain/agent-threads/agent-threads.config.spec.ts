@@ -9,6 +9,7 @@ describe("parseAgentThreadsConfig", () => {
             graphsMax: undefined,
             approvalDeadlineMs: undefined,
             ownerDeadlineMs: undefined,
+            doors: true,
         })
     })
 

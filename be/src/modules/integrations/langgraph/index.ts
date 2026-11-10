@@ -22,6 +22,7 @@ export { THREAD_CONFIG, THREAD_END } from "./langgraph.port"
 export type {
     GraphThreads,
     OptionalThreadView,
+    OptionalTurnRecord,
     ReplayPortsOf,
     ReplayRun,
     ThreadGraph,

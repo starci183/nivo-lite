@@ -32,6 +32,21 @@ const MODULE_ROW_LIMIT = 200
 /** The most call kinds one run's read returns: a run calls a handful of nodes. */
 const RUN_KIND_LIMIT = 100
 
+/** The figures of a run's calls summed per call kind, as SQL expression and alias (the columns of `RunCallKindAggregate`). */
+const RUN_KIND_SUMS: ReadonlyArray<readonly [string, string]> = [
+    ["COUNT(*)::int", "calls"],
+    ["MAX(u.try_number)::int", "max_try"],
+    ["COALESCE(SUM(u.prompt_tokens), 0)::float8", "prompt_tokens"],
+    ["COALESCE(SUM(u.cached_tokens), 0)::float8", "cached_tokens"],
+    ["COALESCE(SUM(u.completion_tokens), 0)::float8", "completion_tokens"],
+    ["COALESCE(SUM(u.reasoning_tokens), 0)::float8", "reasoning_tokens"],
+    ["COALESCE(SUM(u.duration_ms), 0)::float8", "duration_ms"],
+    ["MAX(u.duration_ms)::float8", "slowest_ms"],
+    ["COALESCE(SUM(u.cost_usd), 0)::float8", "cost_usd"],
+    ["array_agg(DISTINCT u.upstream)", "upstreams"],
+    ["array_agg(DISTINCT u.finish_reason)", "finish_reasons"],
+]
+
 @Injectable()
 /** Meters every model call of a workspace and answers where the month stands against the allowance; the only writer of ai_usage_events. */
 export class AiUsageEventsService {
@@ -169,26 +184,17 @@ export class AiUsageEventsService {
      * A call booked without a kind is grouped under its usage kind. Ordered by the first call of each kind.
      */
     async callKindsByRun(workspaceId: string, runId: string): Promise<ReadonlyArray<RunCallKindUsage>> {
-        const rows = await this.entityManager
-            .createQueryBuilder(AiUsageEventEntity, "u")
-            .select("COALESCE(u.purpose, u.kind)", "purpose")
-            .addSelect("COUNT(*)::int", "calls")
-            .addSelect("MAX(u.try_number)::int", "max_try")
-            .addSelect("COALESCE(SUM(u.prompt_tokens), 0)::float8", "prompt_tokens")
-            .addSelect("COALESCE(SUM(u.cached_tokens), 0)::float8", "cached_tokens")
-            .addSelect("COALESCE(SUM(u.completion_tokens), 0)::float8", "completion_tokens")
-            .addSelect("COALESCE(SUM(u.reasoning_tokens), 0)::float8", "reasoning_tokens")
-            .addSelect("COALESCE(SUM(u.duration_ms), 0)::float8", "duration_ms")
-            .addSelect("MAX(u.duration_ms)::float8", "slowest_ms")
-            .addSelect("COALESCE(SUM(u.cost_usd), 0)::float8", "cost_usd")
-            .addSelect("array_agg(DISTINCT u.upstream)", "upstreams")
-            .addSelect("array_agg(DISTINCT u.finish_reason)", "finish_reasons")
+        const grouped = RUN_KIND_SUMS.reduce(
+            (query, [expression, alias]) => query.addSelect(expression, alias),
+            this.entityManager.createQueryBuilder(AiUsageEventEntity, "u").select("COALESCE(u.purpose, u.kind)", "purpose"),
+        )
+        const rows = await grouped
             .where("u.workspace_id = :workspaceId AND u.run_id = :runId AND u.kind <> 'guide'", { workspaceId, runId })
             .groupBy("1")
             .orderBy("MIN(u.created_at)", "ASC")
             .limit(RUN_KIND_LIMIT)
             .getRawMany<RunCallKindAggregate>()
-        return rows.map(toRunCallKind)
+        return rows.map((row) => toRunCallKind(row))
     }
 
     /**

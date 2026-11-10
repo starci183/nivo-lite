@@ -15,6 +15,7 @@ import { AgentThreadsLogEvent } from "./agent-threads.log-events"
 import type { AgentThreadsOptions } from "./agent-threads.options"
 import type { RunStop } from "./stops/run-stop.contracts"
 import { RunStopsService } from "./stops/run-stops.service"
+import { ThreadApprovalsService } from "./thread-approvals.service"
 import { deadlineAtOf, deadlineWindowOf } from "./thread-deadline.policy"
 import { ThreadRunsService } from "./thread-runs.service"
 
@@ -41,7 +42,8 @@ export interface StopDeadline {
  * The deadlines of the stops of thread runs, as NIVO jobs, never a timer inside LangGraph. When a drive leaves a thread stopped, a
  * delayed job is written for its stop (24 hours for an approval, 3 days for a stop that waits for the founder, or the wait the template
  * declares for the step; none for an engine stop, and one deadline per stop at most). When the job comes, the stop is answered `timeout`
- * through `ThreadRunsService.resume`, the same door a founder's decision takes, so it queues behind the run's lease. A deadline is keyed
+ * through `ThreadRunsService.resume`, the same door a founder's decision takes, so it queues behind the run's lease; an approval's
+ * deadline goes through `ThreadApprovalsService.expired`, which also closes the owner's item as refused by the engine. A deadline is keyed
  * by the stop as it stood (its repeat and its count of answers): a deadline that comes for a stop already closed, answered or stopped
  * again since does nothing. The thread sweep arms the deadlines a crash missed and fires the ones whose job was lost (`dueOf`).
  */
@@ -56,6 +58,7 @@ export class ThreadDeadlinesService implements OnModuleInit {
         @Optional() private readonly queue?: ThreadDeadlineQueue,
         @Optional() private readonly graphs?: AgentGraphsService,
         @Optional() @InjectGraphThreads() private readonly port?: GraphThreads,
+        @Optional() private readonly approvals?: ThreadApprovalsService,
     ) {}
 
     /** Arms the deadline of every stop a drive leaves behind. */
@@ -114,7 +117,12 @@ export class ThreadDeadlinesService implements OnModuleInit {
         const now = this.clock.now()
         // Not due yet (the app's window grew since it was armed): the minute sweep fires it when it is.
         if (deadline.at.getTime() > now.getTime()) return this.skipped(payload, "early")
-        const admission = await this.runs.resume(ref, { kind: "timeout", at: now.toISOString() })
+        // An approval's deadline also closes the owner's item as refused by the engine (package 1-3); its verdict hands the timeout on.
+        const admission =
+            stop.kind === "approval" && this.approvals !== undefined
+                ? await this.approvals.expired(ref, stop.stepKey, this.runs)
+                : await this.runs.resume(ref, { kind: "timeout", at: now.toISOString() })
+        if (admission === null) return this.skipped(payload, "closed")
         if (admission.kind === "refused") return this.skipped(payload, "refused")
         this.logger.info(AgentThreadsLogEvent.DeadlineFired, { runId: payload.runId, stepKey: payload.stepKey })
         return "admitted"

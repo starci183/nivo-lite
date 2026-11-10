@@ -217,16 +217,16 @@ describe("TeamChatViewsService stop cards", () => {
             ref: {
                 agent_message: JSON.stringify({
                     kind: "workflow.stopped",
-                    title: "Quy trình đang dừng",
+                    title: "Quy trinh dang dung",
                     payload: {
-                        workflow: { moduleKey: "sales", key: "consult", title: "Tư vấn bán hàng" },
-                        step: { key: "consult", nodeId: "sales.consult", title: "Tư vấn" },
+                        workflow: { moduleKey: "sales", key: "consult", title: "Tu van ban hang" },
+                        step: { key: "consult", nodeId: "sales.consult", title: "Tu van" },
                         runId: "run-1",
                         leadId: null,
                         conversationId: null,
                         by: "ai",
-                        reason: "Khách hỏi giá sỉ.",
-                        question: "Báo giá nào?",
+                        reason: "Khach hoi gia si.",
+                        question: "Bao gia nao?",
                         facts: [],
                         suggestions: [],
                         decisions: [],
@@ -240,11 +240,11 @@ describe("TeamChatViewsService stop cards", () => {
                             stepKey: "consult",
                             kind: "ai_report",
                             state: "answered",
-                            headline: "Đã nhận trả lời",
+                            headline: "Da nhan tra loi",
                             needs: { answer: false, decisions: [], verdicts: [] },
                             replies: replies.map((reply) => ({
                                 kind: "answer",
-                                text: "Giá sỉ 10%",
+                                text: "Gia si 10%",
                                 by: reply.by,
                                 at: "2026-11-10T10:05:00.000Z",
                             })),
@@ -268,7 +268,7 @@ describe("TeamChatViewsService stop cards", () => {
         const [view] = await views.messageViews(WS, [stopLine([{ by: SEAT }])], ANA)
 
         expect(view?.stop?.replies).toEqual([
-            { kind: "answer", text: "Giá sỉ 10%", by: SEAT, at: "2026-11-10T10:05:00.000Z", byName: "Ana" },
+            { kind: "answer", text: "Gia si 10%", by: SEAT, at: "2026-11-10T10:05:00.000Z", byName: "Ana" },
         ])
     })
 

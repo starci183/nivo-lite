@@ -12,6 +12,7 @@ import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { stepViewOf } from "./agent-runs.mapper"
 import type { RunRecord } from "./agent-runs-records.contracts"
 import { jsonValueOf } from "./policies/json-value.policy"
+import { isOldEngineRun } from "./policies/run-engine.policy"
 import { parkAgeSeconds, resumeGapSeconds, servesCustomer, supersededBy } from "./policies/park-ladder.policy"
 import { RESUMABLE_RUN, UNDONE_STEP } from "./policies/run-status.policy"
 import { subjectOfRun } from "./policies/run-subject.policy"
@@ -90,6 +91,8 @@ export class AgentRunParkStoreService {
     private async resumeIn(scoped: ScopedTx, request: ResumeWrite): Promise<ResumeAnswer> {
         const run = await this.records.run(scoped, request.runId)
         if (run === null) return { kind: "not_found" }
+        // A run on a LangGraph thread is never put back on a projected step: only its stop moves it.
+        if (!isOldEngineRun(run)) return { kind: "not_parked" }
         if (run.status === "compensated" || run.status === "compensating") return { kind: "compensated" }
         if (!RESUMABLE_RUN.includes(run.status)) return { kind: "not_parked" }
         const steps = await this.records.stepsOf(scoped, request.runId)

@@ -1,18 +1,20 @@
 import { Injectable, Optional } from "@nestjs/common"
-import { DecisionLogReadService, WorkEngineService } from "@modules/domain/decisions"
-import type { WorkSpec } from "@modules/domain/decisions"
-import { GraphNodesError, GraphNodesErrorCode } from "@modules/domain/graph-nodes"
-import type { NodeToolApproval, NodeTurn } from "@modules/domain/graph-nodes"
-import { ProviderAbilitiesService, abilityDecisionOf, callWordsOf } from "@modules/domain/mcp-gateway"
-import type { CallWord } from "@modules/domain/mcp-gateway"
+import { DecisionLogReadService, WorkEngineService, type WorkSpec } from "@modules/domain/decisions"
+import { GraphNodesError, GraphNodesErrorCode, type NodeToolApproval, type NodeTurn } from "@modules/domain/graph-nodes"
+import {
+    ProviderAbilitiesService,
+    abilityDecisionOf,
+    callWordsOf,
+    type AbilityLabel,
+    type CallWord,
+} from "@modules/domain/mcp-gateway"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
-import { WorkItemsService } from "@modules/domain/work-items"
-import type { WorkItem } from "@modules/domain/work-items"
+import { WorkItemsService, type WorkItem } from "@modules/domain/work-items"
 import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { parseJsonText } from "@modules/platform/primitives"
 import { RunStopRecordsService } from "./stops/run-stop-records.service"
-import { RunStopsService } from "./stops/run-stops.service"
-import type { StopRunRef } from "./stops/run-stops.service"
+import { RunStopsService, type StopRunRef } from "./stops/run-stops.service"
 import type { RunStop, StopCardContext, StopDecision, StopQuestion } from "./stops/run-stop.contracts"
 import type { ThreadRunsService, ThreadWakeAdmission } from "./thread-runs.service"
 
@@ -62,6 +64,13 @@ export interface ApprovalAsk {
     readonly args: unknown
 }
 
+/** The arguments an approval error carries: the door's JSON text of plain words, read back; anything else as it is. */
+const argsOf = (args: unknown): unknown => {
+    if (typeof args !== "string") return args ?? null
+    const read = parseJsonText(args)
+    return read.ok ? read.value : null
+}
+
 /** The ask a host refusal carries, or null when it is no approval to ask or names no fingerprint. */
 export const approvalAskOf = (cause: unknown): ApprovalAsk | null => {
     if (!(cause instanceof GraphNodesError) || cause.code !== GraphNodesErrorCode.ToolApprovalRequired) return null
@@ -71,7 +80,7 @@ export const approvalAskOf = (cause: unknown): ApprovalAsk | null => {
         tool: typeof tool === "string" ? tool : "",
         fingerprint,
         reason: typeof reason === "string" ? reason : "",
-        args: args ?? null,
+        args: argsOf(args),
     }
 }
 
@@ -95,16 +104,13 @@ export interface ApprovalStep {
     readonly card: StopCardContext
 }
 
-/** Why an ask does not stop for a person and is the step's trouble instead (the AI core reads it and may report). */
+/**
+ * Why an ask is the step's trouble instead of a stop (the AI core reads it and may report): `refused` (a person refused this exact call,
+ * or the deadline passed), `spent` (approved once and still asks: one approval reaches a run of a step), `unreadable` (no fingerprint),
+ * `unavailable` (the owner's item could not be raised).
+ */
 export type ApprovalTroubleCode =
-    /** A person refused this exact call, or nobody answered before the deadline: it is never asked again for this step. */
-    | "tool_approval_refused"
-    /** The owner approved this exact call already and the step still asked: one approval reaches a run of a step. */
-    | "tool_approval_spent"
-    /** The host's refusal names no call (no fingerprint). */
-    | "tool_approval_unreadable"
-    /** The owner's item could not be raised (no module of the agent, the work engine refused). */
-    | "tool_approval_unavailable"
+    "tool_approval_refused" | "tool_approval_spent" | "tool_approval_unreadable" | "tool_approval_unavailable"
 
 /** What became of an ask: the step stops for the owner's verdict, or it is the step's trouble. */
 export type ApprovalAsked =
@@ -125,15 +131,11 @@ export type ApprovalAsked =
           readonly text: string
       }
 
-/** A verdict on the item of an approval stop, as the performer of the item hands it. */
+/** A verdict on the item of an approval stop, as its performer hands it: the workspace, the run and step the item names, the item. */
 export interface ApprovalVerdict {
-    /** The workspace. */
     readonly workspaceId: string
-    /** The run the item names. */
     readonly runId: string
-    /** The step the item names. */
     readonly stepKey: string
-    /** The item decided. */
     readonly workItemId: string
     /** `approved` runs the step again with the approval of exactly that call; `refused` runs it again with the refusal. */
     readonly verdict: "approved" | "refused"
@@ -152,12 +154,21 @@ export type ApprovalDecided =
           /** Why: the run no longer waits on this item, or an approval names no person. */
           readonly code: "thread_not_waiting" | "approval_stale" | "approver_unknown"
       }
+    | {
+          /** Nothing was handed to the thread: a person decided the item while the deadline ran, so that verdict moves it. */
+          readonly kind: "refused"
+          /** Why. */
+          readonly code: "decided_meanwhile"
+          /** What the work engine answered when the engine tried to close the item. */
+          readonly cause: unknown
+      }
 
 /** The one thing of the thread runs a verdict needs: the resume that writes a wake (never the port's resume). */
 export type ThreadResumer = Pick<ThreadRunsService, "resume">
 
 /** The value of a fact of a stop, or null. */
-const factOf = (stop: RunStop, name: string): string | null => stop.detail.facts.find((fact) => fact.name === name)?.value ?? null
+const factOf = (stop: RunStop, name: string): string | null =>
+    stop.detail.facts.find((fact) => fact.name === name)?.value ?? null
 
 /** The text of a field of an item, or null. */
 const fieldOf = (item: WorkItem, name: string): string | null => {
@@ -171,31 +182,49 @@ const argFactsOf = (words: ReadonlyArray<CallWord>): ReadonlyArray<{ readonly na
 
 /** The account a call acts on, as the owner reads it: the provider and the account's own name, and the ability in business words. */
 interface AccountWords {
+    /** The provider and the account's own name. */
     readonly account: string
+    /** The ability in business words. */
     readonly ability: string
+    /** The connected account. */
     readonly connectionId: string
 }
 
+/** The account words read from the board (none when no provider ability asked), or why the board could not be read. */
+type AccountRead =
+    | { readonly kind: "read"; readonly words: AccountWords | null }
+    | { readonly kind: "failed"; readonly cause: unknown }
+
+/** The owner's item raised (or found by its key), or why the work engine refused it. */
+type Raised =
+    { readonly kind: "raised"; readonly item: WorkItem } | { readonly kind: "failed"; readonly cause: unknown }
+
+/** A label in the team's language, or the key itself when the catalogue names none. */
+const labelIn = (label: AbilityLabel | undefined, key: string, locale: NodeTurn["locale"]): string => {
+    if (label === undefined) return key
+    return locale === "en" ? label.en : label.vi
+}
+
+/** The words of a failure, for the trouble line the AI core reads. */
+const causeText = (cause: unknown): string => (cause instanceof Error ? cause.message : String(cause))
+
 @Injectable()
 /**
- * Approvals of an `ask` ability on a THREAD run (engine `langgraph`): the stop of kind `approval`. A step whose call the node host
- * refused with "approval required" (the provider ability on that connected account is ticked `ask`) stops at the gate with ONE owner
- * item (`approve_tool_call`, once per run, step and exact call) and the stop of the step, whose card is the one permission request (what
- * tool, which account, the arguments in plain words); the item asks no second line of its own. The owner's verdict on the item comes
- * back through its performer: approved, the step runs again carrying the approval of exactly that call, so the call runs once under
- * the step's own call key (the effect ledger and the replay ports keep it from running twice); refused, the step runs again with the
- * refusal in words its model reads, and the same call is never asked again for that step. Only the thread runs' `resume` moves the
- * thread: this service never touches the LangGraph port. The verdict is written on the stop before the thread is woken, so the run
- * after the verdict reads it even while the work engine has not yet closed the item.
+ * Approvals of an `ask` ability on a THREAD run (engine `langgraph`): the stop of kind `approval`. A call the node host refused with
+ * "approval required" stops its step with ONE owner item (`approve_tool_call`, once per run, step and exact call; no line of its own) and
+ * the step's stop, whose card is the one permission request (tool, account, arguments in plain words). The verdict comes back through the
+ * item's performer: approved, the step runs again carrying the approval of exactly that call, which then runs once under the step's own
+ * call key (effect ledger, replay ports); refused, the step runs again with the refusal in words and the same call is never asked again.
+ * Only the thread runs' `resume` moves the thread, never the LangGraph port. The verdict is kept on the stop before the thread is woken.
  */
 export class ThreadApprovalsService {
     constructor(
+        @InjectClock() private readonly clock: Clock,
+        @InjectMessageCatalog() private readonly catalog: MessageCatalog,
         private readonly stops: RunStopsService,
         private readonly records: RunStopRecordsService,
-        private readonly engine: WorkEngineService,
-        private readonly items: WorkItemsService,
-        @InjectMessageCatalog() private readonly catalog: MessageCatalog,
-        @InjectClock() private readonly clock: Clock,
+        @Optional() private readonly engine?: WorkEngineService,
+        @Optional() private readonly items?: WorkItemsService,
         @Optional() private readonly installations?: InstallationRecordsService,
         @Optional() private readonly abilities?: ProviderAbilitiesService,
         @Optional() private readonly deciders?: DecisionLogReadService,
@@ -209,21 +238,36 @@ export class ThreadApprovalsService {
      */
     async asked(step: ApprovalStep, cause: unknown): Promise<ApprovalAsked> {
         const ask = approvalAskOf(cause)
-        if (ask === null) return { kind: "trouble", code: "tool_approval_unreadable", text: "approval asked without a call fingerprint" }
+        if (ask === null)
+            return {
+                kind: "trouble",
+                code: "tool_approval_unreadable",
+                text: "approval asked without a call fingerprint",
+            }
         const ref = { workspaceId: step.workspaceId, runId: step.runId }
         const dedupeKey = `${approvalKeyOf(step.runId, step.stepKey)}:${ask.fingerprint}`
         const [existing, stop] = await Promise.all([
-            this.items.findByDedupe(step.workspaceId, dedupeKey),
+            this.items?.findByDedupe(step.workspaceId, dedupeKey) ?? null,
             this.stops.stopOf(ref, step.stepKey),
         ])
         const settled = this.settledOf(existing, stop, ask)
         if (settled !== null) return settled
-        const account = await this.accountOf(step, ask.tool)
+        const read = await this.accountOf(step, ask.tool)
+        const account = read.kind === "read" ? read.words : null
         const words = callWordsOf(ask.args)
         const summary = this.catalog.get("agentGraphs.toolApproval.title", { tool: ask.tool }, step.turn.locale)
-        const item = existing ?? (await this.raised(step, ask, dedupeKey, summary, account, words))
-        if (item === null)
-            return { kind: "trouble", code: "tool_approval_unavailable", text: `approval item for ${ask.tool} could not be raised` }
+        const raised: Raised =
+            existing === null
+                ? await this.raised(step, ask, dedupeKey, summary, account, words)
+                : { kind: "raised", item: existing }
+        if (raised.kind === "failed") {
+            return {
+                kind: "trouble",
+                code: "tool_approval_unavailable",
+                text: `approval item for ${ask.tool} could not be raised: ${causeText(raised.cause)}`,
+            }
+        }
+        const item = raised.item
         const question = await this.stops.stopped({
             workspaceId: step.workspaceId,
             runId: step.runId,
@@ -265,9 +309,14 @@ export class ThreadApprovalsService {
         const fingerprint = factOf(stop, FACT.fingerprint)
         if (stop.kind === "approval" && fingerprint !== null && verdict?.startsWith(APPROVED_PREFIX) === true)
             return { by: verdict.slice(APPROVED_PREFIX.length), fingerprint }
-        const item = await this.items.latestOfKey(ref.workspaceId, TOOL_APPROVAL_ACTION, approvalKeyOf(ref.runId, stepKey))
-        const approved = item?.status === "done" ? fieldOf(item, FACT.fingerprint) : null
-        if (item === null || approved === null) return null
+        const item = await this.items?.latestOfKey(
+            ref.workspaceId,
+            TOOL_APPROVAL_ACTION,
+            approvalKeyOf(ref.runId, stepKey),
+        )
+        if (item?.status !== "done") return null
+        const approved = fieldOf(item, FACT.fingerprint)
+        if (approved === null) return null
         const by = (await this.deciders?.decidersOf([item.id]))?.get(item.id) ?? null
         return { by: by ?? APPROVER_UNKNOWN, fingerprint: approved }
     }
@@ -281,7 +330,7 @@ export class ThreadApprovalsService {
     async decided(verdict: ApprovalVerdict, runs: ThreadResumer): Promise<ApprovalDecided> {
         const ref = { workspaceId: verdict.workspaceId, runId: verdict.runId }
         const stop = await this.stops.stopOf(ref, verdict.stepKey)
-        if (stop === null || stop.state !== "open" || stop.kind !== "approval") return { kind: "refused", code: "thread_not_waiting" }
+        if (stop?.state !== "open" || stop.kind !== "approval") return { kind: "refused", code: "thread_not_waiting" }
         if (factOf(stop, FACT.workItem) !== verdict.workItemId) return { kind: "refused", code: "approval_stale" }
         if (verdict.verdict === "approved" && verdict.by === null) return { kind: "refused", code: "approver_unknown" }
         const kept = verdict.verdict === "approved" ? `${APPROVED_PREFIX}${verdict.by ?? ""}` : REFUSED
@@ -309,11 +358,11 @@ export class ThreadApprovalsService {
      */
     async expired(ref: StopRunRef, stepKey: string, runs: ThreadResumer): Promise<ApprovalDecided | null> {
         const stop = await this.stops.stopOf(ref, stepKey)
-        if (stop === null || stop.state !== "open" || stop.kind !== "approval") return null
+        if (stop?.state !== "open" || stop.kind !== "approval") return null
         const workItemId = factOf(stop, FACT.workItem)
         if (workItemId === null) return null
-        const [item] = await this.items.findMany([workItemId], 1)
-        if (item?.workspace_id === ref.workspaceId && item.status === "waiting_decision") {
+        const [item] = (await this.items?.findMany([workItemId], 1)) ?? []
+        if (this.engine !== undefined && item?.workspace_id === ref.workspaceId && item.status === "waiting_decision") {
             try {
                 await this.engine.resumeWork(
                     { workspaceId: ref.workspaceId, actor: ENGINE_ACTOR, locale: "vi" },
@@ -324,22 +373,21 @@ export class ThreadApprovalsService {
                     null,
                 )
                 return { kind: "admitted", fresh: true }
-            } catch {
-                // Decided by a person meanwhile: the verdict of that decision moves the thread.
-                return null
+            } catch (cause) {
+                // Decided by a person meanwhile: the verdict of that decision moves the thread, nothing is handed here.
+                return { kind: "refused", code: "decided_meanwhile", cause }
             }
         }
-        return this.decided(
-            { ...ref, stepKey, workItemId, verdict: "refused", by: null, text: "" },
-            runs,
-        )
+        return this.decided({ ...ref, stepKey, workItemId, verdict: "refused", by: null, text: "" }, runs)
     }
 
     /** The decision a verdict hands the thread. */
     private decisionOf(verdict: ApprovalVerdict): StopDecision {
         const at = this.clock.now().toISOString()
         if (verdict.verdict === "approved") return { kind: "retry", by: verdict.by ?? APPROVER_UNKNOWN, at }
-        return verdict.by === null ? { kind: "timeout", at } : { kind: "answer", text: verdict.text, by: verdict.by, at }
+        return verdict.by === null
+            ? { kind: "timeout", at }
+            : { kind: "answer", text: verdict.text, by: verdict.by, at }
     }
 
     /**
@@ -348,13 +396,24 @@ export class ThreadApprovalsService {
      */
     private settledOf(existing: WorkItem | null, stop: RunStop | null, ask: ApprovalAsk): ApprovalAsked | null {
         const kept =
-            existing !== null && stop !== null && stop.kind === "approval" && factOf(stop, FACT.workItem) === existing.id
+            existing !== null &&
+            stop !== null &&
+            stop.kind === "approval" &&
+            factOf(stop, FACT.workItem) === existing.id
                 ? factOf(stop, FACT.verdict)
                 : null
         if (kept === REFUSED || existing?.status === "rejected" || existing?.status === "failed")
-            return { kind: "trouble", code: "tool_approval_refused", text: `the owner did not approve ${ask.tool} with these arguments` }
+            return {
+                kind: "trouble",
+                code: "tool_approval_refused",
+                text: `the owner did not approve ${ask.tool} with these arguments`,
+            }
         if (existing?.status === "done" || kept?.startsWith(APPROVED_PREFIX) === true)
-            return { kind: "trouble", code: "tool_approval_spent", text: `${ask.tool} was approved once already and asked again` }
+            return {
+                kind: "trouble",
+                code: "tool_approval_spent",
+                text: `${ask.tool} was approved once already and asked again`,
+            }
         return null
     }
 
@@ -366,7 +425,7 @@ export class ThreadApprovalsService {
         summary: string,
         account: AccountWords | null,
         words: ReadonlyArray<CallWord>,
-    ): Promise<WorkItem | null> {
+    ): Promise<Raised> {
         try {
             const installation = await this.installations?.ofAgent(step.workspaceId, step.agentId)
             const spec: WorkSpec = {
@@ -398,12 +457,14 @@ export class ThreadApprovalsService {
                 // The stop's card is the one permission request in the team chat: the engine says no line of its own.
                 ownCard: true,
             }
-            return await this.engine.runWork(
+            if (this.engine === undefined) return { kind: "failed", cause: "no work engine in this app" }
+            const item = await this.engine.runWork(
                 { workspaceId: step.workspaceId, actor: ENGINE_ACTOR, locale: step.turn.locale === "en" ? "en" : "vi" },
                 spec,
             )
-        } catch {
-            return null
+            return { kind: "raised", item }
+        } catch (cause) {
+            return { kind: "failed", cause }
         }
     }
 
@@ -412,24 +473,28 @@ export class ThreadApprovalsService {
      * right ask (the strictest tick wins), read from the board. Null for a call no provider ability asked about (a tool grant in ask
      * mode, a tainted input) or when the board cannot be read: the card then names the tool alone.
      */
-    private async accountOf(step: ApprovalStep, tool: string): Promise<AccountWords | null> {
-        if (this.abilities === undefined) return null
+    private async accountOf(step: ApprovalStep, tool: string): Promise<AccountRead> {
+        if (this.abilities === undefined) return { kind: "read", words: null }
         try {
             const verdict = await this.abilities.judge(step.workspaceId, step.agentId, tool, false)
-            if (abilityDecisionOf(verdict) !== "ask" || verdict === null || verdict.kind !== "approval") return null
+            if (abilityDecisionOf(verdict) !== "ask" || verdict?.kind !== "approval")
+                return { kind: "read", words: null }
             const board = await this.abilities.board(step.workspaceId)
             const provider = board.providers.find((one) => one.provider === verdict.provider)
             const account = provider?.accounts.find((one) => one.connectionId === verdict.connectionId)
             const ability = provider?.abilities.find((one) => one.id === verdict.ability)
-            const en = step.turn.locale === "en"
-            const providerName = provider === undefined ? verdict.provider : en ? provider.label.en : provider.label.vi
+            const providerName = labelIn(provider?.label, verdict.provider, step.turn.locale)
             return {
-                account: account === undefined ? providerName : `${providerName} · ${account.label}`,
-                ability: ability === undefined ? verdict.ability : en ? ability.label.en : ability.label.vi,
-                connectionId: verdict.connectionId,
+                kind: "read",
+                words: {
+                    account: account === undefined ? providerName : `${providerName} · ${account.label}`,
+                    ability: labelIn(ability?.label, verdict.ability, step.turn.locale),
+                    connectionId: verdict.connectionId,
+                },
             }
-        } catch {
-            return null
+        } catch (cause) {
+            // A board that cannot be read never keeps the owner from being asked: the card names the tool alone.
+            return { kind: "failed", cause }
         }
     }
 }

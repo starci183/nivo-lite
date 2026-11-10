@@ -1,9 +1,14 @@
+import { Global, Injectable, Module } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
+import { FakeClock, fakeIds, mock } from "@starci/jest-preset"
 import { z } from "zod"
 import { defineEffect } from "@nivo-lite/agent-sdk/node"
 import type { EffectCall, EffectDefinition, NodeIndex, SubjectRef } from "@nivo-lite/agent-sdk/node"
-import { GraphNodeEffectsService, GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import { EntityEngineService, EntityMutationService, EntityNodePortsService } from "@modules/domain/entity-engine"
+import { GraphNodeEffectsService, GraphNodeRegistryService, GraphNodesModule } from "@modules/domain/graph-nodes"
+import { CLOCK } from "@modules/platform/clock"
+import { IDS } from "@modules/platform/ids"
+import { LOGGER, type Logger } from "@modules/platform/logging"
 import type { NodeEffectExecutor } from "@modules/domain/graph-nodes"
 import { McpGatewayError, McpGatewayErrorCode } from "../errors/mcp-gateway.error"
 import type { GatewayRun, NativeAdapter, NativeCaller } from "../mcp-gateway.contracts"
@@ -114,7 +119,9 @@ describe("EffectToolsService", () => {
         ).resolves.toEqual({ kind: "message", id: "m-1", facts: { channel: "zalo_oa" } })
 
         const call: EffectCall = { key: "step-1:tool:0", dedupeKey: null }
-        expect(ledger.once).toHaveBeenCalledWith("ws-1", "customer.message.send", call, expect.any(Function))
+        expect(ledger.once).toHaveBeenCalledWith("ws-1", "customer.message.send", call, expect.any(Function), {
+            args: { conversationId: "conv-1", text: "Dạ" },
+        })
         expect(execute).toHaveBeenCalledWith(
             {
                 turnId: "run-1",
@@ -187,5 +194,58 @@ describe("EffectToolsService", () => {
         await expect(customer.invoke("ws-1", "message.ghost", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.UnknownTool,
         })
+    })
+})
+
+/** The model door of the composed app: never called by these specs. */
+@Injectable()
+class UnusedModelDoor {}
+
+/** The tool door of the composed app: never called by these specs. */
+@Injectable()
+class UnusedToolDoor {
+    call(): Promise<unknown> {
+        return Promise.reject(new McpGatewayError({ code: McpGatewayErrorCode.UnknownTool, params: { tool: "none" } }))
+    }
+}
+
+/** What the graph host reads from the app, as global providers (the app root's platform modules). */
+@Global()
+@Module({
+    providers: [
+        UnusedModelDoor,
+        { provide: EntityEngineService, useValue: mock<EntityEngineService>() },
+        { provide: EntityMutationService, useValue: mock<EntityMutationService>() },
+        { provide: EntityNodePortsService, useValue: mock<EntityNodePortsService>({ ports: () => [] }) },
+        { provide: LOGGER, useValue: mock<Logger>() },
+        { provide: CLOCK, useValue: new FakeClock(new Date("2026-11-11T00:00:00.000Z")) },
+        { provide: IDS, useValue: fakeIds() },
+    ],
+    exports: [UnusedModelDoor, EntityEngineService, EntityMutationService, EntityNodePortsService, LOGGER, CLOCK, IDS],
+})
+class AppPlatformModule {}
+
+/** The gateway's side as the gateway module declares it: `EffectToolsService` is its own provider, the host comes from the app. */
+@Module({ providers: [EffectToolsService], exports: [EffectToolsService] })
+class GatewaySideModule {}
+
+describe("EffectToolsService in the composed app (GraphNodesModule registered globally, as apps/api composes it)", () => {
+    it("is handed the real effect ledger, so the installed effects are served as gateway tools", async () => {
+        const moduleRef = await Test.createTestingModule({
+            imports: [
+                AppPlatformModule,
+                GraphNodesModule.register({
+                    isGlobal: true,
+                    install: { nodes: [], effects: [MESSAGE_SEND, ORDER_CREATE], tools: [], dataKinds: [] },
+                    model: UnusedModelDoor,
+                    tools: UnusedToolDoor,
+                }),
+                GatewaySideModule,
+            ],
+        }).compile()
+
+        const adapters = moduleRef.get(EffectToolsService).adapters()
+
+        expect(adapters.map((adapter) => adapter.manifest.key)).toEqual(["customer", "order"])
     })
 })

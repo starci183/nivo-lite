@@ -24,7 +24,9 @@ import {
     type RunView,
     type StepSpec,
 } from "@modules/domain/agent-runs"
-import { AgentThreadsModule, RunStopsService, ThreadRunsService } from "@modules/domain/agent-threads"
+import { AgentThreadsModule, RunStopsService, ThreadApprovalsService, ThreadRunsService } from "@modules/domain/agent-threads"
+import { WorkEngineService, type WorkSpec } from "@modules/domain/decisions"
+import { WorkItemsService, type WorkItem } from "@modules/domain/work-items"
 import { AgentTagService, AgentWakeService, AgentWorkHandlersService, type AgentWake } from "@modules/domain/agent-work"
 import { EntityEngineService, EntityMutationService, EntityNodePortsService } from "@modules/domain/entity-engine"
 import {
@@ -292,6 +294,61 @@ const runsOf = (db: ThreadDb): AgentRunsService =>
         },
     })
 
+/** One owner's item the work engine raised, with the business key it was raised under. */
+export interface RaisedItem {
+    /** The item. */
+    readonly item: WorkItem
+    /** Its business key. */
+    readonly key: string
+}
+
+/** The owner's items each database's engine raised (an approval of an `ask` call), in order; outlives a process like the database. */
+const raised = new WeakMap<ThreadDb, Array<RaisedItem>>()
+
+/** The owner's items the engine raised over a database, in order. */
+export const itemsOf = (db: ThreadDb): Array<RaisedItem> => {
+    const kept = raised.get(db) ?? []
+    raised.set(db, kept)
+    return kept
+}
+
+/** An owner's item as the work engine raises it: waiting for a decision, its fields as the spec seeded them. */
+const itemOf = (db: ThreadDb, spec: WorkSpec): WorkItem =>
+    mock<WorkItem>({
+        id: `item-${itemsOf(db).length + 1}`,
+        workspace_id: WS,
+        action: spec.action,
+        status: "waiting_decision",
+        proposal: mock<WorkItem["proposal"]>({ summary: spec.seed?.summary ?? "", fields: { ...spec.seed?.fields } }),
+    })
+
+/** The work engine and items, as far as the approvals of `ask` calls use them: raise an item once per key, find it again. */
+const itemProvidersOf = (db: ThreadDb): Array<Provider> => [
+    {
+        provide: WorkEngineService,
+        useValue: mock<WorkEngineService>({
+            runWork: (_context: unknown, spec: WorkSpec) => {
+                const item = itemOf(db, spec)
+                itemsOf(db).push({ item, key: spec.dedupeKey })
+                return Promise.resolve(item)
+            },
+        }),
+    },
+    {
+        provide: WorkItemsService,
+        useValue: mock<WorkItemsService>({
+            findByDedupe: (_ws: string, key: string) =>
+                Promise.resolve(itemsOf(db).find((one) => one.key === key)?.item ?? null),
+            latestOfKey: (_ws: string, action: string, base: string) =>
+                Promise.resolve(
+                    itemsOf(db).findLast((one) => one.item.action === action && one.key.startsWith(base))?.item ?? null,
+                ),
+            findMany: (ids: ReadonlyArray<string>) =>
+                Promise.resolve(itemsOf(db).flatMap((one) => (ids.includes(one.item.id) ? [one.item] : []))),
+        }),
+    },
+]
+
 /** The work core, as far as the thread runs use it: the wake table and the conversation lock. */
 const workProvidersOf = (db: ThreadDb): Array<Provider> => [
     {
@@ -357,6 +414,7 @@ const worldProvidersOf = (db: ThreadDb, options: ProcessOptions, logger: Logger)
     AgentGraphStepMemoryService,
     ...rightsProvidersOf(db.rights),
     ...workProvidersOf(db),
+    ...itemProvidersOf(db),
     { provide: LeadMemoryService, useValue: leadMemoryWorldOf(db.store).service },
     { provide: AgentWorkflowRunsService, useValue: db.workflows.service },
     { provide: AgentGraphsService, useValue: graphsOf(db) },
@@ -407,6 +465,8 @@ export interface ThreadProcess {
     readonly runs: AgentRunsService
     /** The process's logger. */
     readonly logger: Logger
+    /** The real approvals of `ask` calls (package 1-3); absent in a world that builds its process another way. */
+    readonly approvals?: ThreadApprovalsService
 }
 
 /** Builds one process over the database: the world's providers as a global module, the two real engine modules on top. */
@@ -438,5 +498,6 @@ export const processOf = async (db: ThreadDb, options: ProcessOptions): Promise<
         stops: moduleRef.get(RunStopsService),
         runs: moduleRef.get(AgentRunsService),
         logger,
+        approvals: moduleRef.get(ThreadApprovalsService),
     }
 }

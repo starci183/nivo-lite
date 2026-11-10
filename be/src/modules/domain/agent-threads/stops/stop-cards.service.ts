@@ -1,10 +1,15 @@
 import { Injectable } from "@nestjs/common"
-import { STOPPED_DECISIONS, TOOL } from "@nivo-lite/blocks-core"
-import type { WorkflowStoppedPayload } from "@nivo-lite/blocks-core"
-import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeTurn } from "@modules/domain/graph-nodes"
-import { NO_NEEDS, STOP_CARD_MESSAGE_KIND } from "@modules/domain/team-chat"
-import type { StopCardKind, StopCardNeeds, StopCardSectionGiven, StopCardState } from "@modules/domain/team-chat"
+import { STOPPED_DECISIONS, TOOL, type WorkflowStoppedPayload } from "@nivo-lite/blocks-core"
+import { GraphNodeRegistryService, type NodeTurn } from "@modules/domain/graph-nodes"
+import {
+    NO_NEEDS,
+    STOP_CARD_MESSAGE_KIND,
+    type StopCardApproval,
+    type StopCardKind,
+    type StopCardNeeds,
+    type StopCardSectionGiven,
+    type StopCardState,
+} from "@modules/domain/team-chat"
 import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import type { RunStop, StopCardContext } from "./run-stop.contracts"
 
@@ -25,7 +30,7 @@ const turnOf = (workspaceId: string, stop: RunStop, locale: StopCardContext["loc
 })
 
 /** Which of the founder's three stops a stop is: an engine-worded stop is NIVO's report, like an AI error. */
-export const stopCardKindOf = (stop: Pick<RunStop, "kind">): StopCardKind => {
+export const stopCardKindOf = (stop: Pick<StopCardSource, "kind">): StopCardKind => {
     if (stop.kind === "approval") return "approval"
     return stop.kind === "ai_report" ? "ai_report" : "ai_error"
 }
@@ -39,10 +44,21 @@ const openNeedsOf = (kind: StopCardKind): StopCardNeeds =>
 /** What a stop a person took over still accepts: their words, a retry once they are done, or a skip. */
 const TAKEN_OVER_NEEDS: StopCardNeeds = { answer: true, decisions: ["retry", "skip"], verdicts: [] }
 
+/** The card's state of a stop as read from its record: where it stands, what the engine needs, and whether a person took it over. */
+export interface StopCardRead {
+    /** Where it stands. */
+    readonly state: StopCardState
+    /** What the engine needs now. */
+    readonly needs: StopCardNeeds
+    /** Whether the last decision was a take-over (the card says so). */
+    readonly takenOver: boolean
+}
+
+/** The fields of a stop its card's state is read from. */
+export type StopCardSource = Pick<RunStop, "kind" | "state" | "decision">
+
 /** The card's state of a stop and what the engine needs now, read from the stop record alone. */
-export const stopCardStateOf = (
-    stop: Pick<RunStop, "kind" | "state" | "decision">,
-): { readonly state: StopCardState; readonly needs: StopCardNeeds; readonly takenOver: boolean } => {
+export const stopCardStateOf = (stop: StopCardSource): StopCardRead => {
     const decision = stop.decision?.kind ?? null
     if (stop.state === "resolved") {
         if (decision === "skip") return { state: "skipped", needs: NO_NEEDS, takenOver: false }
@@ -64,6 +80,34 @@ const headlineKeyOf = (stop: RunStop, state: StopCardState, takenOver: boolean):
     if (state === "skipped") return "teamChat.stopCard.skipped"
     if (state === "timed_out") return "teamChat.stopCard.timedOut"
     return "teamChat.stopCard.resolved"
+}
+
+/** Engine facts of a permission request that name what it asks (shown in its `approval` part, never as arguments). */
+const APPROVAL_FACTS = new Set(["workItemId", "tool", "account", "ability", "fingerprint", "verdict"])
+
+/** Engine facts never shown on a card: keys of the machinery, not words for the founder. */
+const HIDDEN_FACTS = new Set(["workItemId", "fingerprint", "verdict"])
+
+/** The value of a named fact of a stop, or empty. */
+const factOf = (stop: RunStop, name: string): string =>
+    stop.detail.facts.find((fact) => fact.name === name)?.value ?? ""
+
+/**
+ * What a permission request asks to do, read from the stop's engine facts (written by the approval stop, package 1-3): the work
+ * item its verdict goes through, the tool, the account, the ability, and every other fact as an argument. Null without a work item.
+ */
+export const approvalOf = (stop: RunStop): StopCardApproval | null => {
+    const workItemId = factOf(stop, "workItemId")
+    if (workItemId === "") return null
+    return {
+        workItemId,
+        tool: factOf(stop, "tool"),
+        account: factOf(stop, "account"),
+        ability: factOf(stop, "ability"),
+        args: stop.detail.facts
+            .filter((fact) => !APPROVAL_FACTS.has(fact.name))
+            .map((fact) => ({ name: fact.name, value: fact.value })),
+    }
 }
 
 @Injectable()
@@ -90,7 +134,10 @@ export class StopCardsService {
             stepKey: stop.stepKey,
             kind: stopCardKindOf(stop),
             state,
-            headline: this.catalog.get(headlineKeyOf(stop, state, takenOver), {}, locale),
+            headline:
+                stop.kind === "approval" && state === "open" && stop.reason !== ""
+                    ? stop.reason
+                    : this.catalog.get(headlineKeyOf(stop, state, takenOver), {}, locale),
             needs,
             replies: stop.answers.map((answer) => ({
                 kind: answer.kind,
@@ -101,6 +148,7 @@ export class StopCardsService {
             repeats: stop.repeats,
             stoppedAt: stop.stoppedAt,
             resolvedAt: stop.resolvedAt,
+            approval: stop.kind === "approval" ? approvalOf(stop) : null,
         }
     }
 
@@ -118,7 +166,9 @@ export class StopCardsService {
             by: context.by,
             reason: stop.reason,
             question: stop.question,
-            facts: stop.detail.facts.map((fact) => ({ name: fact.name, value: fact.value })),
+            facts: stop.detail.facts
+                .filter((fact) => !HIDDEN_FACTS.has(fact.name))
+                .map((fact) => ({ name: fact.name, value: fact.value })),
             suggestions: stop.detail.suggestions.map((one) => ({ text: one.text, handledBy: one.handledBy })),
             decisions: [...section.needs.decisions],
             repeats: stop.repeats,

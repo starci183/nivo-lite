@@ -1,11 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { TOOL, workflowStoppedPayload } from "@nivo-lite/blocks-core"
-import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeEffectExecutor } from "@modules/domain/graph-nodes"
-import { stopCardSectionGiven } from "@modules/domain/team-chat"
-import { MESSAGE_CATALOG } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
+import { GraphNodeRegistryService, type NodeEffectExecutor } from "@modules/domain/graph-nodes"
+import { MESSAGE_CATALOG, type MessageCatalog } from "@modules/platform/i18n"
 import type { RunStop, StopCardContext } from "./run-stop.contracts"
 import { StopCardsService, stopCardKeyOf, stopCardStateOf } from "./stop-cards.service"
 
@@ -22,11 +19,11 @@ const STOP: RunStop = {
     conversationId: null,
     kind: "ai_report",
     state: "open",
-    reason: "Khoản 1.000đ không chỉ đơn nào",
-    question: "Của đơn SO-0003?",
+    reason: "A credit of 1,000 names no order",
+    question: "Is it for SO-0003?",
     detail: {
-        suggestions: [{ text: "Ghi nhận cho SO-0003", handledBy: "workflow" }],
-        facts: [{ name: "amount", value: "1.000đ" }],
+        suggestions: [{ text: "Book it to SO-0003", handledBy: "workflow" }],
+        facts: [{ name: "amount", value: "1,000" }],
     },
     cardMessageId: "msg-1",
     customerLines: [],
@@ -39,10 +36,12 @@ const STOP: RunStop = {
 
 const CONTEXT: StopCardContext = {
     locale: "vi",
-    workflow: { moduleKey: "accounting", key: "reconcile", title: "Đối soát tiền về" },
-    step: { key: "match", nodeId: "accounting.match-payment", title: "Khớp tiền với đơn" },
+    workflow: { moduleKey: "accounting", key: "reconcile", title: "Reconcile" },
+    step: { key: "match", nodeId: "accounting.match-payment", title: "Match the credit" },
     by: "ai",
 }
+
+const NOTHING = { answer: false, decisions: [], verdicts: [] }
 
 const build = async (served = true) => {
     const post = mock<NodeEffectExecutor>({ effect: TOOL.teamMessagePost })
@@ -55,46 +54,40 @@ const build = async (served = true) => {
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) }) },
         ],
     }).compile()
-    return { cards: moduleRef.get(StopCardsService), post }
-}
-
-/** The payload of the nth team post. */
-const payloadOf = (post: { execute: jest.Mock }, nth: number): object => {
-    const payload: unknown = post.execute.mock.calls[nth]?.[1]
-    return typeof payload === "object" && payload !== null ? payload : {}
+    const payloadOf = (nth: number): unknown => post.execute.mock.calls[nth]?.[1]
+    return { cards: moduleRef.get(StopCardsService), post, payloadOf }
 }
 
 /** A member of a value read as an object. */
 const memberOf = (value: unknown, name: string): unknown =>
     typeof value === "object" && value !== null ? Reflect.get(value, name) : undefined
 
-describe("StopCardsService", () => {
-    it("posts the stop's card under the step's key, typed open with the three decisions, and no raw facts in its line", async () => {
-        const { cards, post } = await build()
+describe("StopCardsService posts the card of a stop", () => {
+    it("posts it under the step's key, typed open with the three decisions, and no raw facts in its line", async () => {
+        const { cards, post, payloadOf } = await build()
 
         await expect(cards.posted("ws-1", STOP, CONTEXT, NOW)).resolves.toBe("msg-1")
 
         const [turn, , call] = post.execute.mock.calls[0] ?? []
         expect(turn).toMatchObject({ workspaceId: "ws-1", agentId: "agent-1", conversationId: null, locale: "vi" })
         expect(call).toEqual({ key: `${stopCardKeyOf("run-1", "match")}:2`, dedupeKey: "run-stuck:run-1:match" })
-        const payload = payloadOf(post, 0)
-        expect(payload).toMatchObject({
+        expect(payloadOf(0)).toMatchObject({
             kind: "workflow.stopped",
             title: "[teamChat.stopCard.open.ai_report]",
-            summary: "Khoản 1.000đ không chỉ đơn nào\nCủa đơn SO-0003?",
+            summary: "A credit of 1,000 names no order\nIs it for SO-0003?",
         })
-        const given = memberOf(payload, "card")
-        expect(workflowStoppedPayload.parse(given)).toMatchObject({
+        const card = memberOf(payloadOf(0), "card")
+        expect(workflowStoppedPayload.parse(card)).toMatchObject({
             workflow: CONTEXT.workflow,
             step: CONTEXT.step,
             runId: "run-1",
             leadId: null,
             by: "ai",
             decisions: ["retry", "take_over", "skip"],
-            facts: [{ name: "amount", value: "1.000đ" }],
+            facts: [{ name: "amount", value: "1,000" }],
             repeats: 2,
         })
-        expect(stopCardSectionGiven.parse(memberOf(given, "stop"))).toEqual({
+        expect(memberOf(card, "stop")).toEqual({
             version: 1,
             stopId: "stop-1",
             runId: "run-1",
@@ -107,28 +100,77 @@ describe("StopCardsService", () => {
             repeats: 2,
             stoppedAt: NOW,
             resolvedAt: null,
+            approval: null,
         })
     })
 
     it("asks a verdict on a permission request, and names an AI failure and an engine stop as NIVO's report", async () => {
-        const { cards, post } = await build()
+        const { cards, payloadOf } = await build()
 
         await cards.posted("ws-1", { ...STOP, kind: "approval" }, CONTEXT, NOW)
-        const card = memberOf(payloadOf(post, 0), "card")
-        expect(stopCardSectionGiven.parse(memberOf(card, "stop"))).toMatchObject({
+        const card = memberOf(payloadOf(0), "card")
+        expect(memberOf(card, "stop")).toMatchObject({
             kind: "approval",
             needs: { answer: false, decisions: [], verdicts: ["approve", "refuse"] },
         })
         expect(workflowStoppedPayload.parse(card).decisions).toEqual([])
 
         await cards.posted("ws-1", { ...STOP, kind: "ai_error" }, { ...CONTEXT, by: "engine" }, NOW)
-        expect(payloadOf(post, 1)).toMatchObject({ title: "[teamChat.stopCard.open.ai_error]" })
+        expect(payloadOf(1)).toMatchObject({ title: "[teamChat.stopCard.open.ai_error]" })
         expect(cards.sectionOf({ ...STOP, kind: "engine" }, "vi").kind).toBe("ai_error")
     })
 
-    it("rewrites the one card in place when the founder answers, keeping who, when and the words", async () => {
-        const { cards, post } = await build()
-        const answer = { kind: "answer" as const, text: "Giữ đơn mở nhé", by: "seat-1", at: NOW }
+    it("names what a permission request asks: its work item, tool, account, ability and arguments; the machinery keys never shown", async () => {
+        const { cards, payloadOf } = await build()
+        const facts = [
+            { name: "workItemId", value: "item-1" },
+            { name: "tool", value: "Send a customer message" },
+            { name: "account", value: "Zalo OA Shop" },
+            { name: "ability", value: "customer.send" },
+            { name: "fingerprint", value: "f1" },
+            { name: "text", value: "Hello" },
+        ]
+        const approval = {
+            ...STOP,
+            kind: "approval" as const,
+            reason: "Agent asks to send a message",
+            detail: { suggestions: [], facts },
+        }
+
+        await cards.posted("ws-1", approval, CONTEXT, NOW)
+
+        const card = memberOf(payloadOf(0), "card")
+        expect(memberOf(payloadOf(0), "title")).toBe("Agent asks to send a message")
+        expect(memberOf(card, "stop")).toMatchObject({
+            headline: "Agent asks to send a message",
+            approval: {
+                workItemId: "item-1",
+                tool: "Send a customer message",
+                account: "Zalo OA Shop",
+                ability: "customer.send",
+                args: [{ name: "text", value: "Hello" }],
+            },
+        })
+        expect(workflowStoppedPayload.parse(card).facts.map((fact) => fact.name)).toEqual([
+            "tool",
+            "account",
+            "ability",
+            "text",
+        ])
+    })
+
+    it("posts nothing where the app serves no team post", async () => {
+        const { cards, post } = await build(false)
+        await expect(cards.posted("ws-1", STOP, CONTEXT, NOW)).resolves.toBeNull()
+        await cards.rewritten("ws-1", STOP, "vi")
+        expect(post.execute).not.toHaveBeenCalled()
+    })
+})
+
+describe("StopCardsService rewrites the card of a stop in place", () => {
+    it("on an answer: the one card, the founder's words, who and when kept on it", async () => {
+        const { cards, post, payloadOf } = await build()
+        const answer = { kind: "answer" as const, text: "Keep the order open", by: "seat-1", at: NOW }
 
         await cards.rewritten("ws-1", { ...STOP, answers: [answer], decision: answer }, "vi")
 
@@ -136,23 +178,21 @@ describe("StopCardsService", () => {
             key: "run-stuck:run-1:match:answered:2:1",
             dedupeKey: "run-stuck:run-1:match",
         })
-        const payload = payloadOf(post, 0)
-        expect(memberOf(payload, "kind")).toBe("workflow.stopped")
-        const rewrite = memberOf(payload, "rewrite")
+        expect(memberOf(payloadOf(0), "kind")).toBe("workflow.stopped")
+        const rewrite = memberOf(payloadOf(0), "rewrite")
         expect(memberOf(rewrite, "title")).toBe("[teamChat.stopCard.answered]")
-        expect(stopCardSectionGiven.parse(memberOf(rewrite, "stop"))).toMatchObject({
+        expect(memberOf(rewrite, "stop")).toMatchObject({
             state: "answered",
-            needs: { answer: false, decisions: [], verdicts: [] },
-            replies: [{ kind: "answer", text: "Giữ đơn mở nhé", by: "seat-1", at: NOW }],
+            needs: NOTHING,
+            replies: [{ kind: "answer", text: "Keep the order open", by: "seat-1", at: NOW }],
         })
     })
 
-    it("rewrites a resolved stop in place under the same key, and posts nothing for a stop that never had a card", async () => {
-        const { cards, post } = await build()
+    it("when resolved, under the same key; nothing posts for a stop that never had a card", async () => {
+        const { cards, post, payloadOf } = await build()
 
         await cards.resolved("ws-1", { ...STOP, state: "resolved" }, "vi", NOW)
-        const rewrite = memberOf(payloadOf(post, 0), "rewrite")
-        expect(stopCardSectionGiven.parse(memberOf(rewrite, "stop"))).toMatchObject({
+        expect(memberOf(memberOf(payloadOf(0), "rewrite"), "stop")).toMatchObject({
             state: "resolved",
             resolvedAt: NOW,
         })
@@ -161,13 +201,6 @@ describe("StopCardsService", () => {
         post.execute.mockClear()
         await cards.resolved("ws-1", { ...STOP, cardMessageId: null }, "vi", NOW)
         await cards.rewritten("ws-1", { ...STOP, cardMessageId: null }, "vi")
-        expect(post.execute).not.toHaveBeenCalled()
-    })
-
-    it("posts nothing where the app serves no team post", async () => {
-        const { cards, post } = await build(false)
-        await expect(cards.posted("ws-1", STOP, CONTEXT, NOW)).resolves.toBeNull()
-        await cards.rewritten("ws-1", STOP, "vi")
         expect(post.execute).not.toHaveBeenCalled()
     })
 })
@@ -199,6 +232,10 @@ describe("stopCardStateOf", () => {
             state: "open",
             decision: { kind: "take_over", text: null, by: "seat-1", at: NOW },
         })
-        expect(read.needs).toEqual({ answer: true, decisions: ["retry", "skip"], verdicts: [] })
+        expect(read).toEqual({
+            state: "answered",
+            needs: { answer: true, decisions: ["retry", "skip"], verdicts: [] },
+            takenOver: true,
+        })
     })
 })

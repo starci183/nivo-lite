@@ -14,6 +14,7 @@ import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import { handlerViewOf, handlerViewsOf, routeStepOf, runRecordOf, runViewOf, stepViewOf } from "./agent-runs.mapper"
 import type { RunRecord } from "./agent-runs-records.contracts"
 import { RUN_CANCELLED, SETTLE_TRIES, STEPS_MAX, TELL_STATUSES, filled } from "./policies/agent-runs.policy"
+import { isOldEngineRun } from "./policies/run-engine.policy"
 import { jsonValueOf } from "./policies/json-value.policy"
 import { planBindingVerdict } from "./policies/plan-binding.policy"
 import { CLOSED_RUN, statusAfter } from "./policies/run-status.policy"
@@ -266,7 +267,7 @@ export class AgentRunStoreService {
         return steps.find((step) => step.stepKey === stepKey) ?? null
     }
 
-    /** The wait steps that are open in the workspace, the oldest deadline first, at most `limit`. */
+    /** The wait steps of old-engine runs that are open in the workspace, the oldest deadline first, at most `limit`. */
     openWaits(workspaceId: string, limit: number): Promise<ReadonlyArray<RunStepView>> {
         return this.at(workspaceId, undefined, async (scoped) => {
             const steps = await this.records.stepsOfStatus(
@@ -279,8 +280,19 @@ export class AgentRunStoreService {
                 ],
                 limit,
             )
-            return steps.map(stepViewOf)
+            const old = await Promise.all(steps.map((step) => this.oldEngineIn(scoped, step.runId)))
+            return steps.filter((_step, index) => old[index] === true).map(stepViewOf)
         })
+    }
+
+    /** Whether the old engine may move the run (`isOldEngineRun`); false for a run on a LangGraph thread, and for no run at all. */
+    drivesOldEngine(workspaceId: string, runId: string, manager?: EntityManager): Promise<boolean> {
+        return this.at(workspaceId, manager, (scoped) => this.oldEngineIn(scoped, runId))
+    }
+
+    private async oldEngineIn(scoped: ScopedTx, runId: string): Promise<boolean> {
+        const run = await this.records.run(scoped, runId)
+        return run !== null && isOldEngineRun(run)
     }
 
     /** At most two links for a consumer's immutable input key; two lets the consumer refuse an ambiguous association. Only `workItemId` is kept. */
@@ -312,6 +324,8 @@ export class AgentRunStoreService {
         )
         if (waiting === undefined) return null
         const run = await this.runOf(scoped, waiting.runId)
+        // A step of a run on a LangGraph thread is a projection: its wait is the thread's, never finished from here.
+        if (!isOldEngineRun(run)) return null
         const steps = await this.records.stepsOf(scoped, waiting.runId)
         return handlerViewOf(run, steps, waiting)
     }
@@ -323,7 +337,7 @@ export class AgentRunStoreService {
     async resume(tx: EntityManager, workspaceId: string, workItemId: string, answer: WaitAnswer): Promise<boolean> {
         const runId = await this.at(workspaceId, tx, async (scoped) => {
             const step = (await this.records.stepsWaitingOn(scoped, workItemId)).find((s) => s.status === "running")
-            if (step === undefined) return null
+            if (step === undefined || !(await this.oldEngineIn(scoped, step.runId))) return null
             const done = await this.records.patchStep(scoped, step, {
                 status: "done",
                 result: jsonOr(answer.result),

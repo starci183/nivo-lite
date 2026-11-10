@@ -17,12 +17,10 @@ import { LeadFreezeItemsService } from "./lead-freeze-items.service"
 import { LeadFreezeRecordsService } from "./lead-freeze-records.service"
 import type { FreezeBuild } from "./lead-freeze-records.service"
 import { LeadFreezeRunsService } from "./lead-freeze-runs.service"
-import { LeadFreezeStopsService } from "./lead-freeze-stops.service"
-import type { StopCustomer } from "./lead-freeze-stops.service"
 import { LeadFreezeWakesService } from "./lead-freeze-wakes.service"
 import { LeadFreezesLogEvent } from "./lead-freezes.log-events"
 import { LeadFreezesService } from "./lead-freezes.service"
-import type { FreezeSubject, HeldStop, LeadFreeze, RetriedRun, StoppedStep } from "./lead-freezes.contracts"
+import type { FreezeSubject, LeadFreeze, RetriedRun, StoppedStep } from "./lead-freezes.contracts"
 
 const STOP = {
     workspaceId: "ws-1",
@@ -95,22 +93,6 @@ const build = async (initial: LeadFreeze | null = null, status: string | null = 
         abandon: jest.fn().mockResolvedValue("abandoned"),
         runOfWake: jest.fn().mockResolvedValue(null),
     })
-    // The open stops of thread runs, as a spec opens and closes them.
-    const openStops: Array<HeldStop> = []
-    const stops = mock<LeadFreezeStopsService>({
-        openOfCustomer: jest.fn((_ws: string, customer: StopCustomer) =>
-            Promise.resolve(
-                openStops.filter(
-                    (stop) =>
-                        (customer.leadId !== null && stop.leadId === customer.leadId) ||
-                        (customer.conversationId !== null && stop.conversationId === customer.conversationId),
-                ),
-            ),
-        ),
-        openOfRun: jest.fn((_ws: string, runId: string) =>
-            Promise.resolve(openStops.filter((stop) => stop.runId === runId)),
-        ),
-    })
     const wakes = mock<LeadFreezeWakesService>({
         replay: jest.fn().mockResolvedValue(1),
         takeOver: jest.fn().mockResolvedValue(undefined),
@@ -129,22 +111,9 @@ const build = async (initial: LeadFreeze | null = null, status: string | null = 
             { provide: LeadFreezeItemsService, useValue: items },
             { provide: LeadFreezeRunsService, useValue: runs },
             { provide: LeadFreezeWakesService, useValue: wakes },
-            { provide: LeadFreezeStopsService, useValue: stops },
         ],
     }).compile()
-    return {
-        service: moduleRef.get(LeadFreezesService),
-        records,
-        store,
-        items,
-        runs,
-        runState,
-        wakes,
-        gate,
-        logger,
-        openStops,
-        stops,
-    }
+    return { service: moduleRef.get(LeadFreezesService), records, store, items, runs, runState, wakes, gate, logger }
 }
 
 /** The ids of the events the last release wrote again, in order. */
@@ -570,202 +539,5 @@ describe("LeadFreezesService state and items", () => {
         const released = await build(releasedFreezeOf())
         await released.service.reraise("ws-1", "freeze-1")
         expect(released.items.raise).not.toHaveBeenCalled()
-    })
-})
-
-/** An open stop of thread run run-7 of the front desk, about lead-1 in conversation c-1. */
-const OPEN_STOP: HeldStop = {
-    runId: "run-7",
-    stepKey: "consult",
-    agentId: "chatbot",
-    workflowId: "wf-front-desk",
-    leadId: "lead-1",
-    conversationId: "c-1",
-    stoppedAt: "2026-11-04T10:00:00.000Z",
-}
-
-/** A line of lead-1 to the front desk, as the flow asks `hold` before it opens a run. */
-const FRONT_DESK = { leadId: "lead-1", conversationId: "c-1", workflowId: "wf-front-desk", messageIds: ["m-9"] }
-
-const turnOf = (wakeId: string, attempts = 1) =>
-    agentTurnViewOf({ wakeId, agentId: "chatbot", source: "customer", context: { conversationId: "c-1" }, attempts })
-
-/** The hold of run-7's stop, after it held one line. */
-const threadHoldOf = (overrides: Partial<LeadFreeze> = {}): LeadFreeze =>
-    frozenFreezeOf({
-        id: "freeze-7",
-        key: "lead:lead-1|wf:wf-front-desk",
-        frozenRunId: "run-7",
-        frozenReason: "run_stop",
-        stepKey: "consult",
-        stepTitle: null,
-        workItemId: null,
-        pending: [pendingLineOf()],
-        ...overrides,
-    })
-
-describe("LeadFreezesService: a thread run's stop holds the customer's new wakes", () => {
-    it("holds a new wake of the same customer and workflow while the stop is open: recorded once, no owner item", async () => {
-        const { service, records, items, logger, openStops } = await build(null, "waiting")
-        openStops.push(OPEN_STOP)
-
-        await expect(service.hold(CHAT_TURN, FRONT_DESK)).resolves.toBe(true)
-        await expect(service.hold(CHAT_TURN, FRONT_DESK)).resolves.toBe(true)
-
-        expect([...records.values()]).toEqual([
-            expect.objectContaining({
-                key: "lead:lead-1|wf:wf-front-desk",
-                status: "frozen",
-                frozenRunId: "run-7",
-                frozenReason: "run_stop",
-                stepKey: "consult",
-                workItemId: null,
-                customerName: "Nguyen Van A",
-                episode: 1,
-                pending: [expect.objectContaining({ wakeId: "wake-9", kind: "message", messageIds: ["m-9"] })],
-            }),
-        ])
-        expect(items.raise).not.toHaveBeenCalled()
-        expect(logger.info).toHaveBeenCalledWith(
-            LeadFreezesLogEvent.HeldForStop,
-            expect.objectContaining({ runId: "run-7", stepKey: "consult", wakeId: "wake-9" }),
-        )
-    })
-
-    it("serves a wake of another workflow, of another customer, and of a customer whose only stop is bank-fed", async () => {
-        const { service, records, openStops } = await build(null, "waiting")
-        const bankFed = { ...OPEN_STOP, runId: "run-bank", leadId: null, conversationId: null, workflowId: "wf-reconcile" }
-        openStops.push(OPEN_STOP, bankFed)
-
-        await expect(service.hold(CHAT_TURN, { ...FRONT_DESK, workflowId: "wf-consult" })).resolves.toBe(false)
-        await expect(service.hold(CHAT_TURN, { leadId: "lead-2", workflowId: "wf-front-desk" })).resolves.toBe(false)
-        const credit = { subject: "bank-transaction:tx-1", workflowId: "wf-reconcile" }
-        await expect(service.hold(CHAT_TURN, credit)).resolves.toBe(false)
-
-        expect(records.size).toBe(0)
-    })
-
-    it("never holds the wake that opened the stopped run when it is tried again, before or after the hold exists", async () => {
-        const { service, runs, openStops } = await build(null, "waiting")
-        openStops.push(OPEN_STOP)
-        runs.runOfWake.mockResolvedValue("run-7")
-
-        await expect(service.hold(turnOf("wake-1", 2), FRONT_DESK)).resolves.toBe(false)
-        await expect(service.hold(turnOf("wake-9"), FRONT_DESK)).resolves.toBe(true)
-        await expect(service.hold(turnOf("wake-1", 2), FRONT_DESK)).resolves.toBe(false)
-        expect(runs.runOfWake).toHaveBeenCalledWith("ws-1", "wake-1")
-    })
-
-    it("holds nobody for a stop whose run is over", async () => {
-        const { service, openStops } = await build(null, "failed")
-        openStops.push(OPEN_STOP)
-        await expect(service.hold(CHAT_TURN, FRONT_DESK)).resolves.toBe(false)
-    })
-
-    it("tells the engine the workflow waits and what waits, without recording anything", async () => {
-        const { service, records, openStops } = await build(null, "waiting")
-        openStops.push(OPEN_STOP)
-
-        await expect(service.frozen("ws-1", FRONT_DESK)).resolves.toBe(true)
-        await expect(service.frozen("ws-1", { ...FRONT_DESK, workflowId: "wf-consult" })).resolves.toBe(false)
-        await expect(service.waitingOf("ws-1", { ...FRONT_DESK, workflowId: "wf-consult" })).resolves.toEqual([
-            { step: "consult", since: "2026-11-04T10:00:00.000Z" },
-        ])
-        expect(records.size).toBe(0)
-    })
-})
-
-describe("LeadFreezesService: the hold of a stop is released when the stop closes", () => {
-    it("replays the held events once, in the order they came, when the drive that closed the stop settles", async () => {
-        const { service, records, wakes, openStops } = await build(null, "waiting")
-        openStops.push(OPEN_STOP)
-        await service.hold(turnOf("wake-9"), FRONT_DESK)
-        await service.hold(turnOf("wake-10"), { ...FRONT_DESK, messageIds: ["m-10"] })
-
-        openStops.length = 0
-        await service.threadSettled("ws-1", "run-7")
-        await service.threadSettled("ws-1", "run-7")
-
-        expect(records.get("freeze-1")).toMatchObject({
-            status: "released",
-            releaseReason: "stop_closed",
-            releasedBy: "engine",
-        })
-        expect(wakes.replay).toHaveBeenCalledTimes(1)
-        expect(replayedOf(wakes)).toEqual(["wake-9", "wake-10"])
-        await expect(service.hold(turnOf("wake-11"), FRONT_DESK)).resolves.toBe(false)
-    })
-
-    it("keeps holding while the stop is still open, and follows the run when it stops again at another step", async () => {
-        const { service, records, wakes, openStops } = await build(threadHoldOf(), "waiting")
-        openStops.push(OPEN_STOP)
-
-        await service.threadSettled("ws-1", "run-7")
-        expect(records.get("freeze-7")).toMatchObject({ status: "frozen", stepKey: "consult" })
-
-        openStops.splice(0, 1, { ...OPEN_STOP, stepKey: "match" })
-        await service.threadSettled("ws-1", "run-7")
-
-        expect(records.get("freeze-7")).toMatchObject({ status: "frozen", stepKey: "match" })
-        expect(wakes.replay).not.toHaveBeenCalled()
-    })
-
-    it("releases on the customer's next wake when no settle ran: that wake is replayed after the ones held before it", async () => {
-        const { service, records, wakes } = await build(threadHoldOf(), "waiting")
-
-        await expect(service.hold(CHAT_TURN, FRONT_DESK)).resolves.toBe(true)
-
-        expect(records.get("freeze-7")).toMatchObject({ status: "released", releaseReason: "stop_closed" })
-        expect(replayedOf(wakes)).toEqual(["wake-2", "wake-9"])
-    })
-
-    it("releases the hold of a run that is over, even with a stop left open on it", async () => {
-        const { service, records, openStops } = await build(threadHoldOf(), "failed")
-        openStops.push(OPEN_STOP)
-        await service.threadSettled("ws-1", "run-7")
-        expect(records.get("freeze-7")?.status).toBe("released")
-    })
-
-    it("settles every hold of a closed stop in the workspace and leaves the freezes of the old engine alone (the sweep)", async () => {
-        const { service, records, wakes } = await build(frozenFreezeOf(), "waiting")
-        records.set("freeze-7", threadHoldOf())
-
-        await expect(service.settleThreads("ws-1")).resolves.toBe(1)
-
-        expect(records.get("freeze-7")?.status).toBe("released")
-        expect(records.get("freeze-1")?.status).toBe("frozen")
-        expect(wakes.replay).toHaveBeenCalledTimes(1)
-    })
-
-    it("logs a settle that failed and never fails the drive", async () => {
-        const { service, store, logger } = await build(threadHoldOf(), "waiting")
-        store.byRun.mockRejectedValueOnce(new Error("db down"))
-        await expect(service.threadSettled("ws-1", "run-7")).resolves.toBeUndefined()
-        expect(logger.error).toHaveBeenCalledWith(LeadFreezesLogEvent.SettleFailed, expect.any(Error), { runId: "run-7" })
-    })
-})
-
-describe("LeadFreezesService: the founder answers the stop, never the hold", () => {
-    it("answers retry, skip and take-over of a hold with on_stop while its stop is open, and moves nothing", async () => {
-        const { service, records, runs, wakes, items, openStops } = await build(threadHoldOf(), "waiting")
-        openStops.push(OPEN_STOP)
-
-        await expect(service.retry("ws-1", "freeze-7", "owner-1")).resolves.toBe("on_stop")
-        await expect(service.skip("ws-1", "freeze-7", "owner-1")).resolves.toBe("on_stop")
-        await expect(service.takeOver("ws-1", "freeze-7", "Owner")).resolves.toBe("on_stop")
-        await service.reraise("ws-1", "freeze-7")
-
-        expect(runs.retry).not.toHaveBeenCalled()
-        expect(runs.abandon).not.toHaveBeenCalled()
-        expect(wakes.takeOver).not.toHaveBeenCalled()
-        expect(items.raise).not.toHaveBeenCalled()
-        expect(records.get("freeze-7")).toMatchObject({ status: "frozen", heldBy: null })
-        await expect(service.stateOfRun("ws-1", "run-7")).resolves.toMatchObject({ onStop: true, workItemId: null })
-    })
-
-    it("reads a hold whose stop closed as released, replaying its events", async () => {
-        const { service, wakes } = await build(threadHoldOf(), "waiting")
-        await expect(service.stateOfLead("ws-1", "lead-1")).resolves.toBeNull()
-        expect(replayedOf(wakes)).toEqual(["wake-2"])
     })
 })

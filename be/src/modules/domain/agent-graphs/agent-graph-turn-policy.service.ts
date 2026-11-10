@@ -4,10 +4,8 @@ import { cursorScopeOf } from "@nivo-lite/agent-sdk/query"
 import { TOOL } from "@nivo-lite/blocks-core"
 import { MODULE_DECLARATIONS, agentGuidanceOf } from "@nivo-lite/blocks-core/modules"
 import { EntityEngineService } from "@modules/domain/entity-engine"
-import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeTurn } from "@modules/domain/graph-nodes"
-import { InjectClock } from "@modules/platform/clock"
-import type { Clock } from "@modules/platform/clock"
+import { GraphNodeRegistryService, type NodeTurn } from "@modules/domain/graph-nodes"
+import { InjectClock, type Clock } from "@modules/platform/clock"
 import {
     CONVERSATION_ENTITY,
     LEAD_KIND,

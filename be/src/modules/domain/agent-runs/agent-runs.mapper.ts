@@ -107,6 +107,7 @@ export const runRecordOf = (row: RecordRow): RunRecord => ({
     graphVersionId: textOrNull(row.data, "graphVersionId"),
     planning: flagOf(row.data, "planning"),
     status: enumOf(row.data, "status", RUN_STATUSES),
+    engine: runEngineOf(row),
     context: jsonOf(row.data, "context"),
     errorCode: codeOf(row.data),
     deadLetteredAt: dateOrNull(row.data, "deadLetteredAt"),

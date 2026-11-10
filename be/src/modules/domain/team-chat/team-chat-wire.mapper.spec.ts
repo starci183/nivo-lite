@@ -195,32 +195,35 @@ describe("wire shapes", () => {
                 .approval,
         ).toMatchObject({ decidedAt: null })
     })
+})
 
+describe("wire shape of a stop card", () => {
     it("carries the typed stop of a stop card as the view built it, and null for any other line", async () => {
         const subject = await buildSubject()
         const stop: StopCardView = {
             stopId: "stop-1",
             runId: "run-1",
             stepKey: "match",
-            stepTitle: "Khớp giao dịch",
-            workflowTitle: "Đối soát tiền về",
+            stepTitle: "Khop giao dich",
+            workflowTitle: "Doi soat tien ve",
             moduleKey: "accounting",
             leadId: null,
             conversationId: null,
             kind: "ai_report",
             by: "ai",
             state: "answered",
-            headline: "Quy trình đang dừng",
-            message: "Tiệm nhận 500 ₫ cho đơn DH-0003, còn thiếu 500 ₫.",
-            question: "Ghi nhận đã trả hay giữ đơn mở?",
+            headline: "Quy trinh dang dung",
+            message: "Tiem nhan 500 VND cho don DH-0003, con thieu 500 VND.",
+            question: "Ghi nhan da tra hay giu don mo?",
             suggestions: [],
             facts: [],
             needs: { answer: false, decisions: [], verdicts: [] },
-            replies: [{ kind: "answer", text: "Giữ đơn mở", by: "seat-1", at: ISO, byName: "Lan" }],
+            replies: [{ kind: "answer", text: "Giu don mo", by: "seat-1", at: ISO, byName: "Lan" }],
             repeats: 1,
             firstAt: ISO,
             stoppedAt: ISO,
             resolvedAt: null,
+            approval: null,
             revision: 2,
         }
         expect(subject.messageWireOf({ ...MESSAGE, stop }).stop).toEqual(stop)

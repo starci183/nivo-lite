@@ -1,65 +1,23 @@
-import { z } from "zod"
-import { workflowStoppedPayload } from "@nivo-lite/blocks-core"
-import type { WorkflowStoppedPayload } from "@nivo-lite/blocks-core"
+import { workflowStoppedPayload, type WorkflowStoppedPayload } from "@nivo-lite/blocks-core"
 import {
     STOP_CARD_DEADLINE,
-    STOP_CARD_DECISIONS,
-    STOP_CARD_KINDS,
-    STOP_CARD_REPLY_KINDS,
-    STOP_CARD_STATES,
-    STOP_CARD_VERDICTS,
+    type OptionalAgentMessage,
+    type StopCardNeeds,
+    type StopCardSection,
+    type StopCardSectionGiven,
+    type StopCardView,
+    type StopReplierName,
+    type StoredEnvelope,
+    type StoredJsonRead,
+    type StoredStopCard,
 } from "./stop-card.contracts"
-import type { StopCardNeeds, StopCardSection, StopCardSectionGiven, StopCardView } from "./stop-card.contracts"
+import { stopCardSection, stopCardSectionGiven } from "./stop-card.schema"
 
 /** The kind of the card of a stop. */
 export const STOP_CARD_MESSAGE_KIND = "workflow.stopped"
 
 /** The member of the card payload the typed part is kept under. */
 export const STOP_SECTION_MEMBER = "stop"
-
-/** The most replies one card keeps (the stop record keeps at most 50 answers). */
-const REPLIES_MAX = 50
-
-const text = (max: number) => z.string().max(max)
-
-const needsSchema: z.ZodType<StopCardNeeds> = z.object({
-    answer: z.boolean(),
-    decisions: z.array(z.enum(STOP_CARD_DECISIONS)).max(STOP_CARD_DECISIONS.length),
-    verdicts: z.array(z.enum(STOP_CARD_VERDICTS)).max(STOP_CARD_VERDICTS.length),
-})
-
-const sectionShape = {
-    version: z.literal(1),
-    stopId: text(100).nullable(),
-    runId: text(100),
-    stepKey: text(200),
-    kind: z.enum(STOP_CARD_KINDS),
-    state: z.enum(STOP_CARD_STATES),
-    headline: text(300),
-    needs: needsSchema,
-    replies: z
-        .array(
-            z.object({
-                kind: z.enum(STOP_CARD_REPLY_KINDS),
-                text: text(4000).nullable(),
-                by: text(100),
-                at: text(40),
-            }),
-        )
-        .max(REPLIES_MAX),
-    repeats: z.number().int().min(1),
-    stoppedAt: text(40),
-    resolvedAt: text(40).nullable(),
-}
-
-/** The typed part as the engine hands it (no revision: the team chat counts it). */
-export const stopCardSectionGiven: z.ZodType<StopCardSectionGiven> = z.object(sectionShape)
-
-/** The typed part as the card stores it. */
-export const stopCardSection: z.ZodType<StopCardSection> = z.object({
-    ...sectionShape,
-    revision: z.number().int().min(0),
-})
 
 /** Nothing is needed: the stop is not open. */
 export const NO_NEEDS: StopCardNeeds = { answer: false, decisions: [], verdicts: [] }
@@ -143,25 +101,29 @@ export const legacySectionOf = (base: WorkflowStoppedPayload, headline: string):
     }
 }
 
-/** The kind, title and payload of a stored agent message, or null when it is no JSON object. */
-const envelopeOf = (agentMessage: string): { kind: unknown; title: unknown; payload: unknown } | null => {
+/** A stored line read as JSON: the value, or the parse failure as its outcome (a line that is no JSON is simply no stop card). */
+const jsonOf = (agentMessage: string): StoredJsonRead => {
     try {
-        const parsed: unknown = JSON.parse(agentMessage)
-        if (typeof parsed !== "object" || parsed === null) return null
-        return {
-            kind: Reflect.get(parsed, "kind"),
-            title: Reflect.get(parsed, "title"),
-            payload: Reflect.get(parsed, "payload"),
-        }
-    } catch {
-        return null
+        const value: unknown = JSON.parse(agentMessage)
+        return { ok: true, value }
+    } catch (cause) {
+        return { ok: false, cause }
+    }
+}
+
+/** The kind, title and payload of a stored agent message, or null when it is no JSON object. */
+const envelopeOf = (agentMessage: string): StoredEnvelope | null => {
+    const read = jsonOf(agentMessage)
+    if (!read.ok || typeof read.value !== "object" || read.value === null) return null
+    return {
+        kind: Reflect.get(read.value, "kind"),
+        title: Reflect.get(read.value, "title"),
+        payload: Reflect.get(read.value, "payload"),
     }
 }
 
 /** The common content and the typed part of a stored stop card, or null when the line is no stop card. */
-export const storedStopCardOf = (
-    agentMessage: string | null,
-): { readonly base: WorkflowStoppedPayload; readonly section: StopCardSection } | null => {
+export const storedStopCardOf = (agentMessage: OptionalAgentMessage): StoredStopCard | null => {
     if (agentMessage === null) return null
     const envelope = envelopeOf(agentMessage)
     if (envelope?.kind !== STOP_CARD_MESSAGE_KIND) return null
@@ -175,17 +137,14 @@ export const storedStopCardOf = (
 }
 
 /** The people whose names the replies of a stored stop card need (a deadline is no person). */
-export const stopReplyUsersOf = (agentMessage: string | null): ReadonlyArray<string> => {
+export const stopReplyUsersOf = (agentMessage: OptionalAgentMessage): ReadonlyArray<string> => {
     const card = storedStopCardOf(agentMessage)
     if (card === null) return []
     return [...new Set(card.section.replies.map((reply) => reply.by).filter((by) => by !== STOP_CARD_DEADLINE))]
 }
 
 /** The stop of a stored line as a screen shows it, or null when the line is no stop card. `nameOf` names a user (empty when unknown). */
-export const stopCardViewOf = (
-    agentMessage: string | null,
-    nameOf: (userId: string) => string,
-): StopCardView | null => {
+export const stopCardViewOf = (agentMessage: OptionalAgentMessage, nameOf: StopReplierName): StopCardView | null => {
     const card = storedStopCardOf(agentMessage)
     if (card === null) return null
     const { base, section } = card
@@ -215,6 +174,7 @@ export const stopCardViewOf = (
         firstAt: base.firstAt,
         stoppedAt: section.stoppedAt,
         resolvedAt: section.resolvedAt,
+        approval: section.approval ?? null,
         revision: section.revision,
     }
 }

@@ -83,28 +83,28 @@ export const sentLinesOf = (rows: ReadonlyArray<Readonly<Record<string, unknown>
 }
 
 /** The entity of the effect ledger (`agent.node-effect`): one record per call, with its run, step, arguments and facts (D.1). */
-export const LEDGER_ENTITY = "agent.node-effect"
+export const LEDGER_ENTITY: string = "agent.node-effect"
 
 /** The entity of the stops of a run (`agent.run-stop`): one per run and step, with what the customer was told for it. */
-export const STOP_ENTITY = "agent.run-stop"
+export const STOP_ENTITY: string = "agent.run-stop"
 
 /** The entity of a customer conversation, whose `leadId` names the customer. */
-export const CONVERSATION_ENTITY = "chat.conversation"
+export const CONVERSATION_ENTITY: string = "chat.conversation"
 
 /** The data kind of a customer record, when it is the turn's subject. */
-export const LEAD_KIND = "sales-lead"
+export const LEAD_KIND: string = "sales-lead"
 
 /** The most lines a turn is told were already sent: the newest, oldest first. */
-export const ALREADY_SENT_MAX = 20
+export const ALREADY_SENT_MAX: number = 20
 
 /** The most records of one run step read back from the ledger. */
-export const STEP_RECORDS_LOOKED_AT = 100
+export const STEP_RECORDS_LOOKED_AT: number = 100
 
 /** The most stops of one customer looked at, per state. */
-export const STOPS_LOOKED_AT = 20
+export const STOPS_LOOKED_AT: number = 20
 
 /** How long the lines told for a stop that was resolved still count as told: a day. */
-export const RESOLVED_STOP_COUNTS_MS = 24 * 60 * 60 * 1000
+export const RESOLVED_STOP_COUNTS_MS: number = 24 * 60 * 60 * 1000
 
 /** A run and a step of it. */
 export interface StepPlace {

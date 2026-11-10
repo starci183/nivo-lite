@@ -273,7 +273,9 @@ describe("TeamChatAudienceService folding a card", () => {
         await expect(subject.storedCard(WS, KEY)).resolves.toEqual(MESSAGE)
         store.agentLine.mockResolvedValueOnce(null)
         await expect(subject.storedCard(WS, KEY)).resolves.toBeNull()
-        store.agentLine.mockResolvedValueOnce(Object.assign(new ChatRoomMessageEntity(), { id: MSG, ref: { agent_message: "{" } }))
+        store.agentLine.mockResolvedValueOnce(
+            Object.assign(new ChatRoomMessageEntity(), { id: MSG, ref: { agent_message: "{" } }),
+        )
         await expect(subject.storedCard(WS, KEY)).resolves.toBeNull()
     })
 

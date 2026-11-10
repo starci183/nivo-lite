@@ -1,5 +1,5 @@
 import { Command } from "@nestjs/cqrs"
-import type { StopDoorAnswer } from "@modules/domain/agent-threads/stops"
+import type { StopDoorAnswer } from "@modules/domain/agent-threads"
 import type { ExecuteParams } from "@modules/platform/cqrs"
 import type { DecideRunStopRequest } from "./decide-run-stop.contracts"
 

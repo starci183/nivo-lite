@@ -22,7 +22,12 @@ const THREAD_FIELDS: Proposal["fields"] = {
 }
 
 /** An item of the old engine: its fields name no engine. */
-const OLD_FIELDS: Proposal["fields"] = { runId: "run-0", nodeKey: "qr", tool: "payment.qr.create", fingerprint: "f".repeat(64) }
+const OLD_FIELDS: Proposal["fields"] = {
+    runId: "run-0",
+    nodeKey: "qr",
+    tool: "payment.qr.create",
+    fingerprint: "f".repeat(64),
+}
 
 const itemOf = builder<WorkItem>({
     id: "item-1",
@@ -41,7 +46,7 @@ const itemOf = builder<WorkItem>({
     reason: "branch_ask",
     reasons: [],
     missing_fields: [],
-    proposal: { summary: "AI cần bạn duyệt trước khi chạy payment.qr.create", fields: THREAD_FIELDS },
+    proposal: { summary: "The AI needs your approval before it runs payment.qr.create", fields: THREAD_FIELDS },
     result: null,
     error: null,
     evidence_state: "pending",
@@ -59,7 +64,13 @@ const ENGINE: PerformedBy = { name: "NIVO", kind: "staff" }
 
 const SEATS: Readonly<Record<string, MemberSeatRecord>> = {
     "member-owner": { memberId: "member-owner", userId: "u1", role: "owner", displayName: "Lan", status: "active" },
-    "member-manager": { memberId: "member-manager", userId: "u2", role: "manager", displayName: "Minh", status: "active" },
+    "member-manager": {
+        memberId: "member-manager",
+        userId: "u2",
+        role: "manager",
+        displayName: "Minh",
+        status: "active",
+    },
 }
 
 const build = async (decided: unknown = { kind: "admitted", fresh: true }) => {
@@ -135,7 +146,9 @@ describe("ToolApprovalPerformerService", () => {
             code: WorkPerformersErrorCode.ApprovalInvalid,
         })
     })
+})
 
+describe("ToolApprovalPerformerService, refusals and the old engine", () => {
     it("hands a refusal by a person in words, and the deadline's refusal without a person", async () => {
         const { service, approvals, runs } = await build()
         const item = itemOf()
@@ -145,10 +158,18 @@ describe("ToolApprovalPerformerService", () => {
 
         expect(approvals.decided).toHaveBeenNthCalledWith(
             1,
-            expect.objectContaining({ verdict: "refused", by: "member-manager", text: "[performers.toolApprovalRefused]" }),
+            expect.objectContaining({
+                verdict: "refused",
+                by: "member-manager",
+                text: "[performers.toolApprovalRefused]",
+            }),
             runs,
         )
-        expect(approvals.decided).toHaveBeenNthCalledWith(2, expect.objectContaining({ verdict: "refused", by: null }), runs)
+        expect(approvals.decided).toHaveBeenNthCalledWith(
+            2,
+            expect.objectContaining({ verdict: "refused", by: null }),
+            runs,
+        )
     })
 
     it("a refusal of an item whose run moved on still passes: nothing waits to be told", async () => {

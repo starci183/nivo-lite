@@ -11,4 +11,10 @@ export interface AgentThreadsOptions {
     readonly approvalDeadlineMs?: number | undefined
     /** How long a stop for the founder (AI report, AI error) waits before its deadline, milliseconds; absent takes 3 days. */
     readonly ownerDeadlineMs?: number | undefined
+    /**
+     * True registers the people's doors to a stop (`StopDoorService`, `StopAnswersService`: a founder's words, buttons, cancel of a
+     * thread run). They need the app's members, access and run cancel, so only the app that serves people (the api) sets it; the app's
+     * config always does.
+     */
+    readonly doors?: boolean | undefined
 }

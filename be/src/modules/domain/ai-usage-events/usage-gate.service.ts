@@ -10,7 +10,10 @@ import { usageKindOf } from "./usage-kind.policy"
  * One finished generation as the gate books it: the generations port's record, and, from the prompt library (`AiTaskMeter`), what
  * the call was and how it went. A record without it books none of that.
  */
-export type MeteredGeneration = GenerationUsageRecord & { readonly call?: UsageCallFacts | undefined }
+export type MeteredGeneration = GenerationUsageRecord & {
+    /** What the call was and how it went (kind, hidden reasoning, time, try, upstream, finish); absent books none of it. */
+    readonly call?: UsageCallFacts | undefined
+}
 
 /** The model name booked when a run reports none. */
 const DEFAULT_MODEL = "openclaw"

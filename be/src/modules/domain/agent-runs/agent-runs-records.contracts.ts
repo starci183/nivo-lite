@@ -20,6 +20,11 @@ export interface RunRecord {
     readonly planning: boolean
     /** Where it stands. */
     readonly status: AgentRunStatus
+    /**
+     * The engine the run started on: `legacy` (the old step engine) or `langgraph` (a thread whose progress is projected into the rows).
+     * Absent reads as `legacy` (a record built by hand). Only the old engine's own paths may advance, resume or sweep a `legacy` run.
+     */
+    readonly engine?: "legacy" | "langgraph"
     /** The trigger, intact. */
     readonly context: StepJson
     /** Why it stopped, or null. */

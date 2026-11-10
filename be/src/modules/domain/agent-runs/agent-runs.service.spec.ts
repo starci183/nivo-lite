@@ -33,6 +33,7 @@ const build = async (
     })
     const store = mock<AgentRunStoreService>()
     coverage.arrangeRunStore(store)
+    store.drivesOldEngine.mockResolvedValue(true)
     const compensation = mock<AgentRunCompensationService>({ run: jest.fn().mockResolvedValue(undefined) })
     const handlers = mock<AgentRunHandlersService>({ of: jest.fn(() => handler), ended: jest.fn().mockResolvedValue(undefined) })
     const container = await Test.createTestingModule({
@@ -508,5 +509,21 @@ describe("AgentRunsService.linksFor", () => {
         store.linksFor.mockResolvedValue(links)
         await expect(service.linksFor("ws-1", "approval", "workItemId", "item-1")).resolves.toEqual(links)
         expect(store.linksFor.mock.calls).toEqual([["ws-1", "approval", "workItemId", "item-1"]])
+    })
+})
+
+describe("AgentRunsService.advance: a run on a LangGraph thread", () => {
+    it("is never driven by an old-engine job or sweep: no claim, no step, answers the run as it stands", async () => {
+        const { service, store, ledger, steps } = await build([])
+        store.drivesOldEngine.mockResolvedValue(false)
+        store.runById.mockResolvedValue(runViewOf({ status: "waiting" }))
+
+        await expect(service.advance("ws-1", "run-1", new AbortController().signal)).resolves.toMatchObject({
+            run: { status: "waiting" },
+            retryAfterMs: null,
+        })
+        expect(store.drivesOldEngine).toHaveBeenCalledWith("ws-1", "run-1")
+        expect(ledger.claim).not.toHaveBeenCalled()
+        expect(steps.execute).not.toHaveBeenCalled()
     })
 })

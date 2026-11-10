@@ -7,7 +7,7 @@ import { bilingualOf, messageOf, sampleOf } from "../../messages/catalog"
 import { agentMessagePostEffect, channelSendEffect, paymentClaimRecordEffect } from "../../vocabulary"
 import { TOOL } from "../../vocabulary/tool-ids"
 import type { NodeSchema } from "../node-schema.types"
-import { STORE_NOT_ARRIVED, STORE_OVER, STORE_REAL_CASE } from "../payment/payment.fixtures"
+import { STORE_NOT_ARRIVED, STORE_OVER, STORE_REAL_CASE, TRANSACTION_DINH } from "../payment/payment.fixtures"
 import { READ_CLAIMS, READ_LEADS, READ_ORDERS, READ_TRANSACTIONS } from "../payment/payment.rights"
 import { AWAITING_PAYMENT, claimNamesOf } from "../payment/payment.schemas"
 import type { ClaimRow, LeadRow, OrderRow, TransactionRow } from "../payment/payment.schemas"
@@ -272,6 +272,15 @@ const GRANT: RightsGrant = {
 const REASON_DINH = sampleOf("sampleTenSoTienVaLoiBao2")
 
 /**
+ * The real case with Dinh's 5,000 naming his order in the content (`SO0001`, the code of SO-0001 with the dash dropped): the one shape
+ * the rule calls clear, a code that names one open order AND the amount it owes. Without the code the same money is not clear.
+ */
+const STORE_CODED = {
+    ...STORE_REAL_CASE,
+    "bank-transaction": [{ ...TRANSACTION_DINH, reference: `SO0001 ${TRANSACTION_DINH.reference}` }],
+}
+
+/**
  * `accounting.match-payment` (Khớp tiền với đơn): the agent of the step decides what the money is for and whether to settle it now, from
  * the money that arrived (or the customer's words that they paid), the open orders with what each is due, the customer's paid orders and
  * the open claims, all read here as facts. A customer's word is recorded as a claim (`TOOL.paymentClaimRecord`, never proof) unless one of
@@ -309,11 +318,11 @@ export const accountingMatchPaymentNode: NodeDefinition<
     },
     examples: [
         {
-            name: "SePay: Dinh's 5,000 with no order code pays his 5,000 order, his open claim answered",
+            name: "SePay: Dinh's 5,000 names his order SO-0001 in the content and equals what it owes: clear, settled, his open claim answered",
             grant: GRANT,
             params: {},
             input: { transactionId: "tx-95958515" },
-            store: STORE_REAL_CASE,
+            store: STORE_CODED,
             model: [
                 {
                     done: {
@@ -440,35 +449,41 @@ export const accountingMatchPaymentNode: NodeDefinition<
             effects: [TOOL.paymentClaimRecord, TOOL.customerMessageSend],
         },
         {
-            name: "the owner's test: 2,000 for the 1,000 order named in the content is that order's, over by the records",
+            name: "the owner's test: 2,000 for the 1,000 order named in the content is not clear (the amount differs): nothing settled, the customer told the shop is checking, over by the records",
             grant: GRANT,
             params: {},
             input: { transactionId: "tx-over" },
             store: STORE_OVER,
             model: [
                 {
+                    call: {
+                        tool: TOOL.customerMessageSend,
+                        args: { leadId: "lead-dinh", orderId: "order-test", text: sampleOf("sampleEmDangKiemTraGiaoDich") },
+                    },
+                },
+                {
                     done: {
                         transactionId: "tx-over",
                         orderId: "order-test",
                         claimId: null,
-                        settle: true,
+                        settle: false,
                         reason: REASON_DINH,
                     },
                 },
             ],
             output: {
-                branch: "matched",
+                branch: "held",
                 transactionId: "tx-over",
                 orderId: "order-test",
                 claimId: null,
-                settle: true,
+                settle: false,
                 reason: REASON_DINH,
                 leadId: "lead-dinh",
                 verdict: "over",
                 expectedVnd: 1000,
                 receivedVnd: 2000,
             },
-            effects: [],
+            effects: [TOOL.customerMessageSend],
         },
     ],
 })

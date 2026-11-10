@@ -74,6 +74,30 @@ export class ChatStopSuggestionType {
 }
 
 @ObjectType()
+/** What a permission request asks to do. Approve / refuse go through the work item's decision (`workItemId`), not `decideRunStop`. */
+export class ChatStopApprovalType {
+    /** The owner's work item the verdict goes through. */
+    @Field(() => ID)
+    workItemId!: string
+
+    /** The tool the agent wants to use. */
+    @Field(() => String)
+    tool!: string
+
+    /** The connected account the call would use. */
+    @Field(() => String)
+    account!: string
+
+    /** The ability set to ask. */
+    @Field(() => String)
+    ability!: string
+
+    /** The call's arguments, by name. */
+    @Field(() => [ChatStopFactType])
+    args!: ReadonlyArray<ChatStopFactType>
+}
+
+@ObjectType()
 /** The stop a `workflow.stopped` card is about: one card per stop, rewritten in place when its state changes. */
 export class ChatStopCardType {
     /** The stop record; null on a card the old engine posted. */
@@ -163,6 +187,10 @@ export class ChatStopCardType {
     /** When it resolved, ISO; null while it is open or the step runs again. */
     @Field(() => String, { nullable: true })
     resolvedAt!: string | null
+
+    /** What a permission request asks to do; null for any other stop. */
+    @Field(() => ChatStopApprovalType, { nullable: true })
+    approval!: ChatStopApprovalType | null
 
     /** How many times the card was written; it grows on every rewrite (0 on an old-engine card). */
     @Field(() => Int)

@@ -96,6 +96,16 @@ describe("AgentRunCancelService", () => {
         expect(recovery.abandon).not.toHaveBeenCalled()
     })
 
+    it("hands a thread run to its stop's skip once the stops registered, as the same request", async () => {
+        const { service, runs } = await build(runViewOf({ status: "waiting" }), { kind: "cancelled" }, "langgraph")
+        const skipRun = jest.fn().mockResolvedValue({ kind: "cancelled", note: "effects_kept" })
+        service.setThreadStops({ skipRun })
+
+        await expect(service.cancel(REQUEST)).resolves.toEqual({ kind: "cancelled", note: "effects_kept" })
+        expect(skipRun).toHaveBeenCalledWith(REQUEST)
+        expect(runs.cancel).not.toHaveBeenCalled()
+    })
+
     it("refuses a seat that does not govern the workspace before it reads the run", async () => {
         const { service, members, runs } = await build(runViewOf())
         members.require.mockRejectedValue(Object.assign(new Error("not allowed"), { code: ROLE_FORBIDDEN }))

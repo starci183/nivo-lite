@@ -202,6 +202,9 @@ export type ReplayPortsOf = (ports: NodeHostPorts) => NodeHostPorts
  */
 export type TurnRecord = <Value>(call: string, act: () => Promise<Value>) => Promise<Value>
 
+/** A turn record, or null where nothing can be recorded. */
+export type OptionalTurnRecord = TurnRecord | null
+
 /**
  * The replay of ONE run of a node, for a host that has its own agent loop: `replay` wraps the host's ports (it delegates to the
  * thread's `ReplayPortsOf`), and `record` keeps the model turns of that loop in the same record, in the order they happen between

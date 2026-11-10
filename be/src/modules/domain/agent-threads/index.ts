@@ -11,6 +11,7 @@ export {
     ThreadRunsService,
 } from "./thread-runs.service"
 export type {
+    ThreadSettledListener,
     ThreadStoppedListener,
     ThreadWakeAdmission,
     ThreadWakeAdmitted,
@@ -23,7 +24,7 @@ export type { DeadlineArming, DeadlineFiring, StopDeadline } from "./thread-dead
 export { APPROVAL_DEADLINE_MS, OWNER_DEADLINE_MS, deadlineAtOf, deadlineWindowOf, templateWaitMsOf } from "./thread-deadline.policy"
 export type { DeadlineWindows } from "./thread-deadline.policy"
 export { ThreadSweepService, threadPositionOf } from "./thread-sweep.service"
-export type { ThreadAbandonCode, ThreadSweepReport } from "./thread-sweep.service"
+export type { ThreadAbandonCode, ThreadSweepReport, ThreadSweepRider } from "./thread-sweep.service"
 export { OUTCOME_UNKNOWN, ThreadStepService } from "./thread-step.service"
 export type { ThreadGateNode, ThreadStepNode, ThreadTrouble } from "./thread-step.service"
 export { ThreadProjectionService } from "./thread-projection.service"
@@ -64,3 +65,15 @@ export type {
     StopRoute,
     StopState,
 } from "./stops"
+export { STOP_ACTIONS, StopAnswersService, StopDoorService, cancelOfSkip } from "./stops"
+export type { StopAction, StopActor, StopAsk, StopDoorAnswer, StopDoorOutcome, StopReplied, StopReply, StopReplyOutcome } from "./stops"
+export { THREAD_APPROVAL_ENGINE, TOOL_APPROVAL_ACTION, ThreadApprovalsService, approvalAskOf, approvalKeyOf } from "./thread-approvals.service"
+export type {
+    ApprovalAsk,
+    ApprovalAsked,
+    ApprovalDecided,
+    ApprovalStep,
+    ApprovalTroubleCode,
+    ApprovalVerdict,
+    ThreadResumer,
+} from "./thread-approvals.service"

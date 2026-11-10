@@ -117,7 +117,13 @@ describe("NodeToolDoorService who calls", () => {
     })
 
     it("carries the graph step the token signs, which the NIVO effect tools need", async () => {
-        const claims = { ...CLAIMS, locale: "vi" as const, handedOffBy: "agent-0", leadId: null, stepTools: ["order.create"] }
+        const claims = {
+            ...CLAIMS,
+            locale: "vi" as const,
+            handedOffBy: "agent-0",
+            leadId: null,
+            stepTools: ["order.create"],
+        }
         const { door, gateway } = await build(claims)
 
         await door.call(callOf())
@@ -162,7 +168,9 @@ describe("NodeToolDoorService who calls", () => {
         await door.call(callOf())
 
         expect(scopes.lensOf).toHaveBeenCalledWith("ws-1", "agent-1")
-        expect(gateway.call.mock.calls.map(([caller]) => [caller.audience, caller.conversationId, caller.graphStep])).toEqual([
+        expect(
+            gateway.call.mock.calls.map(([caller]) => [caller.audience, caller.conversationId, caller.graphStep]),
+        ).toEqual([
             ["internal", "conv-1", true],
             ["customer", "conv-1", true],
             ["customer", "conv-1", true],
@@ -218,6 +226,7 @@ describe("NodeToolDoorService approvals", () => {
                 tool: "ledger.append",
                 fingerprint: toolFingerprintOf("ledger.append", ARGS),
                 reason: "ask_mode",
+                args: JSON.stringify({ orderNo: "DH-7", amountVnd: "5000", transferContent: "DH7 thanh toan" }),
             },
         })
     })
@@ -349,12 +358,29 @@ const QR = { token: "token-1", effect: TOOL.paymentQrCreate, payload: { orderId:
 
 describe("NodeToolDoorService effect rights: the context.effect road", () => {
     it("judges payment.qr.create and payment.credit.rematch by the run agent's abilities, as the gateway road does", async () => {
-        const { door, abilities } = await buildWithAbilities({ kind: "allow", provider: "sepay", ability: "qr.create", connectionId: "conn-mb" })
+        const { door, abilities } = await buildWithAbilities({
+            kind: "allow",
+            provider: "sepay",
+            ability: "qr.create",
+            connectionId: "conn-mb",
+        })
 
         await expect(door.effectRight(QR)).resolves.toBeNull()
         await expect(door.effectRight({ ...QR, effect: TOOL.paymentRematch })).resolves.toBeNull()
-        expect(abilities.judge).toHaveBeenNthCalledWith(1, CLAIMS.workspaceId, CLAIMS.agentId, TOOL.paymentQrCreate, false)
-        expect(abilities.judge).toHaveBeenNthCalledWith(2, CLAIMS.workspaceId, CLAIMS.agentId, TOOL.paymentRematch, false)
+        expect(abilities.judge).toHaveBeenNthCalledWith(
+            1,
+            CLAIMS.workspaceId,
+            CLAIMS.agentId,
+            TOOL.paymentQrCreate,
+            false,
+        )
+        expect(abilities.judge).toHaveBeenNthCalledWith(
+            2,
+            CLAIMS.workspaceId,
+            CLAIMS.agentId,
+            TOOL.paymentRematch,
+            false,
+        )
     })
 
     it("not attached and unticked: answers the ordinary refusal fact and logs why", async () => {
@@ -372,15 +398,30 @@ describe("NodeToolDoorService effect rights: the context.effect road", () => {
     })
 
     it("ticked ask: waits for a person with the fingerprint of the effect and its payload, and runs the call that replays it", async () => {
-        const { door, abilities } = await buildWithAbilities({ kind: "approval", provider: "sepay", ability: "qr.create", connectionId: "conn-mb" })
+        const { door, abilities } = await buildWithAbilities({
+            kind: "approval",
+            provider: "sepay",
+            ability: "qr.create",
+            connectionId: "conn-mb",
+        })
         const fingerprint = toolFingerprintOf(TOOL.paymentQrCreate, QR.payload)
 
         await expect(door.effectRight(QR)).rejects.toMatchObject({
             code: GraphNodesErrorCode.ToolApprovalRequired,
-            params: { tool: TOOL.paymentQrCreate, fingerprint, reason: "ask_mode" },
+            params: {
+                tool: TOOL.paymentQrCreate,
+                fingerprint,
+                reason: "ask_mode",
+                args: JSON.stringify({ orderId: "o-1" }),
+            },
         })
 
-        abilities.judge.mockResolvedValue({ kind: "allow", provider: "sepay", ability: "qr.create", connectionId: "conn-mb" })
+        abilities.judge.mockResolvedValue({
+            kind: "allow",
+            provider: "sepay",
+            ability: "qr.create",
+            connectionId: "conn-mb",
+        })
         await expect(door.effectRight({ ...QR, approval: { by: "member-1", fingerprint } })).resolves.toBeNull()
         expect(abilities.judge).toHaveBeenLastCalledWith(CLAIMS.workspaceId, CLAIMS.agentId, TOOL.paymentQrCreate, true)
     })
@@ -412,7 +453,11 @@ const GUARD_TURN: NodeTurn = {
     conversationId: null,
     locale: "vi",
 }
-const TOLD = { channelRef: "line:run-1:match:aaaa", sentAt: "2026-11-10T09:30:00.000Z", text: "Em đã nhận, đang kiểm tra ạ." }
+const TOLD = {
+    channelRef: "line:run-1:match:aaaa",
+    sentAt: "2026-11-10T09:30:00.000Z",
+    text: "Em đã nhận, đang kiểm tra ạ.",
+}
 
 /** The door with the conversation lines and the customers' conversations bound; `rows` are the agent lines of the conversation read. */
 const buildWithLines = async (rows: ReadonlyArray<Readonly<Record<string, unknown>>>) => {
@@ -451,11 +496,13 @@ describe("NodeToolDoorService repeat guard: one customer line per stop", () => {
     it("refuses a second line to the same conversation when the step already told it in an earlier attempt and nobody answered since", async () => {
         const { door, lines, logger } = await buildWithLines([TOLD])
 
-        await expect(door.repeatGuard(sendOf({ conversationId: "c-1", text: "Em đang kiểm tra ạ." }))).resolves.toEqual({
-            kind: "refused",
-            id: "already_told_for_this_stop",
-            facts: { conversationId: "c-1", line: TOLD.text, at: TOLD.sentAt },
-        })
+        await expect(door.repeatGuard(sendOf({ conversationId: "c-1", text: "Em đang kiểm tra ạ." }))).resolves.toEqual(
+            {
+                kind: "refused",
+                id: "already_told_for_this_stop",
+                facts: { conversationId: "c-1", line: TOLD.text, at: TOLD.sentAt },
+            },
+        )
         expect(lines.read).toHaveBeenCalledWith(
             GUARD_TURN,
             { where: { conversationId: "c-1", role: "agent" }, fields: ["text", "sentAt", "channelRef"], limit: 20 },
@@ -479,14 +526,20 @@ describe("NodeToolDoorService repeat guard: one customer line per stop", () => {
         const { door } = await buildWithLines([TOLD])
         const answered = { ...GUARD_TURN, founderAnswers: [{ text: "Cứ ghi nhận đủ", at: "2026-11-10T09:45:00.000Z" }] }
 
-        await expect(door.repeatGuard(sendOf({ conversationId: "c-1", text: "Dạ em đã ghi nhận ạ." }, answered))).resolves.toBeNull()
+        await expect(
+            door.repeatGuard(sendOf({ conversationId: "c-1", text: "Dạ em đã ghi nhận ạ." }, answered)),
+        ).resolves.toBeNull()
     })
 
     it("never stops the lines of one attempt, nor a first line: a line sent since this attempt began does not count", async () => {
         const fresh = { ...TOLD, sentAt: "2026-11-10T10:00:03.000Z" }
 
-        await expect((await buildWithLines([fresh])).door.repeatGuard(sendOf({ conversationId: "c-1", text: "x" }))).resolves.toBeNull()
-        await expect((await buildWithLines([])).door.repeatGuard(sendOf({ conversationId: "c-1", text: "x" }))).resolves.toBeNull()
+        await expect(
+            (await buildWithLines([fresh])).door.repeatGuard(sendOf({ conversationId: "c-1", text: "x" })),
+        ).resolves.toBeNull()
+        await expect(
+            (await buildWithLines([])).door.repeatGuard(sendOf({ conversationId: "c-1", text: "x" })),
+        ).resolves.toBeNull()
     })
 
     it("judges a message addressed by the customer on the conversation the send would pick (the bank-fed run with no conversation)", async () => {
@@ -505,7 +558,9 @@ describe("NodeToolDoorService repeat guard: one customer line per stop", () => {
     it("does not judge another effect, a send that addresses nobody, or a customer with no conversation", async () => {
         const { door, lines, conversations } = await buildWithLines([TOLD])
 
-        await expect(door.repeatGuard({ ...sendOf({ conversationId: "c-1" }), effect: TOOL.teamMessagePost })).resolves.toBeNull()
+        await expect(
+            door.repeatGuard({ ...sendOf({ conversationId: "c-1" }), effect: TOOL.teamMessagePost }),
+        ).resolves.toBeNull()
         await expect(door.repeatGuard(sendOf({ text: "x" }))).resolves.toBeNull()
         conversations.ofLeads.mockResolvedValue([])
         await expect(door.repeatGuard(sendOf({ leadId: "lead-9", text: "x" }))).resolves.toBeNull()

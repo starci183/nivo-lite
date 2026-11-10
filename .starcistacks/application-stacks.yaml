@@ -611,8 +611,8 @@ environments:
             APP_BUILD_ID: dev
             AGENT_RUNS_PARK_SWEEP_MINUTES: "30"
             AGENT_RUNS_PARK_MAX_RESUMES: "5"
-            # Dev only, owner 2026-11-10 (restart TWELVE): node AI calls pinned to the Together upstream; no fallback setting sent.
-            AI_NODE_PROVIDER_ONLY: together
+            # Dev only, package 0-10 (restart TWELVE): the first workflow on LangGraph threads.
+            AGENT_ENGINE_LANGGRAPH: chatbot.front-desk
             SMTP_ALLOW_PRIVATE_HOSTS: "true"
             STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
             STORAGE_BUCKET_PREFIX: nivo-dev

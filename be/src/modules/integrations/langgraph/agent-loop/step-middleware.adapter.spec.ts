@@ -362,3 +362,43 @@ describe("stepMiddlewareOf: inside a thread node that starts again", () => {
         expect(counts).toEqual({ asked: 2, door: 1 })
     })
 })
+
+describe("stepMiddlewareOf: the name a model turn is recorded under", () => {
+    /** The names the loop hands its record, for one run of the frame on the script. */
+    const namesOf = async (over: Partial<NodeAgentLoop>, answers: ReadonlyArray<Answer>): Promise<ReadonlyArray<string>> => {
+        const names: Array<string> = []
+        const { loop } = frameOf(over)
+        const client = await build()
+        await client.run(loop, scripted(answers).model, {
+            record: (call, act) => {
+                names.push(call)
+                return act()
+            },
+        })
+        return names
+    }
+    const SCRIPT = [one("order.read", { id: "o-1" }), one(DONE_TOOL, { output: {} })]
+
+    it("is the purpose and the turn, then a digest of what the turn sends: the same in every process for the same content", async () => {
+        const first = await namesOf({}, SCRIPT)
+        const again = await namesOf({}, SCRIPT)
+
+        expect(first).toHaveLength(2)
+        expect(first.map((name) => name.replace(/:[0-9a-f]{32}$/u, ""))).toEqual(["order.look:agent#1", "order.look:agent#2"])
+        expect(again).toEqual(first)
+        expect(new Set(first).size).toBe(2)
+    })
+
+    it("changes with any word the turn sends: another input, other rules for this try, or another fact on an earlier turn", async () => {
+        const base = await namesOf({}, SCRIPT)
+        const input = await namesOf({ input: { input: { orderId: "o-2" } } }, SCRIPT)
+        const volatile = await namesOf({ volatile: "The founder answered: yes" }, SCRIPT)
+        const fact = await namesOf({ call: () => Promise.resolve({ ok: true, result: { seen: false } }) }, SCRIPT)
+
+        expect(input[0]).not.toBe(base[0])
+        expect(volatile[0]).not.toBe(base[0])
+        // The first turn sent the same words; the second carries another fact, so it is another turn.
+        expect(fact[0]).toBe(base[0])
+        expect(fact[1]).not.toBe(base[1])
+    })
+})
