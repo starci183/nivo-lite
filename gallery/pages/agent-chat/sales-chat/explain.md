@@ -13,9 +13,9 @@ Luật: `page-header-left-sublabel-xs` (band flush left), `table-heroui-native-s
 Grammar: `Page` `header` with `tabs` and `breadcrumbs` (`frame/Page/index.d.ts`, `frame/PageHeader/index.d.ts`); app block `AgentInstanceFrame`.
 
 ## Vùng chat toàn chiều rộng (đầu phòng cố định, luồng cuộn, ô nhập cố định)
-Vì sao: a chat pane is full-bleed Layout B: `Pane surface content="full"` whose body is the room head and the thread and whose `footer` is the composer. Only the thread scrolls; the head and the composer stay at the pane edges at 1440, 1920 and 390 (checked in the shots: long thread, head and composer both visible). There is no aside any more.
-Luật: `table-heroui-native-section-head` (scroll: header band never scrolls, chat scrolls only the thread; chat panes are full-bleed), `nivo-surface-layering`.
-Grammar: `Pane` `footer` and `content="full"` (`frame/PaneGrid/index.d.ts`, 0.37.5), `PaneSection scroll role="log"` (`frame/PaneSection/index.d.ts`); app block `TeamChatRoom` (`teamChatRoomPartsOf`).
+Vì sao: a chat pane is the chat frame (room head + thread + composer footer) and it is drawn on `--background` (pink) on any page that renders a chat, even when the pane sits among white panes; the room list pane beside it stays the white surface. Probed at 1440 (Grammar 0.37.33): head band, thread and composer footer are all `--background`, the composer field is white. Only the thread scrolls: the `role="log"` element has scrollHeight greater than clientHeight on a long room and the pane body does not scroll; it opens at the newest message (scrollTop at the bottom). The head and the composer stay at the pane edges at 1440, 1920 and 390.
+Luật: DNA-COMMON-CHAT-FRAME (the chat frame is `--background` regardless of the surface under it), DNA-COMMON-CHAT-FRAME-SCROLL (only the thread scrolls, the newest message is in view on open), `chat-surfaces`, `table-heroui-native-section-head` (header band never scrolls).
+Grammar: `Pane content="chat"` (Grammar 0.37.33, `frame/PaneGrid/index.d.ts`): head, `PaneSection scroll role="log"` thread and `footer` composer in one pane; app block `TeamChatRoom` (`teamChatRoomPartsOf`) chooses no tone.
 
 ## Thẻ đơn hàng trong luồng (Đơn mới DH-…, Thông báo, Mở đơn →, ghim)
 Vì sao: an order message is a compact card at the bubble measure (Grammar `standard`, at most 40rem, not 70% of the row): the head holds the order number, the "Thông báo" chip, the head link "Mở đơn →" and the pin; the body is the product row, then "Tổng · Khách · Giao" as small term and value lines. The old stacked key-value block and the bottom button are gone. A true 30rem cap needs a Grammar measure for `MessageCard` (gap, see the report).
@@ -23,14 +23,14 @@ Luật: `table-heroui-native-section-head` (navigation link has an arrow that sl
 Grammar: `MessageCard` `measure="standard"` (`composite/MessageCard/index.d.ts`), `Link variant="head"` (`leaf/Link/index.d.ts`); app composite `TeamChatAgentCard` and blocks-core `OrderBody`.
 
 ## Đầu phòng chat (tên, "Agent", ghim, thành viên, tắt chuông)
-Vì sao: the head on the surface under a separator: avatar mark with the agent chip, name 14/500, "Agent" 12 muted, and at the end three outlined round icon buttons (pinned, members, mute) that open drawers or toggle mute. It stays at the top while the thread scrolls.
-Luật: `type-scale-14-12`, `nivo-surface-layering` (head on the surface).
+Vì sao: the head sits on `--background` under a 1px separator (part of the chat frame, not the white chrome): avatar mark with the agent chip, name 14/500, "Agent" 12 muted, and at the end three outlined round icon buttons (pinned, members, mute) that open drawers or toggle mute. It stays at the top while the thread scrolls.
+Luật: `type-scale-14-12`, DNA-COMMON-CHAT-FRAME (head is part of the chat frame, `--background`).
 Grammar: `PaneHeader` `title` `description` `mark` `actions` (`composite/PaneHeader/index.d.ts`) through app frame `ChatRoomHead`; `IconButton intent="neutral"` (`leaf/IconButton/index.d.ts`).
 
-## Luồng tin nhắn (nền trắng, mốc ngày, nhóm theo người gửi)
-Vì sao: the thread is on the white surface with white bubbles for others and red for the viewer, a day divider, the sender named once at the head of a run and the agent avatar at its foot. Identical repeated notices of one agent fold into one cautionary row with the count and the first-last time (see the notice row).
-Luật: `pink-page-surface-rule` (a chat is a pane, not a pink well), `type-scale-14-12`.
-Grammar: `PaneSection scroll={{ role: "log", tone: "surface", align: "end" }}` via app frame `ChatThreadBand`; `MessageBubble` (`composite/MessageBubble/index.d.ts`); `Divider label`.
+## Luồng tin nhắn (nền background, mốc ngày, nhóm theo người gửi)
+Vì sao: the thread sits on `--background` (the pink well, never white); a message of others or of an agent is a flat white `--surface` bubble with no shadow and no border (a message, not a card); the viewer's own message is `--accent` with `--accent-foreground` text; a day divider, the sender named once at the head of a run and the agent avatar at its foot. Identical repeated notices of one agent fold into one cautionary row with the count and the first-last time (see the notice row).
+Luật: DNA-COMMON-CHAT-FRAME (head, thread and composer footer on `--background`), `type-scale-14-12`. `chat-surfaces` (flat bubbles: thread on `--background`, others flat `--surface`, own `--accent`, no empty band above the composer's suggestion row).
+Grammar: `PaneSection scroll={{ role: "log", align: "end" }}` via app frame `ChatThreadBand` (no `tone`: a `role="log"` thread is always on `--background`, Grammar 0.37.33 laws DNA-COMMON-CHAT-SURFACES and DNA-COMMON-CHAT-FRAME-SCROLL); `MessageBubble` (`composite/MessageBubble/index.d.ts`); `Divider label`.
 
 ## Thông báo lặp của agent gộp một hàng ("×N · giờ đầu–giờ cuối", Xem)
 Vì sao: identical notices that one agent or the system posts one after another ("... cần bạn quyết định ...") become one cautionary row: the first words bold, the rest muted, "×N · first–last time", and a row action that opens the repeats and folds them again. The rule is general (same sender, same text, no card, file or reply), not tied to one message.

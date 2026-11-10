@@ -1,29 +1,10 @@
-import { creditsOf } from "@modules/domain/ai-usage-events"
+import { creditsOf, priceOf } from "@modules/domain/ai-usage-events"
 import type { AiUsage } from "@modules/integrations/ai"
 import type { QuotaStatus, UsageKind } from "./knowledge.contracts"
 import type { QuotaStatusRow } from "./persistence/usage.rows"
 
 /** The share of the allowance at which the owner is warned. */
 const WARN_AT = 0.8
-
-/** The price per million tokens of the models whose provider reports no cost. */
-interface Price {
-    /** The text of the model name this price applies to. */
-    readonly match: string
-    /** US dollars per million prompt tokens. */
-    readonly in: number
-    /** US dollars per million completion tokens. */
-    readonly out: number
-}
-
-const PRICES: ReadonlyArray<Price> = [
-    { match: "deepseek", in: 0.14, out: 0.28 },
-    { match: "qwen3-embedding", in: 0.01, out: 0 },
-    { match: "text-embedding-3-small", in: 0.02, out: 0 },
-    { match: "text-embedding-3-large", in: 0.13, out: 0 },
-]
-
-const DEFAULT_PRICE: Price = { match: "", in: 0.3, out: 1.2 }
 
 /** Kinds whose replies customers read: they are held back as soon as the allowance is exceeded. */
 const CUSTOMER_FACING: ReadonlySet<UsageKind> = new Set<UsageKind>(["chat_reply", "relay"])
@@ -52,11 +33,12 @@ export interface UsageInputs {
     readonly completionChars: number
 }
 
-/** The cost in US dollars of a call to a model by its list price. */
-export const priceOf = (model: string, promptTokens: number, completionTokens: number): number => {
-    const price = PRICES.find((entry) => model.toLowerCase().includes(entry.match)) ?? DEFAULT_PRICE
-    return (promptTokens * price.in + completionTokens * price.out) / 1_000_000
-}
+/**
+ * The cost in US dollars of a call to a model by its list price: the ONE price table of the app (`ai-usage-events/usage-cost.policy.ts`,
+ * Claude Sonnet / Haiku 5.5, OpenAI `text-embedding-3-small`, and the retired models for old rows). An embeddings call is booked under
+ * its model identity (`text-embedding-3-small@1536`), which that table matches.
+ */
+export { priceOf }
 
 /** About one token per three characters, at least one. */
 export const estimateTokens = (chars: number): number => Math.max(1, Math.ceil(chars / 3))

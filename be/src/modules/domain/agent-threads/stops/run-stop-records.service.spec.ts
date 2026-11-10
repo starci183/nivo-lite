@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
+import { queryProblems } from "@nivo-lite/agent-sdk/query"
+import { agentRunStopEntity } from "@nivo-lite/blocks-core/entities"
 import { EntityEngineService, EntityMutationService } from "@modules/domain/entity-engine"
 import type { ScopedTx } from "@modules/domain/entity-engine"
 import { RunStopsErrorCode } from "./errors/run-stops.error"
@@ -162,5 +164,25 @@ describe("RunStopRecordsService.open: one record per run and step", () => {
             customerLines: [{ conversationId: "c-1" }],
             cardMessageId: "33333333-3333-4333-8333-333333333333",
         })
+    })
+})
+
+describe("RunStopRecordsService.newest: the open stops of a workspace, for the schedule list", () => {
+    it("lists one page of the newest stops of a state, served by the entity's index on state and moment (real query validator)", async () => {
+        const { records, engine } = await build()
+        engine.list.mockResolvedValue({ rows: [{ row: rowOf() }], next: null } as never)
+
+        const stops = await records.newest("ws-1", "open", 500)
+
+        expect(stops.map((stop) => [stop.runId, stop.state])).toEqual([[DATA.runId, "open"]])
+        expect(engine.scoped).toHaveBeenCalledWith("ws-1", expect.any(Function))
+        const queries = engine.list.mock.calls.map(([, query]) => query)
+        expect(queries.map((query) => query.page)).toEqual([{ size: 50 }])
+        const catalog = new Map([[agentRunStopEntity.name, agentRunStopEntity]])
+        expect(queries.flatMap((query) => queryProblems(query, catalog))).toEqual([])
+        // The validator has teeth: the same list ordered by a field no index serves is refused.
+        const [first] = queries
+        if (first === undefined) throw new Error("no query")
+        expect(queryProblems({ ...first, order: [["reason", "asc"]] }, catalog)).not.toEqual([])
     })
 })

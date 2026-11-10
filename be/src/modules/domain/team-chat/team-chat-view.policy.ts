@@ -11,6 +11,8 @@ import type { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity } from
 import { quoteBodyOf } from "./team-chat-reaction.policy"
 import type { ReactionView, ReplyView } from "./team-chat-reaction.contracts"
 import { stopCardViewOf, stopReplyUsersOf } from "./stop-card.policy"
+import { brainChangeCardViewOf, storedBrainChangeOf } from "./brain-change-card.policy"
+import type { BrainChangeCost, BrainChangeViewerRole } from "./brain-change-card.contracts"
 
 /** What a thread of messages is read against: the names, the pins, the file addresses and the decisions of its cards. */
 export interface MessageViewContext {
@@ -28,6 +30,10 @@ export interface MessageViewContext {
     readonly quoted: ReadonlyMap<string, ChatRoomMessageEntity>
     /** The names of the people who replied to stop cards, by the id the stop keeps (a member seat or an account); none read when absent. */
     readonly stopNames?: ReadonlyMap<string, string>
+    /** The viewer's workspace role, read only when the page holds a `brain.change` card (it sets what the card offers); "member" when absent. */
+    readonly viewerRole?: BrainChangeViewerRole
+    /** What producing each learning card's proposal cost, by change id (U1); read only for an owner or manager. */
+    readonly brainChangeCosts?: ReadonlyMap<string, BrainChangeCost>
 }
 
 /** What a list of rooms is read against: the viewer, the names, what is unread and the newest message of each room. */
@@ -53,6 +59,14 @@ export const refsOfMessages = (messages: ReadonlyArray<ChatRoomMessageEntity>): 
             : [{ memberKind: message.authorKind, memberId: message.authorId }]),
         ...message.mentions.map((mention) => ({ memberKind: mention.kind, memberId: mention.id })),
     ])
+
+/** Whether a page of messages holds a truth-graph change card (`brain.change`), so the viewer's role is worth reading. */
+export const holdsBrainChange = (messages: ReadonlyArray<ChatRoomMessageEntity>): boolean =>
+    messages.some((message) => storedBrainChangeOf(message.ref?.agent_message ?? null) !== null)
+
+/** The role a `brain.change` card is read with, from the viewer's workspace role. */
+export const brainChangeViewerRoleOf = (role: string | null): BrainChangeViewerRole =>
+    role === "owner" || role === "manager" ? role : "member"
 
 /** The ids of the people who replied to the stop cards among the messages (as the stops keep them), whose names a thread needs. */
 export const stopReplierIdsOf = (messages: ReadonlyArray<ChatRoomMessageEntity>): Array<string> => [
@@ -112,6 +126,11 @@ export const messageViewOf = (message: ChatRoomMessageEntity, context: MessageVi
         replyTo: replyViewOf(message.replyTo, context),
         forwardedFrom: message.ref?.forwarded_from ?? null,
         stop: stopCardViewOf(message.ref?.agent_message ?? null, (id) => context.stopNames?.get(id) ?? ""),
+        brainChange: brainChangeCardViewOf(
+            message.ref?.agent_message ?? null,
+            context.viewerRole ?? "member",
+            context.brainChangeCosts,
+        ),
     }
 }
 

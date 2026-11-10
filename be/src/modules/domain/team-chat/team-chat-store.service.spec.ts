@@ -474,6 +474,7 @@ describe("TeamChatStoreService lines", () => {
                 kind: "text",
                 ref: null,
                 clientId: "k1",
+                replyTo: null,
             },
         ])
         expect(system?.callsOf("values")[0]).toEqual([
@@ -486,6 +487,7 @@ describe("TeamChatStoreService lines", () => {
                 kind: "system",
                 ref: null,
                 clientId: "k1",
+                replyTo: null,
             },
         ])
         expect(repeat?.callsOf("orIgnore")).toEqual([[]])

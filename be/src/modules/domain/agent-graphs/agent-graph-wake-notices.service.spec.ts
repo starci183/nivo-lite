@@ -19,11 +19,30 @@ import { AgentWorkflowRunsService } from "./agent-workflow-runs.service"
 /** A customer's line on a channel, as the drain hands it to the flow. */
 const WAKE = agentTurnViewOf({ source: "customer", context: { conversationId: "conv-1", channel: "meta" } })
 
-/** The catalogue as a test reads it: the key, then its fill-ins by name. */
+/** The words a test catalogue knows; any other key is missing (the catalogue answers the key itself). */
+const WORDS: Readonly<Record<string, string>> = {
+    "agentGraphs.wake.failed.title": "A turn could not run",
+    "agentGraphs.wake.failed.sentence": "A turn stopped before the first step of a workflow, after its retries.",
+    "agentGraphs.wake.untaken.title": "A customer message no workflow took",
+    "agentGraphs.wake.untaken.sentence": "A customer message was handled by no workflow.",
+    "agentGraphs.wake.reason.no_trigger_takes_wake": "no running workflow takes messages from this channel",
+    "teamChat.fact.channel": "Channel",
+    "teamChat.fact.reason": "Reason",
+    "teamChat.fact.code": "Error code",
+    "teamChat.fact.conversation": "Conversation id",
+    "teamChat.fact.why": "Why",
+    "teamChat.fact.sources": "Takes messages from",
+    "teamChat.fact.running": "Workflows switched on",
+    "teamChat.channel.meta": "Facebook Messenger",
+    "teamChat.channel.zalo": "Zalo",
+    "teamChat.channel.telegram": "Telegram",
+    "errors.ENTITY_ENGINE_QUERY_INVALID": "The data read request is invalid.",
+    "teamChat.reason.unknown": "A system error with no description yet.",
+}
+
+/** The catalogue as a test reads it: the words of a known key, the key itself for a missing one. */
 const catalog = mock<MessageCatalog>({
-    get: jest.fn(
-        (key: string, params?: Readonly<Record<string, unknown>>) => `[${key}] ${JSON.stringify(params ?? {})}`,
-    ),
+    get: jest.fn((key: string) => WORDS[key] ?? key),
 })
 
 const noticesOf = async (post: NodeEffectExecutor | undefined) => {
@@ -40,8 +59,11 @@ const noticesOf = async (post: NodeEffectExecutor | undefined) => {
     return { notices: moduleRef.get(AgentGraphWakeNoticesService), nodes, logger }
 }
 
+/** The payload a notice posted, as the team chat's executor gets it. */
+const postedOf = (post: ReturnType<typeof mock<NodeEffectExecutor>>) => post.execute.mock.calls[0]?.[1]
+
 describe("AgentGraphWakeNoticesService", () => {
-    it("tells the founder alone, once per wake, that no workflow took a customer's line, with the channel, the conversation and why", async () => {
+    it("tells the founder alone, once per wake, that no workflow took a customer's line, as a typed report with worded facts", async () => {
         const post = mock<NodeEffectExecutor>({ effect: TOOL.teamMessagePost })
         post.execute.mockResolvedValue({ kind: "chat-message", id: "m-1" })
         const { notices, nodes } = await noticesOf(post)
@@ -55,26 +77,75 @@ describe("AgentGraphWakeNoticesService", () => {
         expect(nodes.optionalExecutorOf).toHaveBeenCalledWith(TOOL.teamMessagePost)
         const [turn, payload, call] = post.execute.mock.calls[0] ?? []
         expect(turn).toMatchObject({ workspaceId: "ws-1", agentId: "agent-1", conversationId: null, origin: "system" })
-        expect(payload).toMatchObject({ kind: "message.text", intent: "report", audience: "founder" })
-        expect(payload?.title).toContain("agentGraphs.wake.untaken.title")
-        expect(payload?.text).toContain('"channel":"meta"')
-        expect(payload?.text).toContain('"conversation":"conv-1"')
-        expect(payload?.text).toContain("agentGraphs.wake.reason.no_trigger_takes_wake")
-        expect(payload?.text).toContain('"sources":"zalo, telegram"')
+        expect(payload).toEqual({
+            kind: "report.facts",
+            title: "A customer message no workflow took",
+            text: "A customer message was handled by no workflow.",
+            audience: "founder",
+            facts: [
+                { name: "Channel", value: "Facebook Messenger", technical: false },
+                { name: "Why", value: "no running workflow takes messages from this channel", technical: false },
+                { name: "Takes messages from", value: "Zalo, Telegram", technical: false },
+                { name: "Workflows switched on", value: "front-desk", technical: true },
+                { name: "Conversation id", value: "conv-1", technical: true },
+            ],
+        })
         expect(call).toEqual({ key: "wake-notice:wake-1:untaken", dedupeKey: "wake-notice:wake-1:untaken" })
     })
 
-    it("tells the founder a wake that failed before any step, with its code, and writes nothing to the customer", async () => {
+    it("tells the founder a wake that failed before any step: a readable sentence, the reason in words, the code only as a technical fact", async () => {
         const post = mock<NodeEffectExecutor>({ effect: TOOL.teamMessagePost })
         post.execute.mockResolvedValue({ kind: "chat-message", id: "m-1" })
         const { notices } = await noticesOf(post)
 
-        await notices.failed(WAKE, "ENTITY_ENGINE_UNAVAILABLE")
+        await notices.failed(WAKE, "ENTITY_ENGINE_QUERY_INVALID")
 
         expect(post.execute).toHaveBeenCalledTimes(1)
-        const [, payload, call] = post.execute.mock.calls[0] ?? []
-        expect(payload?.text).toContain('"code":"ENTITY_ENGINE_UNAVAILABLE"')
-        expect(call?.key).toBe("wake-notice:wake-1:failed:ENTITY_ENGINE_UNAVAILABLE")
+        const payload = postedOf(post)
+        expect(payload).toEqual({
+            kind: "report.facts",
+            title: "A turn could not run",
+            text: "A turn stopped before the first step of a workflow, after its retries.",
+            audience: "founder",
+            facts: [
+                { name: "Channel", value: "Facebook Messenger", technical: false },
+                { name: "Reason", value: "The data read request is invalid.", technical: false },
+                { name: "Error code", value: "ENTITY_ENGINE_QUERY_INVALID", technical: true },
+                { name: "Conversation id", value: "conv-1", technical: true },
+            ],
+        })
+        expect(post.execute.mock.calls[0]?.[2]?.key).toBe("wake-notice:wake-1:failed:ENTITY_ENGINE_QUERY_INVALID")
+    })
+
+    it("never puts a raw code, a channel id or a conversation id into the sentence or a worded fact", async () => {
+        const post = mock<NodeEffectExecutor>({ effect: TOOL.teamMessagePost })
+        post.execute.mockResolvedValue({ kind: "chat-message", id: "m-1" })
+        const { notices } = await noticesOf(post)
+        const wake = { ...WAKE, context: { conversationId: "a544428d-conv", channel: "sms-gateway" } }
+
+        await notices.failed(wake, "SOME_UNMAPPED_CODE")
+
+        const payload = postedOf(post)
+        const facts = (payload?.facts ?? []) as ReadonlyArray<{ name: string; value: string; technical: boolean }>
+        const shown = [String(payload?.text), ...facts.filter((fact) => !fact.technical).map((fact) => fact.value)].join(" ")
+        for (const raw of ["SOME_UNMAPPED_CODE", "a544428d-conv", "sms-gateway"]) expect(shown).not.toContain(raw)
+        expect(facts.filter((fact) => fact.technical).map((fact) => fact.value)).toEqual([
+            "sms-gateway",
+            "SOME_UNMAPPED_CODE",
+            "a544428d-conv",
+        ])
+        expect(facts.find((fact) => fact.name === "Reason")?.value).toBe("A system error with no description yet.")
+    })
+
+    it("names no channel and no conversation when the wake carries none", async () => {
+        const post = mock<NodeEffectExecutor>({ effect: TOOL.teamMessagePost })
+        post.execute.mockResolvedValue({ kind: "chat-message", id: "m-1" })
+        const { notices } = await noticesOf(post)
+
+        await notices.failed({ ...WAKE, context: {} }, "ENTITY_ENGINE_QUERY_INVALID")
+
+        const facts = (postedOf(post)?.facts ?? []) as ReadonlyArray<{ name: string }>
+        expect(facts.map((fact) => fact.name)).toEqual(["Reason", "Error code"])
     })
 
     it("never throws: an app with no team chat, or a chat that refuses the line, is logged", async () => {

@@ -4,19 +4,20 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { CLOCK } from "@modules/platform/clock"
 import { BrainChangeRequestsService, changeEvidenceOf } from "./brain-change-requests.service"
-import type { ChangeRequest } from "./brain-facts.contracts"
+import type { ChangeRequestHook, ReasonedChangeRequest } from "./brain-change-requests.service"
 import { BrainFactsService } from "./brain-facts.service"
 import { BrainFactsErrorCode } from "./errors/brain-facts.error"
 
 const MESSAGE = "44444444-4444-4444-8444-444444444444"
 
-const requestOf = (changes: Partial<ChangeRequest> = {}): ChangeRequest => ({
+const requestOf = (changes: Partial<ReasonedChangeRequest> = {}): ReasonedChangeRequest => ({
     subjectLabel: "Shop",
     attributeLabel: "Hours",
     value: "9h",
     room: "direct",
     messageId: MESSAGE,
     quote: "  from Monday we open at 9  ",
+    reason: "The owner said we open at 9 from Monday instead of 8; no end was said.",
     proposedBy: "sales",
     agentId: "a1",
     installationId: null,
@@ -142,5 +143,64 @@ describe("BrainChangeRequestsService: the same value, a retire request, an incom
             code: BrainFactsErrorCode.FactIncomplete,
         })
         expect(store.byKey).not.toHaveBeenCalled()
+    })
+})
+
+describe("BrainChangeRequestsService: the reason is mandatory and real (BG4)", () => {
+    it.each([
+        ["no reason", { reason: undefined }, "missing"],
+        ["an empty reason", { reason: "   " }, "missing"],
+        ["a reason too short to say why", { reason: "gia moi!" }, "missing"],
+        ["a copy of the value", { value: "Mở cửa lúc 9 giờ sáng", reason: "mo cua luc 9 gio sang" }, "copy"],
+        ["a copy of the quoted words", { reason: "From Monday we open at 9." }, "copy"],
+    ])("refuses %s before anything is filed or vetted", async (_name, changes, problem) => {
+        const { requests, facts: store } = await build()
+        const hook = { vet: jest.fn(), filed: jest.fn() } satisfies ChangeRequestHook
+        requests.whenFiled(hook)
+
+        await expect(requests.propose(facts.WS, requestOf(changes))).rejects.toMatchObject({
+            code: BrainFactsErrorCode.FactIncomplete,
+            params: { field: "reason", problem },
+        })
+        expect(store.byKey).not.toHaveBeenCalled()
+        expect(store.propose).not.toHaveBeenCalled()
+        expect(hook.vet).not.toHaveBeenCalled()
+        expect(hook.filed).not.toHaveBeenCalled()
+    })
+
+    it("vets the words before filing and hands the filed request to the card after", async () => {
+        const { requests, facts: store } = await build()
+        const proposal = facts.factOf({ id: "p1", value: "9h", status: "proposed" })
+        store.propose.mockResolvedValue({ fact: proposal, outcome: "proposed" })
+        const order: Array<string> = []
+        const hook: ChangeRequestHook = {
+            vet: jest.fn(async () => {
+                order.push("vet")
+            }),
+            filed: jest.fn(async () => {
+                order.push("filed")
+            }),
+        }
+        requests.whenFiled(hook)
+        store.propose.mockImplementation(async () => {
+            order.push("store")
+            return { fact: proposal, outcome: "proposed" }
+        })
+
+        const request = requestOf()
+        await expect(requests.propose(facts.WS, request)).resolves.toEqual({ outcome: "filed", fact: proposal })
+        expect(order).toEqual(["vet", "store", "filed"])
+        expect(hook.filed).toHaveBeenCalledWith(facts.WS, request, { outcome: "filed", fact: proposal })
+    })
+
+    it("files nothing when the hook refuses the words (not a person's line of the team chat)", async () => {
+        const { requests, facts: store } = await build()
+        requests.whenFiled({
+            vet: jest.fn().mockRejectedValue(new Error("not a person's line")),
+            filed: jest.fn(),
+        })
+
+        await expect(requests.propose(facts.WS, requestOf())).rejects.toThrow("not a person's line")
+        expect(store.propose).not.toHaveBeenCalled()
     })
 })

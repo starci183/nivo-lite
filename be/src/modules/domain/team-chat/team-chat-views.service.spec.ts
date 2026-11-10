@@ -1,4 +1,6 @@
 import { Test } from "@nestjs/testing"
+import { AiUsageOverviewService } from "@modules/domain/ai-usage-events"
+import { LessonCandidatesService } from "@modules/domain/brain-lessons"
 import { mock } from "@starci/jest-preset"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
@@ -277,5 +279,124 @@ describe("TeamChatViewsService stop cards", () => {
         const [view] = await views.messageViews(WS, [stopLine([])], ANA)
         expect(view?.stop?.state).toBe("answered")
         expect(people.directory).not.toHaveBeenCalled()
+    })
+})
+
+describe("TeamChatViewsService brain.change cards", () => {
+    const plainLine = () =>
+        Object.assign(new ChatRoomMessageEntity(), {
+            ...card,
+            kind: "text",
+            ref: null,
+            body: "hi",
+            attachments: [],
+            mentions: [],
+        })
+    const brainLine = () =>
+        Object.assign(new ChatRoomMessageEntity(), {
+            ...card,
+            kind: "text",
+            attachments: [],
+            ref: {
+                agent_message: JSON.stringify({
+                    kind: "brain.change",
+                    title: "t",
+                    payload: {
+                        version: 1,
+                        changeId: "p-ship",
+                        origin: "chat",
+                        kind: "change",
+                        factKey: { subjectLabel: "Giao hang", attributeLabel: "Phi ship" },
+                        oldValue: null,
+                        current: null,
+                        newValue: "30.000 d",
+                        unit: null,
+                        validFrom: null,
+                        validTo: null,
+                        reason: "Anh vua nhan phi ship 30k.",
+                        evidence: [
+                            {
+                                kind: "message",
+                                quote: "phi ship 30k",
+                                ref: "team-chat:m-1",
+                                by: { name: "Ana", memberId: null },
+                                at: null,
+                            },
+                        ],
+                        state: "open",
+                        decidedBy: null,
+                        supersededBy: null,
+                        revision: 1,
+                    },
+                }),
+            },
+        })
+
+    it("reads the viewer's role only when the page holds a brain.change card, and offers what the role may do", async () => {
+        const { views, people } = await build()
+        people.directory.mockResolvedValue([
+            { id: "seat-ana", user_id: ANA, display_name: "Ana", role: "manager", status: "active" },
+        ])
+
+        const [plain] = await views.messageViews(WS, [plainLine()], ANA)
+        expect(plain?.brainChange).toBeNull()
+        expect(people.directory).not.toHaveBeenCalled()
+
+        const [view] = await views.messageViews(WS, [brainLine()], ANA)
+        expect(people.directory).toHaveBeenCalledTimes(1)
+        expect(view?.brainChange).toMatchObject({ changeId: "p-ship", canApprove: false, canReject: true })
+    })
+
+    it("offers nothing to a viewer the directory does not list as owner or manager", async () => {
+        const { views, people } = await build()
+        people.directory.mockResolvedValue([])
+        const [view] = await views.messageViews(WS, [brainLine()], ANA)
+        expect(view?.brainChange).toMatchObject({ canApprove: false, canReject: false })
+    })
+
+    it("U1: shows a manager what a LEARNING card's proposal cost (its lessons' calls), and staff nothing; reads none for staff", async () => {
+        const lessons = mock<LessonCandidatesService>()
+        lessons.ofChange.mockResolvedValue([{ id: "c1" }, { id: "c2" }] as never)
+        const usage = mock<AiUsageOverviewService>()
+        usage.lessonsCostOf.mockResolvedValue({
+            calls: 2,
+            failedTries: 0,
+            tokens: 900,
+            costUsd: 0.000339,
+            credits: 0.3,
+            failedCostUsd: 0,
+            failedCredits: 0,
+        })
+        const { people, ...deps } = await build()
+        const views = new TeamChatViewsService(
+            deps.store,
+            people,
+            deps.agents,
+            deps.files,
+            deps.approvals,
+            deps.reactions,
+            lessons,
+            usage,
+        )
+        const learned = brainLine()
+        learned.ref = {
+            agent_message: (learned.ref?.agent_message ?? "").replace('"origin":"chat"', '"origin":"learning"'),
+        }
+
+        people.directory.mockResolvedValue([
+            { id: "seat-ana", user_id: ANA, display_name: "Ana", role: "manager", status: "active" },
+        ])
+        const [seen] = await views.messageViews(WS, [learned], ANA)
+        expect(seen?.brainChange?.cost).toEqual({ credits: 0.3, usd: 0.000339 })
+        expect(lessons.ofChange).toHaveBeenCalledWith(WS, "p-ship")
+        expect(usage.lessonsCostOf).toHaveBeenCalledWith(WS, ["c1", "c2"])
+
+        lessons.ofChange.mockClear()
+        people.directory.mockResolvedValue([
+            { id: "seat-ana", user_id: ANA, display_name: "Ana", role: "staff", status: "active" },
+        ])
+        const [staff] = await views.messageViews(WS, [learned], ANA)
+        expect(staff?.brainChange?.cost).toBeNull()
+        expect(lessons.ofChange).not.toHaveBeenCalled()
     })
 })

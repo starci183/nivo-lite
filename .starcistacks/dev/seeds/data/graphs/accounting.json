@@ -192,7 +192,8 @@
             },
             "routes": {
                 "matched": "mark-paid"
-            }
+            },
+            "model": "claude-sonnet-5-5"
         },
         {
             "key": "mark-paid",
@@ -215,7 +216,8 @@
                     "$ref": "steps.match.output.receivedVnd"
                 }
             },
-            "next": "ledger"
+            "next": "ledger",
+            "model": "claude-sonnet-5-5"
         },
         {
             "key": "ledger",
@@ -229,7 +231,8 @@
                     "$ref": "steps.mark-paid.output.orderId"
                 }
             },
-            "next": "notify-paid"
+            "next": "notify-paid",
+            "model": "claude-sonnet-5-5"
         },
         {
             "key": "notify-paid",
@@ -240,7 +243,8 @@
                     "$ref": "steps.mark-paid.output.orderId"
                 }
             },
-            "next": "to-after-sale"
+            "next": "to-after-sale",
+            "model": "claude-sonnet-5-5"
         },
         {
             "key": "to-after-sale",

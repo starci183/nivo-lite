@@ -33,6 +33,7 @@ export const parseAgentThreadsConfig = (env: EnvSource): AgentThreadsOptions => 
         throw new AgentThreadsError({ code: AgentThreadsErrorCode.FlagInvalid, params: { name: engine.name } })
     return {
         workflows: threadWorkflowsOf(flag.workflows, engine.engine),
+        everyWorkflow: engine.engine === "langgraph",
         graphsMax: env.has("AGENT_THREADS_GRAPHS_MAX") ? env.int("AGENT_THREADS_GRAPHS_MAX") : undefined,
         approvalDeadlineMs: env.has(APPROVAL_DEADLINE) ? env.int(APPROVAL_DEADLINE) : undefined,
         ownerDeadlineMs: env.has(OWNER_DEADLINE) ? env.int(OWNER_DEADLINE) : undefined,

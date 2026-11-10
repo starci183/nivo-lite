@@ -4,6 +4,7 @@ import type {
     GenerateParams,
     GenerationInput,
     GenerationProgress,
+    GenerationWork,
     PollVerdict,
     QueuedGeneration,
     ResponseFormat,
@@ -57,15 +58,59 @@ const isMessage = (value: unknown): value is GenMessage =>
 
 const formatOf = (value: unknown): ResponseFormat => (value === "json" ? "json" : "text")
 
+/** A text member of a stored object, or null. */
+const textOf = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null)
+
+/** The stored work of a generation, or null when none was stored or it is not that shape. */
+const workOf = (value: unknown): GenerationWork | null => {
+    if (!isPlainObject(value) || typeof value.kind !== "string" || value.kind === "") return null
+    return {
+        kind: value.kind,
+        ref: textOf(value.ref),
+        stepKey: textOf(value.step_key),
+        agentId: textOf(value.agent_id),
+    }
+}
+
 /** Reads the stored input back; a member that is missing or malformed takes its default. */
 export const inputOf = (value: unknown): GenerationInput => {
     const input = isPlainObject(value) ? value : {}
+    const runId = textOf(input.run_id)
+    const work = workOf(input.work)
     return {
         messages: Array.isArray(input.messages) ? input.messages.filter(isMessage) : [],
         responseFormat: formatOf(input.response_format),
         timeoutMs: isNumber(input.timeout_ms) ? input.timeout_ms : DEFAULT_TIMEOUT_MS,
+        ...(runId === null ? {} : { runId }),
+        ...(work === null ? {} : { work }),
     }
 }
+
+/**
+ * The run and work of the caller, as the stored input keeps them: a queued generation runs in a job, outside the caller's scopes,
+ * so they travel with the row and the runner books the call to them (U1: model and credits per node, document, lesson).
+ */
+export const meteringJsonOf = (
+    runId: string | null,
+    work: {
+        readonly kind: string
+        readonly ref?: string | null | undefined
+        readonly stepKey?: string | null | undefined
+        readonly agentId?: string | null | undefined
+    } | null,
+): Record<string, unknown> => ({
+    ...(runId === null ? {} : { run_id: runId }),
+    ...(work === null
+        ? {}
+        : {
+              work: {
+                  kind: work.kind,
+                  ref: work.ref ?? null,
+                  step_key: work.stepKey ?? null,
+                  agent_id: work.agentId ?? null,
+              },
+          }),
+})
 
 /** Reads the usage a run reported; null when it is not the usage shape. */
 export const usageOf = (value: unknown): RunUsage | null => {

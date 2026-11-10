@@ -3,6 +3,7 @@ import { Brackets, In, IsNull, MoreThanOrEqual, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
+import { customerReadySelect, customerTrustWhere, isUnreviewed } from "./customer-trust.policy"
 import { hybridHit, hybridScore } from "./hybrid-score.policy"
 import type {
     ChunkArrangement,
@@ -63,6 +64,7 @@ interface ChunkHitRow {
     readonly score: number
     readonly visibility: string
     readonly ord: number
+    readonly customerReady: unknown
 }
 
 /** The row of a passage at its order, with the vector it was given. */
@@ -203,6 +205,7 @@ export class KnowledgeChunksService {
             .addSelect(hybridScore("c", terms), "score")
             .addSelect("c.visibility", "visibility")
             .addSelect("c.ord", "ord")
+            .addSelect(customerReadySelect("c"), "customerReady")
             .where({ workspaceId: query.workspaceId })
             .andWhere(
                 new Brackets((own) =>
@@ -218,7 +221,11 @@ export class KnowledgeChunksService {
             )
             .andWhere(hybridHit("c", terms))
             .setParameters({ vector: query.vector, model: query.model, tsquery: query.tsquery })
-        const rows = await (query.audience === "customer" ? found.andWhere({ visibility: "public" }) : found)
+        const rows = await (
+            query.audience === "customer"
+                ? found.andWhere({ visibility: "public" }).andWhere(customerTrustWhere("c", "customer") ?? "TRUE")
+                : found
+        )
             .orderBy("score", "DESC")
             .limit(Math.max(1, Math.min(query.limit, SEARCH_MAX)))
             .getRawMany<ChunkHitRow>()
@@ -230,6 +237,7 @@ export class KnowledgeChunksService {
             score: row.score,
             visibility: row.visibility,
             order: row.ord,
+            unreviewed: isUnreviewed(row.customerReady),
         }))
     }
 

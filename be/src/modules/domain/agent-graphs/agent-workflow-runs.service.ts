@@ -16,6 +16,8 @@ import type {
     WorkflowRoute,
     WorkflowVersionRecord,
 } from "./agent-workflows.contracts"
+import { tagSourceOf, triggerScopeOf } from "./policies/graph-flow.policy"
+import type { FlowWake } from "./policies/graph-flow.policy"
 import { workflowRouteOf } from "./policies/workflow-route.policy"
 import { takingTriggerOf } from "./policies/workflow-trigger.policy"
 import { snapshotOf } from "./policies/workflow-view.policy"
@@ -27,12 +29,24 @@ const VERSION_SCAN = 500
 interface Running {
     /** The workflow's key, what a hand-off names. */
     readonly key: string
+    /** The workflow's name, as the owner reads it. */
+    readonly name: string
     readonly workflow: RoutableWorkflow
     readonly version: WorkflowVersionRecord
 }
 
 /** How the primary workflow of an agent, which has no key, is named among the running ones. */
 const PRIMARY_NAME = "primary"
+
+/** The workflow a wake would go to: its id, its key (`primary` for the agent's main one) and its name. */
+export interface WorkflowTaker {
+    /** The workflow id. */
+    readonly workflowId: string
+    /** Its key within the agent. */
+    readonly key: string
+    /** Its name. */
+    readonly name: string
+}
 
 /** The workflows of an agent as a wake finds them. */
 export interface WorkflowStanding {
@@ -110,6 +124,23 @@ export class AgentWorkflowRunsService {
         })
     }
 
+    /**
+     * The active workflow each of these wakes would go to, read only (no adoption, no pin: a wake not written yet), as `route` picks it;
+     * null where none takes it. What a list of the agent's scheduled work names ("which workflow it will wake").
+     */
+    takersOf(workspaceId: string, agentId: string, wakes: ReadonlyArray<FlowWake>): Promise<ReadonlyArray<WorkflowTaker | null>> {
+        if (wakes.length === 0) return Promise.resolve([])
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const running = await this.runningOf(tx, agentId)
+            return wakes.map((wake) => {
+                const found = this.takerOf(running, { source: tagSourceOf(wake), scope: triggerScopeOf(wake), pin: null })
+                return found === undefined
+                    ? null
+                    : { workflowId: found.workflow.id, key: found.key ?? PRIMARY_NAME, name: found.name }
+            })
+        })
+    }
+
     /** The active workflow one of whose triggers takes the wake, as `workflowRouteOf` picks among them (narrowest, primary, first). */
     private takerOf(running: ReadonlyArray<Running>, wake: RouteWake): Running | undefined {
         const takers = running.filter(
@@ -180,6 +211,7 @@ export class AgentWorkflowRunsService {
             if (version === null) return
             found.push({
                 key: workflow.key,
+                name: workflow.name,
                 workflow: { ...workflow, sources: [...snapshotOf(version).trigger.sources] },
                 version,
             })

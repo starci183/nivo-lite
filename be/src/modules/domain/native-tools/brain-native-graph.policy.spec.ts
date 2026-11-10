@@ -2,13 +2,16 @@ import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import {
     BrainChangeRequestsService,
+    BrainFactEmbeddingsService,
     BrainFactRelationsService,
     BrainFactsError,
     BrainFactsErrorCode,
     BrainFactsReadService,
 } from "@modules/domain/brain-facts"
 import type { FactRecord } from "@modules/domain/brain-facts"
-import { KnowledgeSearchService } from "@modules/domain/knowledge"
+import { KnowledgeSearchService, UsageMeterService } from "@modules/domain/knowledge"
+import { AI } from "@modules/integrations/ai"
+import type { AiService } from "@modules/integrations/ai"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import type { SourceDocument } from "@modules/domain/knowledge-sources"
 import type { Passage } from "@modules/domain/knowledge"
@@ -92,7 +95,7 @@ const build = async (scope: Scope = { module: "sales", installationId: null }) =
         Promise.resolve(viewOfCall(workspaceId, scope, caller.conversationId)),
     )
     const facts = mock<BrainFactsReadService>()
-    facts.search.mockResolvedValue([fact()])
+    facts.searchHybrid.mockResolvedValue([fact()])
     facts.forView.mockResolvedValue([fact()])
     facts.get.mockResolvedValue(fact())
     views.internalOf.mockImplementation((workspaceId, caller) => {
@@ -110,6 +113,12 @@ const build = async (scope: Scope = { module: "sales", installationId: null }) =
     relations.ofFacts.mockResolvedValue([])
     facts.byIds.mockResolvedValue([])
     const changes = mock<BrainChangeRequestsService>()
+    const ai = mock<AiService>()
+    ai.available.mockReturnValue(false)
+    ai.embeddingModel.mockReturnValue("embed")
+    const vectors = mock<BrainFactEmbeddingsService>()
+    vectors.nearest.mockResolvedValue([])
+    const usage = mock<UsageMeterService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             BrainNativeService,
@@ -120,9 +129,12 @@ const build = async (scope: Scope = { module: "sales", installationId: null }) =
             { provide: BrainFactRelationsService, useValue: relations },
             { provide: BrainChangeRequestsService, useValue: changes },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
+            { provide: AI, useValue: ai },
+            { provide: BrainFactEmbeddingsService, useValue: vectors },
+            { provide: UsageMeterService, useValue: usage },
         ],
     }).compile()
-    return { brain: moduleRef.get(BrainNativeService), views, facts, knowledge, documents, relations, changes }
+    return { brain: moduleRef.get(BrainNativeService), views, facts, knowledge, documents, relations, changes, ai, vectors, usage }
 }
 
 const OTHER = "22222222-2222-4222-8222-222222222222"
@@ -193,6 +205,7 @@ describe("BrainNativeService change.propose", () => {
         room: "direct",
         messageId: MESSAGE,
         quote: "tu mai phi ship noi thanh 30k nhe",
+        reason: "Anh vua nhan tu mai phi ship noi thanh 30k, thay cho 20.000 d dang dung.",
     }
 
     it("files a change request from a private chat for the founder, in the caller's lane", async () => {
@@ -209,6 +222,7 @@ describe("BrainNativeService change.propose", () => {
             room: "direct",
             messageId: MESSAGE,
             quote: "tu mai phi ship noi thanh 30k nhe",
+            reason: "Anh vua nhan tu mai phi ship noi thanh 30k, thay cho 20.000 d dang dung.",
             validFrom: null,
             validTo: null,
             proposedBy: "sales",

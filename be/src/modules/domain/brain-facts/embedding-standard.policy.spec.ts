@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { passageTextHashOf } from "@modules/domain/knowledge-chunks"
+import { embeddingIdentityOf } from "@nivo-lite/blocks-core"
 import { factEmbedHashOf as realFactEmbedHashOf, factEmbedTextOf as realFactEmbedTextOf, needsEmbedding as realNeedsEmbedding, sameIdentity as realSameIdentity } from "./embedding-standard.policy"
 
 const IDENTITY = { model: "embed", dimensions: 3 }
@@ -55,5 +56,16 @@ describe("embedding-standard.policy as a Nest value", () => {
             expect(sameIdentity({ model: "embed", dimensions: 4 }, IDENTITY)).toBe(false)
             expect(sameIdentity({ model: "other", dimensions: 3 }, IDENTITY)).toBe(false)
         })
+    })
+})
+
+describe("the identity across the switch of embeddings to OpenAI", () => {
+    it("treats a fact vector recorded under the old profile name `embed` as another identity: it needs a new vector", () => {
+        const identity = { model: embeddingIdentityOf("embed-oa"), dimensions: 1536 }
+        const hash = realFactEmbedHashOf({ subjectLabel: "Shop", attributeLabel: "Hours", value: "8-21", unit: null })
+
+        expect(realSameIdentity({ model: "embed", dimensions: 1536 }, identity)).toBe(false)
+        expect(realNeedsEmbedding({ model: "embed", dimensions: 1536, hash }, hash, identity)).toBe(true)
+        expect(realNeedsEmbedding({ model: "text-embedding-3-small@1536", dimensions: 1536, hash }, hash, identity)).toBe(false)
     })
 })

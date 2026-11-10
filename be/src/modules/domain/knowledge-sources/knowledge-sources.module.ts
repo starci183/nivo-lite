@@ -11,6 +11,7 @@ import { SourceCategoriesService } from "./source-categories.service"
 import { SourceCriticStageService } from "./source-critic-stage.service"
 import { SourcePartsService } from "./source-parts.service"
 import { SourceQuotaService } from "./source-quota.service"
+import { SourceReadingsService } from "./source-readings.service"
 import { SourceTwinsService } from "./source-twins.service"
 import { KnowledgeSourcesReadableService } from "./knowledge-sources-readable.service"
 import { KnowledgeSourcesAdminReadService } from "./knowledge-sources-admin-read.service"
@@ -57,6 +58,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 KnowledgeProgressService,
                 SourceCriticStageService,
                 SourceQuotaService,
+                SourceReadingsService,
                 SourcePartsService,
                 SourceTwinsService,
                 SourceCategoriesService,
@@ -73,6 +75,7 @@ export class KnowledgeSourcesModule extends ConfigurableModuleClass {
                 KnowledgeProgressService,
                 SourceCriticStageService,
                 SourceQuotaService,
+                SourceReadingsService,
                 SourcePartsService,
                 SourceTwinsService,
                 SourceCategoriesService,

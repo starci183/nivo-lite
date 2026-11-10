@@ -13,6 +13,7 @@ import { eachInOrder } from "@modules/platform/primitives"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
 import { foldText, refOfSource } from "./document-state.policy"
 import type { OptionalText, ReviewDossierId, ReviewRunRecord } from "./dossier-review.contracts"
+import { DocumentCriticService } from "./document-critic.service"
 import { DossierReviewError, DossierReviewErrorCode } from "./errors/dossier-review.error"
 import { toRunRecord } from "./finding-record.mapper"
 import { DossierFindingEntity, DossierReviewRunEntity } from "./persistence/entities"
@@ -48,12 +49,15 @@ export class DossierReviewRunsService {
         private readonly sources: DossierSourcesService,
         private readonly queue: KnowledgeQueue,
         private readonly critic: SourceCriticStageService,
+        private readonly documentCritic: DocumentCriticService,
     ) {}
 
     /** The facts of a document were read (or given up): its dossier is reviewed; a document no dossier claims is reviewed on its own with the rest of the workspace. */
     async requestForSource(workspaceId: string, sourceId: string): Promise<void> {
         const source = await this.sources.sourceOf(workspaceId, sourceId)
         if (source === null) return
+        // The shop-document critic waits for this run (written before the run is queued, so the run always sees it).
+        await this.documentCritic.request(workspaceId, sourceId)
         const dossier = await this.dossierFiled(workspaceId, source)
         await this.enqueue({
             workspaceId,
@@ -94,6 +98,7 @@ export class DossierReviewRunsService {
         topic: OptionalText,
         title: string,
     ): Promise<void> {
+        await this.documentCritic.forget(workspaceId, sourceId)
         const cited = await this.entityManager.find(DossierFindingEntity, {
             select: { id: true, dossierId: true },
             where: { workspaceId, sourceIds: ArrayContains([sourceId]) },

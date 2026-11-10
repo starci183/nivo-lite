@@ -295,7 +295,7 @@ export const AgentSetupPanesBase = (props: AgentSetupPanesBaseProps) => {
                         <VersionsBand {...props} />
                     </PaneSection>
                 </Pane>
-                <Pane area="side" surface label={copy.chatLabel}>
+                <Pane area="side" content="chat" label={copy.chatLabel}>
                     <ChatBands {...props} />
                 </Pane>
             </PaneGrid>

@@ -2,8 +2,9 @@ import { DossierFindingEntity } from "./dossier-finding.entity"
 import { DossierRemedyDraftEntity } from "./dossier-remedy-draft.entity"
 import { DossierReviewRunEntity } from "./dossier-review-run.entity"
 import { DossierReviewEntity } from "./dossier-review.entity"
+import { SourceCritiqueEntity } from "./source-critique.entity"
 
-export { DossierFindingEntity, DossierRemedyDraftEntity, DossierReviewEntity, DossierReviewRunEntity }
+export { DossierFindingEntity, DossierRemedyDraftEntity, DossierReviewEntity, DossierReviewRunEntity, SourceCritiqueEntity }
 export type { DossierRunStats } from "./dossier-review-run.entity"
 export type { DraftPlaceholder } from "./dossier-remedy-draft.entity"
 
@@ -13,4 +14,5 @@ export const dossierReviewEntities: readonly [
     typeof DossierFindingEntity,
     typeof DossierReviewEntity,
     typeof DossierRemedyDraftEntity,
-] = [DossierReviewRunEntity, DossierFindingEntity, DossierReviewEntity, DossierRemedyDraftEntity] as const
+    typeof SourceCritiqueEntity,
+] = [DossierReviewRunEntity, DossierFindingEntity, DossierReviewEntity, DossierRemedyDraftEntity, SourceCritiqueEntity] as const

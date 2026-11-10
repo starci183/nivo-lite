@@ -5,6 +5,8 @@ import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import type { QuotaStatus, UsageSummary } from "./ai-usage-events.contracts"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { AiUsageOverviewService } from "./ai-usage-overview.service"
+import { AiWorkUsageService } from "./ai-work-usage.service"
+import type { WorkKindUsage } from "./work-usage.contracts"
 
 const USER = "user-1"
 const WORKSPACE = "ws-1"
@@ -40,14 +42,17 @@ const statusOf = builder<QuotaStatus>({
 const build = async () => {
     const usage = mock<AiUsageEventsService>()
     const members = mock<WorkspaceMembersService>({ require: jest.fn(() => Promise.resolve(MEMBER)) })
+    const work = mock<AiWorkUsageService>()
+    work.byRefs.mockResolvedValue(new Map())
     const moduleRef = await Test.createTestingModule({
         providers: [
             AiUsageOverviewService,
             { provide: AiUsageEventsService, useValue: usage },
             { provide: WorkspaceMembersService, useValue: members },
+            { provide: AiWorkUsageService, useValue: work },
         ],
     }).compile()
-    return { service: moduleRef.get(AiUsageOverviewService), usage, members }
+    return { service: moduleRef.get(AiUsageOverviewService), usage, members, work }
 }
 
 describe("AiUsageOverviewService", () => {
@@ -91,6 +96,88 @@ describe("AiUsageOverviewService", () => {
             await expect(service.recentCostUsd(USER, WORKSPACE, "2026-10-01")).resolves.toBe(1.25)
 
             expect(usage.recentCostUsd).toHaveBeenCalledWith(WORKSPACE, "2026-10-01")
+        })
+    })
+
+    describe("the cost of AI work (owner and manager only)", () => {
+        const kindOf = (ref: string, workKind: string, costUsd: number): WorkKindUsage => ({
+            ref,
+            workKind,
+            calls: 1,
+            failedTries: 0,
+            tokens: 1000,
+            costUsd,
+            failedCostUsd: 0,
+            credits: 0,
+            models: ["claude-haiku-5-5"],
+        })
+
+        it("documents: read, critique and re-read per document, exact credits, one read per 100 documents", async () => {
+            const { service, work } = await build()
+            work.byRefs.mockResolvedValueOnce(
+                new Map([
+                    [
+                        "source:s1",
+                        [
+                            kindOf("source:s1", "document_read", 0.00113),
+                            kindOf("source:s1", "document_critique", 0.0113),
+                            kindOf("source:s1", "document_reread", 0.000565),
+                        ],
+                    ],
+                ]),
+            )
+            const ids = ["s1", ...Array.from({ length: 120 }, (_, index) => `x${index}`)]
+
+            const costs = await service.documentCosts(USER, WORKSPACE, ids)
+
+            expect(costs?.get("s1")).toMatchObject({
+                read: { calls: 1, credits: 1 },
+                critique: { calls: 1, credits: 10 },
+                reread: { calls: 1, credits: 0.5 },
+                total: { calls: 3, credits: 11.5 },
+            })
+            expect(costs?.get("x0")?.total).toMatchObject({ calls: 0, credits: 0 })
+            expect(work.byRefs).toHaveBeenCalledTimes(2)
+            expect(work.byRefs.mock.calls[0]?.[1]).toHaveLength(100)
+        })
+
+        it("staff see no credits: the documents list stays open to them, its costs are null and nothing is read", async () => {
+            const { service, work, members } = await build()
+            members.require.mockResolvedValue({ ...MEMBER, role: "staff" })
+
+            await expect(service.documentCosts(USER, WORKSPACE, ["s1"])).resolves.toBeNull()
+            await expect(service.lessonsCost(USER, WORKSPACE, ["c1"])).resolves.toBeNull()
+            expect(work.byRefs).not.toHaveBeenCalled()
+        })
+
+        it("refuses staff the workspace summary with the role guard, and answers it per day, module and kind to a manager", async () => {
+            const { service, work, members } = await build()
+            work.daily.mockResolvedValue([])
+
+            await expect(service.workSummary(USER, WORKSPACE)).resolves.toEqual([])
+            expect(members.require).toHaveBeenCalledWith(USER, WORKSPACE, ["owner", "manager"])
+            expect(work.daily).toHaveBeenCalledWith(WORKSPACE, 30)
+
+            const refusal = new Error("role")
+            members.require.mockRejectedValue(refusal)
+            await expect(service.workSummary(USER, WORKSPACE)).rejects.toBe(refusal)
+        })
+
+        it("a learning proposal: the sum of its lessons' calls (judgements and the draft), exact", async () => {
+            const { service, work } = await build()
+            work.byRefs.mockResolvedValue(
+                new Map([
+                    ["lesson:c1", [kindOf("lesson:c1", "learning", 0.000113)]],
+                    ["lesson:c2", [kindOf("lesson:c2", "learning", 0.000226)]],
+                ]),
+            )
+
+            await expect(service.lessonsCost(USER, WORKSPACE, ["c1", "c2", "c1"])).resolves.toMatchObject({
+                calls: 2,
+                credits: 0.3,
+                costUsd: 0.000339,
+            })
+            expect(work.byRefs).toHaveBeenCalledWith(WORKSPACE, ["lesson:c1", "lesson:c2"])
         })
     })
 })

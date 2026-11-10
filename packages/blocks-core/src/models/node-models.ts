@@ -1,5 +1,5 @@
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
-import { AUTO_MODEL, isModelChoice } from "./models"
+import { AUTO_MODEL, SONNET_MODEL, isModelChoice, isRetiredModel } from "./models"
 import type { ModelChoice, StepWeight } from "./models"
 
 /** What blocks-core declares for one node that calls AI: the model its calls use, and how much its step weighs (Auto reads it). */
@@ -10,14 +10,21 @@ export interface NodeModel {
     readonly weight: StepWeight
 }
 
+/**
+ * TEMPORARY switch (owner, 2026-11-11: "tạm sửa auto = claude trong blocks-core, tại có 200 USD credit"): while true, EVERY AI node
+ * (every row of `NODE_MODELS` and `ENGINE_CORE_MODEL`) declares Claude Sonnet 5.5 instead of Auto, to spend the Anthropic credit.
+ * Weights are untouched. Set it to false to return to Auto exactly (then blocks-core build + `npm run seeds:graphs`).
+ */
+export const ALL_NODES_ON_CLAUDE: boolean = true
+
 const light: NodeModel = { model: AUTO_MODEL, weight: "light" }
 const heavy: NodeModel = { model: AUTO_MODEL, weight: "heavy" }
 
-/**
- * ONE table, node id → its model and weight, for every node that calls AI (a spec proves every such node has a row). The node files
- * do not carry it, so this is the one place a model or a weight changes. A node that calls no AI has no row.
- */
-export const NODE_MODELS: Readonly<Record<string, NodeModel>> = {
+/** A row as the switch declares it: Sonnet when every node is on Claude, the row as written (Auto) otherwise; weight kept. */
+const underSwitch = (row: NodeModel, allOnClaude: boolean): NodeModel => (allOnClaude ? { ...row, model: SONNET_MODEL } : row)
+
+/** The table as written: every AI node on Auto, with its weight. The exported `NODE_MODELS` applies the switch above to it. */
+const AUTO_NODE_MODELS: Readonly<Record<string, NodeModel>> = {
     // Understanding and routing a customer's words: classification.
     "chatbot.understand": light,
     // Short replies to a customer from the shop's knowledge, or a complaint taken down and passed on.
@@ -45,21 +52,36 @@ export const NODE_MODELS: Readonly<Record<string, NodeModel>> = {
     "accounting.post-payment": heavy,
     // The daily close report.
     "accounting.report": heavy,
+    // A colleague's answer to the team in the internal chat (truth reads, at most a proposal the owner decides): a short reply.
+    "team.chat": light,
 }
+
+/** The table under either position of the switch (the spec reads both); `NODE_MODELS` is it under `ALL_NODES_ON_CLAUDE`. */
+export const nodeModelsUnder = (allOnClaude: boolean): Readonly<Record<string, NodeModel>> =>
+    Object.fromEntries(Object.entries(AUTO_NODE_MODELS).map(([id, row]) => [id, underSwitch(row, allOnClaude)]))
+
+/**
+ * ONE table, node id → its model and weight, for every node that calls AI (a spec proves every such node has a row). The node files
+ * do not carry it, so this is the one place a model or a weight changes. A node that calls no AI has no row.
+ */
+export const NODE_MODELS: Readonly<Record<string, NodeModel>> = nodeModelsUnder(ALL_NODES_ON_CLAUDE)
 
 /**
  * The engine's own decision on a step that could not complete (the AI core): what it decides is a report to the founder, so it
  * weighs like a report.
  */
-export const ENGINE_CORE_MODEL: NodeModel = heavy
+export const ENGINE_CORE_MODEL: NodeModel = underSwitch(heavy, ALL_NODES_ON_CLAUDE)
 
 /** The declaration of a node, or null for a node that calls no AI (or is unknown). */
 export const nodeModelOf = (nodeId: string): NodeModel | null => NODE_MODELS[nodeId] ?? null
 
 /** One problem of the models a graph names. */
 export interface GraphModelProblem {
-    /** `MODEL_UNKNOWN`: not Auto and not a model of the vocabulary; `MODEL_ON_NODE_WITHOUT_AI`: the node's step calls no AI. */
-    readonly code: "MODEL_UNKNOWN" | "MODEL_ON_NODE_WITHOUT_AI"
+    /**
+     * `MODEL_RETIRED`: a retired model (DeepSeek flash): a stored graph still runs with it, a save refuses it; `MODEL_UNKNOWN`: not
+     * Auto and not a model of the vocabulary; `MODEL_ON_NODE_WITHOUT_AI`: the node's step calls no AI.
+     */
+    readonly code: "MODEL_RETIRED" | "MODEL_UNKNOWN" | "MODEL_ON_NODE_WITHOUT_AI"
     /** The node's key. */
     readonly nodeKey: string
 }
@@ -68,6 +90,7 @@ export interface GraphModelProblem {
 export const graphModelProblems = (spec: Pick<GraphSpec, "nodes">): ReadonlyArray<GraphModelProblem> =>
     spec.nodes.flatMap((node): ReadonlyArray<GraphModelProblem> => {
         if (node.model === undefined) return []
+        if (isRetiredModel(node.model)) return [{ code: "MODEL_RETIRED", nodeKey: node.key }]
         if (!isModelChoice(node.model)) return [{ code: "MODEL_UNKNOWN", nodeKey: node.key }]
         return nodeModelOf(node.step) === null ? [{ code: "MODEL_ON_NODE_WITHOUT_AI", nodeKey: node.key }] : []
     })

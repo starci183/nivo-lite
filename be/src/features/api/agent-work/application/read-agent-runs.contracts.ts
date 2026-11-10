@@ -1,4 +1,4 @@
-import type { RunCallKindUsage } from "@modules/domain/ai-usage-events"
+import type { RunAiTotals, RunCallKindUsage } from "@modules/domain/ai-usage-events"
 
 /** What the runs of one agent instance take. */
 export interface ReadAgentRunsRequest {
@@ -171,8 +171,11 @@ export interface AgentRunDecision {
     readonly options: ReadonlyArray<AgentRunDecisionOption>
 }
 
-/** The model calls of a run summed per call kind (a node's `<node id>:<tag>`, or the usage kind of a fixed task). */
+/** The model calls of a run summed per step and call kind (a node's `<node id>:<tag>`, or the usage kind of a fixed task). */
 export type AgentRunAiCall = RunCallKindUsage
+
+/** The model use of the whole run: tries, tokens, exact USD and exact credits (fractions). */
+export type AgentRunAiTotals = RunAiTotals
 
 /** One run with its steps and the work item it is about. */
 export interface AgentRunDetail {
@@ -190,4 +193,6 @@ export interface AgentRunDetail {
     readonly decision: AgentRunDecision | null
     /** Its model calls per call kind, in the order of their first call: tries, tokens (cached, reasoning), time, cost, upstreams. */
     readonly aiCalls: ReadonlyArray<AgentRunAiCall>
+    /** The run's model use in total (the sum of `aiCalls`). */
+    readonly aiTotals: AgentRunAiTotals
 }

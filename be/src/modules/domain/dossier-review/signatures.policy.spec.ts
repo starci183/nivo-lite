@@ -134,6 +134,19 @@ describe("signatures.placeholders", () => {
         ])
     })
 
+    it("catches a dotted blank AFTER normalisation shortened it to three dots, and never an ellipsis glued to a word", async () => {
+        const subject = await buildSubject()
+        const stored = docOf({
+            passages: [
+                { id: "p1", order: 0, text: "Gia ke hoa: ... d\nNguoi nhan: ___" },
+                { id: "p2", order: 1, text: "Tiem ban hoa bo, gio hoa v.v... va lan ho diep…" },
+            ],
+        })
+        const [finding] = subject.signatureRules(contextOf({ dossiers: [inputsOf({ entry: null, documents: [stored] })] }))
+        expect(finding?.params.count).toBe("2")
+        expect(finding?.evidence.map((item) => item.passageId)).toEqual(["p1"])
+    })
+
     it("files nothing when no blank is left", async () => {
         const subject = await buildSubject()
         const clean = docOf({ passages: [{ id: "p1", order: 0, text: "Da ky ngay 17/08/2026" }] })

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common"
-import { In } from "typeorm"
+import { In, Like, Not } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
 import type { PassagePlace } from "@modules/domain/knowledge-chunks"
@@ -22,6 +22,7 @@ import type {
     ResolveFindingInput,
     ReviewSummary,
 } from "./dossier-review.contracts"
+import { CRITIC_RULE_PREFIX } from "./document-critic.contracts"
 import { DossierReviewError, DossierReviewErrorCode } from "./errors/dossier-review.error"
 import { toDossierReviewRecord, toFindingRecord, toRunRecord } from "./finding-record.mapper"
 import { DossierFindingInUseService } from "./dossier-finding-in-use.service"
@@ -117,6 +118,8 @@ export class DossierFindingsService {
             .createQueryBuilder(DossierFindingEntity, "f")
             .addSelect(RANK, "severity_rank")
             .where("f.workspaceId = :workspaceId", { workspaceId })
+            // The shop-document critic's points have their own list on the Second Brain page.
+            .andWhere("f.ruleKey NOT LIKE :critic", { critic: `${CRITIC_RULE_PREFIX}%` })
         if (filter.dossierId) query.andWhere("f.dossierId = :dossierId", { dossierId: filter.dossierId })
         if (filter.statuses && filter.statuses.length > 0) {
             query.andWhere("f.status IN (:...statuses)", { statuses: [...filter.statuses] })
@@ -155,7 +158,9 @@ export class DossierFindingsService {
 
     /** How many findings still need somebody, open or confirmed, in one count; the caller has proven the workspace. */
     activeCount(workspaceId: string): Promise<number> {
-        return this.entityManager.count(DossierFindingEntity, { where: { workspaceId, status: In([...ACTIVE]) } })
+        return this.entityManager.count(DossierFindingEntity, {
+            where: { workspaceId, status: In([...ACTIVE]), ruleKey: Not(Like(`${CRITIC_RULE_PREFIX}%`)) },
+        })
     }
 
     /** The review at a glance: active findings by status and severity, drafts to approve, the newest run and the reviewed dossiers. */
@@ -171,9 +176,10 @@ export class DossierFindingsService {
             .select("f.status", "status")
             .addSelect("f.severity", "severity")
             .addSelect("COUNT(*)", "count")
-            .where("f.workspaceId = :workspaceId AND f.status IN (:...statuses)", {
+            .where("f.workspaceId = :workspaceId AND f.status IN (:...statuses) AND f.ruleKey NOT LIKE :critic", {
                 workspaceId,
                 statuses: [...ACTIVE],
+                critic: `${CRITIC_RULE_PREFIX}%`,
             })
             .groupBy("f.status")
             .addGroupBy("f.severity")

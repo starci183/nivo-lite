@@ -189,6 +189,8 @@ export class AgentGraphConversationHoldsService {
                 context,
                 actorMemberId: turn.actorMemberId,
                 scopeKey: turn.scopeKey,
+                // The front door's wake already waited this line's burst: the keeper's wake must not wait it again (D-P10-2).
+                burstSettled: true,
             }),
         )
         this.logger.info(AgentGraphsLogEvent.SentToKeeper, {

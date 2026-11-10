@@ -30,6 +30,7 @@ import { DossierReviewLogEvent } from "./dossier-review.log-events"
 import type { DossierBundle, DossierReasoner, ReasonedReview } from "./dossier-review.port"
 import { DossierReviewRunnerService, stateOf } from "./dossier-review-runner.service"
 import { DossierFindingEntity, DossierReviewEntity, DossierReviewRunEntity } from "./persistence/entities"
+import { DocumentCriticService } from "./document-critic.service"
 import { ReviewCriticService } from "./review-critic.service"
 import { ReviewInputsService } from "./review-inputs.service"
 
@@ -127,6 +128,7 @@ const build = async (setup: Setup) => {
     reasoner.review.mockResolvedValue(reviewOf())
     const logger = mock<Logger>()
     const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => key) })
+    const documentCritic = mock<DocumentCriticService>({ runWaiting: jest.fn().mockResolvedValue(0) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             DossierReviewRunnerService,
@@ -138,9 +140,10 @@ const build = async (setup: Setup) => {
             { provide: ReviewInputsService, useValue: inputs },
             { provide: UsageMeterService, useValue: usage },
             { provide: ReviewCriticService, useValue: mock<ReviewCriticService>() },
+            { provide: DocumentCriticService, useValue: documentCritic },
         ],
     }).compile()
-    return { service: moduleRef.get(DossierReviewRunnerService), em, daily, inputs, usage, reasoner, logger, catalog }
+    return { service: moduleRef.get(DossierReviewRunnerService), em, daily, inputs, usage, reasoner, logger, catalog, documentCritic }
 }
 
 /** The run update that ended the run. */

@@ -189,11 +189,13 @@ export class AiClient implements AiRunner {
             timeoutMs: request.timeoutMs,
             ...(request.budget?.maxTokens === undefined ? {} : { maxTokens: request.budget.maxTokens }),
             // Only the `openai` kind's own fields: the sampling temperature where every provider of the name takes one, and the
-            // upstream's body fields where an OpenAI-compatible upstream can serve it. An `anthropic` client gets neither.
+            // upstream's body fields where an OpenAI-compatible upstream can serve it. An `anthropic` client gets neither. A call
+            // with no target asks the endpoint's chat profile (`work`), which is Claude only since 2026-11-11 (Haiku 5.5 and Sonnet
+            // 5.5 refuse a non-default temperature; OpenRouter's fields mean nothing there): it gets neither either.
             fields: {
                 openai: {
-                    ...(target?.sampling === false ? {} : { temperature: TEMPERATURE }),
-                    modelKwargs: target?.upstreamFields === false ? {} : upstreamFieldsOf(request),
+                    ...(target?.sampling === true ? { temperature: TEMPERATURE } : {}),
+                    modelKwargs: target?.upstreamFields === true ? upstreamFieldsOf(request) : {},
                 },
             },
         }).model

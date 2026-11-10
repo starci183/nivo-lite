@@ -164,7 +164,7 @@ export const stopCardViewOf = (agentMessage: OptionalAgentMessage, nameOf: StopR
         message: base.reason,
         question: base.question,
         suggestions: section.state === "open" ? base.suggestions : [],
-        facts: base.facts,
+        facts: base.facts.map((fact) => ({ name: fact.name, value: fact.value, technical: fact.technical === true })),
         needs: section.needs,
         replies: section.replies.map((reply) => ({
             ...reply,

@@ -6,4 +6,6 @@ export interface CreateKnowledgeUploadRequest {
     readonly filename: string
     /** The content type the browser reports for the file; may be empty. */
     readonly contentType: string
+    /** The size the browser reports for the file, in bytes; absent when it reports none. */
+    readonly sizeBytes?: number | undefined
 }

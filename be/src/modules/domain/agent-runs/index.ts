@@ -18,7 +18,7 @@ export { AgentRunsViewService } from "./agent-runs-view.service"
 export { AgentRunSweepService } from "./agent-run-sweep.service"
 export { AgentStepJobService } from "./agent-step-job.service"
 export { parseAgentRunsConfig } from "./agent-runs.config"
-export { TOOL_OUTCOME_UNKNOWN, DECISION_ACTOR_UNKNOWN } from "./policies/agent-runs.policy"
+export { TOOL_OUTCOME_UNKNOWN, DECISION_ACTOR_UNKNOWN, DEFAULT_DEADLINE_MS } from "./policies/agent-runs.policy"
 export { servesCustomer } from "./policies/park-ladder.policy"
 export type {
     AgentStepHandler,

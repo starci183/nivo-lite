@@ -106,6 +106,18 @@ const registerViews = () => {
         await expect(service.search(facts.WS, "internal", "sales", "i1", "shop", 1)).resolves.toEqual([facts.factOf()])
         expect(view).toHaveBeenCalledWith(facts.WS, "internal", "sales", "i1", 500)
     })
+
+    it("searches the same view by words and meaning: a vector hit with no word in common is found, one outside the view never", async () => {
+        const service = await build(mockEntityManager())
+        const fee = facts.factOf({ id: "fee", subjectKey: "giao-hang", attribute: "phi-ship", value: "30.000 d" })
+        const view = jest.spyOn(service, "forView").mockResolvedValue([facts.factOf(), fee])
+        const near = [
+            { fact: fee, distance: 0.3 },
+            { fact: facts.factOf({ id: "hidden" }), distance: 0.01 },
+        ]
+        await expect(service.searchHybrid(facts.WS, "customer", "chatbot", null, "tien van chuyen", near, 5)).resolves.toEqual([fee])
+        expect(view).toHaveBeenCalledWith(facts.WS, "customer", "chatbot", null, 500)
+    })
 }
 
 const registerSources = () => {

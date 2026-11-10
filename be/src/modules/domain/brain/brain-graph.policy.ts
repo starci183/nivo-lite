@@ -127,7 +127,7 @@ export const pendingOf = (proposal: FactRecord, current: FactRecord | undefined)
     value: proposal.value,
     unit: proposal.unit,
     proposalKind: proposal.proposalKind,
-    currentFactId: current?.id ?? proposal.conflictWith,
+    currentFactId: current?.id ?? null,
     currentValue: current?.value ?? null,
     currentVersion: current?.version ?? null,
     proposedBy: proposal.proposedBy,
@@ -136,6 +136,8 @@ export const pendingOf = (proposal: FactRecord, current: FactRecord | undefined)
     origin: originOf(proposal.evidence),
     validFrom: proposal.validFrom,
     validTo: proposal.validTo,
+    flags: proposal.flags ?? [],
+    conflictWith: proposal.conflictWith,
 })
 
 /** The documents the graph was built from, with how many truths in force each one supports and how far its reading got. */

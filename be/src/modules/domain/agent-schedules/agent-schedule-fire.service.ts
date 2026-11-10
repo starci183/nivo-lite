@@ -72,4 +72,36 @@ export class AgentScheduleFireService {
         })
         return true
     }
+
+    /**
+     * A person runs the next slot of a clock trigger now ("run now"): the SAME wake that slot writes when it comes (keyed
+     * `<triggerId>:<slot>`), written now under the person, so when the slot comes its fire finds the wake already written and adds
+     * nothing. The scheduler and the row are left as they are. `already_ran`: the wake of that slot was already written (the slot came,
+     * or someone pressed first); `not_scheduled`: the trigger is gone, off, not a clock, its work is switched off or its next slot moved.
+     */
+    async fireNow(workspaceId: string, triggerId: string, slot: Date, memberId: string): Promise<SlotRunNow> {
+        const trigger = await this.triggers.byId(triggerId)
+        if (trigger === null || !trigger.enabled || trigger.kind !== "schedule") return "not_scheduled"
+        if (trigger.nextRunAt?.getTime() !== slot.getTime()) return "not_scheduled"
+        if (!(await this.sync.workIsOn(workspaceId, trigger.agentId))) return "not_scheduled"
+        const key = String(slot.getTime())
+        const written = await this.entityManager.transaction((tx) =>
+            this.wakes.wake(tx, {
+                workspaceId,
+                agentId: trigger.agentId,
+                source: "schedule",
+                eventKey: `${trigger.id}:${key}`,
+                context: {
+                    triggerId: trigger.id,
+                    slot: key,
+                    ...(trigger.probeKey === null ? {} : { probeKey: trigger.probeKey }),
+                },
+                actorMemberId: memberId,
+            }),
+        )
+        return written ? "woken" : "already_ran"
+    }
 }
+
+/** What "run now" on a clock slot did. */
+export type SlotRunNow = "woken" | "already_ran" | "not_scheduled"

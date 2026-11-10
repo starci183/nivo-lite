@@ -3,7 +3,12 @@ import type { DynamicModule } from "@nestjs/common"
 import { DossierFindingInUseService } from "./dossier-finding-in-use.service"
 import { DossierFindingsService } from "./dossier-findings.service"
 import { DossierRemedyDraftsService } from "./dossier-remedy-drafts.service"
+import { DOCUMENT_CRITIC_MODEL } from "./document-critic.port"
+import { DocumentCriticService } from "./document-critic.service"
+import { DocumentCritiqueAnswersService } from "./document-critique-answers.service"
+import { DocumentCritiqueReadService } from "./document-critique-read.service"
 import { DOSSIER_REASONER, REMEDY_WRITER } from "./dossier-review.decorators"
+import { KeyedTruthCandidatesService } from "./keyed-truth-candidates.service"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./dossier-review.module-definition"
 import { DossierReviewRunnerService } from "./dossier-review-runner.service"
 import { DossierReviewRunsService } from "./dossier-review-runs.service"
@@ -34,6 +39,13 @@ export class DossierReviewModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 { provide: DOSSIER_REASONER, useClass: options.reasoner },
                 { provide: REMEDY_WRITER, useClass: options.writer },
+                // The critic model is the reasoner class (one class, two ports); the shop candidates (SHOP_TRUTH_CANDIDATES) are provided by
+                // the brain module (exact key + BG2's meaning read, `DocumentCriticCandidatesService`).
+                { provide: DOCUMENT_CRITIC_MODEL, useExisting: DOSSIER_REASONER },
+                KeyedTruthCandidatesService,
+                DocumentCriticService,
+                DocumentCritiqueReadService,
+                DocumentCritiqueAnswersService,
                 ReviewInputsService,
                 ReviewCriticService,
                 DossierReviewRunsService,
@@ -49,6 +61,10 @@ export class DossierReviewModule extends ConfigurableModuleClass {
                 DossierReviewRunnerService,
                 DossierFindingsService,
                 DossierRemedyDraftsService,
+                DocumentCriticService,
+                DocumentCritiqueReadService,
+                DocumentCritiqueAnswersService,
+                KeyedTruthCandidatesService,
             ],
         }
     }

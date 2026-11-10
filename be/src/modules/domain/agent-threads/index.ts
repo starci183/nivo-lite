@@ -21,7 +21,7 @@ export type {
 } from "./thread-runs.service"
 export { ThreadGraphsService } from "./thread-graphs.service"
 export { ThreadDeadlinesService } from "./thread-deadlines.service"
-export type { DeadlineArming, DeadlineFiring, StopDeadline } from "./thread-deadlines.service"
+export type { DeadlineArming, DeadlineFiring, PendingDeadline, StopDeadline } from "./thread-deadlines.service"
 export { APPROVAL_DEADLINE_MS, OWNER_DEADLINE_MS, deadlineAtOf, deadlineWindowOf, templateWaitMsOf } from "./thread-deadline.policy"
 export type { DeadlineWindows } from "./thread-deadline.policy"
 export { ThreadSweepService, threadPositionOf } from "./thread-sweep.service"
@@ -85,7 +85,7 @@ export type {
     ThreadLoopMove,
     ThreadLoopSummary,
 } from "./compiler-loop.policy"
-export { RUN_STOPS_ERROR_KINDS, RunStopsError, RunStopsErrorCode, RunStopsService } from "./stops"
+export { RUN_STOPS_ERROR_KINDS, RunStopRecordsService, RunStopsError, RunStopsErrorCode, RunStopsService } from "./stops"
 export type {
     FounderAnswerJson,
     RunStop,
@@ -100,6 +100,8 @@ export type {
 export { STOP_ACTIONS, StopAnswersService, StopDoorService, cancelOfSkip } from "./stops"
 export type { StopAction, StopActor, StopAsk, StopDoorAnswer, StopDoorOutcome, StopReplied, StopReply, StopReplyOutcome } from "./stops"
 export { THREAD_APPROVAL_ENGINE, TOOL_APPROVAL_ACTION, ThreadApprovalsService, approvalAskOf, approvalKeyOf } from "./thread-approvals.service"
+export { APPROVAL_ITEM_FACT, openApprovalItemOf } from "./thread-approval-items.policy"
+export type { OpenApprovalItem } from "./thread-approval-items.policy"
 export type {
     ApprovalAsk,
     ApprovalAsked,

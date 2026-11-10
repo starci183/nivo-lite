@@ -14,7 +14,7 @@ const B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
 const C = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
 const AT = new Date("2026-11-11T00:00:00.000Z")
 
-const factRow = (id: string) => Object.assign(new BrainFactEntity(), { id })
+const factRow = (id: string, status: "proposed" | "active" = "proposed") => Object.assign(new BrainFactEntity(), { id, status })
 const edgeRow = (changes: Partial<BrainFactRelationEntity> = {}) =>
     Object.assign(new BrainFactRelationEntity(), {
         id: "e1",
@@ -60,7 +60,7 @@ describe("BrainFactRelationsService link: relation CRUD under the workspace's ro
             createdAt: AT.toISOString(),
         })
         expect(optionsOf(em.find.mock.calls)).toEqual([
-            { select: { id: true }, where: { workspaceId: WS, id: In([A, B]) }, take: 2 },
+            { select: { id: true, status: true }, where: { workspaceId: WS, id: In([A, B]) }, take: 2 },
         ])
         expect(insert?.callsOf("values")).toEqual([
             [[{ workspaceId: WS, fromFactId: A, toFactId: B, kind: "part_of", label: "delivered by", createdBy: "Ada" }]],
@@ -143,6 +143,36 @@ describe("BrainFactRelationsService reads, removal and many links", () => {
         expect(insert?.callsOf("values")).toEqual([
             [[{ workspaceId: WS, fromFactId: A, toFactId: B, kind: "part_of", label: null, createdBy: "NIVO" }]],
         ])
+    })
+
+    it("never writes a reading's edge between two facts already in force: an edge of the model stands only once a person put its proposal in force (A.3)", async () => {
+        const em = mockEntityManager({ find: [BrainFactEntity, [factRow(A, "active"), factRow(B, "active"), factRow(C)]] })
+        const [insert] = queueQueryBuilders(em, [{ execute: {} }])
+        const service = await build(em)
+
+        await expect(
+            service.linkMany(WS, [
+                { fromFactId: A, toFactId: B, kind: "part_of", createdBy: "NIVO" },
+                { fromFactId: A, toFactId: C, kind: "applies_to", createdBy: "NIVO" },
+                { fromFactId: C, toFactId: B, kind: "related", createdBy: "NIVO" },
+            ]),
+        ).resolves.toBe(2)
+        expect(insert?.callsOf("values")).toEqual([
+            [
+                [
+                    { workspaceId: WS, fromFactId: A, toFactId: C, kind: "applies_to", label: null, createdBy: "NIVO" },
+                    { workspaceId: WS, fromFactId: C, toFactId: B, kind: "related", label: null, createdBy: "NIVO" },
+                ],
+            ],
+        ])
+    })
+
+    it("writes nothing when every edge of a reading joins two facts in force", async () => {
+        const em = mockEntityManager({ find: [BrainFactEntity, [factRow(A, "active"), factRow(B, "active")]] })
+        const service = await build(em)
+
+        await expect(service.linkMany(WS, [{ fromFactId: A, toFactId: B, kind: "part_of", createdBy: "NIVO" }])).resolves.toBe(0)
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
     })
 
     it("carries the edges of a replaced value to its replacement in the transaction, never the edge between them", async () => {

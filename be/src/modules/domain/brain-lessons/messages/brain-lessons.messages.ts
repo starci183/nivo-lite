@@ -6,10 +6,12 @@ export const BRAIN_LESSONS_MESSAGES: MessageBundle = {
         "errors.BRAIN_LESSONS_INCOMPLETE": "Một bài học cần có tiêu đề và việc cần làm.",
         "errors.BRAIN_LESSONS_NOT_PROPOSED": "Bài học này không còn chờ quyết định.",
         "errors.BRAIN_LESSONS_NOT_ACTIVE": "Bài học này không còn hiệu lực.",
+        "errors.BRAIN_LESSONS_CANDIDATE_LOST": "Không đọc lại được câu trả lời vừa ghi nhận để học.",
     },
     en: {
         "errors.BRAIN_LESSONS_INCOMPLETE": "A lesson needs a title and what to do.",
         "errors.BRAIN_LESSONS_NOT_PROPOSED": "This lesson is no longer waiting for a decision.",
         "errors.BRAIN_LESSONS_NOT_ACTIVE": "This lesson is no longer in force.",
+        "errors.BRAIN_LESSONS_CANDIDATE_LOST": "The answer just kept for learning could not be read back.",
     },
 }

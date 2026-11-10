@@ -78,7 +78,7 @@ const localMail: ApiOptions["mail"] = {
 /** An AI pool with no keys: no router and no gateway are registered, so the api boots and its AI callers fall back without a provider call. */
 const keylessAiGateway: ApiOptions["aiGateway"] = {
     providers: [],
-    models: { work: "world-chat", embed: "world-embedding", strong: "world-strong" },
+    models: { work: "world-chat", strong: "world-strong" },
     gateway: null,
 }
 

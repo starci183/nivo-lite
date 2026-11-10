@@ -8,11 +8,14 @@ export type {
     AddSourceInput,
     DossierDocumentCount,
     KnowledgeUsage,
+    MaybeReading,
     MaybeSource,
+    ReadingWarning,
     ReadableSummary,
     SourceBrief,
     SourceCategory,
     SourceDetail,
+    SourceReading,
     SourceRecord,
     SourceRef,
     SourceSummary,
@@ -27,6 +30,7 @@ export { SourcePartsService } from "./source-parts.service"
 export { SourceTwinsService } from "./source-twins.service"
 export type { TextParts } from "./source-twins.service"
 export { SourceQuotaService } from "./source-quota.service"
+export { SourceReadingsService } from "./source-readings.service"
 export { SourceCriticStageService } from "./source-critic-stage.service"
 export { SourceCategoriesService } from "./source-categories.service"
 export { DossierSourcesService } from "./dossier-sources.service"

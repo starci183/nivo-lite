@@ -14,6 +14,9 @@ import type { AgentBurstPolicy } from "./agent-work.port"
 import { AgentWakeEntity } from "./persistence/entities"
 import type { AgentWake, OptionalWakeId } from "./agent-work.contracts"
 
+/** No window: the wake's drain runs at once and `begin` waits for no later line (a window of 0 turns the burst off). */
+const NO_BURST = { windowMs: 0, maxWaitMs: 0 } as const
+
 /** The id of the row an insert returned, or null when it wrote none. */
 const idOf = (raw: unknown): OptionalWakeId => {
     if (!Array.isArray(raw)) return null
@@ -81,9 +84,11 @@ export class AgentWakeService {
 
     /**
      * What the wake waits for in its conversation, resolved once, when it is written: the live flow of the agent asks for it by the kind of
-     * tag the wake is, else the app's defaults apply.
+     * tag the wake is, else the app's defaults apply. A wake marked `burstSettled` carries lines whose burst the wake it continues already
+     * waited out (a customer line a held conversation's front door sends on to its keeper): it waits no window again (D-P10-2).
      */
     private async burstOf(wake: AgentWake): Promise<{ readonly windowMs: number; readonly maxWaitMs: number }> {
+        if (wake.burstSettled === true) return NO_BURST
         const source = burstSourceOf({
             source: wake.source,
             context: wake.context,

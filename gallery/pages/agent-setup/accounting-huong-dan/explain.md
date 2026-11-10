@@ -48,9 +48,9 @@ Luật: `surfacecard-select-subtitle` (Versions), `suggestion-button-sm`.
 Grammar: `SurfaceCard kind="list"` (`AgentSetupVersions`), `core/surfaceCardData.d.ts`.
 
 ## Pane chat "Thiết lập cùng NIVO"
-Vì sao: pane trắng nguyên khối: đầu (mark + tên), thread, composer tối thiểu 2 dòng với nút gửi bên trong; chỉ thread cuộn; ở 390 nó là khối cuối trang.
-Luật: `page-header-left-sublabel-xs` (composer 2 dòng), `suggestion-button-sm`, `pink-page-surface-rule`.
-Grammar: `PaneHeader`, `core/composite/PaneHeader/index.d.ts`; `MessageBubble`, `core/composite/MessageBubble/index.d.ts`.
+Vì sao: pane chat bên phải là khung chat (đầu mark + tên, thread, composer tối thiểu 2 dòng với nút gửi bên trong) và nó là `--background` (hồng) dù đứng cạnh cột thiết lập; ô nhập trắng, bong bóng của NIVO trắng phẳng, tin của mình `--accent`. Chỉ thread cuộn (`role="log"`, mở ở tin mới nhất); ở 390 nó là khối cuối trang.
+Luật: DNA-COMMON-CHAT-FRAME (khung chat là `--background` ở mọi trang), DNA-COMMON-CHAT-FRAME-SCROLL (chỉ thread cuộn), `chat-surfaces`, `page-header-left-sublabel-xs` (composer 2 dòng), `suggestion-button-sm`.
+Grammar: `Pane content="chat"` (Grammar 0.37.33, `core/frame/PaneGrid/index.d.ts`); `PaneHeader`, `core/composite/PaneHeader/index.d.ts`; `MessageBubble`, `core/composite/MessageBubble/index.d.ts`.
 
 ## Trạng thái tải, lỗi, rỗng
 Vì sao: mỗi khối đọc qua `SlotView` (skeleton cùng hình, thử lại mềm); không có quyền thì thay cả trang bằng `AgentSetupNotice`.

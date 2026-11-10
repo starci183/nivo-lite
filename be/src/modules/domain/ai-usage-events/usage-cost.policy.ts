@@ -15,9 +15,13 @@ export const CREDIT_USD_VALUE = 0.00113
  * cache read (Anthropic first-party list price as cached by the Claude API reference on 2026-11-03; NOT re-read from the live pricing
  * page). Its cache WRITE ($2.50, 1.25x input for the 5-minute TTL) is not priced: the router 0.5.0 folds written tokens into the
  * prompt unsaid, so they are booked at the input price, an under-count of 0.50 USD per million written.
+ * Claude Haiku 5.5 (the cheap tier since 2026-11-11): $0.10 in, $0.50 out for prompts up to 100K tokens, from the same cached table
+ * (NOT verified live; its cache-read price is not in that table, so a cached token is booked at the input price, and a prompt over
+ * 100K tokens, $0.50 / $2.50, is under-counted). OpenAI `text-embedding-3-small` $0.02 in: the repo's earlier line, NOT verified.
  */
 const PRICES: ReadonlyArray<{ readonly match: string; readonly in: number; readonly out: number; readonly cachedIn?: number }> = [
     { match: "claude-sonnet-5-5", in: 2, out: 10, cachedIn: 0.1 },
+    { match: "claude-haiku-5-5", in: 0.1, out: 0.5 },
     { match: "deepseek-v4.1-flash", in: 0.14, out: 0.42 },
     { match: "deepseek", in: 0.14, out: 0.28 },
     { match: "qwen3-embedding", in: 0.01, out: 0 },

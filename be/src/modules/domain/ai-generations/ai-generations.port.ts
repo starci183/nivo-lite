@@ -1,4 +1,4 @@
-import type { RunUsage } from "./ai-generations.contracts"
+import type { GenerationWork, RunUsage } from "./ai-generations.contracts"
 import type { Locale } from "@modules/platform/i18n"
 
 /** What the plan allowance says about a workspace that is over it. */
@@ -26,6 +26,12 @@ export interface GenerationUsageRecord {
     readonly promptChars?: number
     /** The agent run the generation was made for, when it was made for one. */
     readonly runId?: string
+    /** The work the generation was asked for (the caller's work scope, carried through the queue); absent books none. */
+    readonly work?: GenerationWork | undefined
+    /** The model a record with no usage asked for (a failed try); absent books `unknown`. */
+    readonly model?: string | undefined
+    /** Set for a FAILED try (`timeout`, `no_answer`): booked estimated from `promptChars`, never billed (U1). */
+    readonly failure?: string | undefined
 }
 
 /**

@@ -63,6 +63,8 @@ describe("toolsOutsideAgent: the default reads", () => {
         expect(withDefaultReads(["customer.message.send", "brain.search"])).toEqual([
             "customer.message.send",
             "brain.search",
+            "brain.fact.related",
+            "brain.facts.get",
             "nivo.conversation.message.list",
             "nivo.lead.note.list",
             "nivo.lead.order.list",

@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common"
 import type { OptionalQuotaBlock, UsageGate, GenerationUsageRecord } from "@modules/domain/ai-generations"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import type { UsageCallFacts } from "./ai-usage-events.contracts"
+import type { UsageCallFacts, UsageWork } from "./ai-usage-events.contracts"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { usageKindOf } from "./usage-kind.policy"
 
@@ -13,6 +13,12 @@ import { usageKindOf } from "./usage-kind.policy"
 export type MeteredGeneration = GenerationUsageRecord & {
     /** What the call was and how it went (kind, hidden reasoning, time, try, upstream, finish); absent books none of it. */
     readonly call?: UsageCallFacts | undefined
+    /** The model a record with no usage asked for (a failed try), to price its estimate; absent books `unknown`. */
+    readonly model?: string | undefined
+    /** The failure of a FAILED try; the row is booked estimated and never billed. */
+    readonly failure?: string | undefined
+    /** The work the call was made for (a queued generation carries its caller's); absent, the work in scope. */
+    readonly work?: UsageWork | undefined
 }
 
 /** The model name booked when a run reports none. */
@@ -39,7 +45,7 @@ export class UsageGateService implements UsageGate {
             workspaceId: entry.workspaceId,
             kind: usageKindOf(entry.kind),
             module: entry.module,
-            model: run?.model ?? DEFAULT_MODEL,
+            model: run?.model ?? entry.model ?? DEFAULT_MODEL,
             usage:
                 run === null
                     ? null
@@ -49,11 +55,16 @@ export class UsageGateService implements UsageGate {
                           total_tokens: run.prompt_tokens + run.completion_tokens,
                           cost: run.cost,
                           cached_tokens: run.cached_tokens,
+                          ...(run.cache_write_tokens === undefined
+                              ? {}
+                              : { cache_write_tokens: run.cache_write_tokens }),
                       },
             promptChars: entry.promptChars ?? 0,
             completionChars: entry.completionChars,
             runId: entry.runId,
             ...(entry.call === undefined ? {} : { call: entry.call }),
+            ...(entry.failure === undefined ? {} : { failure: entry.failure }),
+            ...(entry.work === undefined ? {} : { work: entry.work }),
         })
     }
 }

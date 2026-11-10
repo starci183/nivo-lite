@@ -156,6 +156,8 @@ export interface FindingEvidence {
     readonly placeKind?: string | null
     /** The page or slide number, or the sheet name, with the kind. */
     readonly placeLabel?: string | null
+    /** The model-free hash of the passage (`passageTextHashOf`), stored by the shop-document critic: a passage keeps it across re-uploads, its id does not. */
+    readonly chunkHash?: string | null
 }
 
 /** A message param as the API lists it. */

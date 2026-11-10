@@ -162,7 +162,7 @@ const Thread = (props: GuideDrawerBaseProps) => {
 
 /** The composer, pinned under the well like the chat composer: a separator, then the search field. */
 const Composer = (props: GuideDrawerBaseProps) => (
-    <PaneSection rule="start" gap="row">
+    <PaneSection as="footer" gap="row">
         <SearchField
             id="guide-question"
             label={props.props.questionLabel}
@@ -200,18 +200,14 @@ export const GuideDrawerBase = (props: GuideDrawerBaseProps) => (
         closeLabel={props.props.closeLabel}
         placement="right"
         width="wide"
+        bodyInset="none"
     >
         <div className={SHEET_CLASS} onKeyDown={onGuideKeys}>
             <PaneGrid label={props.props.title} areas={["guide"]}>
-                <Pane area="guide" surface>
-                    <PaneSection
-                        scroll={{ label: props.props.title, role: "log", tone: "background", align: "end" }}
-                        rule="start"
-                        gap="row"
-                    >
+                <Pane area="guide" content="chat" footer={<Composer {...props} />}>
+                    <PaneSection scroll={{ label: props.props.title, role: "log", align: "end" }} gap="row">
                         <Thread {...props} />
                     </PaneSection>
-                    <Composer {...props} />
                 </Pane>
             </PaneGrid>
         </div>

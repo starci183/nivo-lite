@@ -120,6 +120,7 @@ export const BRAIN_CHANGE_PROPOSE_SCHEMA: z.ZodObject<
         room: z.ZodEnum<{ direct: "direct"; common: "common" }>
         messageId: z.ZodUUID
         quote: z.ZodString
+        reason: z.ZodString
         validFrom: z.ZodOptional<z.ZodISODateTime>
         validTo: z.ZodOptional<z.ZodISODateTime>
     },
@@ -134,6 +135,7 @@ export const BRAIN_CHANGE_PROPOSE_SCHEMA: z.ZodObject<
         room: z.enum(["direct", "common"]),
         messageId: z.uuid(),
         quote: z.string().min(1).max(500),
+        reason: z.string().min(1).max(1000),
         validFrom: z.iso.datetime({ offset: true }).max(40).optional(),
         validTo: z.iso.datetime({ offset: true }).max(40).optional(),
     })

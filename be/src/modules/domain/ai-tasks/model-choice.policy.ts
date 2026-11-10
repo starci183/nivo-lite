@@ -1,12 +1,14 @@
 import {
     AUTO_MODEL,
     AUTO_MODEL_OF_WEIGHT,
-    DEEPSEEK_MODEL,
+    CHEAP_MODEL,
     DEFAULT_MODEL,
+    HAIKU_MODEL,
     MODEL_IDS,
     SONNET_MODEL,
     STRONGER_MODEL,
     isModelId,
+    isRetiredModel,
     modelEntryOf,
 } from "@nivo-lite/blocks-core"
 import type { ModelId, ModelProvider } from "@nivo-lite/blocks-core"
@@ -20,11 +22,12 @@ import type { ConfiguredProviders, DeclaredModel } from "./ai-tasks.contracts"
  * - `explicit`: the shop (or the graph) named this model on the node;
  * - `declared`: blocks-core declares this model for the node's step;
  * - `default`: the node names none and blocks-core declares none: Claude Sonnet 5.5;
- * - `default-no-key`: the same, but Anthropic holds no key, so the cheap model;
+ * - `default-no-key`: (old rows only) the default while Anthropic held no key, served by DeepSeek; now that call fails loudly;
  * - `unknown-model`: the node names a model the vocabulary does not know, so the default (never silently: this is booked);
+ * - `retired-model`: the node still names a retired model (DeepSeek flash): the cheap tier (`CHEAP_MODEL`) on Claude;
  * - `auto-light` / `auto-heavy`: Auto, by the step's declared weight;
  * - `auto-step-up`: Auto on a light step whose earlier try failed: the stronger model, inside the same three tries;
- * - `auto-other-provider`: Auto, but the provider of the model it wanted holds no key, so the other one;
+ * - `auto-other-provider`: (old rows only) Auto turned to the other vendor; with Claude only, a missing key now fails loudly;
  * - `auto-failover`: Auto, but the provider it wanted had no usable lane, and the router served the other model;
  * - `step-pinned`: a later turn of a step's agent loop, kept on the model of its first answer (a prompt cache is per model).
  */
@@ -34,6 +37,7 @@ export type ModelReason =
     | "default"
     | "default-no-key"
     | "unknown-model"
+    | "retired-model"
     | "auto-light"
     | "auto-heavy"
     | "auto-step-up"
@@ -63,7 +67,7 @@ export type ModelChoiceResult =
 /** The profile that serves an explicit model and nothing else. */
 const PROFILE_OF_MODEL: Readonly<Record<ModelId, ModelProfile>> = {
     [SONNET_MODEL]: MODEL_PROFILES.sonnet,
-    [DEEPSEEK_MODEL]: MODEL_PROFILES.deepseek,
+    [HAIKU_MODEL]: MODEL_PROFILES.haiku,
 }
 
 const targetOf = (profile: ModelProfile): AiTarget => ({ name: profile, ...profileWireOf(profile) })
@@ -74,38 +78,57 @@ const configured = (model: ModelId, providers: ConfiguredProviders): boolean => 
     return provider !== null && providers[provider]
 }
 
-/** The other explicit model: the one Auto turns to when the provider of the one it wanted holds no key. */
-const otherOf = (model: ModelId): ModelId => (model === SONNET_MODEL ? DEEPSEEK_MODEL : SONNET_MODEL)
+/** The loud failure of a model whose provider holds no key: no call is made, nothing switches vendor. */
+const notConfigured = (model: ModelId): ModelChoiceResult => ({ ok: false, model, why: "not-configured" })
+
+/** Why Auto chose its model: the step up after a failed try, else the step's weight. */
+const autoReasonOf = (stepUp: boolean, heavy: boolean): ModelReason => {
+    if (stepUp) return "auto-step-up"
+    return heavy ? "auto-heavy" : "auto-light"
+}
 
 /** Auto on one try: the weight's model (the stronger one after a failed try of a light step), on the profile that can fail over. */
-const autoOf = (declared: DeclaredModel, tryNumber: number, providers: ConfiguredProviders): ModelChoice => {
+const autoOf = (declared: DeclaredModel, tryNumber: number, providers: ConfiguredProviders): ModelChoiceResult => {
     const stepUp = declared.weight === "light" && tryNumber > 1
     const heavy = stepUp || declared.weight === "heavy"
     const wanted = heavy ? STRONGER_MODEL : AUTO_MODEL_OF_WEIGHT[declared.weight]
-    const own = configured(wanted, providers)
-    const reason: ModelReason = !own ? "auto-other-provider" : stepUp ? "auto-step-up" : heavy ? "auto-heavy" : "auto-light"
-    return {
+    if (!configured(wanted, providers)) return notConfigured(wanted)
+    const choice: ModelChoice = {
         target: targetOf(heavy ? MODEL_PROFILES.autoHeavy : MODEL_PROFILES.autoLight),
-        intended: own ? wanted : otherOf(wanted),
-        reason,
+        intended: wanted,
+        reason: autoReasonOf(stepUp, heavy),
         declared: AUTO_MODEL,
         auto: true,
     }
+    return { ok: true, choice }
 }
 
-/** The default model, or the cheap one when Anthropic holds no key (said so in the reason). */
-const defaultOf = (declared: string, providers: ConfiguredProviders, unknown: boolean): ModelChoice => {
-    const own = configured(DEFAULT_MODEL, providers)
-    const intended = own ? DEFAULT_MODEL : DEEPSEEK_MODEL
-    const reason: ModelReason = unknown ? "unknown-model" : own ? "default" : "default-no-key"
-    return { target: targetOf(PROFILE_OF_MODEL[intended]), intended, reason, declared, auto: false }
+/** The default model (Sonnet); with no Anthropic key the call fails loudly (it used to become DeepSeek: retired). */
+const defaultOf = (declared: string, providers: ConfiguredProviders, unknown: boolean): ModelChoiceResult => {
+    if (!configured(DEFAULT_MODEL, providers)) return notConfigured(DEFAULT_MODEL)
+    const reason: ModelReason = unknown ? "unknown-model" : "default"
+    return { ok: true, choice: { target: targetOf(PROFILE_OF_MODEL[DEFAULT_MODEL]), intended: DEFAULT_MODEL, reason, declared, auto: false } }
+}
+
+/** A retired model a stored node still names: the cheap tier on Claude (its profile may serve Sonnet), booked `retired-model`. */
+const retiredOf = (declared: string, providers: ConfiguredProviders): ModelChoiceResult => {
+    if (!configured(CHEAP_MODEL, providers)) return notConfigured(CHEAP_MODEL)
+    const choice: ModelChoice = {
+        target: targetOf(MODEL_PROFILES.autoLight),
+        intended: CHEAP_MODEL,
+        reason: "retired-model",
+        declared,
+        auto: false,
+    }
+    return { ok: true, choice }
 }
 
 /**
  * The model of ONE try of a graph node's call. Pure, by rule, with no AI call: Auto gives a light step the cheap model and a heavy
  * step the strong one, steps a light step up to the strong model after a failed try (inside the same three tries), and asks a profile
  * the router can fail over within; an explicit model is asked on a profile that never falls back, and fails loudly when its provider
- * holds no key; the default (Sonnet) becomes the cheap model while Anthropic holds no key, and says so. `pinned` is the model a
+ * holds no key; so do Auto and the default (Claude only: nothing switches vendor); a retired model (DeepSeek flash) runs on the
+ * cheap tier and says so. `pinned` is the model a
  * step's agent loop answered its first turn with: every later turn of the step stays on it (the prompt cache is per model).
  */
 export const modelChoiceOf = (
@@ -124,11 +147,12 @@ export const modelChoiceOf = (
         }
         return { ok: true, choice }
     }
-    if (declared.model === AUTO_MODEL) return { ok: true, choice: autoOf(declared, tryNumber, providers) }
-    if (!isModelId(declared.model)) return { ok: true, choice: defaultOf(declared.model, providers, true) }
-    if (declared.source === "default") return { ok: true, choice: defaultOf(declared.model, providers, false) }
+    if (declared.model === AUTO_MODEL) return autoOf(declared, tryNumber, providers)
+    if (isRetiredModel(declared.model)) return retiredOf(declared.model, providers)
+    if (!isModelId(declared.model)) return defaultOf(declared.model, providers, true)
+    if (declared.source === "default") return defaultOf(declared.model, providers, false)
     const model = declared.model
-    if (!configured(model, providers)) return { ok: false, model, why: "not-configured" }
+    if (!configured(model, providers)) return notConfigured(model)
     const reason: ModelReason = declared.source === "node" ? "explicit" : "declared"
     return { ok: true, choice: { target: targetOf(PROFILE_OF_MODEL[model]), intended: model, reason, declared: model, auto: false } }
 }

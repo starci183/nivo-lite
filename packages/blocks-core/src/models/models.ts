@@ -11,14 +11,34 @@ export const AUTO_MODEL: "auto" = "auto"
 /** Claude Sonnet 5.5, on Anthropic directly: the strong model, and the default of a node that declares none. */
 export const SONNET_MODEL: "claude-sonnet-5-5" = "claude-sonnet-5-5"
 
-/** DeepSeek V4.1 flash, through OpenRouter: the fast, cheap model of light steps. */
+/** Claude Haiku 5.5, on Anthropic directly (the same key as Sonnet): the fast, cheap model. */
+export const HAIKU_MODEL: "claude-haiku-5-5" = "claude-haiku-5-5"
+
+/**
+ * RETIRED (owner 2026-11-11: no more OpenRouter): DeepSeek V4.1 flash, through OpenRouter. No longer selectable and no
+ * longer served; a stored graph node that still names it runs on the cheap tier (`CHEAP_MODEL`, booked `retired-model`), and a draft
+ * that names it is refused at save. Kept only so stored graphs and old usage rows are still read.
+ */
 export const DEEPSEEK_MODEL: "deepseek/deepseek-v4.1-flash" = "deepseek/deepseek-v4.1-flash"
 
-/** One explicit model. */
-export type ModelId = typeof SONNET_MODEL | typeof DEEPSEEK_MODEL
+/** One explicit model a node may name today. */
+export type ModelId = typeof SONNET_MODEL | typeof HAIKU_MODEL
+
+/** A retired model: read on stored graphs, never selectable, never served. */
+export type RetiredModelId = typeof DEEPSEEK_MODEL
 
 /** The ids of the explicit models, strongest first. */
-export const MODEL_IDS: readonly [typeof SONNET_MODEL, typeof DEEPSEEK_MODEL] = [SONNET_MODEL, DEEPSEEK_MODEL]
+export const MODEL_IDS: readonly [typeof SONNET_MODEL, typeof HAIKU_MODEL] = [SONNET_MODEL, HAIKU_MODEL]
+
+/** The ids of the retired models. */
+export const RETIRED_MODEL_IDS: readonly [typeof DEEPSEEK_MODEL] = [DEEPSEEK_MODEL]
+
+/**
+ * THE cheap tier, in ONE place (coordinator's interim choice 2026-11-11, to be confirmed by the owner): Auto's light steps, the
+ * fixed background tasks of the app (gateway profile `work`) and a retired model's calls. The gateway pools this id on Anthropic.
+ * Change it here (then blocks-core build, be build, restart); it must stay an Anthropic model of `MODEL_IDS`.
+ */
+export const CHEAP_MODEL: ModelId = HAIKU_MODEL
 
 /** What a node may name: Auto or one explicit model. */
 export type ModelChoice = typeof AUTO_MODEL | ModelId
@@ -40,12 +60,20 @@ export interface ModelEntry {
     readonly label: Bilingual
     /** One line under the name. */
     readonly hint: Bilingual
-    /** The provider of an explicit model; null for Auto (it uses both). */
+    /** The provider of an explicit model; null for Auto. */
     readonly provider: ModelProvider | null
     /** The provider as the picker's chip shows it; null for Auto. */
     readonly providerLabel: string | null
     /** False keeps a model out of the picker (still read on stored graphs). */
     readonly selectable: boolean
+}
+
+/** The entry of a retired model: same shape, its own id, never selectable. */
+export interface RetiredModelEntry extends Omit<ModelEntry, "id" | "selectable"> {
+    /** The retired id a stored graph may still carry. */
+    readonly id: RetiredModelId
+    /** Always false. */
+    readonly selectable: false
 }
 
 /** The picker, in its order: Auto first, then the explicit models strongest first. */
@@ -70,12 +98,24 @@ export const MODEL_ENTRIES: ReadonlyArray<ModelEntry> = [
         selectable: true,
     },
     {
-        id: DEEPSEEK_MODEL,
-        label: { vi: "DeepSeek flash", en: "DeepSeek flash" },
+        id: HAIKU_MODEL,
+        label: { vi: "Claude Haiku 5.5", en: "Claude Haiku 5.5" },
         hint: { vi: "Nhanh, rẻ · cho bước nhẹ", en: "Fast, cheap · for light steps" },
+        provider: "anthropic",
+        providerLabel: "Anthropic",
+        selectable: true,
+    },
+]
+
+/** The entries of the retired models: never in the picker; read for the label of a stored graph or an old usage row. */
+const RETIRED_ENTRIES: ReadonlyArray<RetiredModelEntry> = [
+    {
+        id: DEEPSEEK_MODEL,
+        label: { vi: "DeepSeek flash (đã ngừng)", en: "DeepSeek flash (retired)" },
+        hint: { vi: "Đã ngừng · chạy bằng model rẻ của Claude", en: "Retired · runs on Claude's cheap model" },
         provider: "openrouter",
         providerLabel: "OpenRouter",
-        selectable: true,
+        selectable: false,
     },
 ]
 
@@ -83,7 +123,7 @@ export const MODEL_ENTRIES: ReadonlyArray<ModelEntry> = [
 export const DEFAULT_MODEL: ModelId = SONNET_MODEL
 
 /** What Auto gives a step of each weight on its first try. */
-export const AUTO_MODEL_OF_WEIGHT: Readonly<Record<StepWeight, ModelId>> = { light: DEEPSEEK_MODEL, heavy: SONNET_MODEL }
+export const AUTO_MODEL_OF_WEIGHT: Readonly<Record<StepWeight, ModelId>> = { light: CHEAP_MODEL, heavy: SONNET_MODEL }
 
 /** The model Auto steps up to when a try failed (inside the same three tries). */
 export const STRONGER_MODEL: ModelId = SONNET_MODEL
@@ -95,5 +135,9 @@ export const isModelChoice = (value: unknown): value is ModelChoice =>
 /** True for an explicit model id. */
 export const isModelId = (value: unknown): value is ModelId => MODEL_IDS.some((id) => id === value)
 
-/** The picker entry of a choice, or null for anything else. */
-export const modelEntryOf = (id: string): ModelEntry | null => MODEL_ENTRIES.find((entry) => entry.id === id) ?? null
+/** True for a retired model id (a stored graph may still carry it). */
+export const isRetiredModel = (value: unknown): value is RetiredModelId => RETIRED_MODEL_IDS.some((id) => id === value)
+
+/** The picker entry of a choice or of a retired model, or null for anything else. */
+export const modelEntryOf = (id: string): ModelEntry | RetiredModelEntry | null =>
+    MODEL_ENTRIES.find((entry) => entry.id === id) ?? RETIRED_ENTRIES.find((entry) => entry.id === id) ?? null

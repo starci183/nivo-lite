@@ -1,4 +1,5 @@
 import { Field, ID, Int, ObjectType } from "@nestjs/graphql"
+import { KnowledgeDocumentAiCostType } from "./knowledge-document-ai-cost.type"
 
 @ObjectType()
 /** One document of a workspace as the Knowledge page lists it, without its text. */
@@ -86,4 +87,8 @@ export class KnowledgeSourceType {
     /** When it last changed, ISO 8601. */
     @Field(() => String)
     updatedAt!: string
+
+    /** What the document cost in AI (read, critique, re-read; exact credits); null for staff and on writes that answer a document. */
+    @Field(() => KnowledgeDocumentAiCostType, { nullable: true })
+    aiCost?: KnowledgeDocumentAiCostType | null
 }

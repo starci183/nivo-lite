@@ -3,7 +3,7 @@ import { fakeQueryBuilder } from "@tests/fixtures/builders/entity-query-builder-
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { LOGGER, withRunScope } from "@modules/platform/logging"
+import { LOGGER, withRunScope, withWorkScope } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { QuotaRecord, QuotaStatus, UsageInput, UsageKind } from "./ai-usage-events.contracts"
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
@@ -140,7 +140,7 @@ describe("AiUsageEventsService > creditsUsedBy", () => {
         expect(sums.callsOf("select")).toEqual([["COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits"]])
         expect(sums.callsOf("where")).toEqual([
             [
-                "u.workspace_id = :workspaceId AND u.module = :module",
+                "u.workspace_id = :workspaceId AND u.module = :module AND u.failure IS NULL",
                 { workspaceId: "ws-1", module: "video", creditUsd: CREDIT_USD_VALUE },
             ],
         ])
@@ -204,6 +204,12 @@ const BOOKED = (overrides: Record<string, unknown> = {}) => ({
     declaredModel: null,
     modelProvider: null,
     modelReason: null,
+    workKind: null,
+    workRef: null,
+    stepKey: null,
+    agentId: null,
+    cacheWriteTokens: 0,
+    failure: null,
     ...overrides,
 })
 
@@ -267,6 +273,61 @@ describe("AiUsageEventsService > record", () => {
         await usage.record({ ...INPUT, call })
 
         expect(em.insert.mock.calls).toEqual([[AiUsageEventEntity, BOOKED(call)]])
+    })
+
+    it("work: books the work in scope (a node's step and agent), or the work the caller names, and the cache writes told", async () => {
+        const em = mockEntityManager({ insert: [AiUsageEventEntity, {}], query: [SELECT_QUOTA_STATUS, []] })
+        const { usage } = await build(em)
+        const agentId = "0b6f6c2e-1111-4222-8333-444455556666"
+
+        await withWorkScope({ kind: "node", stepKey: "match", agentId }, () =>
+            usage.record({ ...INPUT, usage: { ...INPUT.usage, cache_write_tokens: 1_200 } }),
+        )
+        await usage.record({ ...INPUT, work: { kind: "learning", ref: "lesson:c-1" } })
+
+        expect(em.insert.mock.calls).toEqual([
+            [AiUsageEventEntity, BOOKED({ workKind: "node", stepKey: "match", agentId, cacheWriteTokens: 1_200 })],
+            [AiUsageEventEntity, BOOKED({ workKind: "learning", workRef: "lesson:c-1" })],
+        ])
+    })
+
+    it("a FAILED try: booked estimated with the prompt counted and no output, priced at its model, flagged with its failure", async () => {
+        const em = mockEntityManager({ insert: [AiUsageEventEntity, {}], query: [SELECT_QUOTA_STATUS, []] })
+        const { usage } = await build(em)
+
+        await usage.record({
+            ...INPUT,
+            model: "claude-sonnet-5-5",
+            usage: null,
+            promptChars: 30_000,
+            completionChars: 0,
+            failure: "timeout",
+            call: {
+                purpose: "accounting.match-payment:agent",
+                reasoningTokens: null,
+                durationMs: null,
+                tryNumber: 1,
+                upstream: null,
+                finishReason: null,
+            },
+        })
+
+        // 30,000 characters = 10,000 tokens at Sonnet's $2 per million input: 0.02 USD, never billed (the billing SQL skips failures).
+        expect(em.insert.mock.calls).toEqual([
+            [
+                AiUsageEventEntity,
+                BOOKED({
+                    model: "claude-sonnet-5-5",
+                    promptTokens: 10_000,
+                    completionTokens: 0,
+                    costUsd: "0.02",
+                    estimated: true,
+                    failure: "timeout",
+                    purpose: "accounting.match-payment:agent",
+                    tryNumber: 1,
+                }),
+            ],
+        ])
     })
 
     it("logs a write failure without failing the model reply or reading its quota", async () => {
@@ -479,7 +540,9 @@ describe("AiUsageEventsService > creditsByRun", () => {
             ["run-2", 3],
         ])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(AiUsageEventEntity, "u")
-        expect(sums.callsOf("andWhere")).toEqual([["u.run_id IN (:...runIds)", { runIds: ["run-1", "run-2", "run-3"] }]])
+        expect(sums.callsOf("andWhere")).toEqual([
+            ["u.run_id IN (:...runIds)", { runIds: ["run-1", "run-2", "run-3"] }],
+        ])
         expect(sums.callsOf("groupBy")).toEqual([["u.run_id"]])
     })
 
@@ -498,8 +561,16 @@ describe("AiUsageEventsService > callKindsByRun", () => {
         const rollup = fakeQueryBuilder({
             getRawMany: [
                 {
+                    step_key: "match",
                     purpose: "accounting.match-payment:agent",
                     calls: 1,
+                    tries: 2,
+                    failed_tries: 1,
+                    cache_write_tokens: 0,
+                    failed_prompt_tokens: 8000,
+                    failed_cost_usd: 0.016,
+                    failures: ["timeout", null],
+                    work_kinds: ["node"],
                     max_try: 1,
                     prompt_tokens: 8162,
                     cached_tokens: 8064,
@@ -522,8 +593,18 @@ describe("AiUsageEventsService > callKindsByRun", () => {
 
         await expect(usage.callKindsByRun("ws-1", "run-1")).resolves.toEqual([
             {
+                stepKey: "match",
                 purpose: "accounting.match-payment:agent",
                 calls: 1,
+                tries: 2,
+                failedTries: 1,
+                cacheWriteTokens: 0,
+                failedPromptTokens: 8000,
+                failedCostUsd: 0.016,
+                failures: ["timeout"],
+                workKinds: ["node"],
+                credits: 1.061947,
+                failedCredits: 14.159292,
                 maxTry: 1,
                 promptTokens: 8162,
                 cachedTokens: 8064,
@@ -542,10 +623,19 @@ describe("AiUsageEventsService > callKindsByRun", () => {
         ])
         expect(em.createQueryBuilder).toHaveBeenCalledWith(AiUsageEventEntity, "u")
         expect(rollup.callsOf("where")).toEqual([
-            ["u.workspace_id = :workspaceId AND u.run_id = :runId AND u.kind <> 'guide'", { workspaceId: "ws-1", runId: "run-1" }],
+            [
+                "u.workspace_id = :workspaceId AND u.run_id = :runId AND u.kind <> 'guide'",
+                { workspaceId: "ws-1", runId: "run-1" },
+            ],
         ])
-        expect(rollup.callsOf("select")).toEqual([["COALESCE(u.purpose, u.kind)", "purpose"]])
+        expect(rollup.callsOf("select")).toEqual([["u.step_key", "step_key"]])
+        expect(rollup.callsOf("addSelect")).toContainEqual(["COALESCE(u.purpose, u.kind)", "purpose"])
+        expect(rollup.callsOf("addSelect")).toContainEqual([
+            "(COUNT(*) FILTER (WHERE u.failure IS NULL))::int",
+            "calls",
+        ])
         expect(rollup.callsOf("groupBy")).toEqual([["1"]])
+        expect(rollup.callsOf("addGroupBy")).toEqual([["2"]])
         expect(rollup.callsOf("orderBy")).toEqual([["MIN(u.created_at)", "ASC"]])
         expect(rollup.callsOf("limit")).toEqual([[100]])
     })

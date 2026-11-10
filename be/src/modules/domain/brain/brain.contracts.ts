@@ -286,6 +286,10 @@ export interface BrainGraphPending {
     readonly validFrom: string | null
     /** Until when it would hold, when stated (else one year from approval). */
     readonly validTo: string | null
+    /** The review flags of the proposal (`stale`: its stated end is past; `same_meaning`: it may say what `conflictWith` says). */
+    readonly flags: ReadonlyArray<string>
+    /** The fact it clashes with: the other value WAITING for the key (none in force), or, flagged `same_meaning`, a fact of another key. */
+    readonly conflictWith: string | null
 }
 
 /** One document the graph was built from. */

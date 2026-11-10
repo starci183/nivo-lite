@@ -63,6 +63,7 @@ const build = async (em: MockEntityManager) => {
     const progress = mock<KnowledgeProgressService>()
     const parts = mock<SourcePartsService>()
     quota.measure.mockResolvedValue(12)
+    quota.replacementOf.mockResolvedValue({ columns: {}, replaced: null })
     const moduleRef = await Test.createTestingModule({
         providers: [
             KnowledgeSourcesService,
@@ -507,10 +508,10 @@ describe("KnowledgeSourcesService reading", () => {
     it("reads the source with its text after checking workspace membership", async () => {
         const em = mockEntityManager({ findOne: [KnowledgeSourceEntity, listRowOf()] })
         const { service, members } = await build(em)
-        await expect(service.detail("u1", WS, "s1")).resolves.toEqual({ ...summary, content: "c" })
+        await expect(service.detail("u1", WS, "s1")).resolves.toEqual({ ...summary, content: "c", reading: null })
         expect(members.require).toHaveBeenCalledWith("u1", WS)
         expect(em.findOne).toHaveBeenCalledWith(KnowledgeSourceEntity, {
-            select: matching({ id: true, content: true }),
+            select: matching({ id: true, content: true, reading: true }),
             where: { workspaceId: WS, id: "s1" },
         })
     })

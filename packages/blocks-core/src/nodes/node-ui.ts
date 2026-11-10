@@ -159,6 +159,7 @@ export const NODE_UI: Readonly<Record<string, NodeUiEntry>> = {
     "payment.settle": { kind: "action", icon: "receipt" },
     "accounting.post-payment": { kind: "action", icon: "table" },
     "accounting.report": { kind: "action", icon: "chart" },
+    "team.chat": { kind: "action", icon: "message" },
 }
 
 /** The words of a node id as a name part: `payment.match-code` is `PaymentMatchCode`, `no_match` is `NoMatch`. */

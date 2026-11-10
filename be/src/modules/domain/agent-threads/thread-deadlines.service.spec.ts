@@ -10,10 +10,12 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { ThreadDeadlineQueue } from "@modules/queues/thread-deadline"
+import type { ThreadDeadlinePayload } from "@modules/queues/thread-deadline"
 import { jobRecordingOutbox } from "@tests/fixtures/builders/queue-job-outbox.builder"
 import { AGENT_THREADS_OPTIONS } from "./agent-threads.decorators"
 import type { AgentThreadsOptions } from "./agent-threads.options"
 import type { RunStop } from "./stops/run-stop.contracts"
+import { RunStopRecordsService } from "./stops/run-stop-records.service"
 import { RunStopsService } from "./stops/run-stops.service"
 import { ThreadApprovalsService } from "./thread-approvals.service"
 import { ThreadDeadlinesService } from "./thread-deadlines.service"
@@ -64,6 +66,7 @@ interface World {
     readonly options?: Partial<AgentThreadsOptions>
     readonly queueless?: boolean
     readonly expired?: Awaited<ReturnType<ThreadApprovalsService["expired"]>>
+    readonly open?: ReadonlyArray<RunStop>
 }
 
 const build = async (world: World = {}) => {
@@ -85,6 +88,7 @@ const build = async (world: World = {}) => {
     const approvals = mock<ThreadApprovalsService>({
         expired: jest.fn().mockResolvedValue(world.expired === undefined ? { kind: "admitted", fresh: true } : world.expired),
     })
+    const records = mock<RunStopRecordsService>({ newest: jest.fn().mockResolvedValue(world.open ?? []) })
     const logger = mock<Logger>()
     const tx = fakeTransaction(mockEntityManager())
     const moduleRef = await Test.createTestingModule({
@@ -99,12 +103,13 @@ const build = async (world: World = {}) => {
             { provide: AgentGraphsService, useValue: graphs },
             { provide: GRAPH_THREADS, useValue: port },
             { provide: ThreadApprovalsService, useValue: approvals },
+            { provide: RunStopRecordsService, useValue: records },
             ...(world.queueless === true ? [] : [{ provide: ThreadDeadlineQueue, useValue: new ThreadDeadlineQueue(outbox) }]),
         ],
     }).compile()
     const service = moduleRef.get(ThreadDeadlinesService)
     service.onModuleInit()
-    return { service, outbox, runs, stops, graphs, approvals, listeners, logger }
+    return { service, outbox, runs, stops, graphs, approvals, listeners, logger, records }
 }
 
 describe("ThreadDeadlinesService", () => {
@@ -204,6 +209,52 @@ describe("ThreadDeadlinesService", () => {
             const world = await build({ now: DUE, admission: { kind: "refused", code: "thread_not_stopped" } })
 
             await expect(world.service.fire(PAYLOAD)).resolves.toBe("refused")
+        })
+    })
+    describe("run now (the schedule list's \"run now\")", () => {
+        const PRESSED: ThreadDeadlinePayload = { workspaceId: "ws-1", runId: "run-1", stepKey: "match", repeats: 1, answered: 0 }
+
+        it("answers the stop `timeout` now, before its deadline, through the same resume; the armed job then finds the stop moved", async () => {
+            const world = await build({ now: "2026-11-10T11:00:00.000Z" })
+
+            await expect(world.service.fireNow(PRESSED)).resolves.toBe("admitted")
+            // The timeout is the stop's answer now: the armed job (same key) finds the stop moved and does nothing.
+            world.stops.stopOf.mockResolvedValue(stopOf({ answers: [answer("timeout")] }))
+            await expect(world.service.fire(PRESSED)).resolves.toBe("moved")
+
+            expect(world.runs.resume).toHaveBeenCalledTimes(1)
+            expect(world.runs.resume).toHaveBeenCalledWith(REF, { kind: "timeout", at: "2026-11-10T11:00:00.000Z" })
+            expect(world.outbox.written).toEqual([])
+        })
+
+        it("runs an approval's deadline now through the approvals, and refuses a stop that moved or closed since the list was read", async () => {
+            const approval = await build({ stop: stopOf({ kind: "approval" }) })
+            const moved = await build({ stop: stopOf({ answers: [answer("timeout")] }) })
+            const closed = await build({ stop: stopOf({ state: "resolved" }) })
+            const engine = await build({ stop: stopOf({ kind: "engine" }) })
+
+            await expect(approval.service.fireNow(PRESSED)).resolves.toBe("admitted")
+            await expect(moved.service.fireNow(PRESSED)).resolves.toBe("moved")
+            await expect(closed.service.fireNow(PRESSED)).resolves.toBe("closed")
+            await expect(engine.service.fireNow(PRESSED)).resolves.toBe("moved")
+
+            expect(approval.approvals.expired).toHaveBeenCalledWith(REF, "match", approval.runs)
+            expect([moved, closed, engine].map((one) => one.runs.resume.mock.calls.length)).toEqual([0, 0, 0])
+        })
+
+        it("lists the deadlines of the newest open stops of the workspace, soonest first, leaving out a stop with none", async () => {
+            const report = stopOf({ runId: "run-1", stoppedAt: "2026-11-10T10:00:00.000Z" })
+            const approval = stopOf({ runId: "run-2", kind: "approval", stoppedAt: "2026-11-10T12:00:00.000Z" })
+            const engine = stopOf({ runId: "run-3", kind: "engine" })
+            const world = await build({ open: [engine, report, approval] })
+
+            const pending = await world.service.pending("ws-1", 50)
+
+            expect(world.records.newest).toHaveBeenCalledWith("ws-1", "open", 50)
+            expect(pending.map(({ stop, deadline }) => [stop.runId, deadline.at.toISOString(), deadline.payload.answered])).toEqual([
+                ["run-2", "2026-11-11T12:00:00.000Z", 0],
+                ["run-1", "2026-11-13T10:00:00.000Z", 0],
+            ])
         })
     })
 })

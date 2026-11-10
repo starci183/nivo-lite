@@ -122,6 +122,8 @@ export interface NewLine {
     readonly key: string | null
     /** The structured message the line carries as JSON text, or null for a plain line. */
     readonly agentMessage?: string | null
+    /** The message of the same room this line answers; null or omitted for none. */
+    readonly replyTo?: string | null
 }
 
 /** A card the store holds: its message and whether this write made it. */

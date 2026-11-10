@@ -8,12 +8,14 @@ import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
+import { eachInOrder } from "@modules/platform/primitives"
 import { ThreadDeadlineQueue } from "@modules/queues/thread-deadline"
 import type { ThreadDeadlinePayload } from "@modules/queues/thread-deadline"
 import { InjectAgentThreadsOptions } from "./agent-threads.decorators"
 import { AgentThreadsLogEvent } from "./agent-threads.log-events"
 import type { AgentThreadsOptions } from "./agent-threads.options"
 import type { RunStop } from "./stops/run-stop.contracts"
+import { RunStopRecordsService } from "./stops/run-stop-records.service"
 import { RunStopsService } from "./stops/run-stops.service"
 import { ThreadApprovalsService } from "./thread-approvals.service"
 import { deadlineAtOf, deadlineWindowOf } from "./thread-deadline.policy"
@@ -35,6 +37,14 @@ export interface StopDeadline {
     readonly at: Date
     /** The job's payload: the stop as it stood when the deadline was set. */
     readonly payload: ThreadDeadlinePayload
+}
+
+/** An open stop with the deadline that stands for it. */
+export interface PendingDeadline {
+    /** The stop. */
+    readonly stop: RunStop
+    /** Its deadline. */
+    readonly deadline: StopDeadline
 }
 
 @Injectable()
@@ -59,6 +69,7 @@ export class ThreadDeadlinesService implements OnModuleInit {
         @Optional() private readonly graphs?: AgentGraphsService,
         @Optional() @InjectGraphThreads() private readonly port?: GraphThreads,
         @Optional() private readonly approvals?: ThreadApprovalsService,
+        @Optional() private readonly records?: RunStopRecordsService,
     ) {}
 
     /** Arms the deadline of every stop a drive leaves behind. */
@@ -108,23 +119,51 @@ export class ThreadDeadlinesService implements OnModuleInit {
      * repeat, the same answers) and the deadline is due; else nothing happens (a deadline not due yet is left to the minute sweep).
      */
     async fire(payload: ThreadDeadlinePayload): Promise<DeadlineFiring> {
+        return this.fireAs(payload, false)
+    }
+
+    /**
+     * A person runs the deadline now ("run now" on the schedule list): the same answer `fire` gives when the deadline comes, given now,
+     * for the stop exactly as the job was armed for (`payload`, whose key is the job's dedupe key). The delayed job stays where it is and
+     * does nothing when it comes, because the stop no longer stands as it was armed for (`moved`). A stop closed or moved since answers so.
+     */
+    fireNow(payload: ThreadDeadlinePayload): Promise<DeadlineFiring> {
+        return this.fireAs(payload, true)
+    }
+
+    /**
+     * The deadlines of the newest open stops of the workspace (at most `limit`), soonest first; a stop no deadline applies to is left
+     * out. A list for people (the schedule list), never on a customer's path: it reads each thread's pinned template.
+     */
+    async pending(workspaceId: string, limit: number): Promise<ReadonlyArray<PendingDeadline>> {
+        if (this.records === undefined) return []
+        const open = await this.records.newest(workspaceId, "open", limit)
+        const found: Array<PendingDeadline> = []
+        await eachInOrder(open, async (stop) => {
+            const deadline = await this.dueOf({ workspaceId, runId: stop.runId }, stop)
+            if (deadline !== null) found.push({ stop, deadline })
+        })
+        return found.toSorted((a, b) => a.deadline.at.getTime() - b.deadline.at.getTime())
+    }
+
+    private async fireAs(payload: ThreadDeadlinePayload, now: boolean): Promise<DeadlineFiring> {
         const ref: ThreadRef = { workspaceId: payload.workspaceId, runId: payload.runId }
         const stop = await this.stops.stopOf(ref, payload.stepKey)
         if (stop?.state !== "open") return this.skipped(payload, "closed")
         if (stop.repeats !== payload.repeats || stop.answers.length !== payload.answered) return this.skipped(payload, "moved")
         const deadline = await this.dueOf(ref, stop)
         if (deadline === null) return this.skipped(payload, "moved")
-        const now = this.clock.now()
-        // Not due yet (the app's window grew since it was armed): the minute sweep fires it when it is.
-        if (deadline.at.getTime() > now.getTime()) return this.skipped(payload, "early")
+        const at = this.clock.now()
+        // Not due yet (the app's window grew since it was armed): the minute sweep fires it when it is. A person's "run now" is due now.
+        if (!now && deadline.at.getTime() > at.getTime()) return this.skipped(payload, "early")
         // An approval's deadline also closes the owner's item as refused by the engine (package 1-3); its verdict hands the timeout on.
         const admission =
             stop.kind === "approval" && this.approvals !== undefined
                 ? await this.approvals.expired(ref, stop.stepKey, this.runs)
-                : await this.runs.resume(ref, { kind: "timeout", at: now.toISOString() })
+                : await this.runs.resume(ref, { kind: "timeout", at: at.toISOString() })
         if (admission === null) return this.skipped(payload, "closed")
         if (admission.kind === "refused") return this.skipped(payload, "refused")
-        this.logger.info(AgentThreadsLogEvent.DeadlineFired, { runId: payload.runId, stepKey: payload.stepKey })
+        this.logger.info(AgentThreadsLogEvent.DeadlineFired, { runId: payload.runId, stepKey: payload.stepKey, early: now })
         return "admitted"
     }
 

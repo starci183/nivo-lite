@@ -8,6 +8,9 @@ import { AgentMessagePostExecutorService } from "./agent-message-post-executor.s
 import { lineKeyOf } from "./team-chat.policy"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
 import { TeamChatAudienceService } from "./team-chat-audience.service"
+import { TeamChatCardsService } from "./team-chat-cards.service"
+import { TeamChatStoreService } from "./team-chat-store.service"
+import type { ChatRoomMessageEntity } from "./persistence/entities"
 
 const TURN: NodeTurn = {
     turnId: "turn-1",
@@ -30,7 +33,18 @@ const ORDER: NodeRow = {
 
 const POSTED_FACTS = { requested: "own", audience: "own", purpose: "module", roomName: "Sales", roomId: "room-sales" }
 
-const build = async (rows: Readonly<Record<string, ReadonlyArray<NodeRow>>> = {}) => {
+const build = async (
+    rows: Readonly<Record<string, ReadonlyArray<NodeRow>>> = {},
+    lines: ReadonlyArray<Partial<ChatRoomMessageEntity>> = [],
+) => {
+    const store = mock<TeamChatStoreService>({
+        messagesByIds: jest.fn((_ws: string, ids: ReadonlyArray<string>) =>
+            Promise.resolve(lines.filter((line) => ids.includes(line.id ?? "")) as Array<ChatRoomMessageEntity>),
+        ),
+    })
+    const cards = mock<TeamChatCardsService>({
+        postMessage: jest.fn().mockResolvedValue({ roomId: "room-1", messageId: "answer-1" }),
+    })
     const chat = mock<TeamChatAudienceService>({
         postTeamCard: jest.fn().mockResolvedValue({ messageId: "msg-1", facts: POSTED_FACTS }),
     })
@@ -52,13 +66,15 @@ const build = async (rows: Readonly<Record<string, ReadonlyArray<NodeRow>>> = {}
         providers: [
             AgentMessagePostExecutorService,
             { provide: TeamChatAudienceService, useValue: chat },
+            { provide: TeamChatStoreService, useValue: store },
+            { provide: TeamChatCardsService, useValue: cards },
             { provide: GraphNodeRegistryService, useValue: registry },
         ],
     }).compile()
     moduleRef.get(AgentMessagePostExecutorService).onModuleInit()
     const postOf = () => chat.postTeamCard.mock.calls[0]?.[1]
     const messageOf = (): unknown => postOf()?.message
-    return { chat, registry, executor: added[0], messageOf, postOf }
+    return { chat, cards, registry, executor: added[0], messageOf, postOf }
 }
 
 describe("AgentMessagePostExecutorService", () => {
@@ -361,5 +377,57 @@ describe("AgentMessagePostExecutorService the card of a stopped workflow", () =>
             executor?.execute(TURN, { ...STOPPED, card: { ...CARD, by: "model" } }, STOP_CALL),
         ).rejects.toMatchObject({ code: TeamChatErrorCode.InvalidAgentMessage })
         expect(chat.postTeamCard).not.toHaveBeenCalled()
+    })
+})
+
+describe("AgentMessagePostExecutorService the answer of a team chat turn (chat.answer)", () => {
+    const ROOM_TURN: NodeTurn = { ...TURN, subject: { kind: "chat-room", id: "room-1" } }
+    const ASKED: Partial<ChatRoomMessageEntity> = { id: "m-1", roomId: "room-1", authorKind: "user", authorId: "u-1" }
+    const ANSWER = { kind: "chat.answer", messageId: "m-1", text: "Phi ship noi thanh la 20.000 d." }
+    const ANSWER_CALL: EffectCall = { key: "run-9:0", dedupeKey: "chat-answer:m-1:agent-1" }
+
+    it("posts once in the asked room as a reply to the person's line, a typed message.text", async () => {
+        const { cards, chat, executor } = await build({}, [ASKED])
+
+        await expect(executor?.execute(ROOM_TURN, ANSWER, ANSWER_CALL)).resolves.toEqual({
+            kind: "chat-message",
+            id: "answer-1",
+            facts: { roomId: "room-1", replyTo: "m-1" },
+        })
+        expect(cards.postMessage).toHaveBeenCalledTimes(1)
+        const [workspaceId, line] = cards.postMessage.mock.calls[0] ?? []
+        expect(workspaceId).toBe("ws-1")
+        expect(line).toMatchObject({
+            authorAgentId: "agent-1",
+            roomId: "room-1",
+            toUserId: null,
+            body: ANSWER.text,
+            key: lineKeyOf("chat-answer:m-1:agent-1"),
+            replyTo: "m-1",
+        })
+        expect(JSON.parse(line?.agentMessage ?? "null")).toMatchObject({ kind: "message.text", intent: "notify" })
+        expect(chat.postTeamCard).not.toHaveBeenCalled()
+    })
+
+    it("answers the same dedupe key with the same line key (the store keeps one line)", async () => {
+        const { cards, executor } = await build({}, [ASKED])
+        await executor?.execute(ROOM_TURN, ANSWER, ANSWER_CALL)
+        await executor?.execute(ROOM_TURN, ANSWER, ANSWER_CALL)
+        const keys = cards.postMessage.mock.calls.map((call) => call[1].key)
+        expect(new Set(keys).size).toBe(1)
+    })
+
+    it("refuses another room or an agent's line, and posts nothing", async () => {
+        const other = await build({}, [ASKED])
+        await expect(
+            other.executor?.execute({ ...TURN, subject: { kind: "chat-room", id: "room-2" } }, ANSWER, ANSWER_CALL),
+        ).resolves.toMatchObject({ id: "other_room" })
+        expect(other.cards.postMessage).not.toHaveBeenCalled()
+
+        const agentLine = await build({}, [{ ...ASKED, authorKind: "agent" }])
+        await expect(agentLine.executor?.execute(ROOM_TURN, ANSWER, ANSWER_CALL)).resolves.toMatchObject({
+            id: "not_person_line",
+        })
+        expect(agentLine.cards.postMessage).not.toHaveBeenCalled()
     })
 })

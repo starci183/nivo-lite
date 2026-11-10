@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { businessPassage, nivoPassage, rankPassages, tsqueryOf } from "./passage.mapper"
+import { UNREVIEWED_MARK, businessPassage, nivoPassage, rankPassages, tsqueryOf } from "./passage.mapper"
 
 const SUBJECT = Symbol("passage.mapper")
 type Subject = {
@@ -24,6 +24,7 @@ const chunk = {
     score: 0.5,
     visibility: "public",
     order: 2,
+    unreviewed: false,
 }
 const item = { id: "n1", module: "core", kind: "tone", title: "Tone", content: "Be kind", score: 0.7 }
 
@@ -43,7 +44,16 @@ describe("passage mapping", () => {
             visibility: "public",
             topic: "hours",
             order: 2,
+            unreviewed: false,
         })
+    })
+
+    it("marks a passage the critic has not released to customers yet, for the internal reader (trust gate)", async () => {
+        const subject = await build()
+
+        expect(
+            subject.businessPassage({ ...chunk, unreviewed: true }, { id: "s1", kind: "faq", title: "Hours", topic: null }),
+        ).toMatchObject({ content: `${UNREVIEWED_MARK} Open 8 to 21`, unreviewed: true })
     })
 
     it("reads a base knowledge hit as an internal passage without a source", async () => {

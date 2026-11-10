@@ -1,7 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
+import { InjectLogger, runInScope, workInScope } from "@modules/platform/logging"
+import { workColumnsOf, workFactsJsonOf } from "@modules/domain/ai-usage-events"
 import type { Logger } from "@modules/platform/logging"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
@@ -37,16 +38,22 @@ export class UsageMeterService {
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
-    /** Records one model call. Never throws: metering must not break the work it measures. */
+    /**
+     * Records one model call with the work it served: the run in scope, and the work in scope (the document or lesson a job reads,
+     * the step and agent of a node), so the document and run reads can show it. A failed try (`failure`) is booked estimated and
+     * never billed. Never throws: metering must not break the work it measures.
+     */
     async record(input: UsageRecord): Promise<void> {
         try {
-            const figures = figuresOf({
+            const priced = figuresOf({
                 model: input.model,
-                usage: input.usage,
+                usage: input.failure === undefined ? input.usage : null,
                 promptChars: input.promptChars ?? 0,
-                completionChars: input.completionChars ?? 0,
+                completionChars: input.failure === undefined ? (input.completionChars ?? 0) : 0,
             })
-            await callDbFunction(this.entityManager, "public.record_ai_usage", [
+            const figures = input.failure === undefined ? priced : { ...priced, estimated: true }
+            const work = workColumnsOf(workInScope(), null, figures, input.failure)
+            await callDbFunction(this.entityManager, "public.record_ai_usage_work", [
                 input.workspaceId,
                 input.kind,
                 input.module,
@@ -55,6 +62,7 @@ export class UsageMeterService {
                 Math.round(figures.completionTokens),
                 Number(figures.costUsd.toFixed(8)),
                 figures.estimated,
+                JSON.stringify(workFactsJsonOf(work, runInScope(), { tryNumber: input.tryNumber ?? null })),
             ])
             const status = await this.statusOf(input.workspaceId)
             if (status === null) return

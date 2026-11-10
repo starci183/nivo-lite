@@ -1,8 +1,7 @@
-import { useState } from "react"
-import type { ReactNode } from "react"
-import { Avatar, Cluster, MessageCard, Stack, Text } from "@starci/grammar/common"
+import { useState, type ReactNode } from "react"
+import { Avatar, Cluster, MessageCard, Stack, SurfaceCard, Text } from "@starci/grammar/common"
 import type { AgentMessageItem, AgentMessageRecord } from "../../agent-message/agent-message-item"
-import { actionsOf } from "./AgentMessageActions"
+import { actionsOf, repliesOf } from "./AgentMessageActions"
 import { HeadChip, Summary, WhyList, metaOf, outboundOf } from "./AgentMessageParts"
 import type { AgentMessageView } from "./agent-message-views"
 import type { AgentMessageEdits, AgentMessageWords } from "./agent-message-words"
@@ -80,9 +79,11 @@ const PayloadView = (params: PayloadParams): ReactNode => {
 }
 
 /**
- * One message from an agent, the same in the conversation, on the desk and in the inbox: the agent's avatar at the start and a card at
- * the bubble measure (never the full width) that holds, in this order, the head (the title and the chip of its intent or state), the
- * content as its kind draws it (with, for a customer, the channel and recipient, and why a person is asked), the actions row (the
+ * One message from an agent, the same in the conversation, on the desk and in the inbox, drawn through Grammar `MessageCard`: the
+ * agent's avatar at the start and a card at the bubble measure (never the full width) that holds, in this order, the head (the title and
+ * the chip of its intent or state), the content as its kind draws it, full width with no tinted box around it (with, for a customer,
+ * the channel and recipient, why a person is asked, and the answers of an ask as the
+ * Grammar suggestions list: one bordered list, a pressable plain-text row per answer), the actions row (the
  * primary action, the secondary, a spacer, then where it leads, with the arrow last) and the meta line (which agent, when). It holds no
  * business and no domain word: kinds, copy and verdicts come in.
  */
@@ -92,6 +93,7 @@ export const AgentMessageCard = (props: AgentMessageCardProps): ReactNode => {
     const view = props.views.find((entry) => entry.kind.id === props.item.kind?.id)
     const outbound = outboundOf(record, props.words)
     const meta = metaOf(record)
+    const replies = isEditing ? [] : repliesOf({ item: props.item, canReply: props.canReply })
     const body = (
         <Stack gap="row">
             <PayloadView
@@ -107,6 +109,19 @@ export const AgentMessageCard = (props: AgentMessageCardProps): ReactNode => {
             />
             {outbound === "" ? null : <Text size="sm">{outbound}</Text>}
             <WhyList record={record} words={props.words} />
+            {replies.length === 0 ? null : (
+                <SurfaceCard
+                    kind="list"
+                    layout="suggestions"
+                    ariaLabel={record.title}
+                    empty={null}
+                    items={replies.map((reply) => ({
+                        id: reply.id,
+                        title: reply.label,
+                        onPress: () => props.onReply(reply.id),
+                    }))}
+                />
+            )}
             {record.note === "" ? null : (
                 <Text size="sm" tone="muted">
                     {record.note}

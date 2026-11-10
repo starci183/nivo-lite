@@ -44,6 +44,9 @@ const NOT_YET_SUPPORTED: Readonly<Record<string, ReadonlyArray<TemplateProblem>>
     "sales.occasion": [],
     "sales.payment-reminder": [],
     "sales.web-order": [],
+    "accounting.team-chat": [],
+    "chatbot.team-chat": [],
+    "sales.team-chat": [],
 }
 
 const pinOf = (templateId: string, templateVersion: number): TemplatePin => ({

@@ -16,6 +16,7 @@ export { GraphNodeEffectsService, ledgerKeyOf } from "./graph-node-effects.servi
 export { GraphNodeRegistryService } from "./graph-node-registry.service"
 export { GraphNodeRunTokensService } from "./graph-node-run-tokens.service"
 export { toolFingerprintOf } from "./node-run-token.policy"
+export { declaredModelOf } from "./node-model.policy"
 export type { NodeRunClaims, NodeToolApproval, NodeToolCall } from "./node-run-token.contracts"
 export type {
     EffectOnce,

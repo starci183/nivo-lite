@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common"
+import { IsNull } from "typeorm"
 import type { EntityManager, FindOptionsWhere } from "typeorm"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
@@ -33,6 +34,12 @@ import { BrainFactEntity } from "./persistence/entities"
 
 /** Who acts for the brain itself when no person decides. */
 const BRAIN = "NIVO"
+
+/** The note of a proposal approved after its stated end: it is kept as history and never comes in force. */
+const ENDED_NOTE = "Recorded as history: its stated end had already passed"
+
+/** The note of a waiting proposal another one was merged over (flag `same_meaning`). */
+const MERGED_NOTE = "Merged: the founder approved the same fact in other words"
 
 @Injectable()
 /**
@@ -95,8 +102,10 @@ export class BrainFactsService {
 
     /**
      * Records what a source says. The same value as the active fact only grows its evidence; the same value as a waiting proposal grows
-     * that proposal; otherwise a new row: applied at once from a trusted source (or when `autoApply`), else a proposal naming the
-     * active fact it would replace.
+     * that proposal; otherwise a new row: applied at once from a trusted source (or when `autoApply`), else a proposal naming what it
+     * disagrees with: the active fact it would replace, or, with no value in force, the newest other value waiting for the same key (so
+     * two documents that disagree make ONE choice for the founder, never two silent proposals). A value whose stated end has already
+     * passed is never applied at once: it is a proposal flagged `stale`.
      */
     async propose(workspaceId: string, input: FactInput): Promise<ProposeResult> {
         const normal = normalFact(input)
@@ -122,15 +131,18 @@ export class BrainFactsService {
             }
             return { fact, outcome: "reinforced" }
         }
-        const waiting = (
-            await this.reads.keyed(em, workspaceId, normal.subjectKey, normal.attribute, "proposed", scopeId)
-        ).find((proposal) => proposal.proposalKind === "set" && sameValue(proposal.value, normal.value))
-        const direct = input.autoApply ?? trust >= AUTO_APPLY_TRUST
+        const proposals = await this.reads.keyed(em, workspaceId, normal.subjectKey, normal.attribute, "proposed", scopeId)
+        const values = proposals.filter((proposal) => proposal.proposalKind === "set")
+        const waiting = values.find((proposal) => sameValue(proposal.value, normal.value))
+        const stale = this.ended(input.validTo ?? null)
+        const direct = !stale && (input.autoApply ?? trust >= AUTO_APPLY_TRUST)
         if (waiting !== undefined) {
             const fact = await this.grow(em, workspaceId, waiting, evidence, trust)
             if (direct) return { fact: await this.apply(workspaceId, fact.id, input.proposedBy), outcome: "applied" }
-            return { fact, outcome: active === undefined ? "proposed" : "conflict" }
+            return { fact, outcome: active === undefined && fact.conflictWith === null ? "proposed" : "conflict" }
         }
+        // With no value in force, the newest other value waiting for the key is what this one disagrees with (`keyed` is newest first).
+        const rival = active?.id ?? values[0]?.id ?? null
         // A new value for a known fact keeps that fact's type, audience and unit unless the caller says otherwise.
         const scope = input.scope ?? active?.scope ?? "internal"
         const fact = await this.insert(em, {
@@ -149,21 +161,42 @@ export class BrainFactsService {
             trust,
             validFrom: input.validFrom ?? null,
             validTo: input.validTo ?? null,
-            conflictWith: active?.id ?? null,
+            conflictWith: rival,
             evidence,
             proposedBy: input.proposedBy,
             installationId: scopeId,
             proposalKind: "set",
+            ...(stale ? { reviewFlags: ["stale"] } : {}),
         })
-        if (direct) return { fact: await this.apply(workspaceId, fact.id, input.proposedBy), outcome: "applied" }
-        return { fact, outcome: active === undefined ? "proposed" : "conflict" }
+        if (direct) {
+            return { fact: await this.apply(workspaceId, fact.id, input.proposedBy), outcome: "applied", created: true }
+        }
+        return { fact, outcome: rival === null ? "proposed" : "conflict", created: true }
+    }
+
+    /**
+     * Files the model's judgement that a waiting proposal says the SAME fact as another one in other words (another subject or attribute
+     * label): the proposal is flagged `same_meaning` and names that fact in `conflictWith`, for the founder; nothing is merged here. Only a
+     * proposal that still waits and disagrees with nothing is flagged. Answers whether it was.
+     */
+    async flagSameMeaning(workspaceId: string, id: string, sameAsId: string): Promise<boolean> {
+        if (id === sameAsId) return false
+        const updated = await this.entityManager
+            .createQueryBuilder(BrainFactEntity, "bf")
+            .update()
+            .set({ conflictWith: sameAsId, reviewFlags: () => "array_append(review_flags, 'same_meaning')" })
+            .where({ workspaceId, id, status: "proposed", proposalKind: "set", conflictWith: IsNull() })
+            .execute()
+        return (updated.affected ?? 0) > 0
     }
 
     /**
      * Approves a proposal. Valid from now (or undated) it becomes the active fact, the next version of its key, holding for one year
      * unless its end was stated; the current one is superseded and its relations are carried to the new value. Valid from a later date
      * it is scheduled and the current value stays in force until then. Approving a proposal to stop using a fact retires that fact.
-     * Who may approve is the caller's to check: the Second Brain page lets the founder alone.
+     * A proposal whose stated end has passed is recorded as history (expired) and never comes in force. A proposal flagged
+     * `same_meaning` merges: the fact of the other key it names is replaced too (superseded with its relations carried, or, still
+     * waiting, rejected). Who may approve is the caller's to check: the Second Brain page lets the founder alone.
      */
     apply(workspaceId: string, id: string, decidedBy: string, note?: string): Promise<FactRecord> {
         return this.entityManager.transaction(async (tx) => {
@@ -195,21 +228,63 @@ export class BrainFactsService {
                     BrainFactsErrorCode.NotProposed,
                 )
             }
+            if (this.ended(fact.validTo)) {
+                return this.changed(
+                    tx,
+                    { workspaceId, id, status: "proposed" },
+                    decisionOf("expired", reason ?? ENDED_NOTE, decidedBy),
+                    BrainFactsErrorCode.NotProposed,
+                )
+            }
+            const merged = await this.mergedOf(tx, workspaceId, fact, current?.id ?? null)
+            if (merged?.status === "proposed") {
+                await this.changed(
+                    tx,
+                    { workspaceId, id: merged.id, status: "proposed" },
+                    decisionOf("rejected", MERGED_NOTE, decidedBy),
+                    BrainFactsErrorCode.NotProposed,
+                )
+            }
+            const replaced = [current, merged?.status === "active" ? merged : undefined].filter(
+                (one): one is FactRecord => one !== undefined,
+            )
             if (fact.validFrom !== null && Date.parse(fact.validFrom) > this.clock.now().getTime()) {
-                return this.schedule(tx, workspaceId, fact, current?.id ?? null, decidedBy, reason)
+                return this.schedule(tx, workspaceId, fact, replaced, decidedBy, reason)
             }
-            if (current !== undefined) {
-                await tx.update(BrainFactEntity, { workspaceId, id: current.id, status: "active" }, SUPERSEDE)
-            }
+            await eachInOrder(replaced, (old) =>
+                tx.update(BrainFactEntity, { workspaceId, id: old.id, status: "active" }, SUPERSEDE),
+            )
+            const [first] = replaced
             const activated = await this.changed(
                 tx,
                 { workspaceId, id, status: "proposed" },
-                activateChanges(current?.id ?? null, decidedBy, reason, nextVersion(current)),
+                activateChanges(first?.id ?? null, decidedBy, reason, nextVersion(first)),
                 BrainFactsErrorCode.NotProposed,
             )
-            if (current !== undefined) await this.relations.carry(tx, workspaceId, current.id, id)
+            await eachInOrder(replaced, (old) => this.relations.carry(tx, workspaceId, old.id, id))
             return activated
         })
+    }
+
+    /**
+     * The fact of another key a `same_meaning` proposal merges over, while it is still in force or waiting; null for any other
+     * proposal, or when that fact was decided meanwhile.
+     */
+    private async mergedOf(
+        tx: EntityManager,
+        workspaceId: string,
+        fact: FactRecord,
+        currentId: string | null,
+    ): Promise<FactRecord | null> {
+        const other = fact.conflictWith
+        if (!(fact.flags ?? []).includes("same_meaning") || other === null || other === currentId) return null
+        const found = await this.reads.fetch(tx, workspaceId, other)
+        return found !== null && (found.status === "active" || found.status === "proposed") ? found : null
+    }
+
+    /** Whether a stated end has already passed. */
+    private ended(validTo: string | null): boolean {
+        return validTo !== null && Date.parse(validTo) <= this.clock.now().getTime()
     }
 
     /** Turns a proposal down; it stays in the history with the reason. */
@@ -418,12 +493,12 @@ export class BrainFactsService {
 
     /** The fact of the one row a write answers. */
 
-    /** Approves a proposal that starts later: older plans of the key are dropped and the value in force ends at the start. */
+    /** Approves a proposal that starts later: older plans of the key are dropped and the values in force it replaces end at the start. */
     private async schedule(
         tx: EntityManager,
         workspaceId: string,
         fact: FactRecord,
-        currentId: string | null,
+        replaced: ReadonlyArray<FactRecord>,
         decidedBy: string,
         reason: string | null,
     ): Promise<FactRecord> {
@@ -433,19 +508,19 @@ export class BrainFactsService {
             { ...factKeyOf(workspaceId, fact.subjectKey, fact.attribute, fact.installationId), status: "scheduled" },
             { status: "rejected", decisionNote: "Replaced by a newer schedule" },
         )
-        if (currentId !== null) {
-            await tx
+        await eachInOrder(replaced, (old) =>
+            tx
                 .createQueryBuilder(BrainFactEntity, "bf")
                 .update()
                 .set({ validTo: () => ":validTo::timestamptz" })
-                .where({ workspaceId, id: currentId, status: "active" })
+                .where({ workspaceId, id: old.id, status: "active" })
                 .setParameter("validTo", fact.validFrom)
-                .execute()
-        }
+                .execute(),
+        )
         return this.changed(
             tx,
             { workspaceId, id: fact.id, status: "proposed" },
-            scheduleChanges(currentId, decidedBy, reason),
+            scheduleChanges(replaced[0]?.id ?? null, decidedBy, reason),
             BrainFactsErrorCode.NotProposed,
         )
     }

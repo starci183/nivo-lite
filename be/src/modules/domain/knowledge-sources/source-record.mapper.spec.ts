@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import type { KnowledgeSourceEntity } from "./persistence/entities"
-import { toSourceRecord, toSourceSummary, toSourceDetail } from "./source-record.mapper"
+import { readingOf, toSourceRecord, toSourceSummary, toSourceDetail } from "./source-record.mapper"
 
 const SUBJECT = Symbol("source-record.mapper")
 type Subject = {
@@ -134,7 +134,7 @@ describe("toSourceDetail", () => {
     it("includes the stored text with the source summary", async () => {
         const subject = await buildSubject()
 
-        expect(subject.toSourceDetail(rowOf())).toEqual({ ...summary, content: "https://x.test" })
+        expect(subject.toSourceDetail(rowOf())).toEqual({ ...summary, content: "https://x.test", reading: null })
     })
 
     it("defaults a list row without text to empty content", async () => {
@@ -143,6 +143,50 @@ describe("toSourceDetail", () => {
         const { content, ...row } = rowOf()
 
         expect(content).toBe("https://x.test")
-        expect(subject.toSourceDetail(row)).toEqual({ ...summary, content: "" })
+        expect(subject.toSourceDetail(row)).toEqual({ ...summary, content: "", reading: null })
+    })
+})
+
+describe("readingOf", () => {
+    it("answers a stored reading field by field, dropping warnings that are not ones and filling what is missing", () => {
+        expect(
+            readingOf({
+                reader: "pdf",
+                pageCount: 4,
+                sheetCount: "x",
+                transcribed: true,
+                warnings: [
+                    { code: "DOCUMENT_PAGE_UNREADABLE", place: "3", count: 1.5, message: "Trang 3 không đọc được." },
+                    { code: 1 },
+                    null,
+                ],
+                refusal: null,
+                reason: null,
+                readAt: "2026-11-11T10:00:00.000Z",
+            }),
+        ).toEqual({
+            reader: "pdf",
+            pageCount: 4,
+            sheetCount: null,
+            transcribed: true,
+            warnings: [
+                { code: "DOCUMENT_PAGE_UNREADABLE", place: "3", count: null, message: "Trang 3 không đọc được." },
+            ],
+            refusal: null,
+            reason: null,
+            readAt: "2026-11-11T10:00:00.000Z",
+            path: null,
+        })
+        expect(readingOf({ reader: "x", readAt: "t", warnings: "no" })).toMatchObject({
+            warnings: [],
+            transcribed: false,
+        })
+    })
+
+    it("answers null for no reading or one without a reader or an instant", () => {
+        expect(readingOf(null)).toBeNull()
+        expect(readingOf(undefined)).toBeNull()
+        expect(readingOf({ reader: "pdf" })).toBeNull()
+        expect(readingOf("text")).toBeNull()
     })
 })

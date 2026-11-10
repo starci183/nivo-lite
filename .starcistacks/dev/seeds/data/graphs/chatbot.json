@@ -131,7 +131,8 @@
                 "paid": "to-reconcile",
                 "complaint": "complaint",
                 "question": "answer"
-            }
+            },
+            "model": "claude-sonnet-5-5"
         },
         {
             "key": "to-consult",
@@ -202,7 +203,8 @@
                     "default": null
                 }
             },
-            "next": "to-owner"
+            "next": "to-owner",
+            "model": "claude-sonnet-5-5"
         },
         {
             "key": "to-owner",
@@ -228,7 +230,8 @@
                 "text": {
                     "$ref": "trigger.text"
                 }
-            }
+            },
+            "model": "claude-sonnet-5-5"
         }
     ]
 }

@@ -27,7 +27,8 @@ import { AgentGraphRecordsService } from "./agent-graph-records.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { agentToolsOf } from "./policies/flow.policy"
-import { workflowRunGrantOf } from "./policies/workflow-grant.policy"
+import { ownRunGrantOf, workflowRunGrantOf } from "./policies/workflow-grant.policy"
+import { withDefaultReads } from "./policies/agent-tools.policy"
 import { AgentWorkflowAdoptionService } from "./agent-workflow-adoption.service"
 import { AgentWorkflowRecordsService } from "./agent-workflow-records.service"
 import { AgentWorkflowRunsService } from "./agent-workflow-runs.service"
@@ -38,6 +39,10 @@ import type { RunWorkflowPin } from "./agent-workflows.contracts"
 import { mockEntityManager } from "@starci/jest-preset"
 import type { WorkflowRoute, WorkflowView } from "./agent-workflows.contracts"
 import { workflowNotFound } from "./policies/workflow-view.policy"
+import type { FlowWake } from "./policies/graph-flow.policy"
+import { careTagOf } from "@modules/domain/agent-schedules"
+import { tagContextOf } from "@modules/domain/agent-work"
+import type { CareKind } from "@nivo-lite/blocks-core"
 
 /** The workflow services on the doubles, and what the memory engine holds. */
 interface World extends WorkflowDoubles {
@@ -185,6 +190,40 @@ describe("AgentWorkflowRunsService: routing by the triggers", () => {
         await expect(wakeRoute(world, "system-event", { careKind: "occasion" })).resolves.toMatchObject({
             versionId: "graph-v1",
         })
+    })
+})
+
+describe("AgentWorkflowRunsService.takersOf (which workflow a scheduled timer will wake, read only)", () => {
+    const careWake = (kind: CareKind, ref: string): FlowWake => {
+        const tag = careTagOf(
+            { workspaceId: "ws-1", agentId: "agent-1" },
+            "task-1",
+            new Date("2026-11-12T02:00:00.000Z"),
+            { kind, ref, suffix: "", dueAt: "2026-11-12T02:00:00.000Z" },
+            null,
+        )
+        return { source: "tag", context: tagContextOf(tag, JSON.stringify(tag.context)), actorMemberId: null }
+    }
+
+    it("names the workflow each care tag goes to, as the route takes it (by its condition on the care kind), with its name", async () => {
+        const world = await buildWorld()
+        const delivery = await activeFrom(world, "sales.delivery-check")
+        const occasion = await activeFrom(world, "sales.occasion")
+
+        const takers = await world.runs.takersOf("ws-1", "agent-1", [
+            careWake("occasion", "lead-1"),
+            careWake("delivery-check", "o-1"),
+        ])
+
+        expect(takers.map((taker) => taker?.workflowId)).toEqual([occasion.id, delivery.id])
+        expect(takers[0]?.name).toBe(occasion.name)
+        await expect(world.runs.takersOf("ws-1", "agent-1", [])).resolves.toEqual([])
+    })
+
+    it("names nothing for an agent with no active workflow that takes the wake", async () => {
+        const world = await buildWorld()
+
+        await expect(world.runs.takersOf("ws-1", "agent-1", [careWake("occasion", "lead-1")])).resolves.toEqual([null])
     })
 })
 
@@ -382,11 +421,8 @@ describe("AgentGraphsService.runGrantOf: what a step of each workflow may reach"
         const reportsVersion = (await world.workflows.detail("ws-1", reports.id, "vi")).versions[0]?.id ?? ""
         const shop = shopAccountingGraph().grant
 
-        await expect(world.graphs.runGrantOf("ws-1", "agent-1", main.versionId)).resolves.toEqual({
-            rights: shop.rights,
-            tools: shop.tools,
-            effects: null,
-        })
+        // The own graph's grant as it stands, with the default context reads every run holds (W2/W3).
+        await expect(world.graphs.runGrantOf("ws-1", "agent-1", main.versionId)).resolves.toEqual(ownRunGrantOf(shop))
         await expect(world.graphs.runGrantOf("ws-1", "agent-1", reportsVersion)).resolves.toEqual(
             workflowRunGrantOf(templateGraph("accounting.reports").grant, agentToolsOf("accounting")),
         )
@@ -494,7 +530,8 @@ describe("AgentGraphNodeStepService over the graph store: a step needing more th
             kind: "done",
         })
         expect(host.run).toHaveBeenCalledWith(
-            expect.objectContaining({ nodeId: "payment.settle", grant: { rights: [], tools: [] } }),
+            // The workflow's own grant, with the default context reads every run holds (W2/W3).
+            expect.objectContaining({ nodeId: "payment.settle", grant: { rights: [], tools: withDefaultReads([]) } }),
         )
     })
 })

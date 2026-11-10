@@ -7,6 +7,7 @@ describe("parseAgentThreadsConfig", () => {
     it("starts no workflow on a thread and leaves every tunable to its default when nothing is set", () => {
         expect(parseAgentThreadsConfig(new EnvSource({}))).toEqual({
             workflows: [],
+            everyWorkflow: false,
             graphsMax: undefined,
             approvalDeadlineMs: undefined,
             ownerDeadlineMs: undefined,
@@ -38,6 +39,9 @@ describe("parseAgentThreadsConfig", () => {
         expect(parseAgentThreadsConfig(new EnvSource({ AGENT_ENGINE_DEFAULT: "langgraph" })).workflows).toEqual(
             THREAD_READY_WORKFLOWS,
         )
+        // Default-on reaches the workflows no template made too (owner-drawn, `<module>.main`): `engages` reads `everyWorkflow`.
+        expect(parseAgentThreadsConfig(new EnvSource({ AGENT_ENGINE_DEFAULT: "langgraph" })).everyWorkflow).toBe(true)
+        expect(parseAgentThreadsConfig(new EnvSource({ AGENT_ENGINE_LANGGRAPH: "sales.consult" })).everyWorkflow).toBe(false)
         expect(
             parseAgentThreadsConfig(new EnvSource({ AGENT_ENGINE_DEFAULT: "legacy", AGENT_ENGINE_LANGGRAPH: "sales.consult" }))
                 .workflows,

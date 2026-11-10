@@ -9,3 +9,11 @@ export { KnowledgeChunksService } from "./knowledge-chunks.service"
 export { hasStoredSize, toVector } from "./vector.policy"
 export type { ChunkHit, PassageView, SourcePassage } from "./knowledge-chunks.contracts"
 export { knowledgeChunksEntities } from "./persistence/entities"
+export {
+    CUSTOMER_READY_COLUMN,
+    customerReadyOf,
+    customerReadySelect,
+    customerTrustWhere,
+    isUnreviewed,
+} from "./customer-trust.policy"
+export type { TrustAudience, TrustGate } from "./customer-trust.policy"

@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common"
-import { TOOL } from "@nivo-lite/blocks-core"
+import { TOOL, reportFactsKind, type MessageFact } from "@nivo-lite/blocks-core"
 import type { AgentWakeView } from "@modules/domain/agent-work"
-import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeTurn } from "@modules/domain/graph-nodes"
+import { bankDisplayNameOf } from "@modules/domain/channel-connections"
+import { channelFactOf, codeFactsOf, factWordsOf, wordOr, type FactWords } from "@modules/domain/team-chat"
+import { GraphNodeRegistryService, type NodeTurn } from "@modules/domain/graph-nodes"
 import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
@@ -26,10 +27,50 @@ export interface UntakenWake {
 /** The language a wake names; Vietnamese when it names none the product speaks. */
 const localeOfWake = (wake: AgentWakeView): "vi" | "en" => (Reflect.get(wake.context, "locale") === "en" ? "en" : "vi")
 
-/** A text member of a wake's context, or a dash when it holds none. */
-const memberOf = (wake: AgentWakeView, name: string): string => {
+/** A text member of a wake's context, or null when it holds none. */
+const memberOf = (wake: AgentWakeView, name: string): string | null => {
     const value: unknown = Reflect.get(wake.context, name)
-    return typeof value === "string" && value !== "" ? value : "-"
+    return typeof value === "string" && value !== "" ? value : null
+}
+
+/** What a report of a wake says: its heading, one readable sentence (no code, no id in it) and its facts. */
+interface WakeReport {
+    readonly title: string
+    readonly text: string
+    readonly facts: ReadonlyArray<MessageFact>
+}
+
+/** The fact of a raw value, folded under the technical details. */
+const technicalOf = (words: FactWords, label: string, value: string): MessageFact => ({
+    name: wordOr(words, `teamChat.fact.${label}`, label),
+    value,
+    technical: true,
+})
+
+/** The facts every wake report carries: the channel in words (when it names one); the conversation id last, as a technical fact. */
+const wakeFactsOf = (
+    wake: AgentWakeView,
+    words: FactWords,
+    middle: ReadonlyArray<MessageFact>,
+): ReadonlyArray<MessageFact> => {
+    const channel = memberOf(wake, "channel")
+    const conversation = memberOf(wake, "conversationId")
+    const all = [
+        ...(channel === null ? [] : [channelFactOf(words, channel)]),
+        ...middle,
+        ...(conversation === null ? [] : [technicalOf(words, "conversation", conversation)]),
+    ]
+    return [...all.filter((fact) => fact.technical !== true), ...all.filter((fact) => fact.technical === true)]
+}
+
+/** The sources of the running workflows: their channel names in words when every one has a name, else the raw ids as a technical fact. */
+const sourcesFactOf = (words: FactWords, sources: ReadonlyArray<string>): MessageFact | null => {
+    if (sources.length === 0) return null
+    const names = sources.map((source) => words.text(`teamChat.channel.${source}`))
+    const known = names.filter((name) => name !== "")
+    return known.length === names.length
+        ? { name: wordOr(words, "teamChat.fact.sources", "sources"), value: known.join(", "), technical: false }
+        : technicalOf(words, "sources", sources.join(", "))
 }
 
 @Injectable()
@@ -47,41 +88,47 @@ export class AgentGraphWakeNoticesService {
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
-    /** Tells the founder that a customer wake was taken by no workflow of the agent, with the facts. */
+    /**
+     * Tells the founder that a customer wake was taken by no workflow of the agent: one readable sentence, then the facts (the channel,
+     * why, the sources the running workflows take; the running workflow keys and the conversation id as technical facts).
+     */
     async untaken(wake: AgentWakeView, facts: UntakenWake): Promise<void> {
         const locale = localeOfWake(wake)
-        const why = this.catalog.get(`agentGraphs.wake.reason.${facts.reason}`, {}, locale)
+        const words = factWordsOf({ catalog: this.catalog, locale, bankName: bankDisplayNameOf })
+        const why: MessageFact = {
+            name: wordOr(words, "teamChat.fact.why", "why"),
+            value: this.catalog.get(`agentGraphs.wake.reason.${facts.reason}`, {}, locale),
+            technical: false,
+        }
+        const sources = sourcesFactOf(words, facts.sources)
+        const middle = [
+            why,
+            ...(sources === null ? [] : [sources]),
+            ...(facts.running.length === 0 ? [] : [technicalOf(words, "running", facts.running.join(", "))]),
+        ]
         await this.tell(wake, "untaken", {
             title: this.catalog.get("agentGraphs.wake.untaken.title", {}, locale),
-            text: this.catalog.get(
-                "agentGraphs.wake.untaken.text",
-                {
-                    channel: memberOf(wake, "channel"),
-                    conversation: memberOf(wake, "conversationId"),
-                    why,
-                    running: facts.running.length === 0 ? "-" : facts.running.join(", "),
-                    sources: facts.sources.length === 0 ? "-" : facts.sources.join(", "),
-                },
-                locale,
-            ),
+            text: this.catalog.get("agentGraphs.wake.untaken.sentence", {}, locale),
+            facts: wakeFactsOf(wake, words, middle),
         })
     }
 
-    /** Tells the founder that a wake failed before any step of a workflow could run, with its code. */
+    /**
+     * Tells the founder that a wake failed before any step of a workflow could run: one readable sentence, then the facts (the channel,
+     * the reason in the common words of its code; the code and the conversation id as technical facts).
+     */
     async failed(wake: AgentWakeView, code: string): Promise<void> {
         const locale = localeOfWake(wake)
+        const words = factWordsOf({ catalog: this.catalog, locale, bankName: bankDisplayNameOf })
         await this.tell(wake, `failed:${code}`, {
             title: this.catalog.get("agentGraphs.wake.failed.title", {}, locale),
-            text: this.catalog.get(
-                "agentGraphs.wake.failed.text",
-                { channel: memberOf(wake, "channel"), conversation: memberOf(wake, "conversationId"), code },
-                locale,
-            ),
+            text: this.catalog.get("agentGraphs.wake.failed.sentence", {}, locale),
+            facts: wakeFactsOf(wake, words, codeFactsOf(words, code)),
         })
     }
 
-    /** One line to the founder, once per wake and kind; a team chat that cannot take it is logged, never thrown. */
-    private async tell(wake: AgentWakeView, kind: string, words: { readonly title: string; readonly text: string }): Promise<void> {
+    /** One typed report (`report.facts`) to the founder, once per wake and kind; a team chat that cannot take it is logged, never thrown. */
+    private async tell(wake: AgentWakeView, kind: string, report: WakeReport): Promise<void> {
         const post = this.nodes.optionalExecutorOf(TEAM_POST)
         const key = `wake-notice:${wake.wakeId}:${kind}`
         if (post === undefined) {
@@ -100,7 +147,13 @@ export class AgentGraphWakeNoticesService {
         try {
             await post.execute(
                 turn,
-                { kind: "message.text", intent: "report", title: words.title, text: words.text, audience: "founder" },
+                {
+                    kind: reportFactsKind.id,
+                    title: report.title,
+                    text: report.text,
+                    facts: report.facts.map((fact) => ({ ...fact })),
+                    audience: "founder",
+                },
                 { key, dedupeKey: key },
             )
         } catch (cause) {

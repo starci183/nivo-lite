@@ -36,6 +36,7 @@ export const AgentWorkflowMap = (props: AgentWorkflowMapProps) => {
             isLoading={props.props.isLoading}
         >
             <FlowGraph
+                height="fill"
                 label={props.props.label}
                 nodes={flow.nodes}
                 edges={flow.edges}

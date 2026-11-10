@@ -10,7 +10,7 @@ import {
     partsOf,
 } from "@modules/domain/knowledge-sources"
 import type { MaybeSource, SourceRecord } from "@modules/domain/knowledge-sources"
-import { InjectLogger } from "@modules/platform/logging"
+import { InjectLogger, withWorkScope } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { InjectTimer } from "@modules/platform/retry"
@@ -77,6 +77,12 @@ export class KnowledgeIndexingService {
      * same text is never embedded, read for facts or reviewed twice.
      */
     async index(run: IndexRun): Promise<IndexOutcome> {
+        // Every model call of the reading (transcription, embeddings) is booked to the document (U1: credits per document).
+        return withWorkScope({ kind: "document_read", ref: `source:${run.sourceId}` }, () => this.indexed(run))
+    }
+
+    /** The work of `index`, inside the document's work scope. */
+    private async indexed(run: IndexRun): Promise<IndexOutcome> {
         const source = await this.sources.sourceOf(run.workspaceId, run.sourceId)
         if (source === null || CLOSED.has(source.status)) return "skipped"
         try {
@@ -148,11 +154,14 @@ export class KnowledgeIndexingService {
         await this.chunks.arrange({ workspaceId, sourceId: id, moves, count: pieces.length })
         if (places.length > 0) await this.chunks.place({ workspaceId, sourceId: id, places })
         const noCredits = missing.length > BULK_CHUNKS && (await this.usage.blockedBy(workspaceId, "embedding", true))
-        await this.embedMissing(
-            source,
-            { total: pieces.length, places: located.map((piece) => piece.place) },
-            missing,
-            noCredits,
+        // A document that already had passages is being read again: its embeddings are booked as the re-read.
+        await withWorkScope({ kind: stored.length > 0 ? "document_reread" : "document_read" }, () =>
+            this.embedMissing(
+                source,
+                { total: pieces.length, places: located.map((piece) => piece.place) },
+                missing,
+                noCredits,
+            ),
         )
         if (!noCredits) return this.finish(source, null, pieces.length)
         await this.sources.blockIndexing(workspaceId, id, StoredNote.NoCreditsForIndex, pieces.length)

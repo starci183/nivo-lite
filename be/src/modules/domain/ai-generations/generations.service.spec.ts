@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { withRunScope, withWorkScope } from "@modules/platform/logging"
 import { evaluatedValues } from "@tests/fixtures/builders/evaluated-calls.builder"
 import { In } from "typeorm"
 import { FakeClock, builder, fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
@@ -192,6 +193,24 @@ describe("GenerationsService request", () => {
             supplied ? tx.em : expect.anything(),
         )
         expect(tx.commits).toBe(supplied ? 0 : 1)
+    })
+
+    it("stores the caller's run and work with the queued row, so the job that runs it books the call to them (U1)", async () => {
+        const { service, tx } = await build()
+        const params = paramsOf({ timeoutMs: 1000 })
+
+        await withRunScope("run-7", () =>
+            withWorkScope({ kind: "learning", ref: "lesson:c-1", agentId: "agent-1" }, () =>
+                service.request(params, {}, tx.em),
+            ),
+        )
+
+        expect(tx.em.insert.mock.calls[0]?.[1]).toMatchObject({
+            input: {
+                run_id: "run-7",
+                work: { kind: "learning", ref: "lesson:c-1", step_key: null, agent_id: "agent-1" },
+            },
+        })
     })
 
     it.each([

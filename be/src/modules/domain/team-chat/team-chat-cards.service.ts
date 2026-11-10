@@ -87,6 +87,7 @@ export class TeamChatCardsService {
             body: cardBodyOf(text),
             key: line.key,
             agentMessage: line.agentMessage ?? null,
+            replyTo: line.replyTo ?? null,
         })
         if (created !== null) return { roomId, messageId: created }
         if (line.authorAgentId === null || line.key === null) return null

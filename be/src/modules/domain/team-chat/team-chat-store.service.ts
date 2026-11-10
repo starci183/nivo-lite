@@ -431,6 +431,7 @@ export class TeamChatStoreService {
                         ? null
                         : { agent_message: line.agentMessage },
                 clientId: line.key,
+                replyTo: line.replyTo ?? null,
             })
             .orIgnore()
             .returning("id")

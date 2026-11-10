@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
+import type { BrainChangeCardView } from "./brain-change-card.contracts"
 import type { StopCardView } from "./stop-card.contracts"
 import {
     roomPayloadOf,
@@ -90,6 +91,7 @@ const MESSAGE: MessageView = {
     replyTo: null,
     forwardedFrom: null,
     stop: null,
+    brainChange: null,
 }
 
 const ROOM: ChatRoomView = {
@@ -228,6 +230,41 @@ describe("wire shape of a stop card", () => {
         }
         expect(subject.messageWireOf({ ...MESSAGE, stop }).stop).toEqual(stop)
         expect(subject.messageWireOf(MESSAGE).stop).toBeNull()
+    })
+
+    it("carries the brain.change card as the view built it for this viewer, and null for any other line", async () => {
+        const subject = await buildSubject()
+        const brainChange: BrainChangeCardView = {
+            changeId: "p-ship",
+            origin: "chat",
+            kind: "change",
+            factKey: { subjectLabel: "Giao hang", attributeLabel: "Phi ship noi thanh" },
+            oldValue: "20.000 d",
+            current: { value: "20.000 d", version: 2, source: "Quy dinh giao hang.docx" },
+            newValue: "30.000 d",
+            unit: null,
+            validFrom: null,
+            validTo: null,
+            reason: "Anh vua nhan tu mai phi ship noi thanh la 30k.",
+            evidence: [
+                {
+                    kind: "message",
+                    quote: "tu mai 30k",
+                    ref: "team-chat:m-1",
+                    by: { name: "Owner", memberId: "u-1" },
+                    at: ISO,
+                },
+            ],
+            state: "open",
+            decidedBy: null,
+            supersededBy: null,
+            revision: 1,
+            canApprove: true,
+            canReject: true,
+            cost: { credits: 0.3, usd: 0.000339 },
+        }
+        expect(subject.messageWireOf({ ...MESSAGE, brainChange }).brainChange).toEqual(brainChange)
+        expect(subject.messageWireOf(MESSAGE).brainChange).toBeNull()
     })
 
     it("shows a room with its members and last message, a list, a page and an absent room", async () => {

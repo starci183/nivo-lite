@@ -49,6 +49,12 @@ const SELECT: ReadonlyArray<string> = [
 
 const BY_ID: OrderBy = [["id", "asc"]]
 
+/** The newest stops first, by the index `state_stopped` (state, moment). */
+const NEWEST: OrderBy = [
+    ["stoppedAt", "desc"],
+    ["id", "desc"],
+]
+
 const eq = (field: string, value: string): FilterExpr => ({ op: "eq", field, value })
 
 const textOrNull = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null)
@@ -175,6 +181,24 @@ export class RunStopRecordsService {
             const page = await this.engine.list(
                 tx,
                 { from: STOP, select: SELECT, where: eq("runId", runId), order: BY_ID, page: { size: RUN_PAGE } },
+                LIST_SCOPE,
+            )
+            return page.rows.map((listed) => runStopOf(listed.row))
+        })
+    }
+
+    /** The newest stops of one state of the workspace, at most `limit` (one page), by the entity's index on state and moment. */
+    newest(workspaceId: string, state: StopState, limit: number): Promise<ReadonlyArray<RunStop>> {
+        return this.engine.scoped(workspaceId, async (tx) => {
+            const page = await this.engine.list(
+                tx,
+                {
+                    from: STOP,
+                    select: SELECT,
+                    where: eq("state", state),
+                    order: NEWEST,
+                    page: { size: Math.min(Math.max(limit, 1), RUN_PAGE) },
+                },
                 LIST_SCOPE,
             )
             return page.rows.map((listed) => runStopOf(listed.row))

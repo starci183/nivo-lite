@@ -2,7 +2,12 @@ import type { QueryDeepPartialEntity } from "typeorm/query-builder/QueryPartialE
 import { ok, refused } from "@modules/platform/primitives"
 import type { Outcome } from "@modules/platform/primitives"
 import { KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
-import { MAX_SOURCE_CHARS, SOURCE_KINDS } from "./knowledge-sources.contracts"
+import {
+    LEGACY_OFFICE_EXTENSIONS,
+    MAX_SOURCE_CHARS,
+    MAX_UPLOAD_BYTES,
+    SOURCE_KINDS,
+} from "./knowledge-sources.contracts"
 import type { AddSourceInput, SourceKind, UpdateSourceInput } from "./knowledge-sources.contracts"
 import type { KnowledgeSourceEntity } from "./persistence/entities"
 
@@ -204,4 +209,34 @@ export const safeFileName = (name: string): string => {
     while (end > start && base[end - 1] === "_") end -= 1
     const trimmed = base.slice(start, end)
     return (trimmed === "" ? "file" : trimmed).slice(-120)
+}
+
+/** The new upload of a file to read again, checked: inside its workspace; null when none was given. */
+export const replacementUpload = (
+    workspaceId: string,
+    path: string | undefined,
+): Outcome<string | null, KnowledgeSourcesErrorCode> => {
+    if (path === undefined) return ok(null)
+    const trimmed = path.trim()
+    return pathInside(workspaceId, trimmed) ? ok(trimmed) : refused(KnowledgeSourcesErrorCode.StoragePathInvalid)
+}
+
+/** Megabytes with one decimal, as the refusal prints them. */
+const megabytes = (bytes: number): number => Math.round((bytes / (1024 * 1024)) * 10) / 10
+
+/**
+ * Whether a file may be uploaded at all, before any byte moves: it needs a name, an old binary Office file is refused with the advice to save it again,
+ * and a file the browser says is larger than one document may be is refused with both sizes. The size is checked again on add.
+ */
+export const uploadVerdict = (filename: string, sizeBytes: number | null): Outcome<null, KnowledgeSourcesErrorCode> => {
+    if (filename.trim() === "") return refused(KnowledgeSourcesErrorCode.FileNameRequired)
+    const extension = /\.([a-z0-9]+)$/iu.exec(filename.trim())?.[1]?.toLowerCase() ?? ""
+    if (LEGACY_OFFICE_EXTENSIONS.has(extension)) return refused(KnowledgeSourcesErrorCode.LegacyOffice)
+    if (sizeBytes !== null && sizeBytes > MAX_UPLOAD_BYTES) {
+        return refused(KnowledgeSourcesErrorCode.FileTooLarge, {
+            size: megabytes(sizeBytes),
+            max: megabytes(MAX_UPLOAD_BYTES),
+        })
+    }
+    return ok(null)
 }

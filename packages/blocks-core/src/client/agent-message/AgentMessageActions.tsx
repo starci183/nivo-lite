@@ -39,18 +39,15 @@ const approveActionsOf = (input: ActionsInput): ReadonlyArray<MessageCardAction>
     return list
 }
 
-/** What a person may do while the message waits; none for a notice or a report. */
-const commandsOf = (input: ActionsInput): ReadonlyArray<MessageCardAction> => {
-    const { item } = input
-    if (!item.isOpen) return []
-    if (item.intent === "approve") return approveActionsOf(input)
-    if (item.intent !== "ask" || !input.canReply) return []
-    return item.record.options.map((option) => ({
-        id: option.id,
-        label: option.label,
-        onPress: () => input.onReply(option.id),
-    }))
-}
+/** What a person may approve while the message waits; none for a notice, a report or an ask (its answers are the replies in the body). */
+const commandsOf = (input: ActionsInput): ReadonlyArray<MessageCardAction> =>
+    input.item.isOpen && input.item.intent === "approve" ? approveActionsOf(input) : []
+
+/** The answers an open ask offers the viewer, each sent as its reply; none when the message asks nothing or the viewer may not answer. */
+export const repliesOf = (
+    input: Pick<ActionsInput, "item" | "canReply">,
+): ReadonlyArray<{ readonly id: string; readonly label: string }> =>
+    input.item.isOpen && input.item.intent === "ask" && input.canReply ? input.item.record.options : []
 
 /** Where the message leads: the connection it needs, then the related work; both end in the arrow. */
 const leadsOf = (input: ActionsInput): ReadonlyArray<MessageCardAction> => {

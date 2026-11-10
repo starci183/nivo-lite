@@ -9,6 +9,8 @@ import {
     refsOfMessages,
     roomViewOf,
     stopReplierIdsOf,
+    brainChangeViewerRoleOf,
+    holdsBrainChange,
 } from "./team-chat-view.policy"
 import type { MessageViewContext } from "./team-chat-view.policy"
 import type { ChatRoomView } from "./team-chat.contracts"
@@ -127,6 +129,7 @@ describe("message views", () => {
             replyTo: null,
             forwardedFrom: null,
             stop: null,
+            brainChange: null,
         })
     })
 })
@@ -309,5 +312,65 @@ describe("message views of a stop card", () => {
         })
         expect(subject.messageViewOf(line, CONTEXT).stop?.replies[0]?.byName).toBe("")
         expect(subject.messageViewOf(messageOf(), CONTEXT).stop).toBeNull()
+    })
+})
+
+describe("message views of a brain.change card", () => {
+    const PAYLOAD = {
+        version: 1,
+        changeId: "p-ship",
+        origin: "chat",
+        kind: "change",
+        factKey: { subjectLabel: "Giao hang", attributeLabel: "Phi ship noi thanh" },
+        oldValue: "20.000 d",
+        current: { value: "20.000 d", version: 2, source: "Quy dinh giao hang.docx" },
+        newValue: "30.000 d",
+        unit: null,
+        validFrom: null,
+        validTo: null,
+        reason: "Anh vua nhan tu mai phi ship noi thanh la 30k.",
+        evidence: [{ kind: "message", quote: "tu mai 30k", ref: "team-chat:m-1", by: { name: "Ana", memberId: ANA }, at: null }],
+        state: "open",
+        decidedBy: null,
+        supersededBy: null,
+        revision: 1,
+    }
+    const card = (payload: Readonly<Record<string, unknown>>) =>
+        messageOf({ ref: { agent_message: JSON.stringify({ kind: "brain.change", title: "t", payload }) } })
+
+    it("offers approve to the owner alone and reject to the owner and a manager while open; a plain line has none", async () => {
+        const subject = await buildSubject()
+        const line = card(PAYLOAD)
+        expect(subject.messageViewOf(line, { ...CONTEXT, viewerRole: "owner" }).brainChange).toMatchObject({
+            changeId: "p-ship",
+            canApprove: true,
+            canReject: true,
+        })
+        expect(subject.messageViewOf(line, { ...CONTEXT, viewerRole: "manager" }).brainChange).toMatchObject({
+            canApprove: false,
+            canReject: true,
+        })
+        expect(subject.messageViewOf(line, CONTEXT).brainChange).toMatchObject({ canApprove: false, canReject: false })
+        expect(subject.messageViewOf(line, CONTEXT).brainChange).not.toHaveProperty("version")
+        expect(subject.messageViewOf(messageOf(), CONTEXT).brainChange).toBeNull()
+    })
+
+    it("offers nothing once the card is decided", async () => {
+        const subject = await buildSubject()
+        const decided = card({ ...PAYLOAD, state: "applied", decidedBy: { memberId: ANA, name: "Ana", at: "2026-11-11T00:00:00.000Z" } })
+        expect(subject.messageViewOf(decided, { ...CONTEXT, viewerRole: "owner" }).brainChange).toMatchObject({
+            state: "applied",
+            canApprove: false,
+            canReject: false,
+        })
+    })
+
+    it("reads the viewer's role only for a page that holds such a card, and maps any other role to member", () => {
+        expect(holdsBrainChange([messageOf(), card(PAYLOAD)])).toBe(true)
+        expect(holdsBrainChange([messageOf()])).toBe(false)
+        expect(brainChangeViewerRoleOf("owner")).toBe("owner")
+        expect(brainChangeViewerRoleOf("manager")).toBe("manager")
+        expect(brainChangeViewerRoleOf("staff")).toBe("member")
+        expect(brainChangeViewerRoleOf(null)).toBe("member")
     })
 })

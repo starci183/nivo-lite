@@ -90,3 +90,19 @@ export interface EventTarget {
     /** The probe of the trigger, or null. */
     readonly probeKey: string | null
 }
+
+/** A person who pressed "run now" on a timer, and when. */
+export interface TimerPress {
+    /** The workspace member who pressed. */
+    readonly memberId: string
+    /** When, as the engine's clock read it. */
+    readonly at: Date
+}
+
+/** The agent a care timer belongs to, in its workspace. */
+export interface CareTimerOwner {
+    /** The workspace. */
+    readonly workspaceId: string
+    /** The agent that holds the timer. */
+    readonly agentId: string
+}

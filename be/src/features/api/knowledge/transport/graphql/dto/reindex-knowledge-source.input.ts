@@ -18,4 +18,15 @@ export class ReindexKnowledgeSourceInput {
     @IsString()
     @MaxLength(120000)
     content?: string
+
+    /**
+     * A new upload of the same document (the path createKnowledgeUpload gave), for a file document: the new file is read in place of
+     * the old one and only the passages whose text changed are embedded and read for facts again. Omitted keeps the file.
+     */
+    @Field(() => String, { nullable: true })
+    @NullAsAbsent()
+    @IsOptional()
+    @IsString()
+    @MaxLength(400)
+    storagePath?: string
 }

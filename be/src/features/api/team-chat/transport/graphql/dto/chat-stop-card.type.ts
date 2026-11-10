@@ -59,6 +59,13 @@ export class ChatStopFactType {
     /** Its value. */
     @Field(() => String)
     value!: string
+
+    /**
+     * True for a raw value (an error code, an id, the raw words of an error): fold it under "Chi tiet ky thuat", never show it as the
+     * content. False for a worded fact; null for an argument of a permission request.
+     */
+    @Field(() => Boolean, { nullable: true })
+    technical?: boolean | null
 }
 
 @ObjectType()

@@ -1,4 +1,5 @@
 import type { Secret } from "@modules/platform/config"
+import { CHEAP_MODEL, EMBEDDING_PROFILES, SONNET_MODEL } from "@nivo-lite/blocks-core"
 import type {
     AiGatewayHost,
     AiGatewayKey,
@@ -6,25 +7,21 @@ import type {
     AiGatewayOptions,
     AiGatewayProvider,
 } from "./ai-gateway.options"
-import { ANTHROPIC_PROVIDER, modelProfilesOf } from "./ai-gateway-profiles.policy"
+import { ANTHROPIC_PROVIDER, OPENAI_PROVIDER, modelProfilesOf } from "./ai-gateway-profiles.policy"
 
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 /** Anthropic's API, which the router's `anthropic` kind speaks the Messages protocol to. */
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
-const WORK_MODEL = "deepseek/deepseek-v4.1-flash"
-/** The strong model, on Anthropic directly (blocks-core `SONNET_MODEL`). */
-const STRONG_MODEL = "claude-sonnet-5-5"
-const EMBED_MODEL = "qwen/qwen3-embedding-8b"
+/** OpenAI's API, the router's `openai` kind. */
+const OPENAI_BASE_URL = "https://api.openai.com/v1"
 const KEYS_PATH = "ai-router-keys.sqlite"
-/** The pool of one upstream: `<NAME>` and its numbered siblings `<NAME>_2` … `<NAME>_9`, rotated and failed over by the router. */
+/** The pool of one provider: `<NAME>` and its numbered siblings `<NAME>_2` … `<NAME>_9`, rotated and failed over by the router. */
 const POOL_SIZE = 9
 
-/** The virtual key the gateway mounts: one StarCi key of the api, its label and the fixed profiles it may call (plus every model profile the pool serves). */
+/** The virtual key the gateway mounts: one StarCi key of the api and its label; it may call every profile the pool serves. */
 const MOUNTED_KEYS: ReadonlyArray<{
     readonly env: string
     readonly label: string
-    readonly profiles: ReadonlyArray<string>
-}> = [{ env: "STARCI_AI_KEY", label: "nivo", profiles: ["work", "embed"] }]
+}> = [{ env: "STARCI_AI_KEY", label: "nivo" }]
 
 /** The part of the env reader the pool reads through, so a `<KEY>_FILE` mount supplies a key like a plain variable. */
 export interface AiGatewayEnv {
@@ -34,17 +31,6 @@ export interface AiGatewayEnv {
     optional(key: string): string | undefined
     /** A required secret; stops boot naming the key when it is not declared. */
     secret(key: string): Secret
-}
-
-/** The base URL a key declares, without trailing slashes; OpenRouter when it is absent or not an http(s) URL. */
-const baseUrlOf = (env: AiGatewayEnv, key: string): string => {
-    const declared = env.optional(key)
-    if (declared === undefined || !URL.canParse(declared) || !/^https?:$/u.test(new URL(declared).protocol)) {
-        return OPENROUTER_BASE_URL
-    }
-    let end = declared.length
-    while (end > 0 && declared[end - 1] === "/") end -= 1
-    return declared.slice(0, end)
 }
 
 /** The key pool of the first declared of the named variables: the variable and its declared numbered siblings, each named by its variable. */
@@ -58,61 +44,67 @@ const keysOf = (env: AiGatewayEnv, names: ReadonlyArray<string>): Array<AiGatewa
     }))
 }
 
-/** The mounted keys whose variable is declared, each bound to its fixed profiles and the model profiles; an undeclared one is not mounted. */
-const mountedKeysOf = (env: AiGatewayEnv, modelProfiles: ReadonlyArray<string>): Array<AiGatewayMountedKey> =>
+/** The mounted keys whose variable is declared, each bound to the profiles the pool serves; an undeclared one is not mounted. */
+const mountedKeysOf = (env: AiGatewayEnv, profiles: ReadonlyArray<string>): Array<AiGatewayMountedKey> =>
     MOUNTED_KEYS.filter((key) => env.has(key.env)).map((key) => ({
         label: key.label,
         secret: env.secret(key.env),
-        profiles: [...key.profiles, ...modelProfiles],
+        profiles,
     }))
 
 /** The gateway this process hosts; its port is the app port plus one (BE-AI-1), so no port is read here. */
-const gatewayOf = (env: AiGatewayEnv, modelProfiles: ReadonlyArray<string>): AiGatewayHost => ({
+const gatewayOf = (env: AiGatewayEnv, profiles: ReadonlyArray<string>): AiGatewayHost => ({
     keysPath: env.optional("AI_ROUTER_KEYS_PATH") ?? KEYS_PATH,
-    mountedKeys: mountedKeysOf(env, modelProfiles),
+    mountedKeys: mountedKeysOf(env, profiles),
 })
 
+/** The profile of the app's fixed chat tasks. */
+const WORK = "work"
+
 /**
- * The AI gateway the environment declares. No key is required: without an upstream key the pool is empty, no router and no gateway are
- * registered and the app boots with AI unavailable. `OPENROUTER_API_KEY` (or `LLM_API_KEY`) is the upstream key, with `_2` … `_9` siblings for a rotated pool, `LLM_BASE_URL` moves
- * it to another OpenAI-compatible endpoint, `LLM_MODEL` and `EMBEDDING_MODEL` pick the models behind the `work` and `embed` profiles,
- * and `EMBEDDING_BASE_URL` (with `EMBEDDING_API_KEY`) puts embeddings on their own endpoint. `ANTHROPIC_API_KEY` (with `_2` … `_9`)
- * adds Anthropic directly, serving Claude Sonnet 5.5 behind the `sonnet` and Auto profiles; without it those profiles are served by
- * the upstream alone (`sonnet` is then not served at all). Anthropic is pooled only beside an upstream key (the fixed tasks of the
- * app ask `work`, which the upstream serves). The key is read only as a secret reference, never logged.
+ * Every profile the pool declares with these providers, in a stable order: `work` and the model profiles while Anthropic holds a key,
+ * the pinned embeddings profiles (`EMBEDDING_PROFILES`, `embed-oa`) while OpenAI holds one. The router mapper declares exactly these.
+ */
+export const servedProfilesOf = (
+    providers: ReadonlyArray<Pick<AiGatewayProvider, "id">>,
+    models: Pick<AiGatewayOptions["models"], "work" | "strong">,
+): ReadonlyArray<string> => {
+    const present = new Set(providers.map((provider) => provider.id))
+    const chat = present.has(ANTHROPIC_PROVIDER) ? [WORK] : []
+    const embed = present.has(OPENAI_PROVIDER) ? Object.keys(EMBEDDING_PROFILES) : []
+    return [...chat, ...embed, ...modelProfilesOf(providers, models).map((profile) => profile.name)]
+}
+
+/**
+ * The AI gateway the environment declares (owner 2026-11-11: chat on Claude, embeddings on OpenAI, no more OpenRouter). TWO providers:
+ * - `ANTHROPIC_API_KEY` (with `_2` … `_9`) serves EVERY chat profile: `work` (the app's fixed tasks), `sonnet`, `haiku`, `auto-light`,
+ *   `auto-heavy`, on Claude Sonnet 5.5 and the cheap model (blocks-core `CHEAP_MODEL`, Claude Haiku 5.5). Without it no chat profile is
+ *   declared and every chat call fails loudly; nothing switches vendor.
+ * - `OPENAI_API_KEY` (with `_2` … `_9`) serves the pinned embeddings profile `embed-oa` (`text-embedding-3-small`, 1536 dimensions).
+ *   Without it no embeddings profile is declared: an embeddings call fails at the gateway (the index job then stores passages
+ *   keyword-only).
+ * `OPENROUTER_API_KEY`, `LLM_*` and `EMBEDDING_*` are no longer read. No key is required: with none the pool is empty, no router and no
+ * gateway are registered and the app boots with AI unavailable. Keys are read only as secret references, never logged.
  */
 export const aiGatewayOf = (env: AiGatewayEnv): AiGatewayOptions => {
-    const upstream: AiGatewayProvider = {
-        id: "upstream",
-        baseUrl: baseUrlOf(env, "LLM_BASE_URL"),
-        keys: keysOf(env, ["OPENROUTER_API_KEY", "LLM_API_KEY"]),
-    }
-    const embeddings: AiGatewayProvider = {
-        id: "embeddings",
-        baseUrl: baseUrlOf(env, "EMBEDDING_BASE_URL"),
-        keys: env.has("EMBEDDING_BASE_URL")
-            ? keysOf(env, ["EMBEDDING_API_KEY", "OPENROUTER_API_KEY", "LLM_API_KEY"])
-            : [],
-    }
     const anthropic: AiGatewayProvider = {
         id: ANTHROPIC_PROVIDER,
         kind: "anthropic",
         baseUrl: ANTHROPIC_BASE_URL,
         keys: keysOf(env, ["ANTHROPIC_API_KEY"]),
     }
-    // Anthropic joins the pool beside the upstream, never alone: every fixed task of the app asks `work`, which the upstream serves.
-    const providers = [upstream, embeddings, ...(upstream.keys.length > 0 ? [anthropic] : [])].filter(
-        (provider) => provider.keys.length > 0,
-    )
-    const models = {
-        work: env.optional("LLM_MODEL") ?? WORK_MODEL,
-        embed: env.optional("EMBEDDING_MODEL") ?? EMBED_MODEL,
-        strong: STRONG_MODEL,
+    const openai: AiGatewayProvider = {
+        id: OPENAI_PROVIDER,
+        kind: "openai",
+        baseUrl: OPENAI_BASE_URL,
+        keys: keysOf(env, ["OPENAI_API_KEY"]),
     }
-    const modelProfiles = modelProfilesOf(providers, models).map((profile) => profile.name)
+    const providers = [anthropic, openai].filter((provider) => provider.keys.length > 0)
+    const models = { work: CHEAP_MODEL, strong: SONNET_MODEL }
+    const profiles = servedProfilesOf(providers, models)
     return {
         providers,
         models,
-        gateway: providers.length > 0 ? gatewayOf(env, modelProfiles) : null,
+        gateway: profiles.length > 0 ? gatewayOf(env, profiles) : null,
     }
 }

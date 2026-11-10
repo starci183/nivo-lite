@@ -34,6 +34,7 @@ import {
     ChatSendNativeService,
 } from "@modules/domain/channels"
 import { ChannelReceiptsModule } from "@modules/domain/channel-receipts"
+import { TeamChatTurnsModule } from "@modules/domain/team-chat-turns"
 import {
     CONNECTION_SECRETS_ERROR_KINDS,
     CONNECTION_SECRETS_MESSAGES,
@@ -64,6 +65,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
     ChatActivityModule.register({ isGlobal: true }),
     ChatTypingModule.register({ isGlobal: true }),
     TeamChatModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
+    TeamChatTurnsModule.register({ isGlobal: true }),
     ChannelReceiptsModule.register({ isGlobal: true }),
     InboundEventsModule.register({ isGlobal: true }),
     InboxLeadsModule.register({ isGlobal: true }),

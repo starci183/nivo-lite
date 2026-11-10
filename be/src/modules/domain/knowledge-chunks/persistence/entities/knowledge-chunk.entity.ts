@@ -36,6 +36,10 @@ export class KnowledgeChunkEntity extends UuidAbstractEntity {
     @Column({ name: "visibility", type: "text", default: () => "'internal'::text" })
     visibility!: string
 
+    /** Trust gate: served to customer-facing searches only when true; set by the shop-document critic (BG3). */
+    @Column({ name: "customer_ready", type: "boolean", default: () => "false" })
+    customerReady!: boolean
+
     /** The model that made the vector, or null. */
     @Column({ name: "embedding_model", type: "text", nullable: true })
     embeddingModel!: string | null

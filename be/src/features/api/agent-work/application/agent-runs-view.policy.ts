@@ -1,3 +1,4 @@
+import { runTotalsOf } from "@modules/domain/ai-usage-events"
 import type { RunDetail, RunListEntry, RunStepDetail } from "@modules/domain/agent-runs"
 import { isRecord } from "@modules/platform/primitives"
 import type { WorkItem } from "@modules/domain/work-items"
@@ -264,5 +265,6 @@ export const detailOf = (
         ...runActionsOf(detail, entry.stepFailed, undone),
         decision: null,
         aiCalls: [],
+        aiTotals: runTotalsOf([]),
     }
 }

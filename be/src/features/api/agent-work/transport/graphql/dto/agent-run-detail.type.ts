@@ -121,6 +121,46 @@ export class AgentRunItemType {
 @ObjectType()
 /** The model calls of a run of one call kind, summed. */
 export class AgentRunAiCallType {
+    /** The run step (graph node key) the calls were made in; null for a call booked without one (before U1, or outside a node). */
+    @Field(() => String, { nullable: true })
+    stepKey!: string | null
+
+    /** Every try booked: the answers and the failed tries ("Lượt"). */
+    @Field(() => Int)
+    tries!: number
+
+    /** The failed tries (timeout, provider error, cut, empty, not JSON), booked estimated and never billed ("Thử lại"). */
+    @Field(() => Int)
+    failedTries!: number
+
+    /** Prompt tokens of the answers written to the provider's prompt cache. */
+    @Field(() => Int)
+    cacheWriteTokens!: number
+
+    /** Prompt tokens the app counted for the failed tries (no output). */
+    @Field(() => Int)
+    failedPromptTokens!: number
+
+    /** The price of the failed tries in USD (estimated; not billed). */
+    @Field(() => Float)
+    failedCostUsd!: number
+
+    /** The credits of the answers, an exact fraction (never rounded per call). */
+    @Field(() => Float)
+    credits!: number
+
+    /** The credits of the failed tries, an exact fraction (estimated; not billed). */
+    @Field(() => Float)
+    failedCredits!: number
+
+    /** The failure codes of the failed tries, sorted, without repeats. */
+    @Field(() => [String])
+    failures!: Array<string>
+
+    /** The kinds of work the calls served (`node`, `engine_core`), sorted, without repeats. */
+    @Field(() => [String])
+    workKinds!: Array<string>
+
     /** The call kind: a node's `<node id>:<tag>` (`accounting.match-payment:agent`), or the usage kind of a fixed task. */
     @Field()
     purpose!: string
@@ -187,6 +227,58 @@ export class AgentRunAiCallType {
 }
 
 @ObjectType()
+/** The model use of a whole run: exact USD and exact credits (fractions), the failed tries apart. */
+export class AgentRunAiTotalsType {
+    /** Answered calls. */
+    @Field(() => Int)
+    calls!: number
+
+    /** Every try, the failed ones included. */
+    @Field(() => Int)
+    tries!: number
+
+    /** Failed tries (estimated, never billed). */
+    @Field(() => Int)
+    failedTries!: number
+
+    /** Prompt tokens of the answers. */
+    @Field(() => Int)
+    promptTokens!: number
+
+    /** Of them, read from the provider's prompt cache. */
+    @Field(() => Int)
+    cachedTokens!: number
+
+    /** Of them, written to the provider's prompt cache. */
+    @Field(() => Int)
+    cacheWriteTokens!: number
+
+    /** Completion tokens of the answers. */
+    @Field(() => Int)
+    completionTokens!: number
+
+    /** Of them, hidden reasoning. */
+    @Field(() => Int)
+    reasoningTokens!: number
+
+    /** The exact cost of the answers in USD. */
+    @Field(() => Float)
+    costUsd!: number
+
+    /** The credits of the answers, an exact fraction. */
+    @Field(() => Float)
+    credits!: number
+
+    /** The price of the failed tries in USD (estimated; not billed). */
+    @Field(() => Float)
+    failedCostUsd!: number
+
+    /** The credits of the failed tries, an exact fraction. */
+    @Field(() => Float)
+    failedCredits!: number
+}
+
+@ObjectType()
 /** One run with its steps and the work item it is about. */
 export class AgentRunDetailType {
     /** The run as the list draws it. */
@@ -213,7 +305,11 @@ export class AgentRunDetailType {
     @Field(() => AgentRunDecisionType, { nullable: true })
     decision!: AgentRunDecisionType | null
 
-    /** Its model calls per call kind, in the order of their first call. */
+    /** Its model calls per step and call kind, in the order of their first call. */
     @Field(() => [AgentRunAiCallType])
     aiCalls!: Array<AgentRunAiCallType>
+
+    /** The run's model use in total. */
+    @Field(() => AgentRunAiTotalsType)
+    aiTotals!: AgentRunAiTotalsType
 }

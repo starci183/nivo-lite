@@ -19,7 +19,6 @@ import {
     AgentRunHandlersService,
     AgentRunsService,
     AgentRunsViewService,
-    type RunDetail,
     type RunOpen,
     type RunView,
     type StepSpec,
@@ -54,6 +53,8 @@ import { CLOCK } from "@modules/platform/clock"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import { LOGGER, type Logger } from "@modules/platform/logging"
+import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
+import { AgentRunRecordsService } from "../../modules/domain/agent-runs/agent-run-records.service"
 import { ThreadGraphsService } from "../../modules/domain/agent-threads/thread-graphs.service"
 import { memoryCheckpointStore, type MemoryCheckpointStore } from "../fixtures/builders/checkpoint-store.builder"
 import { leadMemoryWorldOf } from "../fixtures/builders/lead-memory-world.builder"
@@ -271,14 +272,32 @@ export const openedRun = (db: ThreadDb, input: RunOpen): RunView => {
         spoken: false,
     }
     db.runs.set(id, view)
-    db.records.put("agent.run", id, {
-        agentId: input.agentId,
-        wakeId: input.wakeId,
-        status: "running",
-        engine: "legacy",
-    })
+    db.records.put("agent.run", id, runRowOf(db, input))
     return view
 }
+
+/**
+ * The run row as the run store inserts it (`AgentRunStoreService.insertRun`), every field the REAL reader requires (FX1, D-P10-6): the
+ * world reads the run and its step rows through the real `AgentRunsViewService`, never a fake that skips the mapper.
+ */
+export const runRowOf = (db: { readonly clock: { now(): Date } }, input: RunOpen): RecordRow["data"] => ({
+    agentId: input.agentId,
+    wakeId: input.wakeId,
+    trigger: "graph_flow",
+    graphVersionId: input.versionId,
+    planning: false,
+    status: "running",
+    engine: "legacy",
+    context: structuredClone(input.context),
+    error: null,
+    resumeAttempts: 0,
+    stepSeq: 0,
+    startedAt: db.clock.now().toISOString(),
+})
+
+/** The REAL run reader (records + mapper) over the world's records: what the thread runs, the stop door and the run page read. */
+export const runsViewOf = (records: MemoryRecords): AgentRunsViewService =>
+    new AgentRunsViewService(records.engine, new AgentRunRecordsService(records.engine, records.mutations))
 
 /** The run table, as far as the engine reads it. */
 const runsOf = (db: ThreadDb): AgentRunsService =>
@@ -375,16 +394,7 @@ const workProvidersOf = (db: ThreadDb): Array<Provider> => [
     { provide: AgentWorkHandlersService, useValue: mock<AgentWorkHandlersService>() },
     { provide: AgentRunHandlersService, useValue: mock<AgentRunHandlersService>() },
     { provide: AgentRunsService, useValue: runsOf(db) },
-    {
-        provide: AgentRunsViewService,
-        useValue: mock<AgentRunsViewService>({
-            detail: (_ws: string, _agent: string, runId: string) => {
-                const row = db.records.get("agent.run", runId)
-                const engine = row?.data.engine === "langgraph" ? "langgraph" : "legacy"
-                return Promise.resolve(row === null ? null : mock<RunDetail>({ engine }))
-            },
-        }),
-    },
+    { provide: AgentRunsViewService, useValue: runsViewOf(db.records) },
 ]
 
 /** What a process is built with. */

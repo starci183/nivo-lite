@@ -1,17 +1,20 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import type { z } from "zod"
-import type { ReactNode } from "react"
 import { Button, Cluster, Form, Quote, Stack, Text, Textarea } from "@starci/grammar/common"
+import { isProposedText } from "../../agent-message/agent-message-facts"
 import type { AgentMessageRecord } from "../../agent-message/agent-message-item"
 import {
     approvalDecisionKind,
     messageTextKind,
     recordsRowsKind,
+    reportFactsKind,
     reportRunKind,
     workflowStoppedKind,
+    type AgentMessageKind,
+    type ApprovalDecisionPayload,
 } from "../../agent-message/agent-message-kinds"
-import type { AgentMessageKind, ApprovalDecisionPayload } from "../../agent-message/agent-message-kinds"
 import { keyedRows } from "../../agent-message/agent-message-rows"
+import { AgentMessageFacts } from "./AgentMessageFacts"
 import type { AgentMessageWords } from "./agent-message-words"
 
 /** What a view is given besides the payload: the message it belongs to and the words of the viewer's language. */
@@ -57,10 +60,14 @@ export interface AgentMessageView {
     readonly editor?: (props: AgentMessageEditorProps) => ReactNode
 }
 
-/** The view of a payload with a typed preview: it reads the payload through its kind's schema and draws nothing for one that does not fit. */
-const textPreview = (payload: unknown): ReactNode => {
+/**
+ * The text of a message: words the agent proposes to send stand apart as a quote; the agent's own words to the team (a notice, a
+ * report) are the card's plain body, full width, never a tinted box inside the card. Nothing for a payload that does not fit.
+ */
+const textPreview = (payload: unknown, context: AgentMessageViewContext): ReactNode => {
     const parsed = messageTextKind.payload.safeParse(payload)
-    return parsed.success ? <Quote text={parsed.data.text} /> : null
+    if (!parsed.success) return null
+    return isProposedText(context.record) ? <Quote text={parsed.data.text} /> : <Text size="sm">{parsed.data.text}</Text>
 }
 
 /** The text in a field; the button approves the changed words, cancel leaves it as it was. */
@@ -121,8 +128,8 @@ const wordsPreview =
         return words === "" ? null : <Text size="sm">{words}</Text>
     }
 
-/** The stopped workflow: the reason, the question, then the engine's true facts as name and value lines. The suggestions are the card's reply buttons. */
-const stoppedPreview = (payload: unknown): ReactNode => {
+/** The stopped workflow: the reason, the question, then the engine's facts folded (raw values only under the technical fold). The suggestions are the card's reply buttons. */
+const stoppedPreview = (payload: unknown, context: AgentMessageViewContext): ReactNode => {
     const parsed = workflowStoppedKind.payload.safeParse(payload)
     if (!parsed.success) return null
     const { reason, question, facts } = parsed.data
@@ -130,11 +137,19 @@ const stoppedPreview = (payload: unknown): ReactNode => {
         <Stack gap="inline">
             <Text size="sm">{reason}</Text>
             {question === null ? null : <Text size="sm">{question}</Text>}
-            {facts.map((fact, index) => (
-                <Text key={`${fact.name}-${String(index)}`} size="sm" tone="muted">
-                    {fact.name}: {fact.value}
-                </Text>
-            ))}
+            <AgentMessageFacts facts={facts} words={context.words} fallbackLabel={context.record.title} />
+        </Stack>
+    )
+}
+
+/** The engine's report: its readable sentence as the plain body, then its facts folded (raw values only under the technical fold). */
+const reportFactsPreview = (payload: unknown, context: AgentMessageViewContext): ReactNode => {
+    const parsed = reportFactsKind.payload.safeParse(payload)
+    if (!parsed.success) return null
+    return (
+        <Stack gap="inline">
+            {parsed.data.text === "" ? null : <Text size="sm">{parsed.data.text}</Text>}
+            <AgentMessageFacts facts={parsed.data.facts} words={context.words} fallbackLabel={context.record.title} />
         </Stack>
     )
 }
@@ -152,6 +167,7 @@ export const coreAgentMessageViews: ReadonlyArray<AgentMessageView> = [
     { kind: approvalDecisionKind, preview: wordsPreview(approvalDecisionKind), connectionHref: connectionOf },
     { kind: reportRunKind, preview: wordsPreview(reportRunKind) },
     { kind: workflowStoppedKind, preview: stoppedPreview },
+    { kind: reportFactsKind, preview: reportFactsPreview },
 ]
 
 /** Declares the view of a kind: how its payload reads and, where the kind allows it, how it is edited in place. */

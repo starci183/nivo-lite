@@ -9,6 +9,7 @@ export type NativeRefusalReason =
     | "ledger_key_unavailable"
     | "other_conversation"
     | "other_lead"
+    | "reason_missing"
 
 /**
  * The refusal a native tool throws for an expected case; the gateway turns it into a `tool_error` answer. The failure that led to it,

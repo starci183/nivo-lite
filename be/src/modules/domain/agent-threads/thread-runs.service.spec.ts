@@ -219,6 +219,8 @@ const STOP = Symbol("stop")
 interface World {
     /** The flag. */
     readonly workflows?: ReadonlyArray<string>
+    /** LangGraph is the default engine: every workflow engages. */
+    readonly everyWorkflow?: boolean
     /** No threads port composed. */
     readonly portless?: boolean
     /** The engine the run row names. */
@@ -316,7 +318,10 @@ const build = async (world: World = {}) => {
             ThreadRunsService,
             ThreadGraphsService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
-            { provide: AGENT_THREADS_OPTIONS, useValue: { workflows: world.workflows ?? [FRONT_DESK] } },
+            {
+                provide: AGENT_THREADS_OPTIONS,
+                useValue: { workflows: world.workflows ?? [FRONT_DESK], everyWorkflow: world.everyWorkflow },
+            },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
             { provide: AgentGraphFlowRunsService, useValue: flows },
@@ -828,6 +833,16 @@ describe("ThreadRunsService", () => {
 
             const off = await build({ workflows: [] })
             expect(off.service.engages(FRONT_DESK)).toBe(false)
+        })
+
+        it("engages every workflow under default-on, also owner-drawn ones and an agent's own main graph", async () => {
+            const every = await build({ workflows: [FRONT_DESK], everyWorkflow: true })
+            expect(every.service.engages(FRONT_DESK)).toBe(true)
+            expect(every.service.engages("sales.main")).toBe(true)
+            expect(every.service.engages("sales.owner-drawn-flow")).toBe(true)
+
+            const named = await build({ workflows: [FRONT_DESK], everyWorkflow: false })
+            expect(named.service.engages("sales.main")).toBe(false)
         })
 
         it("registers with the flow when the app has a threads port, and stays out of it without one", async () => {

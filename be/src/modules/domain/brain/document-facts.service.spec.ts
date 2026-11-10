@@ -1,8 +1,10 @@
 import { Test } from "@nestjs/testing"
+import { workInScope } from "@modules/platform/logging"
 import { builder, mock } from "@starci/jest-preset"
 import { DOC_AT, DOC_CONTENT, DOC_SOURCE, DOC_WS, docSourceOf } from "@tests/fixtures/builders/document-facts.builder"
 import { BrainExtractionsService, ExtractionNote } from "@modules/domain/brain-extractions"
 import { BrainFactsService, foldedText } from "@modules/domain/brain-facts"
+import type { FactRecord } from "@modules/domain/brain-facts"
 import { passageTextHashOf } from "@modules/domain/knowledge-chunks"
 import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
@@ -18,6 +20,8 @@ import { MAX_FACTS_PER_DOC, PROMPT_VERSION, SYSTEM_PROMPT } from "./extraction.p
 import { DocumentRelationsService } from "./document-relations.service"
 import { DocumentReviewService } from "./document-review.service"
 import { ModelJsonService } from "./model-json.service"
+import { FactEmbeddingsService } from "./fact-embeddings.service"
+import { FactReadingLogEvent } from "./fact-reading.log-events"
 
 const WS = DOC_WS
 const SOURCE = DOC_SOURCE
@@ -30,6 +34,36 @@ const USAGE = { promptTokens: 10, completionTokens: 20, totalTokens: 30, costUsd
 const REPLY = { text: "answer", model: "m1", usage: USAGE, parsed: null, retrieved: 0 }
 
 const sourceOf = docSourceOf
+
+/** The stored proposal a filing answers, named after its value. */
+const factFrom = (value: string): FactRecord => ({
+    id: `fact-${value}`,
+    subjectType: "business",
+    subjectKey: "shop",
+    subjectLabel: "Shop",
+    attribute: "x",
+    attributeLabel: "X",
+    value,
+    valueNumber: null,
+    unit: null,
+    scope: "internal",
+    modules: [],
+    installationId: null,
+    status: "proposed",
+    sourceKind: "document",
+    trust: 75,
+    validFrom: null,
+    validTo: null,
+    supersedesId: null,
+    conflictWith: null,
+    proposalKind: "set",
+    evidence: [],
+    proposedBy: "Hours",
+    proposedAt: AT,
+    decidedBy: null,
+    decidedAt: null,
+    decisionNote: null,
+})
 type ExtractionRecord = NonNullable<Awaited<ReturnType<BrainExtractionsService["get"]>>>
 
 const extractionOf = builder<ExtractionRecord>({
@@ -51,7 +85,7 @@ type Progress = Parameters<BrainExtractionsService["save"]>[2]
 const startOf = builder<Parameters<BrainExtractionsService["start"]>[0]>({
     workspaceId: WS,
     sourceId: SOURCE,
-    promptVersion: 1,
+    promptVersion: PROMPT_VERSION,
     contentHash: HASH,
     windowsTotal: 1,
     orphanFactIds: [],
@@ -79,6 +113,11 @@ const build = async (source = sourceOf()) => {
     const json = mock<ModelJsonService>()
     const reviews = mock<DocumentReviewService>()
     const links = mock<DocumentRelationsService>()
+    const vectors = mock<FactEmbeddingsService>()
+    vectors.checkSameMeaning.mockResolvedValue({ judged: 0, flagged: 0 })
+    facts.propose.mockImplementation((_workspaceId, input) =>
+        Promise.resolve({ fact: factFrom(input.value), outcome: "proposed", created: true }),
+    )
     indexing.sourceForFacts.mockResolvedValue(source)
     extractions.get.mockResolvedValue(extractionOf())
     usage.blockedBy.mockResolvedValue(false)
@@ -98,10 +137,11 @@ const build = async (source = sourceOf()) => {
             { provide: ModelJsonService, useValue: json },
             { provide: DocumentReviewService, useValue: reviews },
             { provide: DocumentRelationsService, useValue: links },
+            { provide: FactEmbeddingsService, useValue: vectors },
         ],
     }).compile()
     const service = moduleRef.get(DocumentFactsService)
-    return { service, ai, logger, facts, gaps, extractions, indexing, sources, usage, json, reviews, links }
+    return { service, ai, logger, facts, gaps, extractions, indexing, sources, usage, json, reviews, links, vectors }
 }
 
 describe("DocumentFactsService", () => {
@@ -303,6 +343,29 @@ describe("DocumentFactsService", () => {
         )
     })
 
+    it.each([
+        ["a first reading (no extraction yet)", null, "document_read"],
+        ["a reading resumed after a failure", "failed", "document_read"],
+        ["a changed document read before", "done", "document_reread"],
+    ] as const)(
+        "U1: books the model calls of %s to the document (stored status %s) as %s",
+        async (_case, status, kind) => {
+            const { service, ai, extractions, facts } = await build(sourceOf({ content: "Open 8 to 21." }))
+            facts.withdrawChanged.mockResolvedValue({ orphans: [], withdrawn: 0 })
+            const scopes: Array<unknown> = []
+            extractions.get.mockResolvedValue(status === null ? null : extractionOf({ status, contentHash: "old" }))
+            ai.chat.mockImplementation(() => {
+                scopes.push(workInScope())
+                return Promise.resolve(REPLY)
+            })
+
+            await service.run(PAYLOAD).catch(() => undefined)
+
+            expect(scopes.length).toBeGreaterThan(0)
+            expect(scopes).toContainEqual(expect.objectContaining({ kind, ref: `source:${SOURCE}` }))
+        },
+    )
+
     it.each([null, undefined, ""])("keeps the original result for a provider model %s", async (model) => {
         const { service, ai, extractions, sources } = await build(sourceOf({ content: `${"a".repeat(3500)}b` }))
         extractions.get.mockResolvedValue(null)
@@ -345,6 +408,7 @@ describe("DocumentFactsService", () => {
             scope: "public",
             sourceKind: "document",
             validFrom: "2026-10-11T17:00:00.000Z",
+            validTo: null,
             autoApply: false,
             installationId: "i1",
             proposedBy: "Hours",
@@ -381,7 +445,7 @@ describe("DocumentFactsService", () => {
     ])("files a $scope fact from a $visibility document as $filed", async ({ visibility, scope, filed }) => {
         const { service, json, facts } = await build(sourceOf({ visibility, installationId: null }))
         json.jsonOf.mockReturnValue({
-            facts: [{ subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD", scope }],
+            facts: [{ subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD", scope, quote: "Price 20 USD" }],
         })
 
         await expect(service.run(PAYLOAD)).resolves.toBe("done")
@@ -395,6 +459,7 @@ describe("DocumentFactsService", () => {
             scope: filed,
             sourceKind: "document",
             validFrom: null,
+            validTo: null,
             autoApply: false,
             installationId: null,
             proposedBy: "Hours",
@@ -403,7 +468,7 @@ describe("DocumentFactsService", () => {
                     kind: "document",
                     ref: SOURCE,
                     label: "Hours",
-                    quote: undefined,
+                    quote: "Price 20 USD",
                     at: AT,
                     sourceId: SOURCE,
                     title: "Hours",
@@ -419,8 +484,8 @@ describe("DocumentFactsService", () => {
         facts.propose.mockRejectedValueOnce(cause)
         json.jsonOf.mockReturnValue({
             facts: [
-                { subjectLabel: "Shop", attributeLabel: "Hours", value: "8am-9pm" },
-                { subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD" },
+                { subjectLabel: "Shop", attributeLabel: "Hours", value: "8am-9pm", quote: "Hours 8am-9pm" },
+                { subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD", quote: "Price 20 USD" },
             ],
         })
 
@@ -437,8 +502,8 @@ describe("DocumentFactsService", () => {
         extractions.get.mockResolvedValue(extractionOf({ factsProposed: 199 }))
         json.jsonOf.mockReturnValue({
             facts: [
-                { subjectLabel: "Shop", attributeLabel: "Hours", value: "8am-9pm" },
-                { subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD" },
+                { subjectLabel: "Shop", attributeLabel: "Hours", value: "8am-9pm", quote: "Hours 8am-9pm" },
+                { subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD", quote: "Price 20 USD" },
             ],
         })
 
@@ -471,7 +536,8 @@ describe("DocumentFactsService", () => {
 describe("DocumentFactsService an edited document", () => {
     const read = [passageTextHashOf("## Hours\nOpen 8.")]
     it.each<["done" | "failed", boolean, number, number, boolean]>([
-        ["done", false, 0, 0, false],
+        // Every finished reading asks for the review (BG3: the critic and the trust gate run from it), even with nothing filed.
+        ["done", false, 0, 0, true],
         ["done", false, 1, 0, true],
         ["done", true, 0, 1, true],
         ["failed", true, 0, 0, true],
@@ -497,4 +563,66 @@ describe("DocumentFactsService an edited document", () => {
             expect(reviews.requestForSource).toHaveBeenCalledTimes(reviewed ? 1 : 0)
         },
     )
+})
+
+describe("DocumentFactsService: accuracy and conflicts (BG2)", () => {
+    it("drops the facts its text does not support and says how many, per window", async () => {
+        const { service, json, facts, logger } = await build()
+        json.jsonOf.mockReturnValue({
+            facts: [
+                { subjectLabel: "Shop", attributeLabel: "Hours", value: "8am-9pm", quote: "Hours 8am-9pm" },
+                { subjectLabel: "Shop", attributeLabel: "Price", value: "25 USD", quote: "Price 20 USD" },
+                { subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD" },
+            ],
+        })
+
+        await expect(service.run(PAYLOAD)).resolves.toBe("done")
+
+        expect(facts.propose).toHaveBeenCalledTimes(1)
+        expect(logger.info).toHaveBeenCalledWith(FactReadingLogEvent.FactsUngrounded, {
+            sourceId: SOURCE,
+            window: 0,
+            kept: 1,
+            ungrounded: 2,
+        })
+    })
+
+    it("files a stated end with the fact (the facts store flags an end already past as stale)", async () => {
+        const { service, json, facts } = await build()
+        json.jsonOf.mockReturnValue({
+            facts: [
+                {
+                    subjectLabel: "Shop",
+                    attributeLabel: "Price",
+                    value: "20 USD",
+                    quote: "Price 20 USD",
+                    validTo: "2026-06-30",
+                },
+            ],
+        })
+
+        await service.run(PAYLOAD)
+
+        expect(facts.propose.mock.calls[0]?.[1]).toMatchObject({
+            validTo: "2026-06-30T17:00:00.000Z",
+            autoApply: false,
+        })
+    })
+
+    it("checks the window's NEW proposals for the same fact in other words, never the ones that only grew", async () => {
+        const { service, json, facts, vectors } = await build()
+        facts.propose
+            .mockResolvedValueOnce({ fact: factFrom("8am-9pm"), outcome: "proposed", created: true })
+            .mockResolvedValueOnce({ fact: factFrom("20 USD"), outcome: "reinforced" })
+        json.jsonOf.mockReturnValue({
+            facts: [
+                { subjectLabel: "Shop", attributeLabel: "Hours", value: "8am-9pm", quote: "Hours 8am-9pm" },
+                { subjectLabel: "Shop", attributeLabel: "Price", value: "20 USD", quote: "Price 20 USD" },
+            ],
+        })
+
+        await expect(service.run(PAYLOAD)).resolves.toBe("done")
+
+        expect(vectors.checkSameMeaning).toHaveBeenCalledWith(WS, [factFrom("8am-9pm")])
+    })
 })

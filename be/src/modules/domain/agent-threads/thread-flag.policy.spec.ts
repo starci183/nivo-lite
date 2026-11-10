@@ -32,7 +32,7 @@ describe("thread-flag.policy", () => {
         })
     })
 
-    it("clears the nine blocks-core workflows for threads, and nothing else", () => {
+    it("clears the nine blocks-core workflows and the three team chat turns for threads, and nothing else", () => {
         expect(THREAD_READY_WORKFLOWS).toEqual([
             "chatbot.front-desk",
             "sales.consult",
@@ -43,6 +43,9 @@ describe("thread-flag.policy", () => {
             "sales.payment-reminder",
             "sales.web-order",
             "accounting.reports",
+            "sales.team-chat",
+            "accounting.team-chat",
+            "chatbot.team-chat",
         ])
     })
 

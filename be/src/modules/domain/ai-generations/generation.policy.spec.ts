@@ -123,6 +123,23 @@ describe("generation policy inputOf", () => {
         ).toEqual({ messages: [{ role: "system", content: "s" }], responseFormat: "json", timeoutMs: 7000 })
     })
 
+    it("reads back the caller's run and work the stored input carries (U1), and drops a work of another shape", async () => {
+        const subject = await buildSubject()
+        const stored = {
+            messages: [],
+            response_format: "json",
+            timeout_ms: 7000,
+            run_id: "run-1",
+            work: { kind: "learning", ref: "lesson:c-2", step_key: null, agent_id: "agent-1" },
+        }
+
+        expect(subject.inputOf(stored)).toMatchObject({
+            runId: "run-1",
+            work: { kind: "learning", ref: "lesson:c-2", stepKey: null, agentId: "agent-1" },
+        })
+        expect(subject.inputOf({ ...stored, run_id: "", work: { ref: "x" } })).not.toHaveProperty("work")
+    })
+
     it("falls back to defaults for a missing or malformed input", async () => {
         const subject = await buildSubject()
         const fallback = { messages: [], responseFormat: "text", timeoutMs: DEFAULT_TIMEOUT_MS }

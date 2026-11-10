@@ -5,6 +5,7 @@ import type { AgentRunStatus, AgentStepStatus, StepEffect, StepJson, StepView } 
 import type { RunStepView, RunView } from "./agent-runs-engine.contracts"
 import type { RunRecord, StepRecord } from "./agent-runs-records.contracts"
 import type { RunEngine } from "./agent-runs-view.contracts"
+import { DEFAULT_DEADLINE_MS } from "./policies/agent-runs.policy"
 import type { RouteStep } from "./policies/failure-route.policy"
 
 const RUN_STATUSES: ReadonlyArray<AgentRunStatus> = [
@@ -90,6 +91,17 @@ const enumOf = <T extends string>(data: Data, key: string, allowed: ReadonlyArra
     return found
 }
 
+/**
+ * How long one try of the step may run. A row that names none (a thread's step row, which the projection writes with the deadline its
+ * spec named, often none; every such row on dev before FX1) reads the default every step is filled with at append (`filled`), never a
+ * refusal: the run page, the thread runs' engine read, the stop door and the old engine's item reads all read step rows through here,
+ * and one unreadable row made a crashed thread's wake and the sweep fail for ever (D-P10-6). A value that is no number is still refused.
+ */
+const deadlineOf = (data: Data): number => {
+    const value = data.deadlineMs
+    return value === null || value === undefined ? DEFAULT_DEADLINE_MS : intOf(data, "deadlineMs")
+}
+
 /** The code an error object carries, or null. */
 const codeOf = (data: Data): string | null => {
     const error = jsonOrNull(data, "error")
@@ -140,7 +152,7 @@ export const stepRecordOf = (row: RecordRow): StepRecord => ({
     status: enumOf(row.data, "status", STEP_STATUSES),
     attempt: intOf(row.data, "attempt"),
     maxAttempts: intOf(row.data, "maxAttempts"),
-    deadlineMs: intOf(row.data, "deadlineMs"),
+    deadlineMs: deadlineOf(row.data),
     claimedUntil: dateOrNull(row.data, "claimedUntil"),
     notBefore: dateOrNull(row.data, "notBefore"),
     waitItemId: textOrNull(row.data, "waitItemId"),

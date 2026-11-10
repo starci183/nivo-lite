@@ -27,9 +27,13 @@ import { AiLogEvent } from "./ai.log-events"
 import type { AiOptions } from "./ai.options"
 import { fieldOf, modelOf, textOf, usageOf, vectorsOf } from "./reply.policy"
 import { providerOf } from "./routing.policy"
+import { embeddingIdentityOf } from "@nivo-lite/blocks-core"
 
 /** The most characters sent per embedded text; a passage is about 800 characters, this only guards a runaway input. */
 const MAX_EMBED_CHARS = 8000
+
+/** The gateway's answers for a profile it does not serve: 403 `model_not_allowed` (the key is not bound to it), 404 `model_not_found`. */
+const NOT_SERVED: ReadonlySet<number> = new Set([403, 404])
 
 /** What a failure says, as log fields: its class and status; never its message, which may quote a provider or a prompt. */
 const failureOf = (cause: unknown): Readonly<Record<string, unknown>> => ({
@@ -73,6 +77,9 @@ const servedOf = (provider: unknown, responseMetadata: unknown, durationMs: numb
  * at a provider directly. A call never throws: without a key, or when the call failed, it answers null and callers fall back.
  */
 export class AiService implements OnModuleInit {
+    /** True once the gateway answered that it does not serve the embeddings profile (see `embeddingsServed`). */
+    private embeddingsRefused = false
+
     constructor(
         @InjectAiOptions() private readonly options: AiOptions,
         @InjectAiRunner() private readonly runner: OptionalAiRunner,
@@ -97,9 +104,13 @@ export class AiService implements OnModuleInit {
         return this.options.chatModel
     }
 
-    /** The profile or model new vectors are made with, whether or not a key is set. */
+    /**
+     * The IDENTITY new vectors are made with, whether or not a key is set: `<model>@<dimensions>` of the configured embeddings profile
+     * (blocks-core `models/embeddings.ts`), never the profile name. Every store records it on a vector and compares only rows of it, and
+     * the usage of an embeddings call is booked under it (so its price line matches).
+     */
     embeddingModel(): string {
-        return this.options.embeddingModel
+        return embeddingIdentityOf(this.options.embeddingModel)
     }
 
     /**
@@ -235,7 +246,16 @@ export class AiService implements OnModuleInit {
         return failure.errorClass === "TimeoutError" || failure.errorClass === "AbortError" ? "timeout" : "provider"
     }
 
-    /** Embeds texts in one call: the vectors in the order of the texts; null when no key is set or the call failed. */
+    /**
+     * False once the gateway answered that it does not serve the embeddings profile (403 or 404: the pool holds no `OPENAI_API_KEY`,
+     * so `embed-oa` is not declared). Keys change only at a restart, so the answer holds for the life of the process: callers then
+     * treat embeddings as not configured (the index job stores passages keyword-only) instead of retrying a call that cannot succeed.
+     */
+    embeddingsServed(): boolean {
+        return !this.embeddingsRefused
+    }
+
+    /** Embeds texts in one call: the vectors in the order of the texts; null when no key is set or the call failed (logged). */
     async embed(request: AiEmbedRequest): Promise<AiEmbeddingResult> {
         if (this.runner === null || request.input.length === 0) return null
         try {
@@ -245,7 +265,9 @@ export class AiService implements OnModuleInit {
             })
             return { vectors: vectorsOf(answer), usage: null }
         } catch (cause) {
-            this.logger.warn(AiLogEvent.EmbeddingFailed, failureOf(cause))
+            const failure = failureOf(cause)
+            if (NOT_SERVED.has(Number(failure.status))) this.embeddingsRefused = true
+            this.logger.warn(AiLogEvent.EmbeddingFailed, failure)
             return null
         }
     }

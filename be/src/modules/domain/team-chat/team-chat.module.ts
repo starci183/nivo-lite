@@ -55,6 +55,8 @@ export class TeamChatModule extends ConfigurableModuleClass {
                 TeamChatDecisionService,
                 TeamChatReactionsService,
                 TeamChatForwardService,
+                TeamChatCardsService,
+                TeamChatStoreService,
             ],
         }
     }

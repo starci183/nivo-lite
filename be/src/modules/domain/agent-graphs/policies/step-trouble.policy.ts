@@ -128,7 +128,9 @@ export interface StuckWhere {
 
 /**
  * The true facts the engine attaches to every report: where the run stopped, why (the code and the raw words), the data that came with
- * the trouble, and the plain values the step was given (ids, amounts). Nothing here is worded by a model.
+ * the trouble, and the plain values the step was given (ids, amounts). Nothing here is worded by a model. These are raw values for the
+ * AI core and the run's record; a thread's stop card words them (team-chat `wordedStopFactsOf`, names kept in `STUCK_FACT`, checked
+ * by this policy's spec) and shows a raw value only as a technical fact.
  */
 export const stuckFactsOf = (
     where: StuckWhere,

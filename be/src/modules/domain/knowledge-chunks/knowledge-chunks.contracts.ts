@@ -219,4 +219,6 @@ export interface ChunkHit {
     readonly visibility: string
     /** The order of the passage in its source. */
     readonly order: number
+    /** True when the passage is not released to customers yet (trust gate): an internal reader sees it marked unreviewed. */
+    readonly unreviewed: boolean
 }

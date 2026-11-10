@@ -74,7 +74,7 @@ const options = {
     },
     database: wiringSettings.database,
     storage: wiringSettings.storage,
-    aiGateway: { providers: [], models: { work: "wiring-chat", embed: "wiring-embedding", strong: "wiring-strong" }, gateway: null },
+    aiGateway: { providers: [], models: { work: "wiring-chat", strong: "wiring-strong" }, gateway: null },
     passport: {
         issuer: "wiring",
         audience: "authenticated",

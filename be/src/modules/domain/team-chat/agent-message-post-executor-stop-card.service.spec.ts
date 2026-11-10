@@ -5,6 +5,11 @@ import { GraphNodeRegistryService, type NodeEffectExecutor, type NodeTurn } from
 import { AgentMessagePostExecutorService } from "./agent-message-post-executor.service"
 import { lineKeyOf } from "./team-chat.policy"
 import { TeamChatAudienceService } from "./team-chat-audience.service"
+import { TeamChatCardsService } from "./team-chat-cards.service"
+import { TeamChatStoreService } from "./team-chat-store.service"
+import { MESSAGE_CATALOG } from "@modules/platform/i18n"
+import type { MessageCatalog } from "@modules/platform/i18n"
+import { TEAM_CHAT_MESSAGES } from "./messages/team-chat.messages"
 
 const TURN: NodeTurn = {
     turnId: "turn-1",
@@ -27,6 +32,8 @@ const build = async () => {
         providers: [
             AgentMessagePostExecutorService,
             { provide: TeamChatAudienceService, useValue: chat },
+            { provide: TeamChatStoreService, useValue: mock<TeamChatStoreService>() },
+            { provide: TeamChatCardsService, useValue: mock<TeamChatCardsService>() },
             { provide: GraphNodeRegistryService, useValue: registry },
         ],
     }).compile()
@@ -221,5 +228,148 @@ describe("AgentMessagePostExecutorService the typed card of a thread's stop (wor
                 revision: 2,
             },
         })
+    })
+})
+
+/** The executor with the real team chat words (English) as its catalogue. */
+const buildWorded = async () => {
+    const chat = mock<TeamChatAudienceService>({
+        postTeamCard: jest.fn().mockResolvedValue({ messageId: "msg-1", facts: {} }),
+    })
+    const added: Array<NodeEffectExecutor> = []
+    const registry = mock<GraphNodeRegistryService>({
+        addExecutor: jest.fn((executor: NodeEffectExecutor) => void added.push(executor)),
+    })
+    const words: Readonly<Record<string, string>> = TEAM_CHAT_MESSAGES.en
+    const catalog = mock<MessageCatalog>({ get: jest.fn((key: string) => words[key] ?? key) })
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AgentMessagePostExecutorService,
+            { provide: TeamChatAudienceService, useValue: chat },
+            { provide: TeamChatStoreService, useValue: mock<TeamChatStoreService>() },
+            { provide: TeamChatCardsService, useValue: mock<TeamChatCardsService>() },
+            { provide: GraphNodeRegistryService, useValue: registry },
+            { provide: MESSAGE_CATALOG, useValue: catalog },
+        ],
+    }).compile()
+    moduleRef.get(AgentMessagePostExecutorService).onModuleInit()
+    return { chat, executor: added[0], postOf: () => chat.postTeamCard.mock.calls[0]?.[1] }
+}
+
+describe("AgentMessagePostExecutorService worded facts on a thread's typed stop card", () => {
+    const RAW_CARD = {
+        workflow: { moduleKey: "accounting", key: "reconcile", title: "Reconcile incoming money" },
+        step: { key: "match", nodeId: "accounting.match-payment", title: "Match the transaction" },
+        runId: "run-1",
+        leadId: null,
+        conversationId: null,
+        by: "engine",
+        reason: "r",
+        question: null,
+        facts: [
+            { name: "workflow", value: "accounting.reconcile" },
+            { name: "step", value: "match (accounting.match-payment)" },
+            { name: "code", value: "ai_confused" },
+            { name: "bankName", value: "MBBANK" },
+            { name: "run", value: "run-1" },
+        ],
+        suggestions: [],
+        decisions: ["retry", "take_over", "skip"],
+        repeats: 1,
+        firstAt: "2026-11-10T10:00:00.000Z",
+        lastAt: "2026-11-10T10:00:00.000Z",
+    }
+    const SECTION = {
+        version: 1,
+        stopId: "stop-1",
+        runId: "run-1",
+        stepKey: "match",
+        kind: "ai_error",
+        state: "open",
+        headline: "The workflow stopped: AI error",
+        needs: { answer: true, decisions: ["retry", "take_over", "skip"], verdicts: [] },
+        replies: [],
+        repeats: 1,
+        stoppedAt: "2026-11-10T10:00:00.000Z",
+        resolvedAt: null,
+    }
+    const CALL: EffectCall = { key: "run-stuck:run-1:match:1", dedupeKey: "run-stuck:run-1:match" }
+
+    it("words the facts of a typed stop (titles, reason, bank name) and keeps every raw value only as technical", async () => {
+        const { chat, executor, postOf } = await buildWorded()
+        chat.storedCard.mockResolvedValue(null)
+
+        await executor?.execute(TURN, { kind: "workflow.stopped", title: "t", summary: "r", card: { ...RAW_CARD, stop: SECTION } }, CALL)
+
+        const facts = (postOf()?.message.payload as { facts: ReadonlyArray<{ name: string; value: string; technical: boolean }> }).facts
+        expect(facts).toEqual([
+            { name: "Workflow", value: "Reconcile incoming money", technical: false },
+            { name: "Step", value: "Match the transaction", technical: false },
+            { name: "Reason", value: "The AI could not tell what to do at this step.", technical: false },
+            { name: "Bank", value: "MB Bank", technical: false },
+            { name: "Workflow key", value: "accounting.reconcile", technical: true },
+            { name: "Step key", value: "match (accounting.match-payment)", technical: true },
+            { name: "Error code", value: "ai_confused", technical: true },
+            { name: "Run id", value: "run-1", technical: true },
+        ])
+        const shown = facts.filter((fact) => !fact.technical).map((fact) => fact.value).join(" ")
+        for (const raw of ["ai_confused", "MBBANK", "run-1", "accounting."]) expect(shown).not.toContain(raw)
+    })
+
+    it("leaves the facts of an old-engine card (no typed part) exactly as given", async () => {
+        const { chat, executor, postOf } = await buildWorded()
+        chat.storedCard.mockResolvedValue(null)
+
+        await executor?.execute(TURN, { kind: "workflow.stopped", title: "t", summary: "r", card: RAW_CARD }, CALL)
+
+        expect((postOf()?.message.payload as { facts: unknown }).facts).toEqual(RAW_CARD.facts)
+    })
+})
+
+describe("AgentMessagePostExecutorService the engine's report with facts (report.facts)", () => {
+    const REPORT = {
+        kind: "report.facts",
+        title: "A turn could not run",
+        text: "A turn stopped before the first step of a workflow, after its retries.",
+        facts: [
+            { name: "Channel", value: "Zalo", technical: false },
+            { name: "Error code", value: "ENTITY_ENGINE_QUERY_INVALID", technical: true },
+        ],
+        audience: "founder",
+    }
+
+    it("posts one typed report to the founder under the call's key: the sentence as the readable line, the facts in the payload", async () => {
+        const { executor, postOf } = await buildWorded()
+
+        const fact = await executor?.execute(TURN, REPORT, { key: "wake-notice:w-1:failed:X", dedupeKey: "wake-notice:w-1:failed:X" })
+
+        expect(fact).toMatchObject({ kind: "chat-message", id: "msg-1" })
+        expect(postOf()).toEqual({
+            agentId: "agent-1",
+            audience: "founder",
+            key: lineKeyOf("wake-notice:w-1:failed:X"),
+            message: {
+                kind: "report.facts",
+                intent: "report",
+                title: REPORT.title,
+                summary: REPORT.text,
+                payload: { text: REPORT.text, facts: REPORT.facts },
+            },
+        })
+    })
+
+    it("posts to the founder when the audience is missing or unknown", async () => {
+        const { executor, postOf } = await buildWorded()
+        await executor?.execute(TURN, { ...REPORT, audience: "customers" }, { key: "k", dedupeKey: null })
+        expect(postOf()?.audience).toBe("founder")
+    })
+
+    it("refuses a report with no title or with a fact that has no value", async () => {
+        const { executor, chat } = await buildWorded()
+        await expect(executor?.execute(TURN, { ...REPORT, title: "" }, { key: "k", dedupeKey: null })).rejects.toThrow()
+        await expect(
+            executor?.execute(TURN, { ...REPORT, facts: [{ name: "Channel" }] }, { key: "k", dedupeKey: null }),
+        ).rejects.toThrow()
+        expect(chat.postTeamCard).not.toHaveBeenCalled()
     })
 })

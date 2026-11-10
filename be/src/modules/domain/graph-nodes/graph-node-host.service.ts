@@ -37,6 +37,8 @@ import type {
 } from "./graph-nodes.contracts"
 import type { GraphNodesOptions } from "./graph-nodes.options"
 import type { NodeToolApproval } from "./node-run-token.contracts"
+import { withWorkScope } from "@modules/platform/logging"
+import { nodeWorkOf } from "./node-work.policy"
 
 /** The refusal of an `AGENT_LOOP` flag the app cannot honour, naming what is wrong. */
 const flagInvalid = (name: string): GraphNodesError =>
@@ -104,19 +106,22 @@ export class GraphNodeHostService implements OnModuleInit {
         }
         const own = this.portsOf(turn, scope, input.approval ?? null, asks, attempt)
         const ports = this.takesTurns(input.nodeId) ? { ...own, agent: this.agentOf(scope, input.record) } : own
-        const ran = await runNode(
-            {
-                node,
-                params: input.params,
-                input: input.input,
-                turn,
-                grant: input.grant,
-                effects: installed.effects,
-                words: (key) => this.registry.wordsOf(key),
-                tools: installed.tools,
-                key: input.key,
-            },
-            input.replay === undefined ? ports : input.replay(ports),
+        // Every model call of the node is booked to its step and agent (owner: "model, số credits trên từng node").
+        const ran = await withWorkScope(nodeWorkOf(input.key, turn.agentId), () =>
+            runNode(
+                {
+                    node,
+                    params: input.params,
+                    input: input.input,
+                    turn,
+                    grant: input.grant,
+                    effects: installed.effects,
+                    words: (key) => this.registry.wordsOf(key),
+                    tools: installed.tools,
+                    key: input.key,
+                },
+                input.replay === undefined ? ports : input.replay(ports),
+            ),
         ).catch((cause: unknown) => Promise.reject(asks[0] ?? cause))
         const [ask] = asks
         if (ask !== undefined) throw ask
@@ -160,13 +165,14 @@ export class GraphNodeHostService implements OnModuleInit {
     async core<T>(turn: NodeTurn, ask: NodeModelRequest, schema: ZodType<T>): Promise<T> {
         const scope: NodeModelScope = { workspaceId: turn.workspaceId, locale: turn.locale, model: coreModelOf() }
         const { effects, tools } = this.registry.installed()
-        return schema.parse(
-            await this.ai.nodeJson(
+        const answer = await withWorkScope({ kind: "engine_core", agentId: turn.agentId }, () =>
+            this.ai.nodeJson(
                 scope,
                 guidedModelRequest({ turn, effects, tools, words: (key) => this.registry.wordsOf(key) }, ask),
                 schema,
             ),
         )
+        return schema.parse(answer)
     }
 
     /** The turn with the subject of the first resolver that knows one, asked one after the other; the turn as it was when none does. */

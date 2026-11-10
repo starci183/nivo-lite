@@ -16,6 +16,7 @@ import {
 } from "@nivo-lite/agent-sdk/testing"
 import { callDigestOf, nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import { CLOCK } from "@modules/platform/clock"
+import { workInScope } from "@modules/platform/logging"
 import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
 import { GraphNodeHostService } from "./graph-node-host.service"
@@ -36,6 +37,7 @@ import type {
     NodeSubjectResolver,
     NodeToolDoor,
 } from "./graph-nodes.contracts"
+import { ENGINE_CORE_MODEL } from "@nivo-lite/blocks-core"
 
 const INSTALL = nodeIndexOf({
     nodes: [probeNode, swallowNode],
@@ -161,8 +163,8 @@ const PING_KEY = `run-1:node:${callDigestOf("core.ping", { n: 1 })}`
 
 /** The model of the probe node: blocks-core declares nothing for it, so the default (a node the table does not know weighs heavy). */
 const PROBE_MODEL = { model: "claude-sonnet-5-5", weight: "heavy", source: "default" }
-/** The model of the engine's own decision (the AI core), as blocks-core declares it. */
-const CORE_MODEL = { model: "auto", weight: "heavy", source: "declared" }
+/** The engine core's model as blocks-core declares it, in either position of its ALL_NODES_ON_CLAUDE switch. */
+const CORE_MODEL = { model: ENGINE_CORE_MODEL.model, weight: "heavy", source: "declared" }
 
 describe("GraphNodeHostService", () => {
     it("runs a node through the registered port, the ledgered executor, the model and the tool door", async () => {
@@ -190,6 +192,27 @@ describe("GraphNodeHostService", () => {
             key: `run-1:node:tool:${callDigestOf("core.look", {})}`,
             approval: null,
         })
+    })
+
+    it("books every model call of the node to its step and the turn's agent (U1: model and credits per node)", async () => {
+        const { host, ai } = await build(readingPort())
+        const seen: Array<unknown> = []
+        ai.nodeText.mockImplementation(() => {
+            seen.push(workInScope())
+            return Promise.resolve("hi")
+        })
+
+        await host.run(INPUT)
+
+        expect(seen).toEqual([
+            {
+                kind: "node",
+                ref: null,
+                stepKey: INPUT.key.slice(INPUT.key.indexOf(":") + 1),
+                agentId: INPUT.turn.agentId,
+            },
+        ])
+        expect(workInScope()).toBeNull()
     })
 
     it("stops the node at a call that waits for a person, even when the node catches its tool's failures", async () => {
@@ -287,7 +310,9 @@ describe("GraphNodeHostService replay hook", () => {
             },
         }))
 
-        await expect(host.run({ ...INPUT, replay })).resolves.toMatchObject({ output: { text: "replayed", ref: "e-1" } })
+        await expect(host.run({ ...INPUT, replay })).resolves.toMatchObject({
+            output: { text: "replayed", ref: "e-1" },
+        })
 
         expect(replay).toHaveBeenCalledTimes(1)
         expect(seen).toEqual(expect.arrayContaining(["execute:core.ping", "model.text"]))
@@ -340,7 +365,10 @@ describe("GraphNodeHostService repeat guard", () => {
         const refusal = { kind: "refused", id: "already_told_for_this_stop", facts: { conversationId: "c-1" } }
         tools.repeatGuard = jest.fn().mockResolvedValue(refusal)
 
-        await expect(host.run(INPUT)).resolves.toMatchObject({ output: { ref: "already_told_for_this_stop" }, effects: [] })
+        await expect(host.run(INPUT)).resolves.toMatchObject({
+            output: { ref: "already_told_for_this_stop" },
+            effects: [],
+        })
 
         expect(effects.once).toHaveBeenCalledTimes(1)
         expect(executor.execute).not.toHaveBeenCalled()
@@ -450,14 +478,20 @@ describe("GraphNodeHostService AGENT_LOOP", () => {
         await ports?.agent?.(loop)
 
         expect(ai.nodeImages).not.toHaveBeenCalled()
-        expect(ai.nodeAgentTurns).toHaveBeenCalledWith({ workspaceId: "ws-1", locale: "vi", model: PROBE_MODEL }, { purpose: "core.probe:agent" })
+        expect(ai.nodeAgentTurns).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", locale: "vi", model: PROBE_MODEL },
+            { purpose: "core.probe:agent" },
+        )
         expect(loops.run).toHaveBeenCalledWith(loop, { toolChoice: "auto" }, {})
     })
 
     it("refuses to start when the flag names a node that is not installed, or names nodes where no loop is bound", async () => {
         const unknown = await buildWithLoop(["core.nowhere"])
         expect(() => unknown.host.onModuleInit()).toThrow(
-            expect.objectContaining({ code: GraphNodesErrorCode.AgentLoopFlagInvalid, params: { name: "core.nowhere" } }),
+            expect.objectContaining({
+                code: GraphNodesErrorCode.AgentLoopFlagInvalid,
+                params: { name: "core.nowhere" },
+            }),
         )
 
         const unbound = await buildWithLoop(["core.probe"], false)
@@ -581,7 +615,11 @@ describe("GraphNodeHostService.core", () => {
     it("asks the engine's own decision under the policy of the turn's agent: its guidance and values go before the instructions", async () => {
         const { host, ai } = await build(readingPort())
         ai.nodeJson.mockResolvedValue({ n: 7 })
-        const turn = { ...INPUT.turn, guidance: "CHÍNH SÁCH: hỏi chủ tiệm.", policy: { approvalThresholdVnd: 3_000_000 } }
+        const turn = {
+            ...INPUT.turn,
+            guidance: "CHÍNH SÁCH: hỏi chủ tiệm.",
+            policy: { approvalThresholdVnd: 3_000_000 },
+        }
 
         await expect(host.core(turn, ASK, z.object({ n: z.number() }))).resolves.toEqual({ n: 7 })
 
@@ -592,13 +630,30 @@ describe("GraphNodeHostService.core", () => {
         expect(asked?.instructions.endsWith("\n\nDecide once.")).toBe(true)
     })
 
+    it("books the engine's own decision as engine-core work of the turn's agent", async () => {
+        const { host, ai } = await build(readingPort())
+        const seen: Array<unknown> = []
+        ai.nodeJson.mockImplementation(() => {
+            seen.push(workInScope())
+            return Promise.resolve({ n: 1 })
+        })
+
+        await host.core(INPUT.turn, ASK, z.object({ n: z.number() }))
+
+        expect(seen).toEqual([{ kind: "engine_core", ref: null, stepKey: null, agentId: INPUT.turn.agentId }])
+    })
+
     it("asks with the instructions as they are for a turn that carries no policy", async () => {
         const { host, ai } = await build(readingPort())
         ai.nodeJson.mockResolvedValue({ n: 7 })
 
         await host.core(INPUT.turn, ASK, z.object({ n: z.number() }))
 
-        expect(ai.nodeJson).toHaveBeenCalledWith({ workspaceId: "ws-1", locale: "vi", model: CORE_MODEL }, ASK, expect.anything())
+        expect(ai.nodeJson).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", locale: "vi", model: CORE_MODEL },
+            ASK,
+            expect.anything(),
+        )
     })
 })
 

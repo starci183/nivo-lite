@@ -51,6 +51,11 @@ export interface AgentMessageWords {
     readonly intents?: Partial<Record<AgentMessageIntent, string>> | undefined
     /** The words the kinds draw in their bodies. */
     readonly kinds: AgentMessageKindWords
+    /**
+     * The folds of the facts an engine message carries: `details` over the worded facts, `technical` over the raw ones
+     * inside it (a fold within the details fold). Absent, the card draws the worded facts as rows and never a technical one.
+     */
+    readonly facts?: { readonly details: string; readonly technical: string } | undefined
 }
 
 /** The values an edited payload is approved with. */

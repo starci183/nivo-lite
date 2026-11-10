@@ -13,6 +13,8 @@ export interface DecideAgentRunStepRequest {
     readonly runId: string
     /** The answer. */
     readonly verdict: AgentRunVerdict
+    /** The step whose approval is answered, for a run on a thread; absent: the run's newest open approval. */
+    readonly stepKey?: string | null | undefined
     /** The language of the generated text. */
     readonly locale: Locale
 }

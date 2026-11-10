@@ -130,6 +130,7 @@ const registerSearchCases = () => {
         score: 0.4,
         visibility: "public",
         ord: 3,
+        customerReady: true,
     }
     const hit = {
         id: "c1",
@@ -139,6 +140,7 @@ const registerSearchCases = () => {
         score: 0.4,
         visibility: "public",
         order: 3,
+        unreviewed: false,
     }
     const query = {
         workspaceId: WS,
@@ -185,7 +187,18 @@ const registerSearchCases = () => {
         await service.search({ ...query, audience: "customer", limit: 0 })
 
         expect(fake?.callsOf("andWhere")).toContainEqual([{ visibility: "public" }])
+        // The trust gate (BG3): a customer reads only passages the shop-document critic released.
+        expect(fake?.callsOf("andWhere")).toContainEqual(["c.customer_ready = true"])
         expect(fake?.callsOf("limit")).toEqual([[1]])
+    })
+
+    it("marks a hit not released to customers yet as unreviewed for an internal reader", async () => {
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [{ getRawMany: [{ ...raw, customerReady: false }] }])
+        const service = await build(em)
+
+        await expect(service.search(query)).resolves.toEqual([{ ...hit, unreviewed: true }])
+        expect(fake?.callsOf("andWhere")).not.toContainEqual(["c.customer_ready = true"])
     })
 
     it("searches nothing when the query has neither a vector of a model nor words", async () => {

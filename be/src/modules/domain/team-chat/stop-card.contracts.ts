@@ -181,8 +181,11 @@ export interface StopCardView {
     readonly question: string | null
     /** The AI's suggested ways on; none once the stop is not open. */
     readonly suggestions: ReadonlyArray<{ readonly text: string; readonly handledBy: "workflow" | "person" }>
-    /** The engine's true facts, by name. */
-    readonly facts: ReadonlyArray<{ readonly name: string; readonly value: string }>
+    /**
+     * The engine's facts: a plain label and a value in words; `technical` = a raw value (a code, an id, raw error words) the card folds
+     * under its technical details. A card stored before the facts were worded reads `technical: false` for every fact.
+     */
+    readonly facts: ReadonlyArray<{ readonly name: string; readonly value: string; readonly technical: boolean }>
     /** What the engine needs to go on. */
     readonly needs: StopCardNeeds
     /** The founder's replies, oldest first. */

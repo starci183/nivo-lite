@@ -104,11 +104,12 @@ describe("AgentWorkflowsService: a workflow from a template", () => {
     it("seeds the primary workflow and a workflow per other template of the module, once", async () => {
         const world = await buildWorld()
 
-        await expect(world.workflows.seedAgent("ws-1", "agent-1", "accounting")).resolves.toBe(1)
+        await expect(world.workflows.seedAgent("ws-1", "agent-1", "accounting")).resolves.toBe(2)
         await expect(world.workflows.seedAgent("ws-1", "agent-1", "accounting")).resolves.toBe(0)
         expect(workflowsOf(world).map((workflow) => [workflow.key, workflow.status])).toEqual([
             ["reconcile", "active"],
             ["reports", "active"],
+            ["team-chat", "active"],
         ])
     })
 

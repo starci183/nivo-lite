@@ -21,6 +21,14 @@ export enum DossierReviewErrorCode {
     ModelUnavailable = "DOSSIER_REVIEW_MODEL_UNAVAILABLE",
     /** The page size or the cursor of a findings list is not one this list hands out. */
     PageInvalid = "DOSSIER_REVIEW_PAGE_INVALID",
+    /** The point of the document critique, or the document, does not exist in this workspace. */
+    CriticNotFound = "BRAIN_CRITIC_NOT_FOUND",
+    /** The point was already answered, skipped, or left the document. */
+    CriticDecided = "BRAIN_CRITIC_DECIDED",
+    /** The answer is not one the point offers, or it needs a value. */
+    CriticAnswerInvalid = "BRAIN_CRITIC_ANSWER_INVALID",
+    /** The critique of the document is running; ask again when it ends. */
+    CriticRunning = "BRAIN_CRITIC_RUNNING",
 }
 
 /** How each dossier-review code travels. */
@@ -34,6 +42,10 @@ export const DOSSIER_REVIEW_ERROR_KINDS: Record<DossierReviewErrorCode, ErrorKin
     [DossierReviewErrorCode.NothingToReview]: "invalid",
     [DossierReviewErrorCode.ModelUnavailable]: "unavailable",
     [DossierReviewErrorCode.PageInvalid]: "invalid",
+    [DossierReviewErrorCode.CriticNotFound]: "not-found",
+    [DossierReviewErrorCode.CriticDecided]: "conflict",
+    [DossierReviewErrorCode.CriticAnswerInvalid]: "invalid",
+    [DossierReviewErrorCode.CriticRunning]: "conflict",
 }
 
 /** The one error class of the dossier-review capability. */

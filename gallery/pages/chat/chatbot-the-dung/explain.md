@@ -3,7 +3,7 @@ title: Trò chuyện / Chatbot (thẻ quy trình đang dừng)
 route: /workspaces/<ws>/chat?room=<id>
 area: chat
 ---
-Route `/workspaces/<ws>/chat?room=<id>`, the direct room with the Chatbot agent, scrolled to a live typed `workflow.stopped` card (`ChatMessageType.stop`, state `open`, kind `ai_report`, revision 0 = an old-engine stop read through the typed field). Shots `1440.png`, `1920.png`, `390.png` from the Next dev server, read only (no decision was pressed). The rest of the page (rooms pane, room head, composer) is explained in `chat/agent-sales`. Approved drawing: `lanes/drawings/stop-card-2.png` (card 1).
+Route `/workspaces/<ws>/chat?room=<id>`, the direct room with the Chatbot agent, scrolled to a live typed `workflow.stopped` card (`ChatMessageType.stop`, state `open`, kind `ai_report`, revision 0 = an old-engine stop read through the typed field). Shots `1440.png`, `1920.png`, `390.png` from the Next dev server, read only (no decision was pressed). The rest of the page (rooms pane, room head, composer) is explained in `chat/agent-sales`; the chat frame (head, thread, composer footer) is `--background` and only the thread scrolls (Grammar 0.37.33 `Pane content="chat"`, DNA-COMMON-CHAT-FRAME, DNA-COMMON-CHAT-FRAME-SCROLL). Approved drawing: `lanes/drawings/stop-card-2.png` (card 1).
 
 ## Thẻ dừng: tác giả, dòng phụ, khung thẻ
 Vì sao: one card per stop, rewritten in place (same message id). The agent name and the muted 12 line "<quy trình> · <bước> · <giờ>[ · lần N]" stand above the card like every other message of the thread, the agent mark beside it; the card face is the surface card at the wide chat measure. Here the line reads "front-desk · answer" because the old engine sends keys as titles (engine debt, not drawn by the web).

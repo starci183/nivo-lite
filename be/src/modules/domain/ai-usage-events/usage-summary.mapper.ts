@@ -1,5 +1,9 @@
 import type { DailyModuleUsage, QuotaLookup, UsageSummary } from "./ai-usage-events.contracts"
 import { creditsOf } from "./usage-cost.policy"
+import { creditsExact, usdExact } from "./credits.policy"
+import type { DailyWorkUsage } from "./work-usage.contracts"
+import { countOf, numberOf } from "./work-usage.mapper"
+import type { Figure } from "./work-usage.mapper"
 
 /** One non-guide daily rollup, aggregated across kinds, as the monthly aggregate answers it. */
 export interface MonthlyUsageAggregate {
@@ -52,5 +56,36 @@ export const toUsageSummary = (status: QuotaLookup, rows: ReadonlyArray<DailyMod
         daily: [...days.entries()]
             .map(([day, total]) => ({ day, tokens: total.tokens, credits: creditsOf(total.costUsd) }))
             .sort((left, right) => left.day.localeCompare(right.day)),
+    }
+}
+
+/** One day, module and work kind's rollup as the driver answers it. */
+export interface DailyWorkAggregate {
+    readonly day: string
+    readonly module: string
+    readonly work_kind: string
+    readonly calls: Figure
+    readonly failed_tries: Figure
+    readonly tokens: Figure
+    readonly cost_usd: Figure
+    readonly failed_cost_usd: Figure
+}
+
+/**
+ * Reads one day, module and work kind's rollup of the workspace summary. Its credits are EXACT fractions (display): only a bill rounds,
+ * and it rounds the month's total (`ai_credit_period`), never a day of this summary.
+ */
+export const toDailyWorkUsage = (row: DailyWorkAggregate): DailyWorkUsage => {
+    const costUsd = usdExact(numberOf(row.cost_usd))
+    return {
+        day: row.day,
+        module: row.module,
+        workKind: row.work_kind,
+        calls: countOf(row.calls),
+        failedTries: countOf(row.failed_tries),
+        tokens: countOf(row.tokens),
+        costUsd,
+        failedCostUsd: usdExact(numberOf(row.failed_cost_usd)),
+        credits: creditsExact(costUsd),
     }
 }

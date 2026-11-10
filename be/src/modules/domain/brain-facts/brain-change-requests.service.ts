@@ -5,13 +5,60 @@ import { BrainFactsService } from "./brain-facts.service"
 import type { ChangeFiled, ChangeRequest, Evidence, FactRecord } from "./brain-facts.contracts"
 import { BrainFactsError, BrainFactsErrorCode } from "./errors/brain-facts.error"
 import { normalFact } from "./fact-input.policy"
-import { sameValue } from "./fact-key.policy"
+import { foldedText, sameValue } from "./fact-key.policy"
 
 /** The source a change request files under: words of the owner or the staff, relayed by an agent (trust below auto-apply). */
 const RELAYED = "staff"
 
 /** The longest quote a change request keeps. */
 const QUOTE_MAX = 500
+
+/** The fewest letters and digits a reason has once folded: "giá mới" alone is not a reason. */
+const REASON_MIN = 12
+
+/**
+ * A change request as an agent files it (BG4): the request of W2 with the REASON, why the truth changes in the agent's own plain words
+ * (who said what, what it replaces, for how long when said). Optional in the type only so the tool's caller compiles while its schema
+ * gains the member; a request without one is refused.
+ */
+export interface ReasonedChangeRequest extends ChangeRequest {
+    /** Why the truth changes, in the agent's own words. */
+    readonly reason?: string | undefined
+}
+
+/** Why a reason is refused: none (or too short to say anything), or a copy of the value or of the quoted words. */
+export type ReasonProblem = "missing" | "copy"
+
+/**
+ * Whether a reason says why: refused when empty or shorter than a short sentence, or when it only repeats the new value or the quoted
+ * words (accents, case and punctuation ignored). Null when it holds.
+ */
+export const reasonProblemOf = (
+    reason: string | null | undefined,
+    value: string | null,
+    quotes: ReadonlyArray<string>,
+): ReasonProblem | null => {
+    const folded = foldedText(reason ?? "")
+    if (folded.replaceAll(" ", "").length < REASON_MIN) return "missing"
+    const copies = [value ?? "", ...quotes].map(foldedText).filter((text) => text !== "")
+    return copies.includes(folded) ? "copy" : null
+}
+
+/** The refusal of a request whose reason does not say why. */
+const reasonRefusal = (problem: ReasonProblem): BrainFactsError =>
+    new BrainFactsError({ code: BrainFactsErrorCode.FactIncomplete, params: { field: "reason", problem } })
+
+/**
+ * What else happens around a change request filed from a chat, registered by the app that hosts the team chat (BG4's card service):
+ * `vet` checks the words before anything is filed (they must be a person's line in the team chat), `filed` posts or rewrites the card.
+ * Without one (an app with no team chat) a request is still filed, with no card.
+ */
+export interface ChangeRequestHook {
+    /** Refuses a request whose words are not a person's line of the workspace's team chat. */
+    vet(workspaceId: string, request: ReasonedChangeRequest): Promise<void>
+    /** The request was filed (or found waiting, or already true): post or rewrite its card. */
+    filed(workspaceId: string, request: ReasonedChangeRequest, filed: ChangeFiled): Promise<void>
+}
 
 /** What a chat change request rests on: the message the words are in, verbatim. */
 export const changeEvidenceOf = (request: ChangeRequest, at: string): Evidence => ({
@@ -30,13 +77,35 @@ export const changeEvidenceOf = (request: ChangeRequest, at: string): Evidence =
  * fact). A value the fact in force already has is not filed again; the same waiting value only gains the new message as evidence.
  */
 export class BrainChangeRequestsService {
+    private hook: ChangeRequestHook | null = null
+
     constructor(
         @InjectClock() private readonly clock: Clock,
         private readonly facts: BrainFactsService,
     ) {}
 
-    /** Files one change request; answers the waiting proposal, or the fact in force when it already says so. */
-    async propose(workspaceId: string, request: ChangeRequest): Promise<ChangeFiled> {
+    /** Registers what happens around a filed request (one hook per app: the team chat's card). */
+    whenFiled(hook: ChangeRequestHook): void {
+        this.hook = hook
+    }
+
+    /** Refuses a reason that does not say why (empty, too short, or a copy of the value or of the quoted words). */
+    checkReason(reason: string | null | undefined, value: string | null, quotes: ReadonlyArray<string>): void {
+        const problem = reasonProblemOf(reason, value, quotes)
+        if (problem !== null) throw reasonRefusal(problem)
+    }
+
+    /**
+     * Files one change request; answers the waiting proposal, or the fact in force when it already says so. The reason is mandatory;
+     * the hook vets the words before filing and posts the card after (the same request again rewrites the same card).
+     */
+    async propose(workspaceId: string, request: ReasonedChangeRequest): Promise<ChangeFiled> {
+        const filed = await this.filed(workspaceId, request)
+        await this.hook?.filed(workspaceId, request, filed)
+        return filed
+    }
+
+    private async filed(workspaceId: string, request: ReasonedChangeRequest): Promise<ChangeFiled> {
         const normal = normalFact({
             subjectLabel: request.subjectLabel,
             attributeLabel: request.attributeLabel,
@@ -45,6 +114,8 @@ export class BrainChangeRequestsService {
         if (normal === null || request.quote.trim() === "") {
             throw new BrainFactsError({ code: BrainFactsErrorCode.FactIncomplete })
         }
+        this.checkReason(request.reason, request.value, [request.quote])
+        await this.hook?.vet(workspaceId, request)
         const evidence = changeEvidenceOf(request, this.clock.now().toISOString())
         const [active] = await this.facts.byKey(
             workspaceId,

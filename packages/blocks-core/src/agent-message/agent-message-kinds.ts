@@ -77,6 +77,48 @@ export const reportRunKind: AgentMessageKind<z.ZodType<ApprovalDecisionPayload>>
     actions: { approve: false, edit: "none", reject: false },
 })
 
+/**
+ * One fact the engine attaches to a message, in words: a plain label (`name`) and its value. A fact marked `technical` holds a raw
+ * value a person cannot read (an error code, an id, the raw words of an error): the card folds it under its technical details and never
+ * shows it as the content.
+ */
+export interface MessageFact {
+    /** The plain label a person reads, in the team's language. */
+    readonly name: string
+    /** The value, in words where a mapping exists. */
+    readonly value: string
+    /** True for a raw value (a code, an id, raw error words): folded under the technical details, never the content. */
+    readonly technical?: boolean | undefined
+}
+
+/** The schema of one fact of a message. */
+export const messageFactSchema: z.ZodType<MessageFact> = z.object({
+    name: z.string().max(80),
+    value: z.string().max(400),
+    technical: z.boolean().optional(),
+})
+
+/** What a `report.facts` message carries: one readable sentence, then the facts behind it. */
+export interface ReportFactsPayload {
+    /** The readable sentence; no code, no id, no raw value in it. */
+    readonly text: string
+    /** The facts, worded ones first; raw values only as `technical` facts. */
+    readonly facts: ReadonlyArray<MessageFact>
+}
+
+/** The payload schema of a `report.facts` message. */
+export const reportFactsPayload: z.ZodType<ReportFactsPayload> = z.object({
+    text: z.string().max(4000),
+    facts: z.array(messageFactSchema).max(40),
+})
+
+/** The report of the engine itself (NIVO speaks, not the AI): a readable sentence and its facts. Built by the engine only, never by a tool call. Read only. */
+export const reportFactsKind: AgentMessageKind<z.ZodType<ReportFactsPayload>> = defineAgentMessageKind({
+    id: "report.facts",
+    payload: reportFactsPayload,
+    actions: { approve: false, edit: "none", reject: false },
+})
+
 /** Who handles a suggested way on: the workflow runs it again, or a person does it. */
 export const STOPPED_HANDLERS = ["workflow", "person"] as const
 
@@ -102,8 +144,8 @@ export interface WorkflowStoppedPayload {
     readonly by: "ai" | "engine"
     readonly reason: string
     readonly question: string | null
-    /** True values the engine attached; never worded by a model. */
-    readonly facts: ReadonlyArray<{ readonly name: string; readonly value: string }>
+    /** True values the engine attached, worded by code (never by a model); raw values only as `technical` facts. */
+    readonly facts: ReadonlyArray<MessageFact>
     /** 2 to 3 from the AI; none when the engine speaks. */
     readonly suggestions: ReadonlyArray<StoppedSuggestion>
     /** The freeze decisions, only when the AI itself failed. */
@@ -126,7 +168,7 @@ export const workflowStoppedPayload: z.ZodType<WorkflowStoppedPayload> = z.objec
     by: z.enum(["ai", "engine"]),
     reason: stoppedText,
     question: stoppedText.nullable(),
-    facts: z.array(z.object({ name: z.string().max(80), value: z.string().max(400) })).max(40),
+    facts: z.array(messageFactSchema).max(40),
     suggestions: z.array(z.object({ text: z.string().min(1).max(300), handledBy: z.enum(STOPPED_HANDLERS) })).max(3),
     decisions: z.array(z.enum(STOPPED_DECISIONS)).max(3),
     repeats: z.number().int().min(1),
@@ -142,13 +184,14 @@ export const workflowStoppedKind: AgentMessageKind<z.ZodType<WorkflowStoppedPayl
     actions: { approve: false, edit: "none", reject: false },
 })
 
-/** The kinds the core knows because they name no domain: a text, a table of rows, an approval and a run report. Media, invoices, payment requests and reports are registered by their modules. */
+/** The kinds the core knows because they name no domain: a text, a table of rows, an approval, a run report, a stopped workflow and the engine's report with facts. Media, invoices, payment requests and reports are registered by their modules. */
 export const coreAgentMessageKinds: ReadonlyArray<AgentMessageKind> = [
     messageTextKind,
     recordsRowsKind,
     approvalDecisionKind,
     reportRunKind,
     workflowStoppedKind,
+    reportFactsKind,
 ]
 
 /** The kind with this id among the given ones, or none. */

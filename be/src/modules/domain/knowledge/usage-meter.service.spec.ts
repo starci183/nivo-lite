@@ -11,9 +11,23 @@ import { KnowledgeLogEvent } from "./knowledge.log-events"
 import type { QuotaStatusRow } from "./persistence/usage.rows"
 
 /** The statements `callDbFunction` sends for the usage functions. */
-const RECORD_USAGE_EVENT = 'SELECT * FROM "public"."record_ai_usage"($1, $2, $3, $4, $5, $6, $7, $8)'
+const RECORD_USAGE_EVENT = 'SELECT * FROM "public"."record_ai_usage_work"($1, $2, $3, $4, $5, $6, $7, $8, $9)'
+
+/** The work facts of a call booked outside any scope. */
+const NO_WORK = JSON.stringify({
+    run_id: null,
+    work_kind: null,
+    work_ref: null,
+    step_key: null,
+    agent_id: null,
+    failure: null,
+    try_number: null,
+    duration_ms: null,
+    purpose: null,
+})
 const SELECT_QUOTA_STATUS = 'SELECT * FROM "public"."ai_quota_status"($1)'
 const POST_USAGE_NOTICE = 'SELECT * FROM "public"."post_ai_usage_notice"($1, $2, $3, $4)'
+import { withRunScope, withWorkScope } from "@modules/platform/logging"
 import { UsageMeterService } from "./usage-meter.service"
 
 const recordOf = builder<UsageRecord>({
@@ -70,8 +84,50 @@ describe("UsageMeterService", () => {
                 0,
                 0.001,
                 false,
+                NO_WORK,
             ])
             expect(em.query).toHaveBeenCalledTimes(2)
+        })
+
+        it("books the call to the run and the work in scope: the document a job reads, the agent and step of a node", async () => {
+            const em = mockEntityManager({ query: [INSERTED, [SELECT_QUOTA_STATUS, [rowOf()]]] })
+            const { meter } = await build(em)
+            const agentId = "0b6f6c2e-1111-4222-8333-444455556666"
+
+            await withRunScope("9e0c8d1a-1111-4222-8333-444455556666", () =>
+                withWorkScope({ kind: "document_read", ref: "source:src-1", agentId }, () => meter.record(recordOf())),
+            )
+
+            const facts: unknown = JSON.parse(String(em.query.mock.calls[0]?.[1]?.[8]))
+            expect(facts).toMatchObject({
+                run_id: "9e0c8d1a-1111-4222-8333-444455556666",
+                work_kind: "document_read",
+                work_ref: "source:src-1",
+                agent_id: agentId,
+                failure: null,
+            })
+        })
+
+        it("books a FAILED try estimated from the prompt it sent, no output, priced, with its failure and try (never billed)", async () => {
+            const em = mockEntityManager({ query: [INSERTED, [SELECT_QUOTA_STATUS, [rowOf()]]] })
+            const { meter } = await build(em)
+
+            await meter.record(
+                recordOf({
+                    kind: "brain",
+                    model: "claude-sonnet-5-5",
+                    usage: null,
+                    promptChars: 3000,
+                    completionChars: 0,
+                    failure: "timeout",
+                    tryNumber: 2,
+                }),
+            )
+
+            const args = em.query.mock.calls[0]?.[1] ?? []
+            // 3,000 characters = 1,000 tokens estimated; Sonnet 5.5 at $2 per million input tokens.
+            expect(args.slice(4, 8)).toEqual([1000, 0, 0.002, true])
+            expect(JSON.parse(String(args[8]))).toMatchObject({ failure: "timeout", try_number: 2 })
         })
 
         it("does nothing more when the allowance cannot be read", async () => {

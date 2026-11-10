@@ -19,7 +19,6 @@ import {
     AgentRunHandlersService,
     AgentRunsService,
     AgentRunsViewService,
-    type RunDetail,
     type RunOpen,
     type RunView,
     type StepSpec,
@@ -61,7 +60,7 @@ import { LOGGER, type Logger } from "@modules/platform/logging"
 import { leadMemoryWorldOf } from "../../../fixtures/builders/lead-memory-world.builder"
 import { registerOutside, rightsProvidersOf } from "../../thread-world-outside"
 import { WorldError } from "../../thread-world-records"
-import { LEAD, type ThreadProcess } from "../../thread-world"
+import { LEAD, runRowOf, runsViewOf, type ThreadProcess } from "../../thread-world"
 import type { MoneyDb } from "./thread-world-money"
 
 // The PROCESS of the money world (package P7): one app process over a `MoneyDb`, composed as the 0-9 world's `processOf` composes one
@@ -233,12 +232,7 @@ const moneyRunOf = (db: MoneyDb, input: RunOpen): RunView => {
         spoken: false,
     }
     db.runs.set(id, view)
-    db.records.put("agent.run", id, {
-        agentId: input.agentId,
-        wakeId: input.wakeId,
-        status: "running",
-        engine: "legacy",
-    })
+    db.records.put("agent.run", id, runRowOf(db, input))
     return view
 }
 
@@ -281,16 +275,8 @@ const workProvidersOf = (db: MoneyDb): Array<Provider> => [
             },
         }),
     },
-    {
-        provide: AgentRunsViewService,
-        useValue: mock<AgentRunsViewService>({
-            detail: (_ws: string, _agent: string, runId: string) => {
-                const row = db.records.get("agent.run", runId)
-                const engine = row?.data.engine === "langgraph" ? "langgraph" : "legacy"
-                return Promise.resolve(row === null ? null : mock<RunDetail>({ engine }))
-            },
-        }),
-    },
+    // The REAL run reader (FX1, D-P10-6): what the thread runs read a run's engine through, mapper included.
+    { provide: AgentRunsViewService, useValue: runsViewOf(db.records) },
 ]
 
 /**

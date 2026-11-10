@@ -1,10 +1,16 @@
 import type { MessageBundle } from "@modules/platform/i18n"
+import { DOCUMENT_CRITIC_MESSAGES } from "./document-critic.messages"
 
 /** Display text of the dossier-review codes, the title and detail of every rule finding, and the tail of a NIVO draft; Vietnamese and English. */
 export const DOSSIER_REVIEW_MESSAGES: MessageBundle = {
     vi: {
+        ...DOCUMENT_CRITIC_MESSAGES.vi,
         "unfiled.label": "các tài liệu chưa xếp hồ sơ",
         "errors.DOSSIER_REVIEW_FINDING_NOT_FOUND": "Không tìm thấy phát hiện này trong không gian làm việc.",
+        "errors.BRAIN_CRITIC_NOT_FOUND": "Không tìm thấy điểm soát hoặc tài liệu này.",
+        "errors.BRAIN_CRITIC_DECIDED": "Điểm này đã được trả lời, bỏ qua, hoặc không còn trong tài liệu.",
+        "errors.BRAIN_CRITIC_ANSWER_INVALID": "Lựa chọn này không có trong điểm soát, hoặc cần điền giá trị.",
+        "errors.BRAIN_CRITIC_RUNNING": "NIVO đang soát tài liệu này. Thử lại khi soát xong.",
         "errors.DOSSIER_REVIEW_DRAFT_NOT_FOUND": "Không tìm thấy dự thảo này trong không gian làm việc.",
         "errors.DOSSIER_REVIEW_TRANSITION_REFUSED":
             "Phát hiện hoặc dự thảo không còn ở trạng thái cho phép thao tác này.",
@@ -83,8 +89,13 @@ export const DOSSIER_REVIEW_MESSAGES: MessageBundle = {
             'Dự thảo do NIVO soạn ngày {{date}} theo phát hiện "{{title}}". Cần rà soát, điền chỗ trống và ký trước khi sử dụng.',
     },
     en: {
+        ...DOCUMENT_CRITIC_MESSAGES.en,
         "unfiled.label": "the documents not filed under a dossier",
         "errors.DOSSIER_REVIEW_FINDING_NOT_FOUND": "This finding does not exist in the workspace.",
+        "errors.BRAIN_CRITIC_NOT_FOUND": "This critique point or document does not exist in the workspace.",
+        "errors.BRAIN_CRITIC_DECIDED": "This point was already answered, skipped, or is no longer in the document.",
+        "errors.BRAIN_CRITIC_ANSWER_INVALID": "This answer is not one the point offers, or it needs a value.",
+        "errors.BRAIN_CRITIC_RUNNING": "NIVO is reviewing this document. Try again when it is done.",
         "errors.DOSSIER_REVIEW_DRAFT_NOT_FOUND": "This draft does not exist in the workspace.",
         "errors.DOSSIER_REVIEW_TRANSITION_REFUSED": "The finding or draft is no longer in a state that allows this.",
         "errors.DOSSIER_REVIEW_REASON_REQUIRED": "Write a reason or what was done, 3 to 500 characters.",

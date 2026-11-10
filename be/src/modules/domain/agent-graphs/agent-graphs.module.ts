@@ -51,6 +51,7 @@ import { AgentGraphFreezeGateService } from "./agent-graph-freeze-gate.service"
 import { AgentGraphCallGuardService } from "./agent-graph-call-guard.service"
 import { AgentGraphHoursGateService } from "./agent-graph-hours-gate.service"
 import { AgentGraphConversationHoldsService } from "./agent-graph-conversation-holds.service"
+import { AgentGraphConversationReleaseService } from "./agent-graph-conversation-release.service"
 import { AgentGraphNodeStepService } from "./agent-graph-node-step.service"
 import { AgentGraphStepMemoryService } from "./agent-graph-step-memory.service"
 import { AgentGraphRunNoticesService } from "./agent-graph-run-notices.service"
@@ -175,6 +176,7 @@ const WHOLE: Part = {
         AgentGraphCallGuardService,
         AgentGraphHoursGateService,
         AgentGraphConversationHoldsService,
+        AgentGraphConversationReleaseService,
         AgentGraphWakeNoticesService,
         AgentGraphFlowRunsService,
         AgentGraphRunNoticesService,

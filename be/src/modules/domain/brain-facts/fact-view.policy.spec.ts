@@ -1,6 +1,7 @@
 import { Test } from "@nestjs/testing"
 import type { FactRecord } from "./brain-facts.contracts"
-import { factLine, inForce, searchFacts, visibleTo } from "./fact-view.policy"
+import { FACT_VECTOR_HIT, factLine, hybridFacts, inForce, searchFacts, visibleTo } from "./fact-view.policy"
+import * as facts from "@tests/fixtures/builders/brain-facts.builder"
 const SUBJECT = Symbol("fact-view.policy")
 
 const build = async () => {
@@ -104,5 +105,34 @@ describe("fact views", () => {
         expect(subject.searchFacts(facts, "a ?", 5)).toEqual([])
         expect(subject.searchFacts(facts, "unknown", 5)).toEqual([])
         expect(subject.searchFacts([], "combo", 5)).toEqual([])
+    })
+})
+
+describe("fact-view.policy hybridFacts: fact search by words AND meaning (BG2)", () => {
+    const fee = facts.factOf({ id: "fee", subjectKey: "giao-hang", subjectLabel: "Giao hang", attribute: "phi-ship-noi-thanh", attributeLabel: "Phi ship noi thanh", value: "30.000 d" })
+    const hours = facts.factOf({ id: "hours", subjectKey: "tiem", subjectLabel: "Tiem", attribute: "gio-mo-cua", attributeLabel: "Gio mo cua", value: "8:00-20:00", trust: 95 })
+    const roses = facts.factOf({ id: "roses", subjectKey: "bo-hoa-hong-do", subjectLabel: "Bo hoa hong do", attribute: "gia", attributeLabel: "Gia", value: "350.000 d" })
+
+    it("finds a fact by meaning when no word of the question is in it", () => {
+        expect(hybridFacts([fee, hours, roses], [{ fact: fee, distance: 0.3 }], "tien van chuyen bao nhieu", 5).map((f) => f.id)).toEqual(["fee"])
+    })
+
+    it("joins both halves: a near AND worded fact outranks a worded-only one", () => {
+        const near = [{ fact: hours, distance: 0.2 }]
+        expect(hybridFacts([fee, hours], near, "phi ship gio mo cua", 5).map((f) => f.id)).toEqual(["hours", "fee"])
+    })
+
+    it("drops a vector-only fact at or beyond the hit distance", () => {
+        expect(hybridFacts([fee], [{ fact: fee, distance: FACT_VECTOR_HIT }], "xyz", 5)).toEqual([])
+        expect(FACT_VECTOR_HIT).toBe(0.5)
+    })
+
+    it("never answers a vector hit outside the view (another lens, not in force)", () => {
+        expect(hybridFacts([fee], [{ fact: roses, distance: 0.01 }], "hoa", 5)).toEqual([])
+    })
+
+    it("is the word search when there is no vector, cut at the limit", () => {
+        expect(hybridFacts([fee, hours, roses], [], "phi ship", 5).map((f) => f.id)).toEqual(["fee"])
+        expect(hybridFacts([fee, hours, roses], [{ fact: fee, distance: 0.1 }, { fact: roses, distance: 0.2 }], "", 1).map((f) => f.id)).toEqual(["fee"])
     })
 })

@@ -6,6 +6,8 @@ export interface RunUsage {
     readonly completion_tokens: number
     /** Prompt tokens served from the provider's cache. */
     readonly cached_tokens: number
+    /** Prompt tokens written to the provider's cache; absent when not told. */
+    readonly cache_write_tokens?: number | undefined
     /** The provider cost of the call. */
     readonly cost: number
     /** The model that answered. */
@@ -103,6 +105,22 @@ export interface GenerationInput {
     readonly responseFormat: ResponseFormat
     /** The deadline of the caller, ms. */
     readonly timeoutMs: number
+    /** The agent run the caller worked in when it asked (its run scope), or null: the runner books the call to it. */
+    readonly runId?: string | null | undefined
+    /** The work the caller did when it asked (its work scope), or null: the runner books the call to it (U1). */
+    readonly work?: GenerationWork | null | undefined
+}
+
+/** The work a queued generation was asked for, copied from the caller's work scope into the stored input. */
+export interface GenerationWork {
+    /** The kind of work (`learning`, `chat_turn`, ...). */
+    readonly kind: string
+    /** The record, `<what>:<id>`, or null. */
+    readonly ref: string | null
+    /** The run step, or null. */
+    readonly stepKey: string | null
+    /** The agent, or null. */
+    readonly agentId: string | null
 }
 
 /** A queued request returned immediately, before the agent runs. */

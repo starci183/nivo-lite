@@ -453,10 +453,20 @@ describe("AgentGraphAdminService the models a draft names", () => {
     it("saves Auto and every selectable model", async () => {
         const { service, graphs } = await build()
 
-        for (const model of ["auto", "claude-sonnet-5-5", "deepseek/deepseek-v4.1-flash"]) {
+        for (const model of ["auto", "claude-sonnet-5-5", "claude-haiku-5-5"]) {
             await expect(service.saveDraft(ACTOR, "agent-1", 4, draftOf(model))).resolves.toBe(5)
         }
         expect(graphs.saveDraft).toHaveBeenCalledTimes(3)
+    })
+
+    it("refuses a draft that still names the retired DeepSeek flash (owner: no OpenRouter), with the model code", async () => {
+        const { service, graphs } = await build()
+
+        await expect(service.saveDraft(ACTOR, "agent-1", 4, draftOf("deepseek/deepseek-v4.1-flash"))).rejects.toMatchObject({
+            code: AgentGraphsErrorCode.ModelRefused,
+            params: { count: "1", first: "match", problems: JSON.stringify([{ code: "MODEL_RETIRED", nodeKey: "match" }]) },
+        })
+        expect(graphs.saveDraft).not.toHaveBeenCalled()
     })
 
     it("refuses an unknown model id, and a model on a node that calls no AI, with a code of its own", async () => {

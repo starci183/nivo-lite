@@ -108,7 +108,16 @@ describe("step records", () => {
         expect(stepRecordOf(stepRowOf({ effect })).effect).toEqual(expected)
     })
 
+    it.each([null, undefined])(
+        "reads a step row that names no deadline (%s: a thread's step row, D-P10-6) with the default deadline",
+        async (deadlineMs) => {
+            const { stepRecordOf } = await buildSubject()
+            expect(stepRecordOf(stepRowOf({ deadlineMs })).deadlineMs).toBe(120_000)
+        },
+    )
+
     it.each([
+        ["a deadline that is no number", { deadlineMs: "soon" }],
         ["an effect of an unknown kind", { effect: { kind: "other" } }],
         ["a compensable effect with no handler", { effect: { kind: "compensable" } }],
         ["a step status it does not know", { status: "limbo" }],

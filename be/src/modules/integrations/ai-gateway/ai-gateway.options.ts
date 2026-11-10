@@ -10,22 +10,22 @@ export interface AiGatewayKey {
 
 /** One OpenAI-compatible upstream endpoint of the pool: where it is and the keys that reach it. */
 export interface AiGatewayProvider {
-    /** The provider id in the router: `upstream`, `embeddings` or `anthropic`. */
+    /** The provider id in the router: `anthropic` (every chat profile) or `openai` (embeddings). */
     readonly id: string
-    /** The protocol of the router's provider: `anthropic` (the Messages API through its adapter); absent, OpenAI-compatible. */
-    readonly kind?: "anthropic" | undefined
+    /**
+     * The protocol of the router's provider: `anthropic` (the Messages API through its adapter) or `openai` (OpenAI's own API).
+     */
+    readonly kind: "anthropic" | "openai"
     /** The base URL the OpenAI paths hang from, without a trailing slash. */
     readonly baseUrl: string
     /** The keys; never empty for a provider that is kept. */
     readonly keys: ReadonlyArray<AiGatewayKey>
 }
 
-/** The upstream models the two profiles stand for. */
+/** The models the profiles stand for. */
 export interface AiGatewayModels {
-    /** The model behind the `work` profile (chat). */
+    /** The cheap chat model on Anthropic (blocks-core `CHEAP_MODEL`, Claude Haiku 5.5): first behind `work`, `haiku` and Auto light. */
     readonly work: string
-    /** The model behind the `embed` profile (embeddings). */
-    readonly embed: string
     /** The strong model on Anthropic, behind the `sonnet` profile and Auto's heavy steps. */
     readonly strong: string
 }

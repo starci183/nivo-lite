@@ -10,7 +10,7 @@ export type { ReactionView, ReplyView } from "./team-chat-reaction.contracts"
 export { TeamChatNativeService } from "./team-chat-native.service"
 export { TeamChatModule } from "./team-chat.module"
 export { TeamChatRoomsService } from "./team-chat.service"
-export type { AgentLineReplied, AgentLineReply } from "./team-chat.service"
+export type { AgentLineReplied, AgentLineReply, PersonLineHeard, PersonLineListener } from "./team-chat.service"
 export { lineKeyOf } from "./team-chat.policy"
 export { TeamChatStoreService } from "./team-chat-store.service"
 export { TeamChatAccessService } from "./team-chat-access.service"
@@ -54,6 +54,30 @@ export {
     uploadPayloadOf,
 } from "./team-chat-wire.mapper"
 export { NO_NEEDS, STOP_CARD_MESSAGE_KIND } from "./stop-card.policy"
+export {
+    BRAIN_CHANGE_MESSAGE_KIND,
+    brainChangeCardViewOf,
+    brainChangeKeyOf,
+    brainChangeMessageOf,
+    storedBrainChangeOf,
+} from "./brain-change-card.policy"
+export type {
+    BrainChangeCardView,
+    BrainChangeEvidence,
+    BrainChangePayload,
+    BrainChangeViewerRole,
+} from "./brain-change-card.contracts"
+export { brainChangePayload } from "./brain-change-card.schema"
+export {
+    channelFactOf,
+    codeFactsOf,
+    factWordsOf,
+    reasonWordsOf,
+    STUCK_FACT,
+    wordedStopFactsOf,
+    wordOr,
+} from "./engine-facts.policy"
+export type { BankNameOf, FactWords, FactWordsSource, StopFactContext, WordsOfKey } from "./engine-facts.policy"
 export type {
     StopCardApproval,
     StopCardKind,

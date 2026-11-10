@@ -64,6 +64,15 @@ describe("priceOf", () => {
         expect(subject.priceOf("qwen/qwen3-embedding-8b", 1_000_000, 0)).toBeCloseTo(0.01)
         expect(subject.priceOf("other/model", 1_000_000, 1_000_000)).toBeCloseTo(1.5)
     })
+
+    it("reads the one price table: Claude Haiku 5.5, and an embeddings call booked under its identity (D-E1-1)", async () => {
+        const subject = await build()
+
+        expect(subject.priceOf("claude-haiku-5-5", 1_000_000, 1_000_000)).toBeCloseTo(0.6)
+        expect(subject.priceOf("text-embedding-3-small@1536", 1_000_000, 0)).toBeCloseTo(0.02)
+        // The old era's profile name matched no line and was priced at the default $0.30 per million.
+        expect(subject.priceOf("embed", 1_000_000, 0)).toBeCloseTo(0.3)
+    })
 })
 
 describe("estimateTokens", () => {

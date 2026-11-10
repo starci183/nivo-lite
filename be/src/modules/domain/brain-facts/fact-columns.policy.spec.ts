@@ -38,7 +38,7 @@ describe("fact-columns.policy RETURNED", () => {
     it("lists every column of a write, aliasing the snake_case ones to entity properties", () => {
         const columns = RETURNED.split(", ")
 
-        expect(columns).toHaveLength(28)
+        expect(columns).toHaveLength(29)
         expect(columns.slice(0, 3)).toEqual([
             "id",
             'workspace_id AS "workspaceId"',
@@ -47,6 +47,7 @@ describe("fact-columns.policy RETURNED", () => {
         expect(columns).toContain('proposal_kind AS "proposalKind"')
         expect(columns).toContain("evidence")
         expect(columns).toContain("version")
+        expect(columns).toContain('review_flags AS "reviewFlags"')
     })
 })
 

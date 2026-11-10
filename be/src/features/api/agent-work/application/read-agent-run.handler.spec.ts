@@ -49,8 +49,18 @@ const doneRun = (): RunDetail =>
     }) as unknown as RunDetail
 
 const MATCH: RunCallKindUsage = {
+    stepKey: "match",
     purpose: "accounting.match-payment:agent",
     calls: 2,
+    tries: 3,
+    failedTries: 1,
+    cacheWriteTokens: 0,
+    failedPromptTokens: 8_000,
+    failedCostUsd: 0.016,
+    failures: ["timeout"],
+    workKinds: ["node"],
+    credits: 10.884956,
+    failedCredits: 14.159292,
     maxTry: 2,
     promptTokens: 16_000,
     cachedTokens: 8_064,
@@ -100,6 +110,27 @@ describe("ReadAgentRunHandler", () => {
 
         expect(detail?.aiCalls).toEqual([MATCH])
         expect(usage.callKindsByRun).toHaveBeenCalledWith("ws-1", "run-1")
+    })
+
+    it("answers the run's totals: exact USD and credits as fractions, the failed tries apart", async () => {
+        const { handler } = build()
+
+        const detail = await handler.execute(query())
+
+        expect(detail?.aiTotals).toEqual({
+            calls: 2,
+            tries: 3,
+            failedTries: 1,
+            promptTokens: 16_000,
+            cachedTokens: 8_064,
+            cacheWriteTokens: 0,
+            completionTokens: 900,
+            reasoningTokens: 600,
+            costUsd: 0.0123,
+            credits: 10.884956,
+            failedCostUsd: 0.016,
+            failedCredits: 14.159292,
+        })
     })
 
     it("reads no calls for a run the agent does not have", async () => {

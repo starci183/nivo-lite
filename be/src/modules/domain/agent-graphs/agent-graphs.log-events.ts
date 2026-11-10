@@ -30,6 +30,8 @@ export enum AgentGraphsLogEvent {
     HeldForHours = "agent_graphs.held_for_hours",
     /** A customer's line reached an agent other than the one keeping its conversation; it went on to the keeper. */
     SentToKeeper = "agent_graphs.sent_to_keeper",
+    /** A person handed a conversation back ("hand back to the agent"): which holds went, never the customer. */
+    ConversationReleased = "agent_graphs.conversation_released",
     /** A step could not complete: the raw technical cause, kept for developers whatever the AI core then decided. */
     StepTroubled = "agent_graphs.step_troubled",
     /** The AI core produced the output of a step that could not complete, and the run went on. */

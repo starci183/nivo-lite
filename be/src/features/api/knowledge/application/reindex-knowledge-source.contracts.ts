@@ -6,4 +6,6 @@ export interface ReindexKnowledgeSourceRequest {
     readonly sourceId: string
     /** The new text; omitted keeps the text. */
     readonly content?: string | undefined
+    /** A new upload of the same document, for a file; omitted keeps the file. */
+    readonly storagePath?: string | undefined
 }

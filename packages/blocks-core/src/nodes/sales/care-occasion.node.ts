@@ -9,8 +9,8 @@ import { itemsTextOf, orderLinesOf } from "../payment/payment-request.policy"
 import { nodeGoalOf } from "../node-ui"
 import type { NodeLocale, NodeSchema } from "../node-schema.types"
 import { CARE_RIGHTS, careFactsOfLead, careLeadOf, careMemoryRowOf, carePaidOrdersOf } from "./care.data"
-import { nextOccurrenceOf, occasionOfSuffix, occasionStandingOf } from "./care.policy"
-import type { CareOccasion } from "./care.policy"
+import { isDue, nextOccurrenceOf, occasionOfSuffix, occasionStandingOf } from "./care.policy"
+import type { CareOccasion, OccasionStanding } from "./care.policy"
 import { CARE_VOICE, agentAnswer, arm } from "./care.steps"
 
 const ID = "sales.care-occasion"
@@ -22,6 +22,11 @@ export interface CareOccasionInput {
     readonly leadId: string
     /** Names the date among the customer's (`= trigger.suffix`), or null. */
     readonly suffix: string | null
+    /**
+     * The moment the run is due (`= trigger.dueAt`), or null/absent. A timer's own wake carries the moment it was armed for, which the
+     * date already reaches; "run now" from the schedule carries the press moment, so the step writes although the date is still ahead.
+     */
+    readonly dueAt?: string | null | undefined
     /** The language of the message. */
     readonly locale: NodeLocale
 }
@@ -47,6 +52,7 @@ const params: z.ZodType<CareOccasionParams, { occasionLeadDays?: number | undefi
 const input: NodeSchema<CareOccasionInput> = z.object({
     leadId: z.string().max(MAX_ID).min(1),
     suffix: z.string().max(MAX_LINE).nullable(),
+    dueAt: z.string().max(MAX_LINE).nullable().optional(),
     locale: z.enum(["vi", "en"]),
 })
 
@@ -60,6 +66,13 @@ const output: NodeSchema<CareOccasionOutput> = z.object({
 const GUIDANCE =
     "The customer's date (the occasion) is coming up. Write ONE gentle message: mention the occasion and suggest ordering something like " +
     "their last order for it. No pressure, no discount, no price. Send it with `customer.leadId` (the tool finds their conversation)."
+
+/**
+ * Where the date stands for this run: the clock's standing, except that a run whose own due moment has come (a forced "run now" from the
+ * schedule) treats a date still ahead as due. A run with no due moment keeps the clock's standing (the normal path is unchanged).
+ */
+const standingFor = (standing: OccasionStanding, dueAt: string | null | undefined, now: Date): OccasionStanding =>
+    standing.kind === "later" && typeof dueAt === "string" && isDue(dueAt, now) ? { kind: "due", on: standing.on } : standing
 
 /** The moment to write about a yearly date after the one just handled: the lead time before its next occurrence. */
 const nextYearsWriteAt = (occasion: CareOccasion, on: string, leadDays: number): string | null => {
@@ -110,7 +123,8 @@ export const salesCareOccasionNode: NodeDefinition<typeof input, typeof output, 
         const occasion = occasionOfSuffix(facts.occasions, suffix)
         if (lead === undefined || occasion === undefined || facts.optedOut) return closed
         const { occasionLeadDays } = context.params
-        const standing = occasionStandingOf(occasion, context.now(), occasionLeadDays)
+        const now = context.now()
+        const standing = standingFor(occasionStandingOf(occasion, now, occasionLeadDays), given.dueAt, now)
         if (standing.kind === "gone") return closed
         if (standing.kind === "later") {
             await arm(context, { kind: "occasion", ref: lead.id, suffix, dueAt: standing.writeAt })
@@ -172,6 +186,29 @@ export const salesCareOccasionNode: NodeDefinition<typeof input, typeof output, 
                 },
             ],
             store: { "sales-lead": [LEAD], "agent-lead-memory": [careMemoryRowOf("l1", { occasions: [{ label: "birthday", date: "06-01" }] })] },
+        },
+        {
+            name: "run now from the schedule: a date still far away is written about at once, and next year is armed",
+            params: { occasionLeadDays: 7 },
+            input: { leadId: "l1", suffix: "birthday-6-1", dueAt: "1970-01-01T00:00:00.000Z", locale: "en" },
+            output: { leadId: "l1", result: "sent" },
+            grant: EXAMPLE_GRANT,
+            model: [
+                { call: { tool: TOOL.customerMessageSend, args: { leadId: "l1", text: SUGGESTION } } },
+                { done: { leadId: "l1", result: "sent" } },
+            ],
+            effects: [
+                { kind: TOOL.customerMessageSend, payload: { leadId: "l1", text: SUGGESTION } },
+                {
+                    kind: TOOL.careSchedule,
+                    payload: { kind: "occasion", ref: "l1", dueAt: "1971-05-24T17:00:00.000Z", suffix: "birthday-6-1" },
+                },
+            ],
+            store: {
+                order: [ORDER],
+                "sales-lead": [LEAD],
+                "agent-lead-memory": [careMemoryRowOf("l1", { recipientName: "her", occasions: [{ label: "birthday", date: "06-01" }] })],
+            },
         },
         {
             name: "a customer who asked to be left alone gets no suggestion",

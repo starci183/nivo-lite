@@ -50,6 +50,11 @@ export interface AgentSearch {
     readonly limit: number
     /** How long the embedding of the question may take before the search falls back to words, milliseconds; absent = 8000. */
     readonly embedTimeoutMs?: number
+    /**
+     * The question already embedded by the caller with the embedding model in use (brain.search embeds it for its fact half): when it
+     * has EMBEDDING_DIMENSIONS numbers the search uses it and makes no embedding call of its own; absent = the search embeds it.
+     */
+    readonly questionVector?: ReadonlyArray<number>
 }
 
 /** One retrieved passage, labelled by layer: nivo = base knowledge of NIVO, business = the owner's documents. */
@@ -76,6 +81,8 @@ export interface Passage {
     readonly topic: string | null
     /** The order of the passage inside its document (from 0), or null for the base knowledge. */
     readonly order?: number | null
+    /** True for a business passage not released to customers yet (trust gate); its content then starts with `UNREVIEWED_MARK`. */
+    readonly unreviewed?: boolean
 }
 
 /** One model call to meter. */
@@ -98,6 +105,13 @@ export interface UsageRecord {
     readonly promptChars?: number
     /** The characters received, to estimate tokens when the provider reported none. */
     readonly completionChars?: number
+    /**
+     * Set for a FAILED try (`timeout`, `provider`, `length`, `empty`): booked estimated from `promptChars`, priced, never billed (U1).
+     * Absent for an answered call.
+     */
+    readonly failure?: string | undefined
+    /** Which try of the call this was, from one; absent when the caller does not count. */
+    readonly tryNumber?: number | undefined
 }
 
 /** This month's use against the allowance of a workspace. */

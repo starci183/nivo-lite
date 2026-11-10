@@ -22,6 +22,7 @@ export class CreateKnowledgeUploadHandler extends ICQRSHandler<CreateKnowledgeUp
             command.params.request.workspaceId,
             command.params.request.filename,
             command.params.request.contentType,
+            command.params.request.sizeBytes,
         )
     }
 }

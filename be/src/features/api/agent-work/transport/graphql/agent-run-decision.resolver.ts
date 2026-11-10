@@ -31,6 +31,7 @@ export class AgentRunDecisionResolver {
                     installationId: input.installationId,
                     runId: input.runId,
                     verdict: input.verdict as AgentRunVerdict,
+                    stepKey: input.stepKey ?? null,
                     locale,
                 },
                 principal,

@@ -1,24 +1,27 @@
-import { Injectable, Optional } from "@nestjs/common"
-import type { OnModuleInit } from "@nestjs/common"
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
 import type { EffectCall, EffectPayload, NodeQuery } from "@nivo-lite/agent-sdk/node"
 import {
     TOOL,
     agentMessagePostEffect,
     orderAddressOf,
     refusalOf,
+    reportFactsKind,
+    reportFactsPayload,
     teamOrderCardOf,
     teamPaymentCardOf,
     workflowStoppedPayload,
+    type AgentMessagePostPayload,
+    type CardOrder,
+    type EffectFact,
+    type ReportFactsPayload,
+    type TeamAudience,
+    type TeamChatAnswer,
+    type WorkflowStoppedPayload,
 } from "@nivo-lite/blocks-core"
-import type {
-    AgentMessagePostPayload,
-    CardOrder,
-    EffectFact,
-    TeamAudience,
-    WorkflowStoppedPayload,
-} from "@nivo-lite/blocks-core"
-import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import type { NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
+import { bankDisplayNameOf } from "@modules/domain/channel-connections"
+import { GraphNodeRegistryService, type NodeRow, type NodeTurn } from "@modules/domain/graph-nodes"
+import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
+import { factWordsOf, wordedStopFactsOf, type FactWords } from "./engine-facts.policy"
 import { lineKeyOf } from "./team-chat.policy"
 import type { StopCardSection, StopCardSectionGiven } from "./stop-card.contracts"
 import {
@@ -32,6 +35,8 @@ import {
 import { stopCardSectionGiven } from "./stop-card.schema"
 import type { TeamCardMessage } from "./team-chat-audience.contracts"
 import { TeamChatAudienceService } from "./team-chat-audience.service"
+import { TeamChatCardsService } from "./team-chat-cards.service"
+import { TeamChatStoreService } from "./team-chat-store.service"
 import { TeamChatError, TeamChatErrorCode } from "./errors/team-chat.error"
 
 /** The most catalogue items read to find the photos of a card. */
@@ -45,6 +50,32 @@ type Built = { readonly message: TeamCardMessage } | { readonly refused: string 
 
 /** The kind of the card of a stopped workflow: the engine's own, built here and never by a tool call. */
 const STOPPED_KIND = "workflow.stopped"
+
+/** The kind of the engine's own report with facts (NIVO speaks): built by the engine only, never by a tool call. */
+const REPORT_FACTS_KIND: string = reportFactsKind.id
+
+/** What the engine hands over for its report: the heading, the readable sentence and the facts, for whom. */
+interface ReportGiven {
+    readonly title: string
+    readonly audience: TeamAudience
+    readonly payload: ReportFactsPayload
+}
+
+/** Who reads an engine report: the audience the engine names, else the founder alone. */
+const reportAudienceOf = (audience: unknown): TeamAudience =>
+    audience === "own" || audience === "everyone" ? audience : "founder"
+
+const reportGivenOf = (payload: EffectPayload): ReportGiven | null => {
+    const content = reportFactsPayload.safeParse({ text: payload["text"], facts: payload["facts"] })
+    const { title, audience } = payload
+    return content.success && typeof title === "string" && title !== ""
+        ? {
+              title,
+              audience: reportAudienceOf(audience),
+              payload: content.data,
+          }
+        : null
+}
 
 /** What the engine hands over for the card of a stopped step: its heading, the readable line, the content, and its typed part (threads). */
 interface StoppedGiven {
@@ -197,7 +228,10 @@ const cardOrderOf = (row: NodeRow | undefined): CardOrder | null =>
 export class AgentMessagePostExecutorService implements OnModuleInit {
     constructor(
         private readonly audience: TeamChatAudienceService,
+        private readonly store: TeamChatStoreService,
+        private readonly cards: TeamChatCardsService,
         @Optional() private readonly registry?: GraphNodeRegistryService,
+        @Optional() @InjectMessageCatalog() private readonly catalog?: MessageCatalog,
     ) {}
 
     /** Registers the executor when the app hosts graph nodes; otherwise there is nothing to serve. */
@@ -211,8 +245,10 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
     private async post(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<EffectFact> {
         // The engine's own card (never reachable from a model's tool call, whose payload the runner checks against the tool's schema).
         if (payload["kind"] === STOPPED_KIND) return this.stopped(turn, payload, call)
+        if (payload["kind"] === REPORT_FACTS_KIND) return this.reported(turn, payload, call)
         const parsed = agentMessagePostEffect.payload.safeParse(payload)
         if (!parsed.success) throw new TeamChatError({ code: TeamChatErrorCode.InvalidAgentMessage })
+        if (parsed.data.kind === "chat.answer") return this.answered(turn, parsed.data, call)
         const built = await this.built(turn, parsed.data)
         if ("refused" in built) return refusalOf(built.refused)
         const posted = await this.audience.postTeamCard(turn.workspaceId, {
@@ -234,8 +270,9 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
         if (rewrite !== null) return this.rewrittenStop(turn, rewrite, lineKeyOf(call.dedupeKey ?? call.key))
         const resolved = resolvedGivenOf(payload)
         if (resolved !== null) return this.resolvedStop(turn, resolved, lineKeyOf(call.dedupeKey ?? call.key))
-        const given = stoppedGivenOf(payload)
-        if (given === null) throw new TeamChatError({ code: TeamChatErrorCode.InvalidAgentMessage })
+        const raw = stoppedGivenOf(payload)
+        if (raw === null) throw new TeamChatError({ code: TeamChatErrorCode.InvalidAgentMessage })
+        const given = raw.section === null ? raw : this.wordedStop(raw, turn)
         const key = lineKeyOf(call.dedupeKey ?? call.key)
         const previous = await this.audience.storedCard(turn.workspaceId, key)
         const message = stoppedMessageOf(given, previous, call.key)
@@ -247,6 +284,55 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
             audience: DEFAULT_AUDIENCE,
             message,
             key,
+        })
+        return { kind: "chat-message", id: posted.messageId, facts: posted.facts }
+    }
+
+    /** The words the facts of an engine message are worded with, in the turn's language (labels fall back to their keys with no catalogue). */
+    private factWords(turn: NodeTurn): FactWords {
+        const locale = turn.locale === "en" ? "en" : "vi"
+        return this.catalog === undefined
+            ? { text: () => "", bankName: bankDisplayNameOf }
+            : factWordsOf({ catalog: this.catalog, locale, bankName: bankDisplayNameOf })
+    }
+
+    /**
+     * The card of a thread's typed stop with its facts in words (`wordedStopFactsOf`): the workflow and step by their titles, the code by
+     * its common words, a bank by its name; every raw value only as a `technical` fact. An old-engine card is never passed here.
+     */
+    private wordedStop(given: StoppedGiven, turn: NodeTurn): StoppedGiven {
+        const facts = wordedStopFactsOf(
+            given.card.facts,
+            {
+                workflowTitle: given.card.workflow.title,
+                stepTitle: given.card.step.title,
+                question: given.card.question,
+                locale: turn.locale === "en" ? "en" : "vi",
+            },
+            this.factWords(turn),
+        )
+        return { ...given, card: { ...given.card, facts } }
+    }
+
+    /**
+     * The engine's own report with facts (`report.facts`): one readable sentence and its facts, posted once per key to the founder (or
+     * the audience the engine names). A model's `team.message.post` can never name this kind (its payload is checked against the tool's
+     * schema before it reaches here).
+     */
+    private async reported(turn: NodeTurn, payload: EffectPayload, call: EffectCall): Promise<EffectFact> {
+        const given = reportGivenOf(payload)
+        if (given === null) throw new TeamChatError({ code: TeamChatErrorCode.InvalidAgentMessage })
+        const posted = await this.audience.postTeamCard(turn.workspaceId, {
+            agentId: turn.agentId,
+            audience: given.audience,
+            message: {
+                kind: REPORT_FACTS_KIND,
+                intent: "report",
+                title: given.title,
+                summary: given.payload.text,
+                payload: given.payload,
+            },
+            key: lineKeyOf(call.dedupeKey ?? call.key),
         })
         return { kind: "chat-message", id: posted.messageId, facts: posted.facts }
     }
@@ -308,6 +394,34 @@ export class AgentMessagePostExecutorService implements OnModuleInit {
             id: folded ?? key,
             facts: { rewritten: folded !== null, state: section.state, revision: section.revision },
         }
+    }
+
+    /**
+     * An agent's answer to a person in the team chat (the `team.chat` step): posted in the room of the person's message as a reply to
+     * it, as a typed `message.text` (intent notify), once per message and agent (the call's dedupe key). Refused (a fact, never a post)
+     * when the message is not a PERSON's line, or not of the room the run is about (`turn.subject` = `chat-room:<id>`).
+     */
+    private async answered(turn: NodeTurn, given: TeamChatAnswer, call: EffectCall): Promise<EffectFact> {
+        const [asked] = await this.store.messagesByIds(turn.workspaceId, [given.messageId])
+        if (asked === undefined || asked.authorKind !== "user") return refusalOf("not_person_line")
+        if (turn.subject?.kind !== "chat-room" || turn.subject.id !== asked.roomId) return refusalOf("other_room")
+        const posted = await this.cards.postMessage(turn.workspaceId, {
+            authorAgentId: turn.agentId,
+            roomId: asked.roomId,
+            toUserId: null,
+            body: given.text,
+            key: lineKeyOf(call.dedupeKey ?? call.key),
+            replyTo: asked.id,
+            agentMessage: JSON.stringify({
+                kind: "message.text",
+                intent: "notify",
+                title: "",
+                summary: given.text,
+                payload: { text: given.text },
+            }),
+        })
+        if (posted === null) throw new TeamChatError({ code: TeamChatErrorCode.InvalidAgentMessage })
+        return { kind: "chat-message", id: posted.messageId, facts: { roomId: posted.roomId, replyTo: asked.id } }
     }
 
     /** The message of a payload: the caller's words, or the card of the record it names. */

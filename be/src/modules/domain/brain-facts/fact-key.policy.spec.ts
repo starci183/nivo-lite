@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { AUTO_APPLY_TRUST, factSlugOf, numberOf, sameValue, TRUST } from "./fact-key.policy"
+import { AUTO_APPLY_TRUST, factSlugOf, numberOf, numbersOf, sameValue, TRUST } from "./fact-key.policy"
 
 type Subject = {
     factSlugOf: typeof factSlugOf
@@ -100,5 +100,19 @@ describe("fact keys", () => {
         const subject = await build()
 
         expect(subject.sameValue(first, second)).toBe(expected)
+    })
+})
+
+describe("fact keys numbersOf (BG2)", () => {
+    it.each([
+        ["B\u00f3 hoa h\u1ed3ng \u0111\u1ecf 10 b\u00f4ng: 350.000 \u0111", [10, 350000]],
+        ["350k", [350000]],
+        ["1,2 tri\u1ec7u", [1200000]],
+        ["8:00-20:00", [8, 0, 20, 0]],
+        ["16/02/2026", [16, 2, 2026]],
+        ["10 km", [10]],
+        ["kh\u00f4ng nh\u1eadn \u0111\u01a1n", []],
+    ])("reads every number of %s", (text, expected) => {
+        expect(numbersOf(text)).toEqual(expected)
     })
 })

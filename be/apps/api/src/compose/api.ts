@@ -9,7 +9,10 @@ import { InboxGraphqlModule } from "@features/api/inbox"
 import { WorkspaceDashboardGraphqlModule } from "@features/api/workspace-dashboard"
 import { AgentWorkGraphqlModule } from "@features/api/agent-work"
 import { AgentRunsGraphqlModule } from "@features/api/agent-runs"
+import { AgentDoorsGraphqlModule } from "@features/api/agent-doors"
+import { SchedulesGraphqlModule } from "@features/api/schedules"
 import { TeamChatGraphqlModule } from "@features/api/team-chat"
+import { TeamChatTurnsGraphqlModule } from "@features/api/team-chat-turns"
 import { ChattypingGraphqlModule } from "@features/api/chattyping"
 import { CHAT_FILES_ERROR_KINDS, CHAT_FILES_MESSAGES, ChatFilesModule } from "@modules/domain/chat-files"
 import { STORAGE_OBJECTS } from "@modules/integrations/object-storage"
@@ -17,6 +20,7 @@ import { AccountGraphqlModule } from "@features/api/account"
 import { ShellGraphqlModule } from "@features/api/shell"
 import { KnowledgeGraphqlModule } from "@features/api/knowledge"
 import { BrainGraphGraphqlModule } from "@features/api/brain-graph"
+import { BrainCriticGraphqlModule } from "@features/api/brain-critic"
 import { PublicDocumentsGraphqlModule } from "@features/api/public-documents"
 import { DossierReviewGraphqlModule } from "@features/api/dossier-review"
 import { EvidenceGraphqlModule } from "@features/api/evidence"
@@ -52,11 +56,15 @@ export const apiModules = (): Array<DynamicModule> => [
     WorkspaceDashboardGraphqlModule.register({}),
     AgentWorkGraphqlModule.register({}),
     AgentRunsGraphqlModule.register({}),
+    SchedulesGraphqlModule.register({}),
+    AgentDoorsGraphqlModule.register({}),
     TeamChatGraphqlModule.register({}),
+    TeamChatTurnsGraphqlModule.register({}),
     ChattypingGraphqlModule.register({}),
     ChatFilesModule.register({ isGlobal: true, storage: STORAGE_OBJECTS }),
     KnowledgeGraphqlModule.register({}),
     BrainGraphGraphqlModule.register({}),
+    BrainCriticGraphqlModule.register({}),
     PublicDocumentsGraphqlModule.register({}),
     DossierReviewGraphqlModule.register({}),
     EvidenceGraphqlModule.register({}),

@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { DocumentReadersModule } from "@modules/integrations/document-readers"
+import { DocumentTranscriptionService } from "./document-transcription.service"
 import { EmbeddingService } from "./embedding.service"
 import { KnowledgeDocumentsService } from "./knowledge-documents.service"
 import { KnowledgeDriveService } from "./knowledge-drive.service"
@@ -28,9 +30,12 @@ export class KnowledgeModule extends ConfigurableModuleClass {
         }
         return {
             ...base,
+            // The readers of uploaded files belong to the indexing side alone; the search-only mode never reads a file.
+            imports: [...(base.imports ?? []), DocumentReadersModule.register({})],
             providers: [
                 ...(base.providers ?? []),
                 { provide: DRIVE_ACCESS_SOURCE, useExisting: options.driveAccess },
+                DocumentTranscriptionService,
                 UsageMeterService,
                 EmbeddingService,
                 SourceReaderService,

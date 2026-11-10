@@ -1,5 +1,6 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { IsIn, IsUUID, MaxLength } from "class-validator"
+import { IsIn, IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator"
+import { NullAsAbsent } from "@modules/platform/graphql"
 import { AgentRunDecisionVerdict } from "./agent-run-decision.type"
 
 @InputType()
@@ -22,4 +23,13 @@ export class DecideAgentRunStepInput {
     @IsIn(["approve", "retry", "reject"])
     @MaxLength(10)
     verdict!: string
+
+    /** For a run on a thread: the step whose approval is answered; absent answers the run's newest open approval. */
+    @Field(() => String, { nullable: true })
+    @NullAsAbsent()
+    @IsOptional()
+    @IsString()
+    @MinLength(1)
+    @MaxLength(200)
+    stepKey?: string
 }

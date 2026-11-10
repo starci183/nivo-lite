@@ -67,4 +67,12 @@ export class BrainGraphPendingType {
     /** Until when it would hold, when stated (else one year from approval). */
     @Field(() => String, { nullable: true })
     validTo!: string | null
+
+    /** The review flags: `stale` (its stated end is past: approving only records it), `same_meaning` (it may say what `conflictWith` says). */
+    @Field(() => [String])
+    flags!: ReadonlyArray<string>
+
+    /** The fact it clashes with when that is not the truth in force: another waiting value of the key, or a same-meaning fact. */
+    @Field(() => ID, { nullable: true })
+    conflictWith!: string | null
 }

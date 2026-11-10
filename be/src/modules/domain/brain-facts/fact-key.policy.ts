@@ -51,19 +51,34 @@ const scaleOf = (word: string): number => {
     return THOUSAND.test(word) ? 1e3 : 1
 }
 
-/** A number written the Vietnamese way ("650.000", "1,2 tr", "8tr", "2 trieu", "1.5k") or null. */
-export const numberOf = (raw: string): number | null => {
-    const text = raw.toLowerCase().replace(/\s+/g, " ").trim()
-    const match = NUMBER_WITH_SCALE.exec(text)
-    if (match === null) return null
-    const digits = match[1] ?? ""
-    const scale = scaleOf(match[2] ?? "")
+/** The amount of one written number and its scale word, or null. */
+const amountOf = (digits: string, word: string): number | null => {
+    const scale = scaleOf(word)
     // With a scale word "1,2" and "1.5" are decimals; without one "650.000" and "650,000" group thousands.
     const amount =
         scale > 1
             ? Number(digits.replace(",", "."))
             : Number(digits.replace(/[.,](?=\d{3}(\D|$))/g, "").replace(",", "."))
     return Number.isFinite(amount) ? Math.round(amount * scale * 100) / 100 : null
+}
+
+/** A number written the Vietnamese way ("650.000", "1,2 tr", "8tr", "2 trieu", "1.5k") or null. */
+export const numberOf = (raw: string): number | null => {
+    const text = raw.toLowerCase().replace(/\s+/g, " ").trim()
+    const match = NUMBER_WITH_SCALE.exec(text)
+    return match === null ? null : amountOf(match[1] ?? "", match[2] ?? "")
+}
+
+/**
+ * Every number a text writes, in order, each read the way `numberOf` reads one ("350.000 d" and "350k" are 350000, "8:00-20:00" is 8,
+ * 0, 20, 0, "16/02/2026" is 16, 2, 2026). A dash is a separator here, never a minus sign.
+ */
+export const numbersOf = (raw: string): ReadonlyArray<number> => {
+    const text = raw.toLowerCase().replace(/\s+/g, " ")
+    return [...text.matchAll(new RegExp(NUMBER_WITH_SCALE.source, "gu"))].flatMap((match) => {
+        const amount = amountOf((match[1] ?? "").replace(/^-/, ""), match[2] ?? "")
+        return amount === null ? [] : [amount]
+    })
 }
 
 /** Currency marks (folded): the amount carries the currency, so the mark adds nothing to the comparison. */

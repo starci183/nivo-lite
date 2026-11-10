@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { SHOP_TRUTH_CANDIDATES } from "@modules/domain/dossier-review"
 import { INBOX, InboxService } from "@modules/platform/inbox"
+import { BrainChangeMessagesService } from "./brain-change-messages.service"
 import { BrainBulkService } from "./brain-bulk.service"
 import { BrainCommandRunnerService } from "./brain-command-runner.service"
 import { BrainLearningService } from "./brain-learning.service"
@@ -10,6 +12,7 @@ import { BrainService } from "./brain.service"
 import { BRAIN_CORRECTIONS } from "./brain.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./brain.module-definition"
 import { BrainGraphService } from "./brain-graph.service"
+import { DocumentCriticCandidatesService } from "./document-critic-candidates.service"
 import { DocumentFactsService } from "./document-facts.service"
 import { DocumentRelationsService } from "./document-relations.service"
 import { FactEmbeddingsService } from "./fact-embeddings.service"
@@ -42,6 +45,9 @@ export class BrainModule extends ConfigurableModuleClass {
                 DocumentReviewService,
                 IndexedSourcesService,
                 ModelJsonService,
+                BrainChangeMessagesService,
+                DocumentCriticCandidatesService,
+                { provide: SHOP_TRUTH_CANDIDATES, useExisting: DocumentCriticCandidatesService },
             ],
             exports: [
                 IndexedSourcesService,
@@ -54,6 +60,8 @@ export class BrainModule extends ConfigurableModuleClass {
                 DocumentFactsService,
                 BrainGraphService,
                 FactEmbeddingsService,
+                BrainChangeMessagesService,
+                SHOP_TRUTH_CANDIDATES,
             ],
         }
     }

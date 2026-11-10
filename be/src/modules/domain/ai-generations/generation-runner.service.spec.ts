@@ -293,7 +293,7 @@ describe("GenerationRunnerService", () => {
 })
 
 describe("GenerationRunnerService", () => {
-    it("writes an unanswered call as a failure, logs it and meters nothing", async () => {
+    it("writes an unanswered call as a failure, logs it and books the failed try (estimated, never billed)", async () => {
         const { em } = managerOf(generationRow(), null)
         const { runner, usage, logger, bus } = await build(em, { answer: null })
 
@@ -313,7 +313,14 @@ describe("GenerationRunnerService", () => {
                 finishedAt: new Date("2026-10-12T10:00:01.500Z"),
             },
         )
-        expect(usage.record).not.toHaveBeenCalled()
+        expect(usage.record).toHaveBeenCalledTimes(1)
+        expect(usage.record.mock.calls[0]?.[0]).toMatchObject({
+            workspaceId: "w1",
+            usage: null,
+            completionChars: 0,
+            model: "work",
+            failure: "no_answer",
+        })
         expect(bus.writes).toEqual([completedAs("error")])
     })
 
@@ -326,6 +333,6 @@ describe("GenerationRunnerService", () => {
         expect(em.findOne.mock.calls).toEqual([[AiGenerationEntity, FIND_OPTIONS]])
         expect(em.update.mock.calls).toEqual([STARTED, cancelledAt("2026-10-12T10:00:17.000Z")])
         expect(bus.writes).toEqual([completedAs("cancelled")])
-        expect(usage.record).not.toHaveBeenCalled()
+        expect(usage.record.mock.calls.map(([entry]) => entry.failure)).toEqual(["timeout"])
     })
 })

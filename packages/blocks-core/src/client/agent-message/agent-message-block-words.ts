@@ -23,6 +23,10 @@ export const messageWordsOf = (words: (text: SpecText) => string): AgentMessageW
             notify: words({ key: "agentMessageIntentNotify" }),
             report: words({ key: "agentMessageIntentReport" }),
         },
+        facts: {
+            details: words({ key: "agentMessageFactsDetails" }),
+            technical: words({ key: "agentMessageFactsTechnical" }),
+        },
         kinds: {
             total: words({ key: "agentMessageTotal" }),
             customer: words({ key: "agentMessageCustomer" }),

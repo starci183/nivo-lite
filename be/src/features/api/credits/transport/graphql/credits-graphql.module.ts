@@ -4,6 +4,7 @@ import { CreditPacksBoughtResolver } from "./credit-packs-bought.resolver"
 import { CreditPacksResolver } from "./credit-packs.resolver"
 import { CreditQuotaStatusResolver } from "./credit-quota-status.resolver"
 import { CreditRecentCostUsdResolver } from "./credit-recent-cost-usd.resolver"
+import { CreditWorkUsageResolver } from "./credit-work-usage.resolver"
 import { CreditTopupLotsResolver } from "./credit-topup-lots.resolver"
 import { CreditUsageSummaryResolver } from "./credit-usage-summary.resolver"
 import { ConfigurableModuleClass } from "./credits-graphql.module-definition"
@@ -17,6 +18,7 @@ import { ConfigurableModuleClass } from "./credits-graphql.module-definition"
         CreditQuotaStatusResolver,
         CreditUsageSummaryResolver,
         CreditRecentCostUsdResolver,
+        CreditWorkUsageResolver,
     ],
 })
 /** The GraphQL transport of the credit catalogue and workspace usage. */

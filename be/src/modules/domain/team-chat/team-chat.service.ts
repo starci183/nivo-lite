@@ -74,6 +74,28 @@ export interface AgentLineReplied {
 /** What hears a person's reply to an agent's line. */
 export type AgentLineReplyListener = (reply: AgentLineReplied) => Promise<void>
 
+/** A person's new message as its one line listener hears it (C1's router reads only these fields; no read is needed). */
+export interface PersonLineHeard {
+    readonly workspaceId: string
+    readonly userId: string
+    readonly room: { readonly id: string; readonly kind: "direct" | "group"; readonly directKey: string | null }
+    readonly message: { readonly id: string; readonly body: string; readonly createdAt: string }
+    /** The AGENTS the message names, in the order written, once each. */
+    readonly agentMentions: ReadonlyArray<string>
+    readonly repliedTo: {
+        readonly id: string
+        readonly authorKind: string
+        readonly authorId: string | null
+        readonly kind: string
+        readonly agentMessage: string | null
+        readonly body: string
+        readonly createdAt: string
+    } | null
+}
+
+/** Hears a person's new message; answers the agents whose chat turn it took (the old tag path skips them). */
+export type PersonLineListener = (line: PersonLineHeard) => Promise<ReadonlyArray<string>>
+
 /** One reply of a person, as the engine reads it. */
 export interface AgentLineReply {
     /** The words. */
@@ -92,6 +114,7 @@ export interface AgentLineReply {
  */
 export class TeamChatRoomsService {
     private replyListener: AgentLineReplyListener | null = null
+    private lineListener: PersonLineListener | null = null
 
     constructor(
         private readonly store: TeamChatStoreService,
@@ -111,12 +134,52 @@ export class TeamChatRoomsService {
         this.replyListener = listener
     }
 
+    /** Registers the one listener of a person's new message (the team chat turn's router); it answers the agents whose turn it took. */
+    listenLines(listener: PersonLineListener): void {
+        this.lineListener = listener
+    }
+
     /** What people replied to the line an agent wrote under a key, oldest first; none when there is no such line. */
     async repliesToAgentLine(workspaceId: string, key: string): Promise<ReadonlyArray<AgentLineReply>> {
         const line = await this.store.agentLine(workspaceId, lineKeyOf(key))
         if (line === null) return []
         const replies = await this.store.repliesTo(workspaceId, line.id)
         return replies.map((reply) => ({ text: reply.body, at: reply.createdAt.toISOString() }))
+    }
+
+    /** Hands a person's new message to the line listener; answers the agents whose turn it took. Never fails the send. */
+    private async turnsTaken(
+        workspaceId: string,
+        viewerId: string,
+        room: ChatRoomEntity,
+        message: ChatRoomMessageEntity,
+        mentions: ReadonlyArray<ChatMemberRef>,
+        repliedTo: ChatRoomMessageEntity | null,
+    ): Promise<ReadonlyArray<string>> {
+        if (this.lineListener === null) return []
+        try {
+            return await this.lineListener({
+                workspaceId,
+                userId: viewerId,
+                room: { id: room.id, kind: room.kind, directKey: room.directKey },
+                message: { id: message.id, body: message.body, createdAt: message.createdAt.toISOString() },
+                agentMentions: mentions.filter((m) => m.memberKind === "agent").map((m) => m.memberId),
+                repliedTo:
+                    repliedTo === null
+                        ? null
+                        : {
+                              id: repliedTo.id,
+                              authorKind: repliedTo.authorKind,
+                              authorId: repliedTo.authorId,
+                              kind: repliedTo.kind,
+                              agentMessage: repliedTo.ref?.agent_message ?? null,
+                              body: repliedTo.body,
+                              createdAt: repliedTo.createdAt.toISOString(),
+                          },
+            })
+        } catch {
+            return []
+        }
     }
 
     /** Tells the listener a person replied to an agent's line; what the listener does never fails the person's message. */
@@ -266,7 +329,15 @@ export class TeamChatRoomsService {
                 ? await this.storeText(workspaceId, found.id, viewerId, input, mentions)
                 : chatDone(retried)
         if (!stored.ok) return chatRefusal(stored.refusal)
-        if (retried === null) await this.tagAgents(workspaceId, viewerId, stored.value, mentions)
+        if (retried === null) {
+            const taken = await this.turnsTaken(workspaceId, viewerId, found, stored.value, mentions, repliedTo)
+            await this.tagAgents(
+                workspaceId,
+                viewerId,
+                stored.value,
+                mentions.filter((mention) => !(mention.memberKind === "agent" && taken.includes(mention.memberId))),
+            )
+        }
         if (retried === null && repliedTo?.authorKind === "agent" && repliedTo.clientId !== null) {
             await this.heard({
                 workspaceId,

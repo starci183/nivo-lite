@@ -12,7 +12,7 @@ import {
 } from "@tests/fixtures/builders/dossier-review-services.builder"
 import { FakeClock, mock, mockEntityManager, queueQueryBuilders } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
-import { In } from "typeorm"
+import { In, Like, Not } from "typeorm"
 import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
 import { MemberLookupService, WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { CLOCK } from "@modules/platform/clock"
@@ -111,6 +111,7 @@ describe("DossierFindingsService list", () => {
         ])
         expect(page.pageInfo.hasNextPage).toBe(true)
         expect(first?.callsOf("andWhere")).toEqual([
+            ["f.ruleKey NOT LIKE :critic", { critic: "shop.%" }],
             ["f.dossierId = :dossierId", { dossierId: "d1" }],
             ["f.status IN (:...statuses)", { statuses: ["open"] }],
             ["f.severity IN (:...severities)", { severities: ["high", "medium"] }],
@@ -170,7 +171,7 @@ describe("DossierFindingsService activeCount", () => {
         await expect(service.activeCount(WS)).resolves.toBe(7)
 
         expect(em.count).toHaveBeenCalledWith(DossierFindingEntity, {
-            where: { workspaceId: WS, status: In(["open", "confirmed"]) },
+            where: { workspaceId: WS, status: In(["open", "confirmed"]), ruleKey: Not(Like("shop.%")) },
         })
         expect(em.find).not.toHaveBeenCalled()
     })
@@ -197,7 +198,7 @@ describe("DossierFindingsService list of nothing", () => {
             nodes: [],
             pageInfo: { endCursor: null, hasNextPage: false },
         })
-        expect(query?.callsOf("andWhere")).toEqual([])
+        expect(query?.callsOf("andWhere")).toEqual([["f.ruleKey NOT LIKE :critic", { critic: "shop.%" }]])
         expect(query?.callsOf("limit")).toEqual([[51]])
     })
 })
@@ -279,8 +280,8 @@ describe("DossierFindingsService summary", () => {
         ])
         expect(counts?.callsOf("where")).toEqual([
             [
-                "f.workspaceId = :workspaceId AND f.status IN (:...statuses)",
-                { workspaceId: WS, statuses: ["open", "confirmed"] },
+                "f.workspaceId = :workspaceId AND f.status IN (:...statuses) AND f.ruleKey NOT LIKE :critic",
+                { workspaceId: WS, statuses: ["open", "confirmed"], critic: "shop.%" },
             ],
         ])
         expect(em.exists).toHaveBeenCalledWith(DossierReviewRunEntity, {

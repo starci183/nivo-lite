@@ -1,10 +1,10 @@
 import type { AiGatewayModels, AiGatewayProvider } from "./ai-gateway.options"
 
-/** The provider id of the OpenAI-compatible upstream (OpenRouter by default) that serves the cheap model and embeddings. */
-export const UPSTREAM_PROVIDER = "upstream"
-
-/** The provider id of Anthropic, reached directly through the router's Messages adapter. */
+/** The provider id of Anthropic, reached directly through the router's Messages adapter: every chat profile of the app. */
 export const ANTHROPIC_PROVIDER = "anthropic"
+
+/** The provider id of OpenAI directly (`OPENAI_API_KEY`): the pinned embeddings profile `embed-oa`. */
+export const OPENAI_PROVIDER = "openai"
 
 /**
  * The profiles a graph node's call names, one per choice of the node's model picker (blocks-core `models`). NIVO names a profile;
@@ -13,9 +13,9 @@ export const ANTHROPIC_PROVIDER = "anthropic"
 export const MODEL_PROFILES = {
     /** Claude Sonnet 5.5 and nothing else: an explicit choice never switches model. */
     sonnet: "sonnet",
-    /** The cheap model (`LLM_MODEL`, DeepSeek flash by default) and nothing else. */
-    deepseek: "deepseek",
-    /** Auto on a light step: the cheap model first, Sonnet when the cheap one has no usable lane (no key, down). */
+    /** The cheap model (blocks-core `CHEAP_MODEL`, Claude Haiku 5.5) and nothing else. */
+    haiku: "haiku",
+    /** Auto on a light step (and a retired model's call): the cheap model first, Sonnet when it has no usable lane. Claude only. */
     autoLight: "auto-light",
     /** Auto on a heavy step (and Auto's step up after a failed try): Sonnet first, the cheap model when Sonnet has no usable lane. */
     autoHeavy: "auto-heavy",
@@ -26,17 +26,18 @@ export type ModelProfile = (typeof MODEL_PROFILES)[keyof typeof MODEL_PROFILES]
 
 /** One candidate of a model profile: which provider, and which of the pool's models on it. */
 interface ProfileSeat {
-    readonly provider: typeof UPSTREAM_PROVIDER | typeof ANTHROPIC_PROVIDER
+    readonly provider: typeof ANTHROPIC_PROVIDER
     readonly model: keyof Pick<AiGatewayModels, "work" | "strong">
 }
 
-const CHEAP: ProfileSeat = { provider: UPSTREAM_PROVIDER, model: "work" }
+// Both seats are Anthropic (owner: no OpenRouter for chat): a profile never falls back to another vendor.
+const CHEAP: ProfileSeat = { provider: ANTHROPIC_PROVIDER, model: "work" }
 const STRONG: ProfileSeat = { provider: ANTHROPIC_PROVIDER, model: "strong" }
 
 /** The candidates of each profile, in order; the router tries the next only when the one before has no usable lane. */
 const SEATS: Readonly<Record<ModelProfile, ReadonlyArray<ProfileSeat>>> = {
     [MODEL_PROFILES.sonnet]: [STRONG],
-    [MODEL_PROFILES.deepseek]: [CHEAP],
+    [MODEL_PROFILES.haiku]: [CHEAP],
     [MODEL_PROFILES.autoLight]: [CHEAP, STRONG],
     [MODEL_PROFILES.autoHeavy]: [STRONG, CHEAP],
 }
@@ -51,7 +52,8 @@ export interface ModelProfileSeats {
 
 /**
  * The model profiles the pool serves with the providers that hold a key: each cut down to its candidates whose provider is present,
- * a profile left with none left out (Sonnet without an Anthropic key). Auto keeps working with one provider: it is then that one.
+ * a profile left with none left out. Every chat seat is Anthropic, so without `ANTHROPIC_API_KEY` no model profile is served and a
+ * node's call fails loudly (`model_not_configured`); nothing switches vendor.
  */
 export const modelProfilesOf = (
     providers: ReadonlyArray<Pick<AiGatewayProvider, "id">>,
@@ -76,13 +78,12 @@ export interface ProfileWire {
     readonly sampling: boolean
     /** True when the body may force a tool call (`tool_choice: required`). */
     readonly forcedToolChoice: boolean
-    /** True when OpenRouter's own fields are worth sending: some candidate is the OpenAI-compatible upstream. */
+    /** True when OpenRouter's own fields are worth sending: never now (no OpenRouter in the pool); the field stays for the wire's shape. */
     readonly upstreamFields: boolean
 }
 
 /** The wire of a profile; a profile that reaches Anthropic gets the body every candidate accepts. */
 export const profileWireOf = (profile: ModelProfile): ProfileWire => {
-    const reaches = new Set(SEATS[profile].map((seat) => seat.provider))
-    const anthropic = reaches.has(ANTHROPIC_PROVIDER)
-    return { sampling: !anthropic, forcedToolChoice: !anthropic, upstreamFields: reaches.has(UPSTREAM_PROVIDER) }
+    const anthropic = SEATS[profile].some((seat) => seat.provider === ANTHROPIC_PROVIDER)
+    return { sampling: !anthropic, forcedToolChoice: !anthropic, upstreamFields: false }
 }

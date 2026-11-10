@@ -27,6 +27,7 @@ import { DossierFindingEntity, DossierReviewEntity, DossierReviewRunEntity } fro
 import { reconcile } from "./reconcile.policy"
 import type { Reconciliation } from "./reconcile.policy"
 import { buildBundle, corpusOf, inputsFingerprintOf, reasonedCandidates, resolvedByModel } from "./review-bundle.policy"
+import { DocumentCriticService } from "./document-critic.service"
 import { ReviewCriticService } from "./review-critic.service"
 import { ReviewInputsService } from "./review-inputs.service"
 import { RULE_KEYS, runRules } from "./rule-engine.policy"
@@ -118,6 +119,7 @@ export class DossierReviewRunnerService {
         private readonly inputs: ReviewInputsService,
         private readonly usage: UsageMeterService,
         private readonly critic: ReviewCriticService,
+        private readonly documentCritic: DocumentCriticService,
     ) {}
 
     /** Runs the review a job names; a payload of another shape, or a run another worker holds or finished, changes nothing. */
@@ -148,6 +150,8 @@ export class DossierReviewRunnerService {
             aiResolved: ai.resolved,
         })
         await this.persist(pass, ai, outcome)
+        // The shop-document critic of every document waiting for it, before the documents leave the `critic` stage; it never throws.
+        await this.documentCritic.runWaiting(run.workspaceId)
         await this.critic.settle(run.workspaceId, run.id)
         return "done"
     }
@@ -160,6 +164,8 @@ export class DossierReviewRunnerService {
             { id: payload.runId, workspaceId: payload.workspaceId, status: In(["queued", "running"]) },
             { status: "failed", finishedAt: this.clock.now(), error: JOB_FAILED },
         )
+        // The dossier part failed for good; the documents waiting for the shop critic still get it.
+        await this.documentCritic.runWaiting(payload.workspaceId)
         await this.critic.settle(payload.workspaceId, payload.runId)
     }
 

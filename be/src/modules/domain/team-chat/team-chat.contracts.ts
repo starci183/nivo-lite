@@ -1,3 +1,4 @@
+import type { BrainChangeCardView } from "./brain-change-card.contracts"
 import type { TeamChatErrorCode } from "./errors/team-chat.error"
 import type { ReactionView, ReplyView } from "./team-chat-reaction.contracts"
 import type { StopCardView } from "./stop-card.contracts"
@@ -146,6 +147,8 @@ export interface MessageView {
     readonly forwardedFrom: string | null
     /** The typed stop a `workflow.stopped` card is about (its state, needs and the founder's replies); null for any other line. */
     readonly stop: StopCardView | null
+    /** The truth-graph change card (`brain.change`) as this viewer sees it; null for every other line. */
+    readonly brainChange: BrainChangeCardView | null
 }
 
 /** One room as a screen shows it, for one viewer. */
@@ -351,6 +354,8 @@ export interface LineInput {
     readonly key: string | null
     /** The structured message the line carries as JSON text, or null for a plain line. */
     readonly agentMessage?: string | null
+    /** The message of the same room this line answers; null or omitted for none. */
+    readonly replyTo?: string | null
 }
 
 /** Where a line went. */

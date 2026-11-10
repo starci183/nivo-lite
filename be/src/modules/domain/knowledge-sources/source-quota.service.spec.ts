@@ -8,6 +8,7 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { KnowledgeSourcesError, KnowledgeSourcesErrorCode } from "./errors/knowledge-sources.error"
 import { KNOWLEDGE_STORAGE } from "./knowledge-sources.decorators"
 import type { NormalizedSource } from "./source-input.policy"
+import { KnowledgeSourceEntity } from "./persistence/entities"
 import { SourceQuotaService } from "./source-quota.service"
 import { HASH_STATEMENT, advisoryLockAnswers } from "@tests/fixtures/builders/advisory-lock.builder"
 
@@ -126,5 +127,80 @@ describe("SourceQuotaService discardRefused", () => {
         await service.discardRefused(PATH, new Error("db"))
         await service.discardRefused(null, refusal(codes.QuotaExceeded))
         expect(storage.remove).not.toHaveBeenCalled()
+    })
+})
+
+describe("SourceQuotaService a new upload of a file", () => {
+    const row = (kind: "file" | "text", storagePath: string | null): KnowledgeSourceEntity =>
+        Object.assign(new KnowledgeSourceEntity(), { id: "s1", kind, storagePath, sizeBytes: 10 * MB })
+    const target = { workspaceId: WS, sourceId: "s1" }
+    const next = { path: `${WS}/v2/menu.pdf`, bytes: 10.5 * MB }
+
+    it("checks a new upload and answers its size; none when no upload was given", async () => {
+        const { service, storage } = await build(mockEntityManager())
+        await expect(service.uploadOf(WS, undefined)).resolves.toBeNull()
+        storage.sizeOf.mockResolvedValueOnce({ kind: "ok", value: 3 * MB })
+        await expect(service.uploadOf(WS, ` ${PATH} `)).resolves.toEqual({ path: PATH, bytes: 3 * MB })
+        await expect(service.uploadOf(WS, "other/u/menu.pdf")).rejects.toMatchObject({ code: codes.StoragePathInvalid })
+        storage.sizeOf.mockResolvedValueOnce({ kind: "refused", code: "OBJECT_STORAGE_NOT_FOUND" })
+        await expect(service.uploadOf(WS, PATH)).rejects.toMatchObject({ code: codes.UploadMissing })
+    })
+
+    it("admits only the growth under the workspace lock and answers the columns and the object it replaces", async () => {
+        const em = mockEntityManager({
+            query: advisoryLockAnswers,
+            findOne: [KnowledgeSourceEntity, row("file", PATH)],
+        })
+        holding(em, String(49 * MB))
+        const { service } = await build(em)
+        await expect(service.replacementOf(em, target, next)).resolves.toEqual({
+            columns: { storagePath: next.path, sizeBytes: next.bytes, contentHash: null },
+            replaced: PATH,
+        })
+        expect(em.query).toHaveBeenCalledWith(HASH_STATEMENT, [`knowledge-sources:${WS}`, 0])
+    })
+
+    it("replaces nothing for the same object or no upload", async () => {
+        const em = mockEntityManager({
+            query: advisoryLockAnswers,
+            findOne: [KnowledgeSourceEntity, row("file", next.path)],
+        })
+        holding(em, "0")
+        const { service } = await build(em)
+        await expect(service.replacementOf(em, target, next)).resolves.toMatchObject({ replaced: null })
+        await expect(service.replacementOf(em, target, null)).resolves.toEqual({ columns: {}, replaced: null })
+    })
+
+    it("refuses a new upload for a note, a gone source, or a file over one document's limit, before it takes the lock", async () => {
+        const note = mockEntityManager({
+            query: advisoryLockAnswers,
+            findOne: [KnowledgeSourceEntity, row("text", null)],
+        })
+        await expect((await build(note)).service.replacementOf(note, target, next)).rejects.toMatchObject({
+            code: codes.NotAFile,
+        })
+        const gone = mockEntityManager({ query: advisoryLockAnswers, findOne: [KnowledgeSourceEntity, null] })
+        await expect((await build(gone)).service.replacementOf(gone, target, next)).rejects.toMatchObject({
+            code: codes.SourceNotFound,
+        })
+        const big = mockEntityManager({
+            query: advisoryLockAnswers,
+            findOne: [KnowledgeSourceEntity, row("file", PATH)],
+        })
+        await expect(
+            (await build(big)).service.replacementOf(big, target, { ...next, bytes: 51 * MB }),
+        ).rejects.toMatchObject({
+            code: codes.FileTooLarge,
+        })
+        expect([note, gone, big].map((em) => em.query.mock.calls.length)).toEqual([0, 0, 0])
+    })
+
+    it("removes the replaced object after the write, never failing on storage, and waits for the announcement", async () => {
+        const { service, storage } = await build(mockEntityManager())
+        storage.remove.mockRejectedValueOnce(new Error("down"))
+        await expect(service.settleReplaced(PATH, Promise.resolve())).resolves.toBeUndefined()
+        expect(storage.remove).toHaveBeenCalledWith("knowledge-uploads", [PATH])
+        await service.settleReplaced(null, Promise.resolve())
+        expect(storage.remove).toHaveBeenCalledTimes(1)
     })
 })

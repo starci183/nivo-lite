@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
-import { KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
+import { EMBEDDING_DIMENSIONS, KnowledgeChunksService } from "@modules/domain/knowledge-chunks"
 import type { ChunkHit } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import { NivoKnowledgeSearchService } from "@modules/domain/nivo-knowledge"
@@ -24,6 +24,7 @@ const chunk: ChunkHit = {
     score: 0.9,
     visibility: "public",
     order: 2,
+    unreviewed: false,
 }
 const item: NivoHit = { id: "nivo-1", module: "core", kind: "tone", title: "Tone", content: "Be kind", score: 0.95 }
 
@@ -260,6 +261,19 @@ describe("KnowledgeSearchService", () => {
                 tsquery: "opening | hours",
                 limit: 4,
             })
+        })
+
+        it("uses a question the caller already embedded instead of embedding it again, and ignores a vector of another size", async () => {
+            const given = await build()
+            const vector = Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.5)
+            await given.service.forAgent({ ...request, questionVector: vector })
+            expect(given.embeddings.embed).not.toHaveBeenCalled()
+            expect(given.chunks.search).toHaveBeenCalledWith(
+                expect.objectContaining({ vector: `[${vector.join(",")}]` }),
+            )
+            const wrong = await build()
+            await wrong.service.forAgent({ ...request, questionVector: [1, 2] })
+            expect(wrong.embeddings.embed).toHaveBeenCalledTimes(1)
         })
 
         it("gives the embedding of the question the budget the caller asks for, else the default", async () => {

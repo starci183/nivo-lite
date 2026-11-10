@@ -36,9 +36,12 @@ export class EmbeddingService {
         private readonly usage: UsageMeterService,
     ) {}
 
-    /** True when the deployment can embed at all. */
+    /**
+     * True when the deployment can embed at all: a key to the gateway, and the gateway has not answered that it does not serve the
+     * embeddings profile (no `OPENAI_API_KEY` in its pool). Not configured, the index job stores passages keyword-only.
+     */
     configured(): boolean {
-        return this.ai.available()
+        return this.ai.available() && this.ai.embeddingsServed()
     }
 
     /** The model new vectors are made with. */

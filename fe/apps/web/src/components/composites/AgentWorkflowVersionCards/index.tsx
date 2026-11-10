@@ -100,8 +100,7 @@ export const AgentWorkflowVersionCards = (props: AgentWorkflowVersionCardsProps)
                     statusLabels={view.flow.statusLabels}
                     isInteractive={false}
                     isLoading={isLoading}
-                    fit="contain"
-                    height="lg"
+                    height="fill"
                 />
             </SurfaceCard>
         </Stack>

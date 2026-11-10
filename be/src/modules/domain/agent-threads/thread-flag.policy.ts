@@ -15,6 +15,10 @@ export const THREAD_READY_WORKFLOWS: ReadonlyArray<string> = [
     "sales.payment-reminder",
     "sales.web-order",
     "accounting.reports",
+    // The team chat turn (C1): a person of the shop talks to an agent in /chat. Threads only: no old-engine path exists for it.
+    "sales.team-chat",
+    "accounting.team-chat",
+    "chatbot.team-chat",
 ]
 
 /** The engine a run starts on: the old step engine, or a LangGraph thread. A run finishes on the engine it started on. */

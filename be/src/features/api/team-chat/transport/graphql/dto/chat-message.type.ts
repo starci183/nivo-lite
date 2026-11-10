@@ -7,6 +7,7 @@ import { ChatReportRefType } from "./chat-report-ref.type"
 import { ChatApprovalType } from "./chat-approval.type"
 import { ChatReactionType } from "./chat-reaction.type"
 import { ChatReplyType } from "./chat-reply.type"
+import { ChatBrainChangeCardType } from "./chat-brain-change-card.type"
 import { ChatStopCardType } from "./chat-stop-card.type"
 
 @ObjectType()
@@ -87,4 +88,8 @@ export class ChatMessageType {
     /** The typed stop a `workflow.stopped` card is about (state, needs, the founder's replies); null for any other line. */
     @Field(() => ChatStopCardType, { nullable: true })
     stop!: ChatStopCardType | null
+
+    /** The truth-graph change card (`brain.change`) as this viewer sees it (with what the viewer may do); null for any other line. */
+    @Field(() => ChatBrainChangeCardType, { nullable: true })
+    brainChange!: ChatBrainChangeCardType | null
 }

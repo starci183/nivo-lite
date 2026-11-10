@@ -23,7 +23,7 @@ import type {
 } from "@modules/integrations/langgraph"
 import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger } from "@modules/platform/logging"
+import { InjectLogger, withRunScope } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { isRecord, parseJsonText } from "@modules/platform/primitives"
 import { InjectAgentThreadsOptions } from "./agent-threads.decorators"
@@ -243,9 +243,9 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
         this.settledListeners.push(listener)
     }
 
-    /** True when a new run of the workflow starts on a thread: the flag names it. */
+    /** True when a new run of the workflow starts on a thread: the flag names it, or LangGraph is the default engine (every workflow). */
     engages(namespace: string): boolean {
-        return this.options.workflows.includes(namespace)
+        return this.options.everyWorkflow === true || this.options.workflows.includes(namespace)
     }
 
     /** True for a wake this capability wrote: a decision for a stopped thread, or a re-drive. */
@@ -459,7 +459,7 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
         try {
             this.logger.info(AgentThreadsLogEvent.ThreadDriven, { runId: ref.runId, wakeId: turn.wakeId, fence: turn.fence })
             const lease = { fence: turn.fence, signal }
-            const outcome = await this.graphs.driving(ref.runId, drive.run, async () => {
+            const driven = async (): Promise<ThreadOutcome> => {
                 try {
                     return await run(port, lease)
                 } catch (cause) {
@@ -469,7 +469,10 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
                     if (again === null) throw cause
                     return port.drive(ref, again, lease)
                 }
-            })
+            }
+            // Every model call of the drive is booked to the run (`ai_usage_events.run_id`), as the old engine's step runner books the
+            // calls of its steps (`AgentRunInflightService`): the run page's AI calls and the cost per run read it (D-P10-7).
+            const outcome = await withRunScope(ref.runId, () => this.graphs.driving(ref.runId, drive.run, driven))
             return await this.settled(drive, outcome)
         } catch (cause) {
             if (isFenced(cause)) this.logger.warn(AgentThreadsLogEvent.ThreadFenced, { runId: ref.runId, fence: turn.fence })

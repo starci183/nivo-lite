@@ -208,8 +208,24 @@ export interface TeamText {
     readonly audience?: TeamAudience | undefined
 }
 
-/** What an agent says to the team in the chat: a card built from a record by its id, or plain words. */
-export type AgentMessagePostPayload = TeamOrderSummary | TeamPaymentReceived | TeamText
+/**
+ * An agent's answer to a person of the team, posted in the room of the person's message as a reply to it (the `team.chat` step posts
+ * it from its output). The executor reads the room from the message and posts there only when that message is a person's line of the
+ * room the run is about; one answer per message and agent.
+ */
+export interface TeamChatAnswer {
+    /** The card kind. */
+    readonly kind: "chat.answer"
+    /** The person's message the answer replies to. */
+    readonly messageId: string
+    /** The words. */
+    readonly text: string
+    /** No audience: the answer goes to the room of the message, nowhere else. */
+    readonly audience?: undefined
+}
+
+/** What an agent says to the team in the chat: a card built from a record by its id, plain words, or an answer to a person's message. */
+export type AgentMessagePostPayload = TeamOrderSummary | TeamPaymentReceived | TeamText | TeamChatAnswer
 
 /** What every undo effect is given: the id of the subject the effect it undoes touched. */
 export interface UndoPayload {
@@ -434,6 +450,15 @@ const agentMessagePostPayload: z.ZodType<AgentMessagePostPayload> = z
                 .max(TEAM_TEXT_MAX)
                 .describe("The words. Quote an amount only as a tool or the customer gave it."),
             audience,
+        }),
+        z.object({
+            kind: z.literal("chat.answer"),
+            messageId: id.describe("The person's message in the shop chat you answer: the answer is posted in its room as a reply to it."),
+            text: z
+                .string()
+                .min(1)
+                .max(TEAM_TEXT_MAX)
+                .describe("The answer. The team chat step posts it for you: do not call this kind yourself."),
         }),
     ])
     .describe(

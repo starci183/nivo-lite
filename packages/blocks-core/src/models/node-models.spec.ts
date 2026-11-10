@@ -2,16 +2,29 @@ import { coreNodes } from "../nodes/core-nodes"
 import { WORKFLOW_TEMPLATES } from "../modules/workflow-templates"
 import {
     AUTO_MODEL,
+    SONNET_MODEL,
     AUTO_MODEL_OF_WEIGHT,
+    CHEAP_MODEL,
+    DEEPSEEK_MODEL,
     DEFAULT_MODEL,
+    HAIKU_MODEL,
     MODEL_ENTRIES,
     MODEL_IDS,
     STRONGER_MODEL,
     isModelChoice,
     isModelId,
+    isRetiredModel,
     modelEntryOf,
 } from "./models"
-import { ENGINE_CORE_MODEL, NODE_MODELS, graphModelProblems, nodeModelOf, withDeclaredModels } from "./node-models"
+import {
+    ALL_NODES_ON_CLAUDE,
+    ENGINE_CORE_MODEL,
+    NODE_MODELS,
+    graphModelProblems,
+    nodeModelOf,
+    nodeModelsUnder,
+    withDeclaredModels,
+} from "./node-models"
 
 /** A node calls AI when one of its examples scripts the model's answers: the runner then asks the model on that path. */
 const callsAi = (node: (typeof coreNodes)[number]): boolean =>
@@ -33,10 +46,30 @@ describe("the model vocabulary", () => {
 
     it("defaults to Claude Sonnet 5.5 and maps Auto's weights onto models of the vocabulary", () => {
         expect(DEFAULT_MODEL).toBe("claude-sonnet-5-5")
-        expect(AUTO_MODEL_OF_WEIGHT).toEqual({ light: "deepseek/deepseek-v4.1-flash", heavy: "claude-sonnet-5-5" })
+        expect(AUTO_MODEL_OF_WEIGHT).toEqual({ light: "claude-haiku-5-5", heavy: "claude-sonnet-5-5" })
         expect(isModelId(STRONGER_MODEL)).toBe(true)
         expect(modelEntryOf(DEFAULT_MODEL)?.provider).toBe("anthropic")
-        expect(modelEntryOf("deepseek/deepseek-v4.1-flash")?.provider).toBe("openrouter")
+    })
+
+    it("offers only Claude (owner: no OpenRouter): Auto, Sonnet 5.5, Haiku 5.5; the cheap tier is Haiku", () => {
+        expect(MODEL_ENTRIES.filter((entry) => entry.selectable).map((entry) => entry.id)).toEqual([
+            "auto",
+            "claude-sonnet-5-5",
+            "claude-haiku-5-5",
+        ])
+        expect(CHEAP_MODEL).toBe(HAIKU_MODEL)
+        expect(MODEL_ENTRIES.every((entry) => entry.provider === null || entry.provider === "anthropic")).toBe(true)
+    })
+
+    it("keeps DeepSeek flash as a retired id: read with its label, never a choice, refused on a saved graph", () => {
+        expect(isRetiredModel(DEEPSEEK_MODEL)).toBe(true)
+        expect(isModelChoice(DEEPSEEK_MODEL)).toBe(false)
+        expect(isModelId(DEEPSEEK_MODEL)).toBe(false)
+        expect(modelEntryOf(DEEPSEEK_MODEL)?.selectable).toBe(false)
+        expect(modelEntryOf(DEEPSEEK_MODEL)?.provider).toBe("openrouter")
+        expect(
+            graphModelProblems({ nodes: [{ key: "n1", kind: "execute", step: "chatbot.answer", model: DEEPSEEK_MODEL }] as never }),
+        ).toEqual([{ code: "MODEL_RETIRED", nodeKey: "n1" }])
     })
 
     it("accepts Auto and the explicit ids, and nothing else", () => {
@@ -72,6 +105,36 @@ describe("the table of node models", () => {
         expect(nodeModelOf("payment.settle")?.weight).toBe("heavy")
         expect(nodeModelOf("chatbot.understand")?.weight).toBe("light")
         expect(nodeModelOf("core.if")).toBeNull()
+    })
+})
+
+describe("the temporary all-nodes-on-Claude switch", () => {
+    const weights = (table: Readonly<Record<string, { readonly weight: string }>>): Record<string, string> =>
+        Object.fromEntries(Object.entries(table).map(([id, row]) => [id, row.weight]))
+
+    it("on: every row declares Claude Sonnet 5.5, with its weight kept", () => {
+        const on = nodeModelsUnder(true)
+
+        expect(Object.values(on).every((row) => row.model === SONNET_MODEL)).toBe(true)
+        expect(weights(on)).toEqual(weights(nodeModelsUnder(false)))
+    })
+
+    it("off: every row declares Auto, the table as written", () => {
+        expect(Object.values(nodeModelsUnder(false)).every((row) => row.model === AUTO_MODEL)).toBe(true)
+    })
+
+    it("keeps a row for every AI node in both positions", () => {
+        const aiNodes = coreNodes.filter(callsAi).map((node) => node.id).sort()
+
+        expect(Object.keys(nodeModelsUnder(true)).sort()).toEqual(aiNodes)
+        expect(Object.keys(nodeModelsUnder(false)).sort()).toEqual(aiNodes)
+    })
+
+    it("the exported table and the engine core follow the switch's current position", () => {
+        const expected = ALL_NODES_ON_CLAUDE ? SONNET_MODEL : AUTO_MODEL
+
+        expect(NODE_MODELS).toEqual(nodeModelsUnder(ALL_NODES_ON_CLAUDE))
+        expect(ENGINE_CORE_MODEL).toEqual({ model: expected, weight: "heavy" })
     })
 })
 

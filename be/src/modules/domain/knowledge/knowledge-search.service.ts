@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { KnowledgeChunksService, toVector } from "@modules/domain/knowledge-chunks"
+import { EMBEDDING_DIMENSIONS, KnowledgeChunksService, toVector } from "@modules/domain/knowledge-chunks"
 import type { ChunkHit } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import { catalogAudienceOf } from "@modules/domain/module-audiences"
@@ -50,7 +50,8 @@ export class KnowledgeSearchService {
     /**
      * What an agent lane may read for a question, with no member check: the retrieval step of a task the system runs for the agent.
      * The lens is the same as in `ask`: a customer-facing module or audience sees public passages only, and the instance joins its
-     * own notes to the shared ones. A blank question finds nothing and spends nothing.
+     * own notes to the shared ones. A blank question finds nothing and spends nothing; a question the caller already embedded is not
+     * embedded again.
      */
     forAgent(request: AgentSearch): Promise<ReadonlyArray<Passage>> {
         const question = request.question.trim().slice(0, QUESTION_MAX_CHARS)
@@ -64,6 +65,10 @@ export class KnowledgeSearchService {
             requestedAudience: request.audience,
             installationId: request.installationId,
         })
+        const given = request.questionVector
+        if (given !== undefined && given.length === EMBEDDING_DIMENSIONS) {
+            return this.match(lens, question, request.limit, toVector(given))
+        }
         return this.passages(lens, question, request.limit, request.embedTimeoutMs ?? QUERY_TIMEOUT_MS)
     }
 

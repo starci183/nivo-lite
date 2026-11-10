@@ -22,6 +22,7 @@ import { salesWebOrderNode } from "./sales/web-order.node"
 import { paymentReceivedNoticeNode } from "./payment/received-notice.node"
 import { paymentNodes } from "./payment/payment-nodes"
 import { paymentRequestNode } from "./payment/request.node"
+import { teamChatNode } from "./team/team-chat.node"
 
 /**
  * Every core node, React-free so the back end validates graph specs against them without loading React. The business logic of the
@@ -52,4 +53,5 @@ export const coreNodes: ReadonlyArray<NodeDefinition> = [
     accountingMatchPaymentNode,
     accountingPostPaymentNode,
     accountingReportNode,
+    teamChatNode,
 ]

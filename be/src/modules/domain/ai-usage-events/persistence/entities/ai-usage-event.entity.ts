@@ -79,4 +79,28 @@ export class AiUsageEventEntity extends UuidAbstractEntity {
     /** Why the call went to the model it went to (`auto-heavy`, `default-no-key`, ...); null for a fixed task. */
     @Column({ name: "model_reason", type: "text", nullable: true })
     modelReason!: string | null
+
+    /** The kind of work the call served (`node`, `engine_core`, `document_read`, ...); null for a fixed task of the app (migration 014000). */
+    @Column({ name: "work_kind", type: "text", nullable: true })
+    workKind!: string | null
+
+    /** The record the work was done for (`source:<id>`, `lesson:<id>`, `message:<room>/<id>`); null for engine work. */
+    @Column({ name: "work_ref", type: "text", nullable: true })
+    workRef!: string | null
+
+    /** The step (graph node key) of the run a graph node's call was made in; null otherwise. */
+    @Column({ name: "step_key", type: "text", nullable: true })
+    stepKey!: string | null
+
+    /** The agent whose work it was; null when not known. */
+    @Column({ name: "agent_id", type: "uuid", nullable: true })
+    agentId!: string | null
+
+    /** Prompt tokens written to the provider's prompt cache; zero when it did not say. */
+    @Column({ name: "cache_write_tokens", type: "integer", default: () => "0" })
+    cacheWriteTokens!: number
+
+    /** Null for an answered call; the failure code of a FAILED try (estimated, priced, never billed). */
+    @Column({ name: "failure", type: "text", nullable: true })
+    failure!: string | null
 }

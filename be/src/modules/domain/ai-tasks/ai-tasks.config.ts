@@ -74,19 +74,21 @@ const nodeReasoningOf = (declared: string | undefined): NodeReasoning =>
     NODE_REASONINGS.find((known) => known === declared?.trim().toLowerCase()) ?? NODE_REASONING_DEFAULT
 
 /**
- * Which providers of the pool hold a key, by the same variables the gateway pools them from (`integrations/ai-gateway`): the upstream
- * by `OPENROUTER_API_KEY` or `LLM_API_KEY`, Anthropic by `ANTHROPIC_API_KEY`, pooled only beside the upstream. Only presence is read.
+ * Which providers of the pool serve chat, by the same variables the gateway pools them from (`integrations/ai-gateway`): Anthropic by
+ * `ANTHROPIC_API_KEY` serves every chat profile (owner 2026-11-11: no more OpenRouter); OpenRouter serves no chat any more,
+ * so it is never configured here (its key may stay sealed for embeddings). Only presence is read.
  */
-const configuredProvidersOf = (env: EnvSource): ConfiguredProviders => {
-    const openrouter = env.has("OPENROUTER_API_KEY") || env.has("LLM_API_KEY")
-    return { openrouter, anthropic: openrouter && env.has("ANTHROPIC_API_KEY") }
-}
+const configuredProvidersOf = (env: EnvSource): ConfiguredProviders => ({
+    anthropic: env.has("ANTHROPIC_API_KEY"),
+    openrouter: false,
+})
 
 /**
  * Reads the prompt library tunables: `AI_TIMEOUT` (one try of a task), `AI_NODE_TIMEOUT` (the first try of a graph node's call) and
  * `AI_NODE_RETRY_TIMEOUT` (each retry of it), both capped at the ceiling, and `AI_NODE_REASONING` (`off`, `minimal`, `low`, `medium`, `high` or `default`: what a node call asks a reasoning model for),
  * `AI_NODE_MAX_TOKENS` (the output limit of a node call, reasoning included) and `AI_NODE_REASONING_MAX_TOKENS` (a direct cap on its
- * reasoning), neither sent unless declared, and the routing of node calls over the endpoint's upstreams, none sent unless declared:
+ * reasoning), neither sent unless declared, and the routing of node calls over the endpoint's upstreams, none sent unless declared
+ * (INERT since every chat profile is Claude: the `provider` field rides only with OpenRouter's fields, which no call sends now):
  * `AI_NODE_PROVIDER_ORDER` (comma-separated upstream slugs, tried first to last; a retry starts one later), `AI_NODE_PROVIDER_ONLY`
  * (the only upstreams allowed), `AI_NODE_PROVIDER_SORT` (`price`, `throughput` or `latency`) and `AI_NODE_ALLOW_FALLBACKS` (`false`
  * refuses every other upstream); there is no secret here, the key belongs to the LangChain integration, whose settings ride along as the endpoint. */

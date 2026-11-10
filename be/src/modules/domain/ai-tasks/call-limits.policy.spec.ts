@@ -198,12 +198,12 @@ describe("the node call settings of the environment", () => {
 })
 
 describe("the providers of the pool, from the environment", () => {
-    it("names the upstream alone without an Anthropic key, and both with one; Anthropic never alone", () => {
-        expect(parseAiTasksConfig(envOf({ OPENROUTER_API_KEY: "k" }), ENDPOINT).providers).toEqual({ openrouter: true, anthropic: false })
+    it("names Anthropic by its key alone; OpenRouter never serves chat now (its key may stay for embeddings)", () => {
+        expect(parseAiTasksConfig(envOf({ OPENROUTER_API_KEY: "k" }), ENDPOINT).providers).toEqual({ openrouter: false, anthropic: false })
         expect(parseAiTasksConfig(envOf({ LLM_API_KEY: "k", ANTHROPIC_API_KEY: "a" }), ENDPOINT).providers).toEqual({
-            openrouter: true,
+            openrouter: false,
             anthropic: true,
         })
-        expect(parseAiTasksConfig(envOf({ ANTHROPIC_API_KEY: "a" }), ENDPOINT).providers).toEqual({ openrouter: false, anthropic: false })
+        expect(parseAiTasksConfig(envOf({ ANTHROPIC_API_KEY: "a" }), ENDPOINT).providers).toEqual({ openrouter: false, anthropic: true })
     })
 })

@@ -3,18 +3,20 @@ import { Injectable } from "@nestjs/common"
 import { BrainExtractionsService, ExtractionNote } from "@modules/domain/brain-extractions"
 import type { MaybeExtraction } from "@modules/domain/brain-extractions"
 import { BrainFactsService, foldedText } from "@modules/domain/brain-facts"
-import type { Evidence } from "@modules/domain/brain-facts"
+import type { Evidence, FactRecord } from "@modules/domain/brain-facts"
 import { DOC_ANSWERS, KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { KnowledgeIndexingService, UsageMeterService } from "@modules/domain/knowledge"
 import { KnowledgeSourcesService, StoredNote, factsPercent } from "@modules/domain/knowledge-sources"
 import type { SourceRecord } from "@modules/domain/knowledge-sources"
 import { InjectAi } from "@modules/integrations/ai"
 import type { AiBudget, AiChatAnswer, AiService } from "@modules/integrations/ai"
-import { InjectLogger } from "@modules/platform/logging"
+import { InjectLogger, withWorkScope } from "@modules/platform/logging"
 import { concurrencyGateOf, eachInOrder } from "@modules/platform/primitives"
 import type { Logger } from "@modules/platform/logging"
 import { DocumentRelationsService } from "./document-relations.service"
 import { DocumentReviewService } from "./document-review.service"
+import { FactEmbeddingsService } from "./fact-embeddings.service"
+import { FactReadingLogEvent } from "./fact-reading.log-events"
 import { ModelJsonService } from "./model-json.service"
 import { sourcePayloadOf } from "./brain-payload.policy"
 import { BrainError, BrainErrorCode } from "./errors/brain.error"
@@ -65,6 +67,7 @@ export class DocumentFactsService {
         private readonly json: ModelJsonService,
         private readonly reviews: DocumentReviewService,
         private readonly links: DocumentRelationsService,
+        private readonly vectors: FactEmbeddingsService,
     ) {}
 
     /** Reads the facts of the source a facts job names; a payload of another shape is logged and dropped. */
@@ -108,6 +111,20 @@ export class DocumentFactsService {
             await this.sources.settle(workspaceId, source.id, source.content)
             return "skipped"
         }
+        // Every model call of this reading (facts, same-fact judgements, fact vectors, relations) is booked to the document: a
+        // document whose earlier reading finished is being read again (a reading resumed after a failure is still its first).
+        const kind = known?.status === "done" ? "document_reread" : "document_read"
+        return withWorkScope({ kind, ref: `source:${source.id}` }, () => this.readAgain(source, hash, known, same))
+    }
+
+    /** The reading of `read`, inside the document's work scope. */
+    private async readAgain(
+        source: SourceRecord,
+        hash: string,
+        known: Awaited<ReturnType<BrainExtractionsService["get"]>>,
+        same: boolean,
+    ): Promise<FactsOutcome> {
+        const workspaceId = source.workspaceId
         const plan = readingPlanOf(source.content, known?.promptVersion === PROMPT_VERSION ? known.passageHashes : [])
         if (!same) await this.restart(source, hash, plan, known)
         const resume = same ? known : await this.extractions.get(workspaceId, source.id)
@@ -200,7 +217,19 @@ export class DocumentFactsService {
             await progress("running", note, attempts)
             throw new BrainError({ code: BrainErrorCode.ModelUnavailable })
         }
-        const filed = await this.file(source, parsed.facts, MAX_FACTS_PER_DOC - state.filed, state.chunks)
+        if (parsed.ungrounded > 0) {
+            this.logger.info(FactReadingLogEvent.FactsUngrounded, {
+                sourceId: source.id,
+                window: state.done,
+                kept: parsed.facts.length,
+                ungrounded: parsed.ungrounded,
+            })
+        }
+        const created = await this.file(source, parsed.facts, MAX_FACTS_PER_DOC - state.filed, state.chunks)
+        // The same fact in other words (another label in another window or document): vectors of the new proposals, one judgement per
+        // fact with a near candidate, a flag for the founder. Never stops the reading.
+        await this.vectors.checkSameMeaning(workspaceId, created.facts)
+        const filed = created.filed
         const next = {
             ...state,
             done: state.done + 1,
@@ -242,17 +271,21 @@ export class DocumentFactsService {
         )
     }
 
-    /** Files the facts of one window as proposals, each naming the passage it was read from; answers how many were filed. */
+    /**
+     * Files the facts of one window as proposals, each naming the passage it was read from and its stated end (a stated end already past
+     * is filed flagged `stale` by the facts store); answers how many were filed and the rows that were new.
+     */
     private async file(
         source: SourceRecord,
         found: ReadonlyArray<ExtractedFact>,
         room: number,
         chunks: ReadonlyArray<FoldedPassage>,
-    ): Promise<number> {
+    ): Promise<WindowFiled> {
         let filed = 0
+        const created: Array<FactRecord> = []
         await eachInOrder(found.slice(0, room), async (fact) => {
             try {
-                await this.facts.propose(source.workspaceId, {
+                const result = await this.facts.propose(source.workspaceId, {
                     subjectType: fact.subjectType,
                     subjectLabel: fact.subjectLabel,
                     attributeLabel: fact.attributeLabel,
@@ -263,20 +296,20 @@ export class DocumentFactsService {
                     scope: source.visibility === "public" ? "public" : undefined,
                     sourceKind: "document",
                     validFrom: fact.validFrom,
+                    validTo: fact.validTo,
                     autoApply: false,
                     // A document kept for one agent instance proposes facts for that instance only.
                     installationId: source.installationId,
                     proposedBy: source.title.slice(0, 80),
-                    evidence: [
-                        this.documentEvidence(source, fact.quote, chunkHashOf(fact.quote ?? fact.value, chunks)),
-                    ],
+                    evidence: [this.documentEvidence(source, fact.quote, chunkHashOf(fact.quote, chunks))],
                 })
                 filed += 1
+                if (result.created === true) created.push(result.fact)
             } catch (cause) {
                 this.logger.error(BrainLogEvent.FilingFailed, cause, { sourceId: source.id })
             }
         })
-        return filed
+        return { filed, facts: created }
     }
 
     /** The document is read: new facts are linked into the truth graph, facts that lost their evidence are proposed for retirement, the gaps it covers are answered, the source is ready, and its dossier is reviewed again when the facts changed or the whole document was read. */
@@ -303,18 +336,19 @@ export class DocumentFactsService {
             }
         }
         await this.sources.settle(workspaceId, source.id, source.content)
-        if (!state.partial || state.changed || state.filed > 0)
-            await this.reviews.requestForSource(workspaceId, source.id)
+        // After EVERY finished reading (BG3): the critic and the trust gate run from this request, so a re-read whose changed passage
+        // files no new fact is still critiqued and its new passage released; the dossier part skips unchanged dossiers by fingerprint.
+        await this.reviews.requestForSource(workspaceId, source.id)
         return "done"
     }
 
     /** The evidence a fact carries about the document it was read from, with the hash of its passage when one holds the quote. */
-    private documentEvidence(source: SourceRecord, quote: string | null, chunkHash: string | null): Evidence {
+    private documentEvidence(source: SourceRecord, quote: string, chunkHash: string | null): Evidence {
         return {
             kind: "document",
             ref: source.id,
             label: source.title,
-            quote: quote ?? undefined,
+            quote,
             at: source.updatedAt,
             sourceId: source.id,
             title: source.title,
@@ -330,6 +364,14 @@ export class DocumentFactsService {
             label: `The document "${title}" ${what}: no source supports this value any more`,
         }
     }
+}
+
+/** What filing one window did. */
+interface WindowFiled {
+    /** How many facts were filed (new rows and evidence added to known ones). */
+    readonly filed: number
+    /** The new rows. */
+    readonly facts: ReadonlyArray<FactRecord>
 }
 
 /** Where a reading stands between two windows. */

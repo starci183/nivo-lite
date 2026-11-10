@@ -170,6 +170,22 @@ describe("a stored stop card as a screen shows it", () => {
         expect(subject.stopCardViewOf(null, () => "")).toBeNull()
     })
 
+    it("shows each fact with its technical mark: false for a fact stored before facts were worded, true for a raw value", async () => {
+        const subject = await buildSubject()
+        const section = subject.countedSectionOf(GIVEN, null)
+        const worded = {
+            ...BASE,
+            facts: [
+                { name: "Reason", value: "The AI could not tell what to do at this step.", technical: false },
+                { name: "Error code", value: "ai_confused", technical: true },
+            ],
+        }
+        expect(subject.stopCardViewOf(envelope(subject.typedPayloadOf(worded, section)), () => "")?.facts).toEqual(worded.facts)
+        expect(subject.stopCardViewOf(envelope(subject.typedPayloadOf(BASE, section)), () => "")?.facts).toEqual([
+            { name: "Calls", value: "3", technical: false },
+        ])
+    })
+
     it("shows an old-engine card the same way, its heading being the card's title", async () => {
         const subject = await buildSubject()
         expect(

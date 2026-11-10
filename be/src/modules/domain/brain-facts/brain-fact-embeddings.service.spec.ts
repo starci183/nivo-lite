@@ -32,7 +32,7 @@ describe("BrainFactEmbeddingsService", () => {
             embeddingModel: "embed",
             embeddingHash: "hash-1",
         })
-        expect(write?.callsOf("where")).toEqual([[{ workspaceId: facts.WS, id: "f1", status: "active" }]])
+        expect(write?.callsOf("where")).toEqual([[{ workspaceId: facts.WS, id: "f1", status: In(["active", "proposed"]) }]])
         expect(write?.callsOf("setParameter")).toEqual([["vector", "[0.1,0.2,0.3]"]])
     })
 
@@ -55,6 +55,82 @@ describe("BrainFactEmbeddingsService", () => {
         expect(condition).toContain("f.embeddingModel = :model AND f.embeddingDimensions = :dimensions")
         expect(parameters).toMatchObject({ workspaceId: facts.WS, model: "embed", dimensions: 3, vector: "[1,0,0]" })
         expect(em.find.mock.calls[0]?.[1]).toEqual({ where: { workspaceId: facts.WS, id: In(["f1", "f2"]) }, take: 2 })
+    })
+
+    it("ranks only the facts a customer-facing lens may read: public, shared or its own instance, in SQL before the limit", async () => {
+        const em = mockEntityManager()
+        const [rank] = queueQueryBuilders(em, [{ getRawMany: [] }])
+        const service = await build(em)
+
+        await expect(
+            service.nearest(facts.WS, IDENTITY, [1, 0, 0], 5, { audience: "customer", module: "chatbot", installationId: "i-1" }),
+        ).resolves.toEqual([])
+        expect(rank?.callsOf("andWhere")).toEqual([
+            ["(f.installationId IS NULL OR f.installationId = :installationId)", { installationId: "i-1" }],
+            ["f.scope = 'public'", { module: "chatbot" }],
+        ])
+    })
+
+    it("ranks for an internal lens its shared facts and the restricted ones of its module", async () => {
+        const em = mockEntityManager()
+        const [rank] = queueQueryBuilders(em, [{ getRawMany: [] }])
+        const service = await build(em)
+
+        await service.nearest(facts.WS, IDENTITY, [1, 0, 0], 5, { audience: "internal", module: "sales", installationId: null })
+        expect(rank?.callsOf("andWhere")).toEqual([
+            ["f.installationId IS NULL", { installationId: null }],
+            ["(f.scope <> 'restricted' OR :module = ANY(f.modules))", { module: "sales" }],
+        ])
+    })
+
+    it("finds the facts near one STORED fact by its own vector, same identity and scope, under the distance, itself left out", async () => {
+        const em = mockEntityManager({ find: [BrainFactEntity, [facts.rowOf({ id: "f2" })]] })
+        const [rank] = queueQueryBuilders(em, [{ getRawMany: [{ id: "f2", distance: "0.08" }] }])
+        const service = await build(em)
+
+        const near = await service.nearestTo(facts.WS, "f1", IDENTITY, {
+            statuses: ["active", "proposed"],
+            installationId: null,
+            maxDistance: 0.25,
+            limit: 3,
+        })
+        expect(near.map((hit) => [hit.fact.id, hit.distance])).toEqual([["f2", 0.08]])
+        const [condition, parameters] = rank?.callsOf("where")[0] ?? []
+        expect(condition).toContain("f.id <> :factId AND f.status IN (:...statuses)")
+        expect(parameters).toEqual({
+            workspaceId: facts.WS,
+            factId: "f1",
+            statuses: ["active", "proposed"],
+            model: "embed",
+            dimensions: 3,
+        })
+        const [scope, distance] = rank?.callsOf("andWhere") ?? []
+        expect(scope).toEqual(["f.installationId IS NULL", { installationId: null }])
+        expect(distance?.[0]).toContain("q.embedding_model = :model AND q.embedding_dimensions = :dimensions")
+        expect(distance?.[1]).toEqual({ maxDistance: 0.25 })
+        expect(rank?.callsOf("limit")).toEqual([[3]])
+    })
+
+    it("compares with no status at all: nothing is read", async () => {
+        const em = mockEntityManager()
+        const service = await build(em)
+
+        await expect(
+            service.nearestTo(facts.WS, "f1", IDENTITY, { statuses: [], installationId: null, maxDistance: 1, limit: 3 }),
+        ).resolves.toEqual([])
+        expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+
+    it("reads the stored vector state of named facts", async () => {
+        const row = Object.assign(facts.rowOf({ id: "p1" }), { embeddingModel: "embed", embeddingDimensions: 3, embeddingHash: "h" })
+        const em = mockEntityManager({ find: [BrainFactEntity, [row]] })
+        const service = await build(em)
+
+        await expect(service.statesOf(facts.WS, ["p1", "p1"])).resolves.toMatchObject([
+            { fact: { id: "p1" }, stored: { model: "embed", dimensions: 3, hash: "h" } },
+        ])
+        expect(em.find.mock.calls[0]?.[1]).toEqual({ where: { workspaceId: facts.WS, id: In(["p1"]) }, take: 1 })
+        await expect(service.statesOf(facts.WS, [])).resolves.toEqual([])
     })
 
     it("never compares a question vector of another size: nothing is read", async () => {

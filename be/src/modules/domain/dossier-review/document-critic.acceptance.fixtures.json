@@ -1,0 +1,98 @@
+{
+  "note": "The brain test documents of lanes/brain-test-20261111 (tiem-hoa-quy-dinh.md v1; v2 = the rush paragraph changed), the facts a reading files from them, the seeded shop truths, and the scripted critic answers. Test data only.",
+  "title": "Quy định Tiệm hoa NIVO (bản thử)",
+  "v1": "# Tiệm hoa NIVO - Quy định bán hàng\n\nTài liệu thử của Tiệm hoa NIVO. Tiệm bán hoa bó, giỏ hoa, kệ hoa khai trương và lan hồ điệp.\n\n## Giờ mở cửa\n\n- Thứ Hai đến Chủ nhật: 8:00 đến 20:00.\n- Nghỉ Tết Bính Ngọ: từ 16/02/2026 đến hết 20/02/2026, không nhận đơn.\n\n## Bảng giá\n\n- Bó hoa hồng đỏ 10 bông: 350.000 đ\n- Giỏ hoa nhỏ: 25.000 đ\n- Bó hướng dương 3 bông: 280.000 đ\n- Kệ hoa khai trương: [...] đ\n\n## Phí giao hàng\n\n- Phí giao hàng nội thành: 30.000 đ một đơn.\n- Phí giao hàng ngoại thành (trên 10 km): 50.000 đ một đơn.\n\n## Giao nhanh\n\nKhách cần giao nhanh thì tính thêm, nhân viên báo sau.\n\n## Thanh toán\n\n- Chuyển khoản trước 100% khi chốt đơn, ghi đúng mã đơn vào nội dung chuyển khoản.\n- Không nhận tiền mặt khi giao.\n\n## Khách quen\n\n- Khách đã mua từ 5 đơn trở lên được giảm 5% mỗi đơn.\n- Ưu đãi khách quen có hiệu lực đến 30/06/2026.\n\n## Lưu ý khi giao\n\n- Phí giao hàng nội thành: 25.000 đ một đơn.\n- Đơn từ 500.000 đ được miễn phí giao hàng.\n",
+  "oldRush": "Khách cần giao nhanh thì tính thêm, nhân viên báo sau.",
+  "newRush": "Giao nhanh trong 2 giờ (nội thành): phụ thu 20.000 đ mỗi đơn.",
+  "oldCash": "Không nhận tiền mặt khi giao.",
+  "newCash": "Nhận tiền mặt khi giao (COD), phí thu hộ 1%.",
+  "facts": [
+    ["f-hours", "Tiệm hoa NIVO", "Giờ mở cửa", "8:00 đến 20:00", "Thứ Hai đến Chủ nhật: 8:00 đến 20:00."],
+    ["f-tet", "Tiệm hoa NIVO", "Nghỉ Tết Bính Ngọ", "16/02/2026 đến 20/02/2026", "Nghỉ Tết Bính Ngọ: từ 16/02/2026 đến hết 20/02/2026"],
+    ["f-rose", "Bó hoa hồng đỏ 10 bông", "Giá", "350.000 đ", "Bó hoa hồng đỏ 10 bông: 350.000 đ"],
+    ["f-basket", "Giỏ hoa nhỏ", "Giá", "25.000 đ", "Giỏ hoa nhỏ: 25.000 đ"],
+    ["f-sun", "Bó hướng dương 3 bông", "Giá", "280.000 đ", "Bó hướng dương 3 bông: 280.000 đ"],
+    ["f-ship30", "Giao hàng nội thành", "Phí giao hàng", "30.000 đ", "Phí giao hàng nội thành: 30.000 đ một đơn."],
+    ["f-ship50", "Giao hàng ngoại thành", "Phí giao hàng", "50.000 đ", "Phí giao hàng ngoại thành (trên 10 km): 50.000 đ một đơn."],
+    ["f-pay", "Thanh toán", "Hình thức", "Chuyển khoản trước 100%", "Chuyển khoản trước 100% khi chốt đơn"],
+    ["f-loyal", "Khách quen", "Giảm giá", "5% mỗi đơn", "Khách đã mua từ 5 đơn trở lên được giảm 5% mỗi đơn."],
+    ["f-loyal-end", "Ưu đãi khách quen", "Hiệu lực đến", "30/06/2026", "Ưu đãi khách quen có hiệu lực đến 30/06/2026."],
+    ["f-ship25", "Giao hàng nội thành", "Phí giao hàng", "25.000 đ", "Phí giao hàng nội thành: 25.000 đ một đơn."],
+    ["f-free", "Miễn phí giao hàng", "Điều kiện", "Đơn từ 500.000 đ", "Đơn từ 500.000 đ được miễn phí giao hàng."]
+  ],
+  "rushFact": ["f-rush", "Giao nhanh", "Phụ thu", "20.000 đ", "Giao nhanh trong 2 giờ (nội thành): phụ thu 20.000 đ mỗi đơn."],
+  "rushFactLine": "Giao nhanh - Phụ thu: 20.000 đ",
+  "seedTitle": "Sản phẩm và bảng giá",
+  "truths": {
+    "basket": ["t-basket", "Giỏ hoa nhỏ", "Giá", "2.000 ₫", "Giỏ hoa nhỏ - giá: 2.000 ₫"],
+    "rose": ["t-rose", "Bó hồng đỏ 10 bông", "Giá", "7.000 ₫", "Bó hồng đỏ 10 bông - giá: 7.000 ₫"],
+    "hours": ["t-hours", "Tiệm hoa Nắng Mai", "Giờ mở cửa", "7:30 - 21:00", "Tiệm hoa Nắng Mai mở cửa 7:30 - 21:00"]
+  },
+  "shopLines": [
+    "Tiệm hoa Nắng Mai - Giờ mở cửa: 7:30 - 21:00",
+    "Bó hồng đỏ 10 bông - Giá: 7.000 ₫",
+    "Giỏ hoa nhỏ - Giá: 2.000 ₫"
+  ],
+  "words": {
+    "intro": "lan hồ điệp",
+    "hours": "Thứ Hai",
+    "hoursLine": "Thứ Hai đến Chủ nhật",
+    "tet": "Nghỉ Tết Bính Ngọ",
+    "prices": "Bảng giá",
+    "basket": "Giỏ hoa nhỏ",
+    "basketTruth": "Giỏ hoa nhỏ - giá: 2.000 ₫",
+    "rose": "Bó hoa hồng đỏ 10 bông: 350.000 đ",
+    "roseShop": "Bó hồng đỏ",
+    "hoursShop": "Nắng Mai",
+    "stand": "Kệ hoa khai trương: [...] đ",
+    "fee30": "Phí giao hàng nội thành: 30.000 đ",
+    "fee25": "Phí giao hàng nội thành: 25.000 đ",
+    "rush": "Khách cần giao nhanh",
+    "rushLower": "giao nhanh",
+    "payment": "Chuyển khoản trước",
+    "paymentSection": "Thanh toán",
+    "loyalEnd": "hiệu lực đến 30/06/2026",
+    "loyalEndShort": "hiệu lực đến",
+    "tetShort": "Nghỉ Tết",
+    "bracket": "[...]",
+    "cod": "thu hộ 1%",
+    "pick30": "30.000 đ",
+    "skipReason": "Giá thử, bỏ qua"
+  },
+  "v1Answer": [
+    {
+      "kind": "missing", "severity": "medium",
+      "line": "Thiếu giá: lan hồ điệp", "why": "Đầu tài liệu nói tiệm bán lan hồ điệp nhưng bảng giá không có.", "question": "Lan hồ điệp giá bao nhiêu?",
+      "quotes": [["changed", "lan hồ điệp", "kệ hoa khai trương và lan hồ điệp"]], "values": []
+    },
+    {
+      "kind": "shop_contradiction", "severity": "high",
+      "line": "Khác dữ liệu shop: giá bó hồng đỏ 10 bông", "why": "Shop đang dùng 7.000 ₫ cho \"Bó hồng đỏ 10 bông\".", "question": "Giá bó hồng đỏ 10 bông là 350.000 đ hay 7.000 ₫?",
+      "quotes": [["changed", "Bó hoa hồng đỏ", "Bó hoa hồng đỏ 10 bông: 350.000 đ"], ["shop", "Bó hồng đỏ", "Bó hồng đỏ 10 bông - Giá: 7.000 ₫"]],
+      "values": ["350.000 đ", "7.000 ₫"]
+    },
+    {
+      "kind": "shop_contradiction", "severity": "high",
+      "line": "Khác dữ liệu shop: giờ mở cửa (và tên tiệm: NIVO / Nắng Mai)", "why": "Shop đang dùng 7:30 - 21:00 dưới tên \"Tiệm hoa Nắng Mai\".", "question": "Giờ mở cửa là 8:00 - 20:00 hay 7:30 - 21:00, và tiệm tên gì?",
+      "quotes": [["changed", "Thứ Hai", "Thứ Hai đến Chủ nhật: 8:00 đến 20:00."], ["shop", "Nắng Mai", "Giờ mở cửa: 7:30 - 21:00"]],
+      "values": ["8:00 - 20:00", "7:30 - 21:00"]
+    },
+    {
+      "kind": "vague", "severity": "medium",
+      "line": "Giao nhanh tính thêm bao nhiêu?", "why": "Không có số tiền.", "question": "Giao nhanh tính thêm bao nhiêu?",
+      "quotes": [["changed", "giao nhanh", "Khách cần giao nhanh thì tính thêm"]], "values": []
+    },
+    {
+      "kind": "typo", "severity": "high",
+      "line": "Giá lạ", "why": "Bịa", "question": "?",
+      "quotes": [["changed", "Bảng giá", "Bó hoa hồng đỏ 10 bông: 3.500.000 đ"]], "values": []
+    }
+  ],
+  "v2Answer": [
+    {
+      "kind": "vague", "severity": "low",
+      "line": "Chưa rõ", "why": "Không nói khi nào", "question": "?",
+      "quotes": [["context", "Thanh toán", "Không nhận tiền mặt khi giao."]], "values": []
+    }
+  ]
+}

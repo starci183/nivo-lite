@@ -12,6 +12,7 @@ import deliveryCheck from "./sales/template/workflows/delivery-check.json"
 import occasion from "./sales/template/workflows/occasion.json"
 import paymentReminder from "./sales/template/workflows/payment-reminder.json"
 import webOrder from "./sales/template/workflows/web-order.json"
+import { TEAM_CHAT_MODULES, teamChatTemplateOf } from "./team-chat-template"
 
 /** A connection a workflow template cannot run without: its kind, its name and why the graph needs it. */
 export interface WorkflowTemplateConnection {
@@ -114,6 +115,7 @@ export const WORKFLOW_TEMPLATES: ReadonlyArray<WorkflowTemplate> = [
     deliveryCheck,
     occasion,
     frontDesk,
+    ...TEAM_CHAT_MODULES.map(teamChatTemplateOf),
 ].map(
     templateOf,
 )

@@ -74,6 +74,13 @@ const ASK: AiChatRequest = {
     context: null,
 }
 
+/**
+ * A target an OpenAI-compatible upstream could serve (no profile of the pool is one since 2026-11-11: every chat profile is Claude).
+ * The mechanics of the upstream's own fields are kept and proven on it, so they work again the day such a profile returns.
+ */
+const UPSTREAM_TARGET = { name: "upstream-profile", sampling: true, forcedToolChoice: true, upstreamFields: true }
+const ASK_UP: AiChatRequest = { ...ASK, target: UPSTREAM_TARGET }
+
 const registerMultimodalChatCase = () => {
     it("sends the user's text and ordered image URLs together as one multimodal message", async () => {
         const { client, http } = await build()
@@ -110,7 +117,7 @@ const registerMultimodalChatCase = () => {
 describe("AiClient chat", () => {
     registerMultimodalChatCase()
 
-    it("calls the gateway profile with the virtual key at temperature 0 within the deadline and reads the message metadata", async () => {
+    it("calls the gateway profile with the virtual key, no temperature (Claude only), within the deadline, and reads the message metadata", async () => {
         const { client, http } = await build()
 
         const reply = await client.chat(ASK)
@@ -125,7 +132,7 @@ describe("AiClient chat", () => {
         expect(sent).toMatchObject({ url: "http://gateway.test/v1/chat/completions", timeoutMs: 5000 })
         expect(sent.headers).toMatchObject({ authorization: "Bearer sk-starci-test" })
         expect(sent.text).toContain('"model":"work"')
-        expect(sent.text).toContain('"temperature":0')
+        expect(sent.text).not.toContain('"temperature"')
         expect(sent.text).not.toContain("response_format")
     })
 
@@ -191,10 +198,10 @@ describe("AiClient prompt cache", () => {
     it("sends the same session_id for the same affinity, a digest and never the name, and none without one", async () => {
         const { client, http } = await build()
 
-        await client.chat({ ...ASK, affinity: "workspace-1" })
-        await client.chat({ ...ASK, affinity: "workspace-1", messages: [{ role: "user", content: "another" }] })
-        await client.chat({ ...ASK, affinity: "workspace-2" })
-        await client.chat(ASK)
+        await client.chat({ ...ASK_UP, affinity: "workspace-1" })
+        await client.chat({ ...ASK_UP, affinity: "workspace-1", messages: [{ role: "user", content: "another" }] })
+        await client.chat({ ...ASK_UP, affinity: "workspace-2" })
+        await client.chat(ASK_UP)
 
         const sessions = [0, 1, 2].map((at) => /"session_id":"([0-9a-f]{32})"/u.exec(sentOf(http, at).text)?.[1])
         expect(sessions[0]).toBeDefined()
@@ -212,7 +219,7 @@ describe("AiClient prompt cache", () => {
             body: completion("ok").replace('"object"', '"provider":"DeepInfra","object"'),
         })
 
-        await expect(client.chat(ASK)).resolves.toMatchObject({ provider: "DeepInfra" })
+        await expect(client.chat(ASK_UP)).resolves.toMatchObject({ provider: "DeepInfra" })
     })
 })
 
@@ -220,9 +227,9 @@ describe("AiClient upstream routing", () => {
     it("sends no provider field for a call without a routing, or with a routing that names nothing", async () => {
         const { client, http } = await build()
 
-        await client.chat({ ...ASK, affinity: "workspace-1", budget: { effort: "low" } })
-        await client.chat({ ...ASK, routing: {} })
-        await client.chat({ ...ASK, routing: { order: [], only: [] } })
+        await client.chat({ ...ASK_UP, affinity: "workspace-1", budget: { effort: "low" } })
+        await client.chat({ ...ASK_UP, routing: {} })
+        await client.chat({ ...ASK_UP, routing: { order: [], only: [] } })
         await client.turnModel({ timeoutMs: 45_000 }).invoke([{ role: "user", content: "STEP" }])
 
         for (const at of [0, 1, 2, 3]) expect(sentOf(http, at).text).not.toContain('"provider"')
@@ -232,15 +239,15 @@ describe("AiClient upstream routing", () => {
         const { client, http } = await build()
 
         await client.chat({
-            ...ASK,
+            ...ASK_UP,
             affinity: "workspace-1",
             budget: { effort: "low" },
             routing: { order: ["wafer", "together"], allowFallbacks: true },
         })
-        await client.chat({ ...ASK, routing: { sort: "throughput" } })
-        await client.chat({ ...ASK, routing: { only: ["wafer", "digitalocean"], allowFallbacks: false } })
+        await client.chat({ ...ASK_UP, routing: { sort: "throughput" } })
+        await client.chat({ ...ASK_UP, routing: { only: ["wafer", "digitalocean"], allowFallbacks: false } })
         await client
-            .turnModel({ timeoutMs: 45_000, routing: { order: ["together", "wafer"] } })
+            .turnModel({ timeoutMs: 45_000, routing: { order: ["together", "wafer"] }, target: UPSTREAM_TARGET })
             .invoke([{ role: "user", content: "STEP" }])
 
         const sent = [0, 1, 2, 3].map((at) => {
@@ -267,6 +274,7 @@ describe("AiClient the client of one try of an agent turn", () => {
             timeoutMs: 45_000,
             budget: { effort: "low", maxTokens: 4000 },
             affinity: "workspace-1",
+            target: UPSTREAM_TARGET,
         })
         const tools = [
             {
@@ -303,7 +311,7 @@ describe("AiClient chat budget", () => {
     it("sends a call without a budget with no token cap and no reasoning field", async () => {
         const { client, http } = await build()
 
-        await client.chat(ASK)
+        await client.chat(ASK_UP)
 
         const sent = sentOf(http, 0)
         expect(sent.text).not.toContain("max_tokens")
@@ -313,7 +321,7 @@ describe("AiClient chat budget", () => {
     it("sends the budget of a call as the most tokens it may write and reasoning switched off", async () => {
         const { client, http } = await build()
 
-        await client.chat({ ...ASK, budget: { effort: "off", maxTokens: 800 } })
+        await client.chat({ ...ASK_UP, budget: { effort: "off", maxTokens: 800 } })
 
         const sent = sentOf(http, 0)
         expect(sent.text).toContain('"max_tokens":800')
@@ -323,8 +331,8 @@ describe("AiClient chat budget", () => {
     it("sends a reasoning effort when the budget names one, with the output limit it is a share of, and never asks the reasoning text back", async () => {
         const { client, http } = await build()
 
-        await client.chat({ ...ASK, budget: { effort: "low", maxTokens: 800 } })
-        await client.chat({ ...ASK, budget: { effort: "minimal" } })
+        await client.chat({ ...ASK_UP, budget: { effort: "low", maxTokens: 800 } })
+        await client.chat({ ...ASK_UP, budget: { effort: "minimal" } })
 
         expect(sentOf(http, 0).text).toContain('"reasoning":{"effort":"low","exclude":true}')
         expect(sentOf(http, 0).text).toContain('"max_tokens":800')
@@ -335,8 +343,8 @@ describe("AiClient chat budget", () => {
     it("sends a direct cap on reasoning in place of the effort when the budget names one, and none with reasoning off", async () => {
         const { client, http } = await build()
 
-        await client.chat({ ...ASK, budget: { effort: "low", reasoningMaxTokens: 1024 } })
-        await client.chat({ ...ASK, budget: { effort: "off", reasoningMaxTokens: 1024 } })
+        await client.chat({ ...ASK_UP, budget: { effort: "low", reasoningMaxTokens: 1024 } })
+        await client.chat({ ...ASK_UP, budget: { effort: "off", reasoningMaxTokens: 1024 } })
 
         expect(sentOf(http, 0).text).toContain('"reasoning":{"max_tokens":1024,"exclude":true}')
         expect(sentOf(http, 0).text).not.toContain('"effort"')
@@ -422,13 +430,14 @@ describe("AiClient chat, the model a call targets", () => {
         expect(sent).toHaveProperty("session_id")
     })
 
-    it("sends today's body when the call names no target: the endpoint's profile at temperature 0", async () => {
+    it("sends the Claude body when the call names no target (`work` is Claude only): no temperature, no OpenRouter fields", async () => {
         const { client, http } = await build()
 
-        await client.chat({ ...ASK, budget: BUDGET })
+        await client.chat({ ...ASK, budget: BUDGET, affinity: "ws-1", routing: { order: ["together"] } })
 
         const sent = JSON.parse(sentOf(http, 0).text) as Record<string, unknown>
-        expect(sent).toMatchObject({ model: "work", temperature: 0, reasoning: { effort: "low", exclude: true } })
+        expect(sent).toMatchObject({ model: "work", max_tokens: 4000 })
+        for (const field of ["temperature", "reasoning", "session_id", "provider"]) expect(sent).not.toHaveProperty(field)
     })
 
     it("sends a marked message as plain text while breakpoints are off the wire", async () => {

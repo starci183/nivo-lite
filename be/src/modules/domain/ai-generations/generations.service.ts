@@ -7,7 +7,7 @@ import type { Clock } from "@modules/platform/clock"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { MessageCatalog } from "@modules/platform/i18n"
-import { InjectLogger } from "@modules/platform/logging"
+import { InjectLogger, runInScope, workInScope } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { InjectAgentsQueue } from "@modules/queues/agents"
 import type { AgentsQueue } from "@modules/queues/agents"
@@ -41,6 +41,7 @@ import {
     inputJsonOf,
     inputOf,
     isPlainObject,
+    meteringJsonOf,
     progressOf,
     purposeOf,
     verdictOf,
@@ -301,7 +302,8 @@ export class GenerationsService {
             purpose: purposeOf(params.purpose),
             module: params.module,
             usageKind: params.kind,
-            input,
+            // The caller's run and work travel with the row: the job that runs it books the call to them.
+            input: { ...input, ...meteringJsonOf(runInScope(), workInScope()) },
         })
         const id: unknown = inserted.identifiers[0]?.id
         if (typeof id !== "string") throw new AiGenerationsError({ code: AiGenerationsErrorCode.NotCreated })

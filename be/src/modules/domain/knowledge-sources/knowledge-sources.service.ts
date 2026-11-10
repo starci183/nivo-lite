@@ -51,6 +51,7 @@ import {
     normalizeUpdate,
     replacementContent,
     safeFileName,
+    uploadVerdict,
 } from "./source-input.policy"
 import { contentHashOf } from "./source-hash.policy"
 import { SourcePartsService } from "./source-parts.service"
@@ -141,7 +142,7 @@ export class KnowledgeSourcesService {
     async detail(userId: string, workspaceId: string, sourceId: string): Promise<SourceDetail> {
         await this.members.require(userId, workspaceId)
         const row = await this.entityManager.findOne(KnowledgeSourceEntity, {
-            select: { ...SUMMARY_COLUMNS, content: true },
+            select: { ...SUMMARY_COLUMNS, content: true, reading: true },
             where: { workspaceId, id: sourceId },
         })
         if (row === null) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
@@ -208,11 +209,13 @@ export class KnowledgeSourcesService {
         return { id: sourceId }
     }
 
-    /** Reads a source again, optionally with new text. */
+    /** Reads a source again, optionally with new text or, for a file, a new upload of it (`SourceQuotaService.replacementOf`). */
     async reindexSource(userId: string, workspaceId: string, input: ReindexInput): Promise<SourceRef> {
         await this.members.require(userId, workspaceId, MANAGERS)
         const content = unwrapOutcome(replacementContent(input.content), KnowledgeSourcesError)
+        const upload = await this.quota.uploadOf(workspaceId, input.storagePath)
         const queued = await this.entityManager.transaction(async (tx) => {
+            const file = await this.quota.replacementOf(tx, { workspaceId, sourceId: input.sourceId }, upload)
             const requeued = await tx.update(
                 KnowledgeSourceEntity,
                 [
@@ -225,6 +228,7 @@ export class KnowledgeSourcesService {
                     error: null,
                     ...NO_STAGE,
                     ...(content === null ? {} : { content }),
+                    ...file.columns,
                     updatedAt: NOW,
                 },
             )
@@ -236,12 +240,13 @@ export class KnowledgeSourcesService {
                 if (busy === null) throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.SourceNotFound })
                 if (busy.origin === PUBLIC_DOCUMENT_ORIGIN)
                     throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.PublicByApproval })
-                return false
+                return null
             }
             await this.queue.enqueueIndex({ sourceId: input.sourceId, workspaceId }, tx, this.clock.now().getTime())
-            return true
+            return { replaced: file.replaced }
         })
-        if (queued) await this.progress.announce(workspaceId, input.sourceId)
+        if (queued !== null)
+            await this.quota.settleReplaced(queued.replaced, this.progress.announce(workspaceId, input.sourceId))
         return { id: input.sourceId }
     }
 
@@ -284,10 +289,10 @@ export class KnowledgeSourcesService {
         workspaceId: string,
         filename: string,
         contentType: string,
+        sizeBytes?: number,
     ): Promise<UploadAddress> {
         await this.members.require(userId, workspaceId, MANAGERS)
-        if (filename.trim() === "")
-            throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.FileNameRequired })
+        unwrapOutcome(uploadVerdict(filename, sizeBytes ?? null), KnowledgeSourcesError)
         const signedType = uploadContentTypeOf(KNOWLEDGE_UPLOAD_MIME, filename, contentType)
         if (signedType === null)
             throw new KnowledgeSourcesError({ code: KnowledgeSourcesErrorCode.FileTypeUnsupported })

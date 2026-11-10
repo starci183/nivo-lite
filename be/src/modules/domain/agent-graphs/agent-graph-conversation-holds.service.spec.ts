@@ -308,6 +308,8 @@ describe("AgentGraphConversationHoldsService: the customer's follow-up during an
                 source: "customer",
                 eventKey: `msg-ok-anh~held-by-${SALES}`,
                 context: { conversationId: CONVERSATION, messageId: "m-ok-anh" },
+                // The front door's wake already waited the burst of this line: the keeper's wake does not wait it again (D-P10-2).
+                burstSettled: true,
             }),
         )
 

@@ -121,6 +121,11 @@ export interface AgentWake {
     readonly scopeKey?: string
     /** How long the drain of the wake waits, milliseconds (a wake held for the agent's next working hour); absent takes the burst window. */
     readonly delayMs?: number
+    /**
+     * True for a wake that carries lines whose burst window was already waited out by the wake it continues (a customer line a held
+     * conversation's front door sends on to the agent that keeps it): it waits no window a second time (D-P10-2).
+     */
+    readonly burstSettled?: boolean
 }
 
 /** A wake as a handler sees it: what woke the agent and for whom, with or without a turn behind it. */

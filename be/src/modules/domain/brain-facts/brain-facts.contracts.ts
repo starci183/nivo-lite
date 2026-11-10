@@ -27,6 +27,20 @@ export type FactSource = "owner" | "manager" | "document" | "system" | "staff" |
 /** A value (set) or a proposal to stop using an active fact (retire). */
 export type FactProposalKind = "set" | "retire"
 
+/**
+ * What the brain noticed about a proposal that the founder must see before deciding it; a flagged proposal is never applied in bulk or
+ * without a person.
+ * - `stale`: its stated end has already passed when it was filed (a document says "valid until 30/06" in November). Approving it records
+ *   it as history: it never comes in force.
+ * - `same_meaning`: the model judged it the SAME fact as another one written in other words (another subject or attribute label);
+ *   `conflictWith` names that fact. Approving it MERGES: it takes the other fact's place (the other value in force is superseded, or the
+ *   other waiting proposal is rejected); "split" keeps both apart; reject drops it.
+ */
+export type FactFlag = "stale" | "same_meaning"
+
+/** The flags a proposal may carry, in the order the store checks them. */
+export const FACT_FLAGS: ReadonlyArray<FactFlag> = ["stale", "same_meaning"]
+
 /** Who the answer is for; `customer` only ever sees public facts. */
 export type FactAudience = "customer" | "internal"
 
@@ -101,7 +115,10 @@ export interface FactRecord {
     readonly validTo: string | null
     /** The fact this one replaced. */
     readonly supersedesId: string | null
-    /** The active fact a proposal disagrees with, or the one a retire proposal points at. */
+    /**
+     * The fact a proposal disagrees with: the value in force of its key, else (no value in force) the other value waiting for the same
+     * key, else (flag `same_meaning`) the fact of another key it says the same thing as; for a retire proposal, the fact it would stop.
+     */
     readonly conflictWith: string | null
     /** A value or a proposal to stop using one. */
     readonly proposalKind: FactProposalKind
@@ -122,6 +139,8 @@ export interface FactRecord {
      * never in force (and on a row the version backfill did not reach).
      */
     readonly version?: number
+    /** What the brain noticed for the founder (`FactFlag`); absent when nothing. */
+    readonly flags?: ReadonlyArray<FactFlag>
 }
 
 /** What decides who may read a fact: its scope, the modules it is restricted to and the instance it is kept for. */
@@ -189,6 +208,8 @@ export interface ProposeResult {
     readonly fact: FactRecord
     /** What happened to it. */
     readonly outcome: BrainProposeOutcome
+    /** True when a new row was stored (never when an existing fact or proposal only grew its evidence); absent reads as false. */
+    readonly created?: boolean
 }
 
 /** Which facts a list returns. */

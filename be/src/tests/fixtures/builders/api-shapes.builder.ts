@@ -239,7 +239,7 @@ export type BuildWiringProofResultOptionsPassportShape = {
     budget: BuildWiringProofResultOptionsPassportBudgetShape
 }
 /** The build wiring proof result options ai gateway models record the builders hand out and the specs expect. */
-export type BuildWiringProofResultOptionsAiGatewayModelsShape = { work: string; embed: string; strong: string }
+export type BuildWiringProofResultOptionsAiGatewayModelsShape = { work: string; strong: string }
 /** The build wiring proof result options ai gateway record the builders hand out and the specs expect. */
 export type BuildWiringProofResultOptionsAiGatewayShape = {
     providers: Array<never>

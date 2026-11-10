@@ -15,6 +15,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { IDS } from "@modules/platform/ids"
 import { KnowledgeQueue } from "@modules/queues/knowledge"
+import { DocumentCriticService } from "./document-critic.service"
 import { DossierReviewRunsService } from "./dossier-review-runs.service"
 import { DossierReviewErrorCode } from "./errors/dossier-review.error"
 import { DossierFindingEntity, DossierReviewRunEntity } from "./persistence/entities"
@@ -51,6 +52,7 @@ const build = async (em: MockEntityManager) => {
     const sources = mock<DossierSourcesService>()
     const queue = mock<KnowledgeQueue>()
     const critic = mock<SourceCriticStageService>()
+    const documentCritic = mock<DocumentCriticService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             DossierReviewRunsService,
@@ -61,9 +63,10 @@ const build = async (em: MockEntityManager) => {
             { provide: DossierSourcesService, useValue: sources },
             { provide: KnowledgeQueue, useValue: queue },
             { provide: SourceCriticStageService, useValue: critic },
+            { provide: DocumentCriticService, useValue: documentCritic },
         ],
     }).compile()
-    return { service: moduleRef.get(DossierReviewRunsService), members, inputs, sources, queue, critic }
+    return { service: moduleRef.get(DossierReviewRunsService), members, inputs, sources, queue, critic, documentCritic }
 }
 
 /** A transaction in which no workspace run is queued and the insert stores the run with the first id. */
@@ -94,11 +97,15 @@ describe("DossierReviewRunsService requestForSource", () => {
 describe("DossierReviewRunsService requestForSource filing", () => {
     it("reviews a document no dossier claims on its own, with a run of the whole set", async () => {
         const { tx, inserts } = freshRun(runOf({ scope: "workspace", dossierId: null }))
-        const { service, sources, inputs, queue, critic } = await build(tx.em)
+        const { service, sources, inputs, queue, critic, documentCritic } = await build(tx.em)
         inputs.all.mockResolvedValue([dossierOf()])
         inputs.dossierOf.mockResolvedValue(undefined)
         sources.sourceOf.mockResolvedValue(sourceOf({ topic: "OTHER", title: "Loose notes" }))
         await service.requestForSource(WS, "s1")
+
+        // The shop-document critic waits for this run, asked before the run is queued.
+        expect(documentCritic.request).toHaveBeenCalledWith(WS, "s1")
+        expect(documentCritic.request.mock.invocationCallOrder[0]).toBeLessThan(queue.enqueueDossierReview.mock.invocationCallOrder[0] ?? 0)
 
         expect(sources.fileUnder).not.toHaveBeenCalled()
         expect(inserts[0]?.callsOf("values")).toEqual([

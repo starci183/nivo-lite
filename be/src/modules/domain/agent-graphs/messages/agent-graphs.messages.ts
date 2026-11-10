@@ -41,6 +41,8 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
         "agentGraphs.wake.reason.no_workflow_running": "trợ lý này không có quy trình nào đang bật",
         "agentGraphs.wake.reason.no_trigger_takes_wake": "không quy trình đang bật nào nhận tin từ kênh này",
         "agentGraphs.wake.failed.title": "Một lượt xử lý không chạy được",
+        "agentGraphs.wake.failed.sentence": "Một lượt xử lý dừng trước bước đầu tiên của quy trình, sau khi đã thử lại.",
+        "agentGraphs.wake.untaken.sentence": "Một tin của khách không được quy trình nào xử lý nên khách chưa được trả lời.",
         "agentGraphs.wake.failed.text":
             "Một lượt xử lý dừng trước khi vào bước nào của quy trình, sau khi đã thử lại. Kênh: {{channel}}. Hội thoại: {{conversation}}. Mã lỗi: {{code}}.",
         "agentGraphs.toolApproval.title": "AI cần bạn duyệt trước khi chạy {{tool}}",
@@ -154,6 +156,8 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
         "agentGraphs.wake.reason.no_workflow_running": "this assistant has no workflow switched on",
         "agentGraphs.wake.reason.no_trigger_takes_wake": "no running workflow takes messages from this channel",
         "agentGraphs.wake.failed.title": "A turn could not run",
+        "agentGraphs.wake.failed.sentence": "A turn stopped before the first step of a workflow, after its retries.",
+        "agentGraphs.wake.untaken.sentence": "A customer message was handled by no workflow, so the customer has no answer yet.",
         "agentGraphs.wake.failed.text":
             "A turn stopped before any step of a workflow, after its retries. Channel: {{channel}}. Conversation: {{conversation}}. Error code: {{code}}.",
         "agentGraphs.toolApproval.title": "The AI needs your approval before it runs {{tool}}",

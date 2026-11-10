@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing"
+import { workInScope } from "@modules/platform/logging"
 import { mock } from "@starci/jest-preset"
 import {
     INDEXING_WS,
@@ -150,6 +151,20 @@ const registerIndexingProgressCases = () => {
         expect(chunks.arrange).toHaveBeenCalledWith({ workspaceId: WS, sourceId: "s1", moves: [], count: 1 })
         expect(chunks.keep).toHaveBeenCalledWith(INDEXING_TEXT_WRITE)
         expect(sources.finishIndexing).toHaveBeenCalledWith(WS, "s1", null, 1)
+    })
+
+    it("U1: books every model call of the reading to the document (`source:<id>`), a first reading as `document_read`", async () => {
+        const { service, embeddings } = await build()
+        const scopes: Array<unknown> = []
+        embeddings.embed.mockImplementation(() => {
+            scopes.push(workInScope())
+            return Promise.resolve([[0.5, 1]])
+        })
+
+        await service.index(run)
+
+        expect(scopes).toEqual([expect.objectContaining({ kind: "document_read", ref: "source:s1" })])
+        expect(workInScope()).toBeNull()
     })
 
     it("moves through the stages chunk, embed and store in order", async () => {

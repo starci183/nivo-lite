@@ -53,9 +53,9 @@ export interface DeclaredModel {
 
 /** Which providers of the AI pool hold a key in this deployment (an explicit model of a provider without one fails loudly). */
 export interface ConfiguredProviders {
-    /** Anthropic (Claude Sonnet 5.5). */
+    /** Anthropic: every chat model (Claude Sonnet 5.5, Claude Haiku 5.5). */
     readonly anthropic: boolean
-    /** OpenRouter, or the OpenAI-compatible upstream in its place (the cheap model). */
+    /** OpenRouter for chat: always false since 2026-11-11 (no OpenRouter chat); kept for the retired model's picker label. */
     readonly openrouter: boolean
 }
 
@@ -402,6 +402,8 @@ export interface MeteredRun {
     readonly completion_tokens: number
     /** Prompt tokens served from a cache; the endpoint does not report them. */
     readonly cached_tokens: number
+    /** Prompt tokens written to the provider's cache; absent when not told. */
+    readonly cache_write_tokens?: number | undefined
     /** The provider cost. */
     readonly cost: number
     /** Who served the run. */
@@ -422,6 +424,12 @@ export interface MeterEntry {
     readonly completionChars: number
     /** What the call was and how it went: its kind, hidden reasoning, time, try, upstream and finish reason. */
     readonly call?: MeteredCall | undefined
+    /** The model a call booked with no usage asked for (a failed try): what its estimate is priced at. */
+    readonly model?: string | undefined
+    /** The characters of the prompt, for a call booked with no usage (a failed try): the meter estimates its tokens from them. */
+    readonly promptChars?: number | undefined
+    /** Set for a FAILED try (`timeout`, `provider`, `length`, `empty`): booked estimated and priced, never billed. */
+    readonly failure?: string | undefined
 }
 
 /** What one metered model call was and how it went, beside what it cost: the run page shows it per call kind. */

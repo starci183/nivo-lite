@@ -97,3 +97,17 @@ describe("the note of a batch", () => {
         expect(subject.bulkNoteOf("b-1", "x".repeat(300)).length).toBeLessThan(200)
     })
 })
+
+describe("bulk-apply.policy flags (BG2)", () => {
+    it.each([["stale"], ["same_meaning"]] as const)("never applies a proposal flagged %s in bulk", (flag) => {
+        const fact: FactRecord = {
+            id: "f1", subjectType: "business", subjectKey: "shop", subjectLabel: "Shop", attribute: "hours", attributeLabel: "Hours",
+            value: "8h", valueNumber: 8, unit: null, scope: "internal", modules: [], installationId: null, status: "proposed",
+            sourceKind: "document", trust: 75, validFrom: null, validTo: null, supersedesId: null, conflictWith: null,
+            proposalKind: "set", evidence: [{ kind: "document", ref: "d", label: "Doc", quote: "Shop hours 8h every day" }],
+            proposedBy: "Doc", proposedAt: "2026-10-12T10:00:00.000Z", decidedBy: null, decidedAt: null, decisionNote: null,
+        }
+        expect(isBulkSafe(fact, NOW)).toBe(true)
+        expect(isBulkSafe({ ...fact, flags: [flag] }, NOW)).toBe(false)
+    })
+})

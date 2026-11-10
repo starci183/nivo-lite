@@ -394,3 +394,86 @@ describe("AgentWorkSweepService.sweep, thread runs", () => {
         expect(runSweep.sweep).toHaveBeenCalledTimes(1)
     })
 })
+
+describe("AgentWorkSweepService.runTaskNow (the schedule list's \"run now\")", () => {
+    const AT = new Date("2026-11-12T02:00:00.000Z")
+    const PRESS = { memberId: "member-owner", at: new Date(NOW) }
+    const careTask = (over: Record<string, unknown> = {}) => ({
+        id: "task-7",
+        agentId: "agent-1",
+        goalId: null,
+        dedupeKey: "care:delivery-check:o7",
+        title: "care due 2026-11-12T02:00:00.000Z",
+        detail: "",
+        status: "open" as const,
+        waitingOn: null,
+        nextActionAt: AT,
+        workItemId: null,
+        ...over,
+    })
+    const item = { ...due({ kind: "task", subjectId: "task-7", at: AT }), scopeKey: "agent" }
+
+    it("writes the SAME care tag the timer writes (same key), now: the moment is now and names who pressed; the time is cleared", async () => {
+        const { service, tasks, tags, wakes, tx } = await build([])
+        tasks.byId.mockResolvedValue(careTask())
+
+        await expect(service.runTaskNow(item, PRESS)).resolves.toBe("woken")
+
+        expect(tags.tagAgent).toHaveBeenCalledWith(
+            expect.objectContaining({
+                source: "care-timer",
+                eventKey: `care:task-7:${String(AT.getTime())}`,
+                context: {
+                    event: "care.due",
+                    careKind: "delivery-check",
+                    ref: "o7",
+                    suffix: "",
+                    dueAt: NOW,
+                    runNowBy: "member-owner",
+                },
+            }),
+            expect.anything(),
+        )
+        expect(tasks.markWoken).toHaveBeenCalledWith(expect.anything(), "task-7", AT)
+        expect(wakes.wake).not.toHaveBeenCalled()
+        expect(tx.commits).toBe(1)
+    })
+
+    it("answers already_ran when the wake of that time was written already (the timer fired, or someone pressed first)", async () => {
+        const { service, tasks, tags } = await build([])
+        tasks.byId.mockResolvedValue(careTask())
+        tags.tagAgent.mockResolvedValue({ tagged: false, reason: "duplicate" })
+
+        await expect(service.runTaskNow(item, PRESS)).resolves.toBe("already_ran")
+    })
+
+    it("writes nothing for a task closed, woken or moved to another time since the list was read", async () => {
+        const closed = await build([])
+        closed.tasks.byId.mockResolvedValue(careTask({ status: "done" }))
+        const woken = await build([])
+        woken.tasks.byId.mockResolvedValue(careTask({ nextActionAt: null }))
+        const moved = await build([])
+        moved.tasks.byId.mockResolvedValue(careTask({ nextActionAt: new Date("2026-11-13T02:00:00.000Z") }))
+
+        await expect(closed.service.runTaskNow(item, PRESS)).resolves.toBe("already_ran")
+        await expect(woken.service.runTaskNow(item, PRESS)).resolves.toBe("already_ran")
+        await expect(moved.service.runTaskNow(item, PRESS)).resolves.toBe("already_ran")
+        expect([closed, woken, moved].map((one) => one.tags.tagAgent.mock.calls.length + one.wakes.wake.mock.calls.length)).toEqual([0, 0, 0])
+    })
+
+    it("runs any other task as the internal wake its timer writes, under the person who pressed", async () => {
+        const { service, tasks, wakes } = await build([])
+        tasks.byId.mockResolvedValue(careTask({ dedupeKey: "follow-up:o7", title: "Ask the customer again" }))
+
+        await expect(service.runTaskNow(item, PRESS)).resolves.toBe("woken")
+
+        expect(wakes.wake).toHaveBeenCalledWith(expect.anything(), {
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            source: "internal",
+            eventKey: `task:task-7:${String(AT.getTime())}`,
+            context: { taskId: "task-7", subjectId: "task-7" },
+            actorMemberId: "member-owner",
+        })
+    })
+})

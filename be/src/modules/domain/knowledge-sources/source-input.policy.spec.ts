@@ -9,7 +9,9 @@ import {
     normalizeSource,
     normalizeUpdate,
     replacementContent,
+    replacementUpload,
     safeFileName,
+    uploadVerdict,
 } from "./source-input.policy"
 
 const SUBJECT = Symbol("source-input.policy")
@@ -313,5 +315,34 @@ describe("metaChanges", () => {
 describe("NOW", () => {
     it("is the database instant", () => {
         expect(NOW()).toBe("now()")
+    })
+})
+
+describe("replacementUpload and uploadVerdict", () => {
+    const WORKSPACE = "11111111-1111-4111-8111-111111111111"
+
+    it("takes a new upload inside the workspace, none when absent, and refuses one outside it", () => {
+        expect(replacementUpload(WORKSPACE, undefined)).toEqual({ kind: "ok", value: null })
+        expect(replacementUpload(WORKSPACE, ` ${WORKSPACE}/u/a.pdf `)).toEqual({
+            kind: "ok",
+            value: `${WORKSPACE}/u/a.pdf`,
+        })
+        expect(replacementUpload(WORKSPACE, `${WORKSPACE}/../x/a.pdf`)).toMatchObject({
+            code: KnowledgeSourcesErrorCode.StoragePathInvalid,
+        })
+        expect(replacementUpload(WORKSPACE, "other/u/a.pdf")).toMatchObject({
+            code: KnowledgeSourcesErrorCode.StoragePathInvalid,
+        })
+    })
+
+    it("refuses an old Office file and a file over the limit at the door, and lets the rest through", () => {
+        expect(uploadVerdict("Bang gia.XLS", null)).toMatchObject({ code: KnowledgeSourcesErrorCode.LegacyOffice })
+        expect(uploadVerdict("slides.ppt", 10)).toMatchObject({ code: KnowledgeSourcesErrorCode.LegacyOffice })
+        expect(uploadVerdict("scan.pdf", 52_428_801)).toMatchObject({
+            code: KnowledgeSourcesErrorCode.FileTooLarge,
+            params: { size: 50, max: 50 },
+        })
+        expect(uploadVerdict("scan.pdf", 52_428_800)).toEqual({ kind: "ok", value: null })
+        expect(uploadVerdict("anh.jpg", null)).toEqual({ kind: "ok", value: null })
     })
 })

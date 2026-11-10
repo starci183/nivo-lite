@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
+import { BrainChangeMessagesService } from "@modules/domain/brain"
 import { AGENT_THREADS_OPTIONS } from "./agent-threads.decorators"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./agent-threads.module-definition"
 import { RunStopRecordsService } from "./stops/run-stop-records.service"
@@ -7,6 +8,9 @@ import { RunStopsService } from "./stops/run-stops.service"
 import { StopAnswersService } from "./stops/stop-answers.service"
 import { StopCardsService } from "./stops/stop-cards.service"
 import { StopDoorService } from "./stops/stop-door.service"
+import { StopLearningDoorService } from "./stops/stop-learning-door.service"
+import { STOP_LEARNING_CARDS } from "./stops/stop-learning.contracts"
+import { StopLearningService } from "./stops/stop-learning.service"
 import { ThreadDeadlineQueueModule } from "@modules/queues/thread-deadline"
 import { ThreadApprovalsService } from "./thread-approvals.service"
 import { ThreadDeadlinesService } from "./thread-deadlines.service"
@@ -31,7 +35,10 @@ export class AgentThreadsModule extends ConfigurableModuleClass {
     static register(options: typeof OPTIONS_TYPE): DynamicModule {
         const base = super.register(options)
         // The people's doors to a stop need the app's members, access and run cancel: only an app that serves people registers them.
-        const doors = options.doors === true ? [StopDoorService, StopAnswersService] : []
+        const doors = options.doors === true
+            ? [StopDoorService, StopAnswersService, StopLearningDoorService, StopLearningService,
+               { provide: STOP_LEARNING_CARDS, useExisting: BrainChangeMessagesService }]
+            : []
         return {
             ...base,
             imports: [...(base.imports ?? []), ThreadDeadlineQueueModule],
@@ -51,6 +58,7 @@ export class AgentThreadsModule extends ConfigurableModuleClass {
             ],
             exports: [
                 AGENT_THREADS_OPTIONS,
+                RunStopRecordsService,
                 RunStopsService,
                 ThreadApprovalsService,
                 ...doors,

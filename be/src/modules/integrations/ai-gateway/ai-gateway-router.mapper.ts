@@ -1,13 +1,13 @@
 import type { AiRouterModuleOptions, KeyConfig, ModelConfig, ProviderConfig } from "@starci/ai-router"
 import type { AiGatewayKey, AiGatewayOptions, AiGatewayProvider } from "./ai-gateway.options"
-import { ANTHROPIC_PROVIDER, modelProfilesOf } from "./ai-gateway-profiles.policy"
+import { EMBEDDING_PROFILES } from "@nivo-lite/blocks-core"
+import { servedProfilesOf } from "./ai-gateway-config.policy"
+import { ANTHROPIC_PROVIDER, OPENAI_PROVIDER, modelProfilesOf } from "./ai-gateway-profiles.policy"
 import type { ModelProfileSeats } from "./ai-gateway-profiles.policy"
 
 /** The profile of chat work: the `model` an OpenAI client asks for. */
 export const WORK_PROFILE = "work"
 
-/** The profile of embeddings: the `model` an OpenAI client asks for. */
-export const EMBED_PROFILE = "embed"
 
 /**
  * How long one attempt of a chat call may take at the gateway, milliseconds. The caller sets the real deadline of each call by its
@@ -19,8 +19,11 @@ export const WORK_ATTEMPT_TIMEOUT_MS = 125_000
 /** The whole chat call at the gateway, waits and backoff included: one full attempt, with room to fail over after a quick failure. */
 export const WORK_DEADLINE_MS = 130_000
 
-/** US dollars per million tokens of the default models, so the gateway can enforce and account cost quotas. */
-const WORK_COST = { input: 0.14, output: 0.42 }
+/**
+ * Claude Haiku 5.5 list price, USD per million tokens, prompts up to 100K tokens (the Claude API skill's table cached 2026-11-03;
+ * NOT re-read from the live pricing page: not verified). The gateway's cost quotas only; the app books from `usage-cost.policy.ts`.
+ */
+const CHEAP_COST = { input: 0.1, output: 0.5 }
 /** Claude Sonnet 5.5 list price, USD per million tokens (Anthropic first-party; the skill's table of 2026-11-03, not re-read live). */
 const STRONG_COST = { input: 2, output: 10 }
 
@@ -32,16 +35,39 @@ const STRONG_DEFAULT_MAX_TOKENS = 32_000
 
 /** The attempts of a profile with a fallback: one per candidate, so a provider with no usable lane (no key, down) hands over once. */
 const FALLBACK_ATTEMPTS = 2
-const EMBED_COST = { input: 0.01, output: 0 }
+/**
+ * OpenAI `text-embedding-3-small`, USD per million tokens: the repo's own price line (`usage-cost.policy.ts`), not re-read from OpenAI's
+ * page (not verified). The gateway's cost quotas only.
+ */
+const OPENAI_EMBED_COST = { input: 0.02, output: 0 }
+
+/** The models of every pinned embeddings profile on OpenAI, each with its identity and vector length (a reply of another length fails). */
+const openAiEmbedModels = (): Array<ModelConfig> => [
+    ...new Map(
+        Object.values(EMBEDDING_PROFILES).map((entry): [string, ModelConfig] => [
+            entry.model,
+            { id: entry.model, identity: entry.model, dimensions: entry.dimensions, capabilities: ["embeddings"], cost: OPENAI_EMBED_COST },
+        ]),
+    ).values(),
+]
+
+/** The pinned embeddings profiles: one model identity each, on OpenAI alone; a call can never land on another vector space. */
+const embedProfiles = (): NonNullable<AiRouterModuleOptions["profiles"]> =>
+    Object.fromEntries(
+        Object.entries(EMBEDDING_PROFILES).map(([name, entry]) => [
+            name,
+            { pinned: true, candidates: [{ provider: OPENAI_PROVIDER, model: entry.model }], allowFallback: false },
+        ]),
+    )
 
 /** The router reads each key from the secret parsed at boot, so a `<KEY>_FILE` mount works like a plain variable. */
 const keyOf = (key: AiGatewayKey): KeyConfig => ({ alias: key.alias, resolve: () => key.secret.reveal() })
 
 const providerOf = (provider: AiGatewayProvider, models: ReadonlyArray<ModelConfig>): ProviderConfig => ({
     id: provider.id,
-    ...(provider.kind === undefined ? {} : { kind: provider.kind }),
+    kind: provider.kind,
     baseUrl: provider.baseUrl,
-    ...(provider.kind === "anthropic" ? { defaultMaxTokens: STRONG_DEFAULT_MAX_TOKENS } : { headers: { "X-Title": "NIVO OS" } }),
+    ...(provider.kind === "anthropic" ? { defaultMaxTokens: STRONG_DEFAULT_MAX_TOKENS } : {}),
     keys: provider.keys.map(keyOf),
     models,
 })
@@ -58,46 +84,38 @@ const modelProfileOf = (profile: ModelProfileSeats): NonNullable<AiRouterModuleO
     deadlineMs: WORK_DEADLINE_MS,
 })
 
-/** The pool over a non-empty provider list: the upstream provider serves chat, and embeddings unless they have their own provider. */
+/** The pool over a non-empty provider list: Anthropic serves every chat profile, OpenAI the pinned embeddings profiles. */
 const poolOf = (options: AiGatewayOptions): AiRouterModuleOptions => {
-    const ownEmbeddings = options.providers.some((provider) => provider.id === "embeddings")
-    const chat: ModelConfig = {
-        id: options.models.work,
-        capabilities: ["chat", "streaming", "tools", "json", "vision"],
-        cost: WORK_COST,
-    }
-    const embed: ModelConfig = { id: options.models.embed, capabilities: ["embeddings"], cost: EMBED_COST }
-    const strong: ModelConfig = {
-        id: options.models.strong,
-        capabilities: ["chat", "streaming", "tools", "json", "vision"],
-        cost: STRONG_COST,
-    }
-    const modelsOf = (provider: AiGatewayProvider): Array<ModelConfig> => {
-        if (provider.id === "embeddings") return [embed]
-        if (provider.id === ANTHROPIC_PROVIDER) return [strong]
-        return ownEmbeddings ? [chat] : [chat, embed]
-    }
+    const chatCapabilities: ModelConfig["capabilities"] = ["chat", "streaming", "tools", "json", "vision"]
+    const cheap: ModelConfig = { id: options.models.work, capabilities: chatCapabilities, cost: CHEAP_COST }
+    const strong: ModelConfig = { id: options.models.strong, capabilities: chatCapabilities, cost: STRONG_COST }
+    const modelsOf = (provider: AiGatewayProvider): Array<ModelConfig> =>
+        provider.id === ANTHROPIC_PROVIDER ? [cheap, strong] : openAiEmbedModels()
+    const served = new Set(servedProfilesOf(options.providers, options.models))
     const modelProfiles = Object.fromEntries(
         modelProfilesOf(options.providers, options.models).map((profile) => [profile.name, modelProfileOf(profile)]),
     )
     return {
         providers: options.providers.map((provider) => providerOf(provider, modelsOf(provider))),
         profiles: {
-            [WORK_PROFILE]: {
-                model: options.models.work,
-                providers: ["upstream"],
-                // One attempt per call: the caller (the AI task layer) owns the count of tries of a model call, so the gateway
-                // never multiplies it by retrying on its own.
-                maxAttempts: 1,
-                timeoutMs: WORK_ATTEMPT_TIMEOUT_MS,
-                deadlineMs: WORK_DEADLINE_MS,
-            },
-            [EMBED_PROFILE]: {
-                model: options.models.embed,
-                allowFallback: false,
-                providers: [ownEmbeddings ? "embeddings" : "upstream"],
-            },
-            // The profiles a graph node's call names (`MODEL_PROFILES`), cut to the providers that hold a key.
+            ...(served.has(WORK_PROFILE)
+                ? {
+                      [WORK_PROFILE]: {
+                          // The cheap model, Sonnet when it has no usable lane: Claude only, never another vendor.
+                          candidates: [
+                              { provider: ANTHROPIC_PROVIDER, model: options.models.work },
+                              { provider: ANTHROPIC_PROVIDER, model: options.models.strong },
+                          ],
+                          // One attempt per call: the caller (the AI task layer) owns the count of tries of a model call, so the
+                          // gateway never multiplies it by retrying on its own.
+                          maxAttempts: 1,
+                          timeoutMs: WORK_ATTEMPT_TIMEOUT_MS,
+                          deadlineMs: WORK_DEADLINE_MS,
+                      },
+                  }
+                : {}),
+            ...(options.providers.some((provider) => provider.id === OPENAI_PROVIDER) ? embedProfiles() : {}),
+            // The profiles a graph node's call names (`MODEL_PROFILES`), present while Anthropic holds a key.
             ...modelProfiles,
         },
         telemetry: { includeContent: false },

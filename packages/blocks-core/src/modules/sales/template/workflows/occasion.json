@@ -15,9 +15,13 @@
     "shops": 0,
     "versions": [
         {
-            "version": 3,
-            "publishedAt": "2026-11-10T14:00:00.000Z",
+            "version": 4,
+            "publishedAt": "2026-11-12T00:00:00.000Z",
             "changes": [
+                {
+                    "vi": "Chạy ngay từ lịch hẹn: bước gợi ý nhận thời điểm hẹn của lượt chạy và gửi luôn khi chủ tiệm bấm Chạy ngay",
+                    "en": "Run now from the schedule: the suggest step takes the run's due moment and writes at once when the owner presses Run now"
+                },
                 {
                     "vi": "Thuần nghiệp vụ: Gợi ý đặt lại cho dịp (AI tự viết), Đã chúc",
                     "en": "Pure business steps: Suggest a reorder for the date (the AI writes it), Greeted"
@@ -159,6 +163,10 @@
                             },
                             "suffix": {
                                 "$ref": "trigger.suffix",
+                                "default": null
+                            },
+                            "dueAt": {
+                                "$ref": "trigger.dueAt",
                                 "default": null
                             },
                             "locale": "vi"

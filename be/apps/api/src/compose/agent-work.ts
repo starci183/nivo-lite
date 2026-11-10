@@ -29,6 +29,7 @@ import {
 import { SALES_EFFECTS_ERROR_KINDS, SALES_EFFECTS_MESSAGES, SalesEffectsModule } from "@modules/domain/sales-effects"
 import { AGENT_GRAPHS_ERROR_KINDS, AGENT_GRAPHS_MESSAGES } from "@modules/domain/agent-graphs"
 import { AgentCheckpointsModule } from "@modules/domain/agent-checkpoints"
+import { AgentDoorsModule } from "@modules/domain/agent-doors"
 import { AGENT_THREADS_ERROR_KINDS, AgentThreadsModule, RUN_STOPS_ERROR_KINDS } from "@modules/domain/agent-threads"
 import {
     AGENT_LOOPS,
@@ -86,6 +87,8 @@ export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
     AgentCheckpointsModule.register({ isGlobal: true }),
     LanggraphModule.register({ isGlobal: true, ...(options.langgraph ?? DEFAULT_LANGGRAPH) }),
     AgentThreadsModule.register({ isGlobal: true, ...(options.agentThreads ?? THREADS_OFF) }),
+    // The owner's doors onto the agents' work: the schedule list with "run now", the care opt-out, handing a conversation back.
+    AgentDoorsModule.register({ isGlobal: true }),
 ]
 
 /** The bounds of the LangGraph integration for an app whose options name none (a test world): the parser's own defaults. */

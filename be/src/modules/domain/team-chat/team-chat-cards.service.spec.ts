@@ -161,7 +161,16 @@ describe("TeamChatCardsService postMessage", () => {
             body: "hello",
             key: "k1",
             agentMessage: null,
+            replyTo: null,
         })
+    })
+
+    it("writes the message a line answers (a chat turn's reply, C1)", async () => {
+        const { cards, store } = await build()
+        store.roomById.mockResolvedValue(roomOf(NAMED))
+        store.insertLine.mockResolvedValue(MSG)
+        await cards.postMessage(WS, { ...line, replyTo: "m-asked" })
+        expect(store.insertLine).toHaveBeenCalledWith(expect.objectContaining({ replyTo: "m-asked" }))
     })
 
     it("stores the structured message of an agent line beside its words", async () => {

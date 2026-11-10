@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { callDbFunction, InjectPrimaryEntityManager } from "@modules/platform/database"
-import { InjectLogger, runInScope } from "@modules/platform/logging"
+import { InjectLogger, runInScope, workInScope } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { noticeBody, noticeLevelOf } from "./notice.policy"
 import { AiUsageEventEntity } from "./persistence/entities"
@@ -17,6 +17,7 @@ import type {
 } from "./ai-usage-events.contracts"
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
 import { callColumnsOf } from "./call-facts.policy"
+import { workColumnsOf } from "./work-columns.policy"
 import { toRunCallKind } from "./run-calls.mapper"
 import type { RunCallKindAggregate } from "./run-calls.mapper"
 import { CREDIT_USD_VALUE, figuresOf } from "./usage-cost.policy"
@@ -32,23 +33,35 @@ const MODULE_ROW_LIMIT = 200
 /** The most call kinds one run's read returns: a run calls a handful of nodes. */
 const RUN_KIND_LIMIT = 100
 
-/** The figures of a run's calls summed per call kind, as SQL expression and alias (the columns of `RunCallKindAggregate`). */
+/** Rows of an answered call (a failed try is booked for the run page, never summed as an answer or billed). */
+const ANSWERED = "u.failure IS NULL"
+/** Rows of a failed try. */
+const FAILED = "u.failure IS NOT NULL"
+
+/** The figures of a run's calls summed per step and call kind, as SQL expression and alias (the columns of `RunCallKindAggregate`). */
 const RUN_KIND_SUMS: ReadonlyArray<readonly [string, string]> = [
-    ["COUNT(*)::int", "calls"],
+    [`(COUNT(*) FILTER (WHERE ${ANSWERED}))::int`, "calls"],
+    ["COUNT(*)::int", "tries"],
+    [`(COUNT(*) FILTER (WHERE ${FAILED}))::int`, "failed_tries"],
     ["MAX(u.try_number)::int", "max_try"],
-    ["COALESCE(SUM(u.prompt_tokens), 0)::float8", "prompt_tokens"],
-    ["COALESCE(SUM(u.cached_tokens), 0)::float8", "cached_tokens"],
-    ["COALESCE(SUM(u.completion_tokens), 0)::float8", "completion_tokens"],
-    ["COALESCE(SUM(u.reasoning_tokens), 0)::float8", "reasoning_tokens"],
+    [`COALESCE(SUM(u.prompt_tokens) FILTER (WHERE ${ANSWERED}), 0)::float8`, "prompt_tokens"],
+    [`COALESCE(SUM(u.cached_tokens) FILTER (WHERE ${ANSWERED}), 0)::float8`, "cached_tokens"],
+    [`COALESCE(SUM(u.cache_write_tokens) FILTER (WHERE ${ANSWERED}), 0)::float8`, "cache_write_tokens"],
+    [`COALESCE(SUM(u.completion_tokens) FILTER (WHERE ${ANSWERED}), 0)::float8`, "completion_tokens"],
+    [`COALESCE(SUM(u.reasoning_tokens) FILTER (WHERE ${ANSWERED}), 0)::float8`, "reasoning_tokens"],
+    [`COALESCE(SUM(u.prompt_tokens) FILTER (WHERE ${FAILED}), 0)::float8`, "failed_prompt_tokens"],
     ["COALESCE(SUM(u.duration_ms), 0)::float8", "duration_ms"],
     ["MAX(u.duration_ms)::float8", "slowest_ms"],
-    ["COALESCE(SUM(u.cost_usd), 0)::float8", "cost_usd"],
+    [`COALESCE(SUM(u.cost_usd) FILTER (WHERE ${ANSWERED}), 0)::float8`, "cost_usd"],
+    [`COALESCE(SUM(u.cost_usd) FILTER (WHERE ${FAILED}), 0)::float8`, "failed_cost_usd"],
     ["array_agg(DISTINCT u.upstream)", "upstreams"],
     ["array_agg(DISTINCT u.finish_reason)", "finish_reasons"],
     ["array_agg(DISTINCT u.model)", "models"],
     ["array_agg(DISTINCT u.declared_model)", "declared_models"],
     ["array_agg(DISTINCT u.model_provider)", "model_providers"],
     ["array_agg(DISTINCT u.model_reason)", "model_reasons"],
+    ["array_agg(DISTINCT u.failure)", "failures"],
+    ["array_agg(DISTINCT u.work_kind)", "work_kinds"],
 ]
 
 @Injectable()
@@ -65,7 +78,9 @@ export class AiUsageEventsService {
      */
     async record(input: UsageInput): Promise<void> {
         try {
-            const figures = figuresOf(input, input.usage)
+            // A failed try is an estimate whatever usage it carries: the app counted its prompt, the provider answered nothing.
+            const priced = figuresOf(input, input.usage)
+            const figures = input.failure === undefined ? priced : { ...priced, cachedTokens: 0, estimated: true }
             await this.entityManager.insert(AiUsageEventEntity, {
                 workspaceId: input.workspaceId,
                 kind: input.kind,
@@ -78,6 +93,7 @@ export class AiUsageEventsService {
                 estimated: figures.estimated,
                 runId: input.runId ?? runInScope(),
                 ...callColumnsOf(input.call, figures),
+                ...workColumnsOf(input.work ?? workInScope(), input.usage, figures, input.failure),
             })
             const status = await this.quotaStatus(input.workspaceId)
             if (status !== null) await this.notifyOwner(input.workspaceId, status)
@@ -113,7 +129,7 @@ export class AiUsageEventsService {
             .addSelect("SUM(e.prompt_tokens + e.completion_tokens)::float8", "tokens")
             .addSelect("SUM(e.cost_usd)::float8", "cost_usd")
             .where("e.workspace_id = :workspaceId", { workspaceId })
-            .andWhere("e.kind <> 'guide'")
+            .andWhere("e.kind <> 'guide' AND e.failure IS NULL")
             .andWhere(
                 "e.created_at >= (date_trunc('month', current_timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh')",
             )
@@ -132,7 +148,7 @@ export class AiUsageEventsService {
             .createQueryBuilder(AiUsageEventEntity, "e")
             .select("COALESCE(SUM(e.cost_usd), 0)::float8", "cost_usd")
             .where("e.workspace_id = :workspaceId", { workspaceId })
-            .andWhere("e.kind <> 'guide'")
+            .andWhere("e.kind <> 'guide' AND e.failure IS NULL")
             .andWhere("e.created_at >= (CAST(:from AS date)::timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')", { from })
             .getRawOne<{ cost_usd: number }>()
         return row?.cost_usd ?? 0
@@ -143,7 +159,7 @@ export class AiUsageEventsService {
         const row = await this.entityManager
             .createQueryBuilder(AiUsageEventEntity, "u")
             .select("COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits")
-            .where("u.workspace_id = :workspaceId AND u.module = :module", {
+            .where("u.workspace_id = :workspaceId AND u.module = :module AND u.failure IS NULL", {
                 workspaceId,
                 module,
                 creditUsd: CREDIT_USD_VALUE,
@@ -159,7 +175,10 @@ export class AiUsageEventsService {
             .createQueryBuilder(AiUsageEventEntity, "u")
             .select("COALESCE(u.module, 'other')", "module")
             .addSelect("COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits")
-            .where("u.workspace_id = :workspaceId AND u.kind <> 'guide'", { workspaceId, creditUsd: CREDIT_USD_VALUE })
+            .where("u.workspace_id = :workspaceId AND u.kind <> 'guide' AND u.failure IS NULL", {
+                workspaceId,
+                creditUsd: CREDIT_USD_VALUE,
+            })
             .andWhere("u.created_at >= :from AND u.created_at < :to", { from, to })
             .groupBy("1")
             .limit(MODULE_ROW_LIMIT)
@@ -174,7 +193,10 @@ export class AiUsageEventsService {
             .createQueryBuilder(AiUsageEventEntity, "u")
             .select("u.run_id", "run_id")
             .addSelect("COALESCE(sum(ceil(u.cost_usd / :creditUsd)), 0)::int", "credits")
-            .where("u.workspace_id = :workspaceId AND u.kind <> 'guide'", { workspaceId, creditUsd: CREDIT_USD_VALUE })
+            .where("u.workspace_id = :workspaceId AND u.kind <> 'guide' AND u.failure IS NULL", {
+                workspaceId,
+                creditUsd: CREDIT_USD_VALUE,
+            })
             .andWhere("u.run_id IN (:...runIds)", { runIds })
             .groupBy("u.run_id")
             .limit(runIds.length)
@@ -183,18 +205,24 @@ export class AiUsageEventsService {
     }
 
     /**
-     * The model calls of one run grouped by call kind (the guide never counts), for the run page: how many, the highest try, the
-     * prompt and cached tokens, the completion and its hidden reasoning, the time, the cost, the upstreams and the finish reasons.
-     * A call booked without a kind is grouped under its usage kind. Ordered by the first call of each kind.
+     * The model calls of one run grouped by step and call kind (the guide never counts), for the run page: the answers and every try
+     * (failed tries included, booked estimated), the highest try, the prompt, cached, cache-written, completion and reasoning tokens of
+     * the answers, the time, the exact cost of the answers and of the failed tries, the models, upstreams and finish reasons. A call
+     * booked without a kind is grouped under its usage kind; a call booked without a step (before migration 014000, or outside a node)
+     * has none. Ordered by the first call of each group. Served by `ai_usage_events_run_idx`.
      */
     async callKindsByRun(workspaceId: string, runId: string): Promise<ReadonlyArray<RunCallKindUsage>> {
         const grouped = RUN_KIND_SUMS.reduce(
             (query, [expression, alias]) => query.addSelect(expression, alias),
-            this.entityManager.createQueryBuilder(AiUsageEventEntity, "u").select("COALESCE(u.purpose, u.kind)", "purpose"),
+            this.entityManager
+                .createQueryBuilder(AiUsageEventEntity, "u")
+                .select("u.step_key", "step_key")
+                .addSelect("COALESCE(u.purpose, u.kind)", "purpose"),
         )
         const rows = await grouped
             .where("u.workspace_id = :workspaceId AND u.run_id = :runId AND u.kind <> 'guide'", { workspaceId, runId })
             .groupBy("1")
+            .addGroupBy("2")
             .orderBy("MIN(u.created_at)", "ASC")
             .limit(RUN_KIND_LIMIT)
             .getRawMany<RunCallKindAggregate>()

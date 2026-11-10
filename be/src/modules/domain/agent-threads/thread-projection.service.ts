@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { DEFAULT_DEADLINE_MS } from "@modules/domain/agent-runs"
 import { EntityEngineService, EntityMutationService, type ScopedTx } from "@modules/domain/entity-engine"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { EngineResult, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
@@ -133,7 +134,8 @@ const specValuesOf = (fact: ThreadStepParams): MutationValues => ({
     input: jsonOf(fact.spec.input),
     attempt: fact.attempt,
     maxAttempts: Math.max(fact.spec.maxAttempts ?? 1, fact.attempt),
-    deadlineMs: fact.spec.deadlineMs ?? null,
+    // The deadline the old engine fills a spec that names none with (`filled`): a step row the run reader can read (D-P10-6).
+    deadlineMs: fact.spec.deadlineMs ?? DEFAULT_DEADLINE_MS,
 })
 
 /** When this try began: the row's own moment when the row is of the same try, else the fact's. */

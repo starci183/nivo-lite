@@ -31,8 +31,8 @@ const quotesDocument = (fact: FactRecord): boolean =>
 
 /**
  * Whether a proposal from a document can be applied together with others without a person looking at it: it sets a value (never retires
- * one), it stays internal (a bulk path never makes anything public), it disagrees with no value in force, nothing waits for a later
- * date, and the document says it in its own words. Everything else is left for a person.
+ * one), it stays internal (a bulk path never makes anything public), it disagrees with nothing, the brain flagged nothing on it (an
+ * ended value, the same fact in other words), nothing waits for a later date, and the document says it in its own words. Everything else is left for a person.
  */
 export const isBulkSafe = (fact: FactRecord, nowMs: number): boolean =>
     fact.status === "proposed" &&
@@ -40,5 +40,6 @@ export const isBulkSafe = (fact: FactRecord, nowMs: number): boolean =>
     fact.sourceKind === "document" &&
     fact.scope === "internal" &&
     fact.conflictWith === null &&
+    (fact.flags ?? []).length === 0 &&
     (fact.validFrom === null || Date.parse(fact.validFrom) <= nowMs) &&
     quotesDocument(fact)

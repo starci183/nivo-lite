@@ -34,7 +34,15 @@ export const chatbotModule: ModuleDeclaration = defineModule({
     key: CHATBOT_MODULE_KEY,
     namespace: CHATBOT_MODULE_KEY,
     agent: {
-        tools: [TOOL.agentTag, TOOL.customerMessageSend, TOOL.teamMessagePost, TOOL.brainSearch],
+        tools: [
+            TOOL.agentTag,
+            TOOL.customerMessageSend,
+            TOOL.teamMessagePost,
+            TOOL.brainSearch,
+            TOOL.brainFactGet,
+            TOOL.brainFactRelated,
+            TOOL.brainChangePropose,
+        ],
         abilities: {
             kinds: { messaging: { "customer.send": "auto" } },
         },

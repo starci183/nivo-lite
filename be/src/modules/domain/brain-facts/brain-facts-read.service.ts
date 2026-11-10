@@ -15,7 +15,8 @@ import type {
 import { waitingCardCount } from "./fact-cards.policy"
 import { factKeyOf } from "./fact-columns.policy"
 import { toFactRecord } from "./fact-record.mapper"
-import { inForce, searchFacts, visibleTo } from "./fact-view.policy"
+import { hybridFacts, inForce, searchFacts, visibleTo } from "./fact-view.policy"
+import type { RankedFact } from "./fact-view.policy"
 import { BrainFactEntity } from "./persistence/entities"
 
 /** The most facts a list returns. */
@@ -109,6 +110,22 @@ export class BrainFactsReadService {
         limit: number,
     ): Promise<ReadonlyArray<FactRecord>> {
         return searchFacts(await this.forView(workspaceId, audience, module, installationId, 500), query, limit)
+    }
+
+    /**
+     * The facts of a view that match a question by words and meaning (`hybridFacts`), best first: `near` are the facts a vector search
+     * found for the question in the same lens (`BrainFactEmbeddingsService.nearest`); with none it is the word search.
+     */
+    async searchHybrid(
+        workspaceId: string,
+        audience: FactAudience,
+        module: string,
+        installationId: InstallationScope,
+        query: string,
+        near: ReadonlyArray<RankedFact>,
+        limit: number,
+    ): Promise<ReadonlyArray<FactRecord>> {
+        return hybridFacts(await this.forView(workspaceId, audience, module, installationId, 500), near, query, limit)
     }
 
     /** The facts in these statuses whose evidence cites any of these documents, newest change first, in one bounded read. */

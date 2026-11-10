@@ -17,7 +17,7 @@ import type { AiGenerationCompletedPayload } from "@modules/events/api"
 import type { GenerationRunStatus, QueuedGeneration, TurnAttempt } from "./ai-generations.contracts"
 import { InjectUsage } from "./ai-generations.decorators"
 import { AiGenerationsLogEvent } from "./ai-generations.log-events"
-import type { UsageGate } from "./ai-generations.port"
+import type { GenerationUsageRecord, UsageGate } from "./ai-generations.port"
 import { isWaiting, promptOf, queuedOf, runUsageOf, turnTimeoutOf } from "./generation.policy"
 import { AiGenerationEntity } from "./persistence/entities"
 
@@ -44,6 +44,12 @@ const meteringOf = (raw: unknown): Metering | undefined => {
 /** Why a generation has no text, as the row keeps it. */
 const NOT_CONFIGURED = "ai_not_configured"
 const NO_ANSWER = "no_answer"
+/** The model a failed try is booked with: the endpoint's chat profile was asked, its model was never told. */
+const UNTOLD_MODEL = "work"
+
+/** The characters of a queued prompt, to estimate the tokens of a try that got no answer. */
+const promptCharsOf = (input: QueuedGeneration["input"]): number =>
+    input.messages.reduce((total, message) => total + message.content.length, 0)
 
 @Injectable()
 /**
@@ -161,6 +167,7 @@ export class GenerationRunnerService {
             module: row.module,
             usage: attempt.usage,
             completionChars: text.length,
+            ...this.meteringOf(generation),
         })
         return "done"
     }
@@ -192,7 +199,27 @@ export class GenerationRunnerService {
             }
             await this.announce(tx, generation, attempt.timedOut ? "cancelled" : "error")
         })
+        // A try the model was asked and did not answer may still be charged: booked estimated from the prompt, never billed (U1).
+        if (attempt.reason !== NOT_CONFIGURED) {
+            await this.usage.record({
+                workspaceId: generation.workspaceId,
+                kind: generation.usageKind,
+                module: generation.module,
+                usage: null,
+                completionChars: 0,
+                promptChars: promptCharsOf(generation.input),
+                model: UNTOLD_MODEL,
+                failure: attempt.timedOut ? "timeout" : "no_answer",
+                ...this.meteringOf(generation),
+            })
+        }
         return "error"
+    }
+
+    /** The run and work the caller asked in, carried by the queued row, as the meter books them. */
+    private meteringOf(generation: QueuedGeneration): Pick<GenerationUsageRecord, "runId" | "work"> {
+        const { runId, work } = generation.input
+        return { ...(runId == null ? {} : { runId }), ...(work == null ? {} : { work }) }
     }
 
     /** Publishes the end of the generation in the transaction that wrote it; consumers read the row, so the status is a hint. */

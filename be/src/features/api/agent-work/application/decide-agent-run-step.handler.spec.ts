@@ -1,6 +1,7 @@
 import { mock } from "@starci/jest-preset"
 import type { AgentGraphDecisionsService } from "@modules/domain/agent-graphs"
 import type { AgentRunsViewService, RunDetail } from "@modules/domain/agent-runs"
+import type { RunStop, RunStopRecordsService } from "@modules/domain/agent-threads"
 import type { AgentWorkAccessService } from "@modules/domain/agent-work"
 import { DecisionsError, DecisionsErrorCode } from "@modules/domain/decisions"
 import type { WorkDecisionService, WorkItem } from "@modules/domain/decisions"
@@ -48,6 +49,8 @@ interface Built {
     readonly access: AgentWorkAccessService
     readonly chat: TeamChatDecisionService
     readonly work: WorkDecisionService
+    readonly approvals: RunStopRecordsService
+    readonly graphDecisions: AgentGraphDecisionsService
 }
 
 const build = (
@@ -58,15 +61,36 @@ const build = (
         readonly chatAnswer?: Awaited<ReturnType<TeamChatDecisionService["decide"]>>
         readonly manager?: () => Promise<string>
         readonly workDecide?: () => Promise<never>
+        readonly thread?: boolean
+        readonly openItem?: { readonly stepKey: string; readonly workItemId: string } | null
+        readonly owner?: boolean
     } = {},
 ): Built => {
     const access = mock<AgentWorkAccessService>({
         manager: jest.fn(options.manager ?? (() => Promise.resolve("member-1"))),
+        owner: jest.fn(() =>
+            options.owner === false
+                ? Promise.reject(new DecisionsError({ code: DecisionsErrorCode.NotAllowed }))
+                : Promise.resolve("member-1"),
+        ),
     })
     const installations = mock<InstallationRecordsService>({
         find: jest.fn().mockResolvedValue({ agentId: "agent-1" }),
     })
-    const runs = mock<AgentRunsViewService>({ detail: jest.fn().mockResolvedValue(waitingRun()) })
+    const detail = options.thread === true ? ({ ...waitingRun(), engine: "langgraph", steps: [] } as unknown as RunDetail) : waitingRun()
+    const runs = mock<AgentRunsViewService>({ detail: jest.fn().mockResolvedValue(detail) })
+    const approvalStop = (item: { readonly stepKey: string; readonly workItemId: string }): RunStop =>
+        ({
+            stepKey: item.stepKey,
+            kind: "approval",
+            state: "open",
+            stoppedAt: "2026-11-11T01:00:00.000Z",
+            detail: { suggestions: [], facts: [{ name: "workItemId", value: item.workItemId }] },
+        }) as unknown as RunStop
+    const open = options.openItem === undefined ? { stepKey: "send-qr", workItemId: "wi-1" } : options.openItem
+    const approvals = mock<RunStopRecordsService>({
+        ofRun: jest.fn().mockResolvedValue(open === null ? [] : [approvalStop(open)]),
+    })
     const items = mock<WorkItemsViewsReadService>({
         find: jest.fn().mockResolvedValue(itemRow(options.action ?? "approve_order", options.status)),
     })
@@ -92,13 +116,14 @@ const build = (
         graphDecisions,
         chat,
         work,
+        approvals,
     )
-    return { handler, access, chat, work }
+    return { handler, access, chat, work, approvals, graphDecisions }
 }
 
-const commandOf = (verdict: AgentRunVerdict): DecideAgentRunStepCommand =>
+const commandOf = (verdict: AgentRunVerdict, stepKey?: string): DecideAgentRunStepCommand =>
     new DecideAgentRunStepCommand({
-        request: { workspaceId: "ws-1", installationId: "inst-1", runId: "run-1", verdict, locale: "vi" },
+        request: { workspaceId: "ws-1", installationId: "inst-1", runId: "run-1", verdict, locale: "vi", stepKey: stepKey ?? null },
         principal: { id: "user-1" } as never,
     })
 
@@ -201,5 +226,35 @@ describe("DecideAgentRunStepHandler", () => {
             decision: "approved",
             locale: "vi",
         })
+    })
+})
+
+describe("DecideAgentRunStepHandler on a run on a LangGraph thread (its steps name no item: the approval STOP does)", () => {
+    it("finds the item through the run's open approval stop of the step and approves it through the inbox's door, as the owner", async () => {
+        const { handler, work, approvals, chat, graphDecisions } = build({ thread: true, action: "approve_tool_call" })
+
+        await expect(handler.execute(commandOf("approve", "send-qr"))).resolves.toEqual({ ok: true, refusal: null })
+
+        expect(approvals.ofRun).toHaveBeenCalledWith("ws-1", "run-1")
+        expect(work.decide).toHaveBeenCalledWith("user-1", "ws-1", { workItemId: "wi-1", decision: "approved", locale: "vi" })
+        expect(chat.decide).not.toHaveBeenCalled()
+        expect(graphDecisions.byItem).not.toHaveBeenCalled()
+    })
+
+    it("lets only the owner approve; a manager may refuse, through the same door", async () => {
+        const manager = build({ thread: true, action: "approve_tool_call", owner: false })
+
+        await expect(manager.handler.execute(commandOf("approve"))).resolves.toEqual({ ok: false, refusal: "not_an_approver" })
+        expect(manager.work.decide).not.toHaveBeenCalled()
+        await expect(manager.handler.execute(commandOf("reject"))).resolves.toEqual({ ok: true, refusal: null })
+        expect(manager.work.decide).toHaveBeenCalledWith("user-1", "ws-1", { workItemId: "wi-1", decision: "rejected", locale: "vi" })
+        expect(manager.approvals.ofRun).toHaveBeenCalledWith("ws-1", "run-1")
+    })
+
+    it("answers decision_not_found when the thread run waits on no approval", async () => {
+        const { handler, work } = build({ thread: true, openItem: null })
+
+        await expect(handler.execute(commandOf("approve"))).resolves.toEqual({ ok: false, refusal: "decision_not_found" })
+        expect(work.decide).not.toHaveBeenCalled()
     })
 })

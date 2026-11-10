@@ -20,6 +20,7 @@ import type {
     DesignedModule,
     ExtractedOrder,
     LeadInput,
+    MeterEntry,
     NodeAsk,
     OptionalAgentInput,
     ProposedCommand,
@@ -45,6 +46,7 @@ import type { AgentTurnsAsk } from "./agent-turn.policy"
 import type { NodeReasoning } from "./ai-tasks.options"
 import { callLimitsOf } from "./call-limits.policy"
 import { meteredCallOf } from "./metered-call.policy"
+import { failedTryEntryOf, promptCharsOf } from "./failed-try.policy"
 import { modelChoiceOf, modelFactsOf, servedModelOf } from "./model-choice.policy"
 import { modelPickerOf } from "./model-picker.mapper"
 import type { ModelPicker } from "./model-picker.mapper"
@@ -96,8 +98,8 @@ const PLAIN: CallOptions = { schema: null, question: null, call: "task" }
 /** A graph node's free-text call. */
 const NODE_TEXT: CallOptions = { schema: null, question: null, call: "node" }
 
-/** The providers of a deployment that declares none: the upstream alone, as before Anthropic joined the pool. */
-const UPSTREAM_ONLY: ConfiguredProviders = { anthropic: false, openrouter: true }
+/** The providers of a deployment that declares none: Anthropic alone, the only chat provider of the pool. */
+const CLAUDE_ONLY: ConfiguredProviders = { anthropic: true, openrouter: false }
 
 /** An answer with the model choice of the try that gave it (null for a fixed task of the app). */
 interface ChosenAnswer {
@@ -109,6 +111,8 @@ interface ChosenAnswer {
 interface AgentTurnsState {
     /** The explicit model the first answered turn was served by; null before it (or when it is not a model of the vocabulary). */
     pinned: ReturnType<typeof servedModelOf>
+    /** The prompt tokens of the step's last answered turn: what a failed turn after it is booked with (null before any answer). */
+    lastPromptTokens: number | null
 }
 
 /** The result of one run: the text, and the structured output when the model produced one. */
@@ -417,7 +421,7 @@ Current rules: ${currentRules}`,
         // The step's model on its first try; a choice that cannot be served fails the step at its first turn, not here.
         const first = this.firstChoiceOf(scope)
         // Every turn of ONE step stays on the model of its first answer (a prompt cache is per model).
-        const turns: AgentTurnsState = { pinned: null }
+        const turns: AgentTurnsState = { pinned: null, lastPromptTokens: null }
         let built: AiChatModel | null | undefined
         // Built when first read, once: the client a first try gets, for the loop to construct its agent over. Never asked.
         const firstClient = (): AiChatModel | undefined => {
@@ -428,8 +432,9 @@ Current rules: ${currentRules}`,
             })
             return built ?? undefined
         }
-        // A forced tool call only where every model the step may use takes one (Anthropic's Sonnet 5.5 refuses it).
-        const forced = agentToolChoiceOf(reasoning) === "required" && (first === null || first.target.forcedToolChoice)
+        // A forced tool call only where every model the step may use takes one (Anthropic's Sonnet 5.5 refuses it). A step with no
+        // model of its own asks the endpoint's `work` profile, Claude only since 2026-11-11: never forced either.
+        const forced = agentToolChoiceOf(reasoning) === "required" && first !== null && first.target.forcedToolChoice
         return {
             toolChoice: forced ? "required" : "auto",
             turn: (attempt) => this.agentTurn(scope, request, asked, attempt, turns),
@@ -444,7 +449,7 @@ Current rules: ${currentRules}`,
      * in this deployment), the default model, and what blocks-core declares for every node step that calls AI.
      */
     modelPicker(locale: Locale): ModelPicker {
-        return modelPickerOf(locale, this.options.providers ?? UPSTREAM_ONLY)
+        return modelPickerOf(locale, this.options.providers ?? CLAUDE_ONLY)
     }
 
     /**
@@ -460,7 +465,7 @@ Current rules: ${currentRules}`,
     /** The model of the first try of a step's agent, or null for no declared model or one that cannot be served (the turn says so). */
     private firstChoiceOf(scope: AiTaskScope): ModelChoice | null {
         if (scope.model === undefined) return null
-        const chosen = modelChoiceOf(scope.model, 1, this.options.providers ?? UPSTREAM_ONLY)
+        const chosen = modelChoiceOf(scope.model, 1, this.options.providers ?? CLAUDE_ONLY)
         return chosen.ok ? chosen.choice : null
     }
 
@@ -503,10 +508,14 @@ Current rules: ${currentRules}`,
         const elapsed = this.ai.stopwatch()
         const tried = await attempt(model, tries.made).then(
             (message) => ({ message, read: this.ai.readTurn(message, limits, elapsed()) }),
-            (cause: unknown) => ({ message: undefined, read: { ok: false as const, failure: this.ai.failureOfThrow(cause) } }),
+            (cause: unknown) => ({
+                message: undefined,
+                read: { ok: false as const, failure: this.ai.failureOfThrow(cause) },
+            }),
         )
         if (tried.read.ok && tried.message !== undefined) {
             turns.pinned ??= servedModelOf(tried.read.model)
+            turns.lastPromptTokens = tried.read.usage.promptTokens ?? turns.lastPromptTokens
             await this.meter.record({
                 workspaceId: request.workspaceId,
                 kind: request.kind,
@@ -515,6 +524,7 @@ Current rules: ${currentRules}`,
                     prompt_tokens: tried.read.usage.promptTokens ?? 0,
                     completion_tokens: tried.read.usage.completionTokens ?? 0,
                     cached_tokens: tried.read.usage.cachedTokens ?? 0,
+                    cache_write_tokens: tried.read.usage.cacheWriteTokens ?? 0,
                     cost: tried.read.usage.costUsd ?? 0,
                     model: tried.read.model,
                 },
@@ -531,6 +541,9 @@ Current rules: ${currentRules}`,
         }
         const failure = tried.read.ok ? "empty" : tried.read.failure
         tries.failures.push(failure)
+        await this.bookFailed(
+            failedTryEntryOf(request, failure, tries.made, choice, { tokens: turns.lastPromptTokens }),
+        )
         this.logger.warn(AiTasksLogEvent.Retried, {
             workspaceId: request.workspaceId,
             module: request.module,
@@ -618,6 +631,7 @@ Current rules: ${currentRules}`,
                 prompt_tokens: answer.usage.promptTokens ?? 0,
                 completion_tokens: answer.usage.completionTokens ?? 0,
                 cached_tokens: answer.usage.cachedTokens ?? 0,
+                cache_write_tokens: answer.usage.cacheWriteTokens ?? 0,
                 cost: answer.usage.costUsd ?? 0,
                 model: answer.model,
             },
@@ -631,6 +645,11 @@ Current rules: ${currentRules}`,
             ),
         })
         return { text: answer.text, parsed: answer.parsed }
+    }
+
+    /** Books a failed try (estimated, never billed); nothing for a try that was never sent. The meter never throws. */
+    private async bookFailed(entry: MeterEntry | null): Promise<void> {
+        if (entry !== null) await this.meter.record(entry)
     }
 
     /** Waits before the next try; no wait at all for a pause of nothing. */
@@ -651,7 +670,7 @@ Current rules: ${currentRules}`,
         pinned: ReturnType<typeof servedModelOf> = null,
     ): ModelChoice | null {
         if (scope.model === undefined) return null
-        const chosen = modelChoiceOf(scope.model, tryNumber, this.options.providers ?? UPSTREAM_ONLY, pinned)
+        const chosen = modelChoiceOf(scope.model, tryNumber, this.options.providers ?? CLAUDE_ONLY, pinned)
         if (chosen.ok) return chosen.choice
         this.logger.warn(AiTasksLogEvent.ModelNotConfigured, { workspaceId: scope.workspaceId, model: chosen.model })
         throw new AiTasksError({
@@ -674,9 +693,16 @@ Current rules: ${currentRules}`,
         const choice = this.choiceOf(scope, tries.made)
         // The deadline of a try depends on which try it is: a node call's retries are given less time than its first try.
         const limits = callLimitsOf(this.options, options.call, options.reasoning, tries.made)
-        const tried = await this.ai.attempt({ ...call, ...limits, ...(choice === null ? {} : { target: choice.target }) })
+        const tried = await this.ai.attempt({
+            ...call,
+            ...limits,
+            ...(choice === null ? {} : { target: choice.target }),
+        })
         if (tried.ok) return { answer: tried.answer, choice }
         tries.failures.push(tried.failure)
+        await this.bookFailed(
+            failedTryEntryOf(request, tried.failure, tries.made, choice, { chars: promptCharsOf(call.messages) }),
+        )
         this.logger.warn(AiTasksLogEvent.Retried, {
             workspaceId: request.workspaceId,
             module: request.module,

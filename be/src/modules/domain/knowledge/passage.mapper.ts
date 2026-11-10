@@ -3,6 +3,12 @@ import type { SourceBrief } from "@modules/domain/knowledge-sources"
 import type { NivoHit } from "@modules/domain/nivo-knowledge"
 import type { Passage } from "./knowledge.contracts"
 
+/**
+ * The mark an internal reader (an internal agent, "try asking", `brain.search` passages) reads before a passage the shop-document critic
+ * has not released to customers yet (trust gate, BG3). A customer search never returns such a passage.
+ */
+export const UNREVIEWED_MARK = "[chua soat]"
+
 /** A passage of a business document, from the hit the chunk search answers and the brief of its source. */
 export const businessPassage = (hit: ChunkHit, source: SourceBrief): Passage => ({
     layer: "business",
@@ -11,7 +17,8 @@ export const businessPassage = (hit: ChunkHit, source: SourceBrief): Passage => 
     module: hit.module,
     kind: source.kind,
     title: source.title,
-    content: hit.content,
+    content: hit.unreviewed ? `${UNREVIEWED_MARK} ${hit.content}` : hit.content,
+    unreviewed: hit.unreviewed,
     score: hit.score,
     visibility: hit.visibility,
     topic: source.topic,

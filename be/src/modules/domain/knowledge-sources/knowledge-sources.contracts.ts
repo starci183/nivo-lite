@@ -38,7 +38,20 @@ export const KNOWLEDGE_UPLOAD_MIME: ReadonlyMap<string, string> = new Map([
     ["md", "text/markdown"],
     ["markdown", "text/markdown"],
     ["csv", "text/csv"],
+    ["tsv", "text/tab-separated-values"],
+    ["html", "text/html"],
+    ["htm", "text/html"],
+    ["jpg", "image/jpeg"],
+    ["jpeg", "image/jpeg"],
+    ["png", "image/png"],
+    ["webp", "image/webp"],
+    ["gif", "image/gif"],
+    ["heic", "image/heic"],
+    ["heif", "image/heif"],
 ])
+
+/** The extensions of old binary Office files: refused at the upload door with the advice to save them again as .docx or .xlsx. */
+export const LEGACY_OFFICE_EXTENSIONS: ReadonlySet<string> = new Set(["doc", "xls", "ppt"])
 
 /** The largest uploaded document, in bytes: 50 MB. */
 export const MAX_UPLOAD_BYTES: number = 50 * 1024 * 1024
@@ -81,7 +94,56 @@ export enum StoredNote {
     NeedsOcr = "KNOWLEDGE_NOTE_NEEDS_OCR",
     /** The text is the same as a document the workspace already holds for the same readers: it was not read, embedded or filed again. */
     Duplicate = "KNOWLEDGE_NOTE_DUPLICATE",
+    /** The file is locked with a password. */
+    PasswordProtected = "KNOWLEDGE_NOTE_PASSWORD_PROTECTED",
+    /** A Word or Excel file of the old binary format (.doc, .xls): it must be saved again as .docx or .xlsx. */
+    LegacyOffice = "KNOWLEDGE_NOTE_LEGACY_OFFICE",
+    /** The library that reads this kind of file is not installed on the server. */
+    ReaderUnavailable = "KNOWLEDGE_NOTE_READER_UNAVAILABLE",
+    /** The file is pictures only and the AI that transcribes pictures could not be reached. */
+    TranscriptionUnavailable = "KNOWLEDGE_NOTE_TRANSCRIPTION_UNAVAILABLE",
+    /** The file is pictures only and the workspace has no AI allowance left to transcribe them. */
+    NoCreditsForTranscription = "KNOWLEDGE_NOTE_NO_CREDITS_TRANSCRIPTION",
+    /** The file is not of a kind a document can be read from. */
+    TypeUnsupported = "KNOWLEDGE_NOTE_TYPE_UNSUPPORTED",
 }
+
+/** One part of a document its last reading could not read whole, as the second-brain page shows it. */
+export interface ReadingWarning {
+    /** The note's code (`DOCUMENT_PAGE_UNREADABLE`, `DOCUMENT_PAGE_TRANSCRIBED`, `DOCUMENT_PAGES_OVER_LIMIT`, `DOCUMENT_ROWS_OVER_LIMIT`, `DOCUMENT_PLACE_EMPTY`). */
+    readonly code: string
+    /** The page number, sheet name or slide number, or null for the whole document. */
+    readonly place: string | null
+    /** The count the note names, or null. */
+    readonly count: number | null
+    /** The note in plain Vietnamese, e.g. "Trang 3 không đọc được." */
+    readonly message: string
+}
+
+/** How the last reading of a file or link went, stored in `knowledge_sources.reading`. */
+export interface SourceReading {
+    /** The reader that read it: text, markdown, csv, tsv, html, pdf, docx, xlsx, pptx, image, heic, link. */
+    readonly reader: string
+    /** How many pages (PDF, picture) or slides it has, or null. */
+    readonly pageCount: number | null
+    /** How many sheets a workbook has, or null. */
+    readonly sheetCount: number | null
+    /** True when any of its text was transcribed by the AI from a picture. */
+    readonly transcribed: boolean
+    /** The parts it could not read whole. */
+    readonly warnings: ReadonlyArray<ReadingWarning>
+    /** The stored code of why the file was refused, or null when it was read. */
+    readonly refusal: string | null
+    /** Why it was refused, in plain Vietnamese, or null when it was read. */
+    readonly reason: string | null
+    /** When it was read, ISO 8601. */
+    readonly readAt: string
+    /** The stored object that was read (a file source), or null: a retry of the same object reuses a transcription instead of paying again. */
+    readonly path: string | null
+}
+
+/** A reading, or null when the document has none. */
+export type MaybeReading = SourceReading | null
 
 /** What a person adds: a note, a Q&A list, an uploaded file or a link. */
 export interface AddSourceInput {
@@ -131,6 +193,42 @@ export interface ReindexInput {
     readonly sourceId: string
     /** The new text; omitted keeps the text. */
     readonly content?: string | undefined
+    /** A new upload of the same document (`<workspaceId>/<uuid>/<filename>`), for a file source; omitted keeps the file. */
+    readonly storagePath?: string | undefined
+}
+
+/** One source of one workspace. */
+export interface SourceKey {
+    /** The workspace that owns it. */
+    readonly workspaceId: string
+    /** The source. */
+    readonly sourceId: string
+}
+
+/** A new upload of a document: its object and its size. */
+export interface NewUpload {
+    /** The object. */
+    readonly path: string
+    /** Its size in bytes. */
+    readonly bytes: number
+}
+
+/** The columns a new upload writes on its source (empty without one). */
+export interface ReplacementColumns {
+    /** The new object. */
+    readonly storagePath?: string
+    /** Its size in bytes. */
+    readonly sizeBytes?: number
+    /** Cleared, so the index job reads the new file instead of keeping the text it knew. */
+    readonly contentHash?: null
+}
+
+/** What a new upload changes on the file of a source, and the object it replaces. */
+export interface FileReplacement {
+    /** The columns to write. */
+    readonly columns: ReplacementColumns
+    /** The old object, to remove once the change is written; null when there is none (no upload, or the same object again). */
+    readonly replaced: string | null
 }
 
 /** The identity of a source that was just written. */
@@ -263,6 +361,8 @@ export interface SourceSummary {
 export interface SourceDetail extends SourceSummary {
     /** The text (the address of a link source until it is read). */
     readonly content: string
+    /** How its last reading went, or null when it has none (a note, or a document read before readings were kept); absent where not read. */
+    readonly reading?: MaybeReading
 }
 
 /** Who may read a document: anyone (public) or the team only (internal); a customer-facing view never counts internal ones. */

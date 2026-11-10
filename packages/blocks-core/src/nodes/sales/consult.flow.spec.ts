@@ -95,7 +95,7 @@ describe("sales.consult-turn", () => {
     })
 
     it("searches the shop's knowledge with the second brain's tool and reads no document as data", () => {
-        expect(salesConsultTurnNode.tools).toEqual([TOOL.brainSearch])
+        expect(salesConsultTurnNode.tools).toEqual([TOOL.brainSearch, TOOL.leadOrderList])
         expect(salesConsultTurnNode.rights.map((right) => right.kind)).not.toContain("knowledge-document")
         expect(brainSearchTool.result.safeParse(BRAIN_HIT).success).toBe(true)
         expect(Object.keys(BRAIN_HIT).toSorted()).toEqual(["facts", "notice", "passages"])

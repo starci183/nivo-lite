@@ -1,7 +1,7 @@
 import { QueryHandler } from "@nestjs/cqrs"
 import { AgentGraphDecisionsService, AgentGraphsService } from "@modules/domain/agent-graphs"
 import { AgentRunsViewService } from "@modules/domain/agent-runs"
-import { AiUsageEventsService } from "@modules/domain/ai-usage-events"
+import { AiUsageEventsService, runTotalsOf } from "@modules/domain/ai-usage-events"
 import { AgentWorkAccessService } from "@modules/domain/agent-work"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkItemsViewsReadService } from "@modules/domain/work-items"
@@ -42,7 +42,9 @@ export class ReadAgentRunHandler extends ICQRSHandler<ReadAgentRunQuery, AgentRu
         if (detail === null) return null
         const itemId = detail.steps.find((step) => step.waitItemId !== null || step.workItemId !== null)
         const found =
-            itemId === undefined ? null : await this.items.find(workspaceId, itemId.waitItemId ?? itemId.workItemId ?? "")
+            itemId === undefined
+                ? null
+                : await this.items.find(workspaceId, itemId.waitItemId ?? itemId.workItemId ?? "")
         const versions = await this.graphs.versionsOf(workspaceId, agentId)
         const read = detailOf(
             detail,
@@ -51,11 +53,8 @@ export class ReadAgentRunHandler extends ICQRSHandler<ReadAgentRunQuery, AgentRu
             this.clock.now(),
             await this.usage.creditsByRun(workspaceId, [runId]),
         )
-        return {
-            ...read,
-            decision: await this.decisionFor(workspaceId, read),
-            aiCalls: await this.usage.callKindsByRun(workspaceId, runId),
-        }
+        const aiCalls = await this.usage.callKindsByRun(workspaceId, runId)
+        return { ...read, decision: await this.decisionFor(workspaceId, read), aiCalls, aiTotals: runTotalsOf(aiCalls) }
     }
 
     /** The decision the run waits on, with the open request of the approval road when the graph asked a group; null when no item waits. */

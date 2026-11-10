@@ -3,6 +3,7 @@ import { Column, Entity } from "typeorm"
 import type {
     BrainSubjectType,
     Evidence,
+    FactFlag,
     FactSource,
     FactStatus,
     FactProposalKind,
@@ -119,6 +120,10 @@ export class BrainFactEntity extends UuidAbstractEntity {
     /** Which value of its key this is: 1 on the first activation, one more on each replacement; null until it was in force. */
     @Column({ name: "version", type: "integer", nullable: true })
     version?: number | null
+
+    /** What the brain noticed for the founder (`stale`, `same_meaning`); empty when nothing. Migration 20261112013100. */
+    @Column({ name: "review_flags", type: "text", array: true, default: () => "'{}'::text[]" })
+    reviewFlags?: Array<FactFlag> | null
 
     /** The vector of the fact's line (embedding standard W2): never read back by default. */
     @Column({ name: "embedding", type: "vector", nullable: true, select: false })

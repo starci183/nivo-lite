@@ -1,8 +1,10 @@
 import type { EnvSource } from "@modules/platform/config"
 import type { AiOptions } from "./ai.options"
+import { EMBEDDING_PROFILE } from "@nivo-lite/blocks-core"
 
 const DEFAULT_CHAT_MODEL = "work"
-const DEFAULT_EMBEDDING_MODEL = "embed"
+/** The pinned OpenAI embeddings profile (`embed-oa`); the old `embed` (Qwen on OpenRouter) is gone from the pool. */
+const DEFAULT_EMBEDDING_MODEL = EMBEDDING_PROFILE
 
 /**
  * Reads the AI endpoint from the environment (BE-AI-3): `AI_BASE_URL`, the gateway the clients point at, with no default (a missing URL

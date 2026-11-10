@@ -5,6 +5,7 @@ import { ListCreditTopupLotsHandler } from "./application/list-credit-topup-lots
 import { GetCreditQuotaStatusHandler } from "./application/get-credit-quota-status.handler"
 import { GetCreditUsageSummaryHandler } from "./application/get-credit-usage-summary.handler"
 import { GetCreditRecentCostUsdHandler } from "./application/get-credit-recent-cost-usd.handler"
+import { GetCreditWorkUsageHandler } from "./application/get-credit-work-usage.handler"
 import { ConfigurableModuleClass } from "./credits.module-definition"
 
 @Module({
@@ -15,6 +16,7 @@ import { ConfigurableModuleClass } from "./credits.module-definition"
         GetCreditQuotaStatusHandler,
         GetCreditUsageSummaryHandler,
         GetCreditRecentCostUsdHandler,
+        GetCreditWorkUsageHandler,
     ],
 })
 /** The credit catalogue, purchased lots, quota and usage application handlers. */

@@ -163,8 +163,8 @@ describe("AgentWorkflowsAdminService: seats", () => {
         const { admin, runs } = await build("staff")
         runs.pinsOf.mockResolvedValue([])
 
-        // Accounting ships two templates: reconcile (which took the payment claim in) and the reports.
-        await expect(admin.templates(ACTOR, { moduleKey: "accounting" })).resolves.toHaveLength(2)
+        // Accounting ships three templates: reconcile (which took the payment claim in), the reports and the team chat turn (C1).
+        await expect(admin.templates(ACTOR, { moduleKey: "accounting" })).resolves.toHaveLength(3)
         await expect(admin.template(ACTOR, { templateId: "sales.consult" })).resolves.toMatchObject({ primary: true })
         await expect(admin.runPins(ACTOR, { installationId: "inst-1", runIds: ["run-1"] })).resolves.toEqual([])
     })

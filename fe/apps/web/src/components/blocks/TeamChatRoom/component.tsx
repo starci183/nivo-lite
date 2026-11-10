@@ -238,7 +238,7 @@ export const TeamChatPanesBase = (page: TeamChatPanesBaseProps) => {
                     {view.list}
                 </Pane>
             ) : null}
-            <Pane area="room" surface content="full" label={view.roomLabel} footer={view.parts.footer}>
+            <Pane area="room" content="chat" label={view.roomLabel} footer={view.parts.footer}>
                 {view.parts.body}
             </Pane>
         </PaneGrid>

@@ -411,13 +411,16 @@ describe("flow F graphs on fake ports", () => {
         expect(seeded.map((workflow) => workflow.templateId)).toEqual([
             "accounting.reconcile",
             "accounting.reports",
+            "accounting.team-chat",
             "chatbot.front-desk",
+            "chatbot.team-chat",
             "sales.consult",
             "sales.after-sale",
             "sales.web-order",
             "sales.payment-reminder",
             "sales.delivery-check",
             "sales.occasion",
+            "sales.team-chat",
         ])
         for (const workflow of seeded) expect(graphSpecProblems(workflow.graph, installed)).toEqual([])
     })

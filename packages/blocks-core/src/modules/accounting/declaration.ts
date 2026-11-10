@@ -43,6 +43,9 @@ export const accountingModule: ModuleDeclaration = defineModule({
             TOOL.agentTag,
             TOOL.ledgerAppend,
             TOOL.reportDailyClose,
+            TOOL.brainSearch,
+            TOOL.brainFactGet,
+            TOOL.brainFactRelated,
             TOOL.brainChangePropose,
         ],
         abilities: {

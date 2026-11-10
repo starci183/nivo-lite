@@ -26,6 +26,24 @@ export interface ProviderUsage {
     readonly cost?: number
     /** Prompt tokens the provider served from its prompt cache; they are part of `prompt_tokens`. */
     readonly cached_tokens?: number
+    /** Prompt tokens the provider WROTE to its prompt cache (Anthropic bills them above the input price); absent when not told. */
+    readonly cache_write_tokens?: number
+}
+
+/**
+ * The work a model call was made for, as the reads group it: the kind (`node`, `engine_core`, `document_read`, `document_reread`,
+ * `document_critique`, `learning`, `chat_turn`), the record (`source:<id>`, `lesson:<id>`, `message:<room>/<id>`), the run step
+ * (graph node key) and the agent. Absent fields book null.
+ */
+export interface UsageWork {
+    /** The kind of work. */
+    readonly kind: string
+    /** The record the work was done for, or null. */
+    readonly ref?: string | null | undefined
+    /** The run step (graph node key), or null. */
+    readonly stepKey?: string | null | undefined
+    /** The agent, or null. */
+    readonly agentId?: string | null | undefined
 }
 
 /** One model call to record. */
@@ -48,6 +66,13 @@ export interface UsageInput {
     readonly runId?: string | undefined
     /** What the call was and how it went (its kind, hidden reasoning, time, try, upstream); absent books none of it. */
     readonly call?: UsageCallFacts | undefined
+    /** The work the call was made for; absent, the work in scope (`workInScope()`) is used, else none. */
+    readonly work?: UsageWork | undefined
+    /**
+     * Set for a FAILED try (`timeout`, `provider`, `length`, `empty`, `not_json`): the row is booked estimated (the prompt the app sent,
+     * no output) and priced, but never billed. Absent for an answered call.
+     */
+    readonly failure?: string | undefined
 }
 
 /** What one model call was and how it went, beside what it cost: what the run page shows per call kind. */
@@ -77,10 +102,26 @@ export interface UsageCallFacts {
  * went. Ordered by the first call of each kind.
  */
 export interface RunCallKindUsage {
+    /** The run step (graph node key) the calls were made in; null for a call booked without one (before U1, or outside a node). */
+    readonly stepKey: string | null
     /** The call kind (`<node id>:<tag>`), or the usage kind for a fixed task of the app. */
     readonly purpose: string
-    /** The calls of this kind that answered (failed tries are never booked). */
+    /** The calls of this kind that answered. */
     readonly calls: number
+    /** Every try booked: the answers and the failed tries. */
+    readonly tries: number
+    /** The failed tries (timeout, provider error, cut at the token limit, empty, not JSON), booked estimated and never billed. */
+    readonly failedTries: number
+    /** Prompt tokens of the answers written to the provider's prompt cache. */
+    readonly cacheWriteTokens: number
+    /** Prompt tokens the app counted for the failed tries (no output). */
+    readonly failedPromptTokens: number
+    /** The price of the failed tries in USD (estimated, not billed today). */
+    readonly failedCostUsd: number
+    /** The failure codes of the failed tries, sorted, without repeats. */
+    readonly failures: ReadonlyArray<string>
+    /** The kinds of work the calls served (`node`, `engine_core`), sorted, without repeats. */
+    readonly workKinds: ReadonlyArray<string>
     /** The highest try number among them: above 1, some try of this kind failed before one answered. */
     readonly maxTry: number | null
     /** Prompt tokens of all the calls, cached ones included. */
@@ -95,8 +136,12 @@ export interface RunCallKindUsage {
     readonly durationMs: number
     /** The slowest call, milliseconds; null when none was measured. */
     readonly slowestMs: number | null
-    /** The cost of the calls in USD. */
+    /** The exact cost of the answers in USD. */
     readonly costUsd: number
+    /** The credits of the answers as a fraction (`creditsExact`): never rounded per call. */
+    readonly credits: number
+    /** The credits of the failed tries as a fraction (estimated, not billed today). */
+    readonly failedCredits: number
     /** The upstreams that served them, sorted, without repeats. */
     readonly upstreams: ReadonlyArray<string>
     /** Why the model stopped, sorted, without repeats. */
@@ -265,4 +310,32 @@ export interface QuotaRecord {
     readonly credits_carried: Figure | null
     /** Top-up credits left, or null. */
     readonly topup_balance: Figure | null
+}
+
+/** The model use of a whole run: the sum of its steps' calls, with exact credits (never rounded per call). */
+export interface RunAiTotals {
+    /** Answered calls. */
+    readonly calls: number
+    /** Every try, the failed ones included. */
+    readonly tries: number
+    /** Failed tries (estimated, never billed). */
+    readonly failedTries: number
+    /** Prompt tokens of the answers. */
+    readonly promptTokens: number
+    /** Of them, read from the provider's prompt cache. */
+    readonly cachedTokens: number
+    /** Of them, written to the provider's prompt cache. */
+    readonly cacheWriteTokens: number
+    /** Completion tokens of the answers. */
+    readonly completionTokens: number
+    /** Of them, hidden reasoning. */
+    readonly reasoningTokens: number
+    /** The exact cost of the answers in USD. */
+    readonly costUsd: number
+    /** The credits of the answers, a fraction. */
+    readonly credits: number
+    /** The exact price of the failed tries in USD. */
+    readonly failedCostUsd: number
+    /** The credits of the failed tries, a fraction. */
+    readonly failedCredits: number
 }

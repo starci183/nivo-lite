@@ -1,7 +1,7 @@
 import type { UsageMeterService } from "@modules/domain/knowledge"
 import type { AiBudget, AiChatAnswer, AiService } from "@modules/integrations/ai"
 import type { Logger } from "@modules/platform/logging"
-import type { OptionalCallResult } from "./dossier-review-ai.contracts"
+import type { ModelCallResult, OptionalCallResult } from "./dossier-review-ai.contracts"
 import { DossierReviewAiLogEvent } from "./dossier-review-ai.log-events"
 import type { AnswerSchema } from "./dossier-review.schema"
 
@@ -67,6 +67,17 @@ export abstract class ModelCallPolicy {
             promptTokens: sumOf(first.promptTokens, second.promptTokens),
             completionTokens: sumOf(first.completionTokens, second.completionTokens),
         }
+    }
+
+    /**
+     * ONE call, no retry: the caller counts its tries (the shop-document critic gives three in total, the owner's AI-error rule). Answers
+     * the parsed value, `unreadable` when the answer did not fit the schema (the call is still recorded), or `unavailable`.
+     */
+    protected async askOnce<T>(params: ModelCallParams<T>): Promise<ModelCallResult<T> | "unreadable" | "unavailable"> {
+        const answer = await this.attempt(params, 1)
+        if (answer === null) return "unavailable"
+        if (answer.value === null) return "unreadable"
+        return { ...answer, value: answer.value }
     }
 
     /** One call of the model with its usage recorded; null when the model is unavailable. */

@@ -59,5 +59,8 @@ export const toAgentRunDetailType = (detail: AgentRunDetail | null): AgentRunDet
                   declaredModels: [...call.declaredModels],
                   modelProviders: [...call.modelProviders],
                   modelReasons: [...call.modelReasons],
+                  failures: [...call.failures],
+                  workKinds: [...call.workKinds],
               })),
+              aiTotals: { ...detail.aiTotals },
           }

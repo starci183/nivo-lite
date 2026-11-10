@@ -189,6 +189,22 @@ describe("AgentWakeService burst from the flow", () => {
         expect(silent.fake?.callsOf("values")[0]?.[0]).toMatchObject({ burstWindowMs: 1000, burstMaxMs: 20_000 })
     })
 
+    // D-P10-2: a customer line the front door of a held conversation sends on to its keeper already waited its burst at the front
+    // door; it does not wait the window a second time. A line not marked so keeps its window.
+    it("drains a line whose burst was already waited out at once, and asks the flow nothing (D-P10-2)", async () => {
+        const { service, queue, tx, fake, bursts } = await build(
+            inserted("wake-1"),
+            { debounceMs: 6000 },
+            { windowMs: 6000, maxWaitMs: 20_000 },
+        )
+
+        await service.wake(tx, { ...customer, burstSettled: true })
+
+        expect(bursts.burstOf).not.toHaveBeenCalled()
+        expect(fake?.callsOf("values")[0]?.[0]).toMatchObject({ burstWindowMs: 0, burstMaxMs: 0 })
+        expect(queue.enqueueDrain).toHaveBeenCalledWith(expect.anything(), "customer", "msg-3", tx, 0)
+    })
+
     it("asks the flow nothing for a wake that is not locked to a conversation", async () => {
         const { service, tx, fake, bursts } = await build(inserted("wake-1"), undefined, {
             windowMs: 6000,

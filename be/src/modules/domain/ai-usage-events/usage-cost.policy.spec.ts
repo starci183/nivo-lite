@@ -253,6 +253,18 @@ describe("usage cost policy > Claude Sonnet 5.5 (no cost reported through the ro
         expect(realPriceOf("claude-sonnet-5-5", 1_000_000, 0, 800_000)).toBeCloseTo(0.4 + 0.08, 8)
     })
 
+    it("prices Claude Haiku 5.5 at $0.10 in and $0.50 out (not verified live), a cached token at the input price", () => {
+        expect(realPriceOf("claude-haiku-5-5", 1_000_000, 0)).toBeCloseTo(0.1, 8)
+        expect(realPriceOf("claude-haiku-5-5", 0, 1_000_000)).toBeCloseTo(0.5, 8)
+        expect(realPriceOf("claude-haiku-5-5", 1_000_000, 0, 500_000)).toBeCloseTo(0.1, 8)
+    })
+
+    it("prices OpenAI's text-embedding-3-small at $0.02 per million prompt tokens", () => {
+        expect(realPriceOf("text-embedding-3-small", 1_000_000, 0)).toBeCloseTo(0.02, 8)
+        // An embeddings call is booked under the model identity the AI layer records (`text-embedding-3-small@1536`).
+        expect(realPriceOf("text-embedding-3-small@1536", 1_000_000, 0)).toBeCloseTo(0.02, 8)
+    })
+
     it("keeps every other model's cached tokens at its full input price, as before", () => {
         expect(realPriceOf("deepseek/deepseek-v4.1-flash", 1_000_000, 0, 900_000)).toBeCloseTo(0.14, 8)
     })

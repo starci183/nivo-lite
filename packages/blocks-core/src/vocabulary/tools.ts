@@ -339,6 +339,8 @@ export interface BrainChangeProposeArgs {
     readonly messageId: string
     /** The words that were said. */
     readonly quote: string
+    /** Why the truth changes, in the agent's own plain words: who said what, which value in force it replaces, for how long. */
+    readonly reason: string
     /** When the change starts to hold. */
     readonly validFrom?: string | undefined
     /** When the change stops holding. */
@@ -445,6 +447,7 @@ export const brainChangeProposeTool: ToolDefinition<
         room: z.enum(["direct", "common"]),
         messageId: z.string().uuid(),
         quote: z.string().min(1).max(500),
+        reason: z.string().min(1).max(1000),
         validFrom: z.string().max(40).optional(),
         validTo: z.string().max(40).optional(),
     }),

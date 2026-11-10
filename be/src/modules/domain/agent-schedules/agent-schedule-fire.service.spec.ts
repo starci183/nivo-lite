@@ -123,3 +123,46 @@ describe("AgentScheduleFireService.fire", () => {
         expect(wakes.wake).not.toHaveBeenCalled()
     })
 })
+
+describe("AgentScheduleFireService.fireNow (the schedule list's \"run now\")", () => {
+    const SLOT_AT = new Date(Number(SLOT))
+
+    it("writes the wake of the next slot now, under its own key and the person who pressed; the scheduler and the row are untouched", async () => {
+        const { service, wakes, triggers, sync } = await build(record({ nextRunAt: SLOT_AT }))
+
+        await expect(service.fireNow("ws-1", "trigger-1", SLOT_AT, "member-owner")).resolves.toBe("woken")
+
+        expect(wakes.wake).toHaveBeenCalledWith(expect.anything(), {
+            workspaceId: "ws-1",
+            agentId: "agent-1",
+            source: "schedule",
+            eventKey: `trigger-1:${SLOT}`,
+            context: { triggerId: "trigger-1", slot: SLOT, probeKey: "invoices_due" },
+            actorMemberId: "member-owner",
+        })
+        expect(triggers.recordFire).not.toHaveBeenCalled()
+        expect(sync.unschedule).not.toHaveBeenCalled()
+    })
+
+    it("answers already_ran when that slot's wake exists (the slot came or someone pressed first): the cron's fire adds nothing either", async () => {
+        const { service, wakes } = await build(record({ nextRunAt: SLOT_AT }))
+        wakes.wake.mockResolvedValue(false)
+
+        await expect(service.fireNow("ws-1", "trigger-1", SLOT_AT, "member-owner")).resolves.toBe("already_ran")
+    })
+
+    it("runs nothing for a trigger gone, off, not a clock, whose next slot moved, or whose work is switched off", async () => {
+        const worlds = await Promise.all([
+            build(null),
+            build(record({ nextRunAt: SLOT_AT, enabled: false })),
+            build(record({ nextRunAt: SLOT_AT, kind: "event" })),
+            build(record({ nextRunAt: NEXT })),
+            build(record({ nextRunAt: SLOT_AT }), false),
+        ])
+
+        const answers = await Promise.all(worlds.map((world) => world.service.fireNow("ws-1", "trigger-1", SLOT_AT, "m")))
+
+        expect(answers).toEqual(["not_scheduled", "not_scheduled", "not_scheduled", "not_scheduled", "not_scheduled"])
+        expect(worlds.map((world) => world.wakes.wake.mock.calls.length)).toEqual([0, 0, 0, 0, 0])
+    })
+})

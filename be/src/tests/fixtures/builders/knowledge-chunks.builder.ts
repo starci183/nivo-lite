@@ -18,6 +18,7 @@ export const knowledgeChunkOf: (overrides?: Partial<KnowledgeChunkEntity>) => Kn
     fts: null,
     createdAt: new Date("2026-04-01T00:00:00.000Z"),
     visibility: "internal",
+    customerReady: true,
     embeddingModel: null,
     installationId: null,
     contentHash: null,

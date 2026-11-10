@@ -134,7 +134,8 @@
             }
         ],
         "tools": [
-            "brain.search"
+            "brain.search",
+            "nivo.lead.order.list"
         ],
         "effects": [
             "customer.message.send",
@@ -175,7 +176,8 @@
             },
             "routes": {
                 "ready": "create-order"
-            }
+            },
+            "model": "claude-sonnet-5-5"
         },
         {
             "key": "create-order",
@@ -205,7 +207,8 @@
                     "$ref": "steps.consult.output.deliveryAt"
                 }
             },
-            "next": "send-qr"
+            "next": "send-qr",
+            "model": "claude-sonnet-5-5"
         },
         {
             "key": "send-qr",
@@ -220,7 +223,8 @@
                 },
                 "locale": "vi"
             },
-            "next": "notify-order"
+            "next": "notify-order",
+            "model": "claude-sonnet-5-5"
         },
         {
             "key": "notify-order",
@@ -235,7 +239,8 @@
                 },
                 "locale": "vi"
             },
-            "next": "won"
+            "next": "won",
+            "model": "claude-sonnet-5-5"
         },
         {
             "key": "won",

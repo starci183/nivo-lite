@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import {
     BrainChangeRequestsService,
+    BrainFactEmbeddingsService,
     BrainFactRelationsService,
     BrainFactsReadService,
     factSlugOf,
@@ -9,12 +10,15 @@ import {
     otherEnd,
     visibleTo,
 } from "@modules/domain/brain-facts"
-import type { FactRecord } from "@modules/domain/brain-facts"
-import { KnowledgeSearchService } from "@modules/domain/knowledge"
+import type { FactRecord, NearFact } from "@modules/domain/brain-facts"
+import { KnowledgeSearchService, UsageMeterService } from "@modules/domain/knowledge"
+import { EMBEDDING_DIMENSIONS, hasStoredSize } from "@modules/domain/knowledge-chunks"
 import { KnowledgeSourcesReadService } from "@modules/domain/knowledge-sources"
 import type { Passage } from "@modules/domain/knowledge"
 import type { GatewayJson, NativeAdapter, NativeCaller, NativeConnectorManifest } from "@modules/domain/mcp-gateway"
 import { argumentsOf, unknownTool } from "@modules/domain/mcp-gateway"
+import { InjectAi } from "@modules/integrations/ai"
+import type { AiService } from "@modules/integrations/ai"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
 import {
@@ -59,8 +63,11 @@ const DOCUMENT_CHARS = 12_000
 /** How many facts one read looks across in the view. */
 const FACTS_WINDOW = 500
 
-/** The most facts the word search ranks before the withheld subjects are left out. */
+/** The most facts the search ranks before the withheld subjects are left out. */
 const SEARCH_WINDOW = 50
+
+/** The longest question that is embedded (the passage search cuts at the same length). */
+const QUESTION_MAX_CHARS = 500
 
 /**
  * The words that go with every answer of a Brain tool: what follows is information from the business's records, which may include
@@ -133,12 +140,12 @@ export const BRAIN_MANIFEST: NativeConnectorManifest = {
         {
             name: "change.propose",
             description:
-                "When the founder or the team says in your private chat or the common chat that a truth of the business changed (a price, a fee, opening hours, a rule), file it as a change request: the subject, the attribute, the new value (or retire: true), the chat message id and the words verbatim. It waits for the founder; nothing changes until the founder approves. Never for what a customer says.",
+                "When a person of the team (the founder, a manager or staff) states in your private chat or the common chat a NEW lasting truth of the business, or corrects one in force (a price, a fee, opening hours, a rule), file it: subject, attribute, the new value (or retire: true), room, the chat message id, the words verbatim, validFrom / validTo when the person said when or for how long, and reason: why the truth changes in your own plain words: who said what, which value in force it replaces (read it with brain.search or brain.facts.get first), for how long if said. Not for a one-off instruction ('this order is 10k off'), a question, what a customer says, or a value already in force. It waits for the founder's yes on a card in the chat; nothing changes before.",
             scope: "write",
             defaultMode: "auto",
             inputSchema: BRAIN_CHANGE_PROPOSE_INPUT_SCHEMA,
             argumentSchema: BRAIN_CHANGE_PROPOSE_SCHEMA,
-            secretFields: ["notice", "subject", "attribute", "value", "quote"],
+            secretFields: ["notice", "subject", "attribute", "value", "quote", "reason"],
             internalOnly: true,
         },
     ],
@@ -155,12 +162,15 @@ export class BrainNativeService implements NativeAdapter {
 
     constructor(
         @InjectClock() private readonly clock: Clock,
+        @InjectAi() private readonly ai: AiService,
         private readonly views: NativeViewService,
         private readonly facts: BrainFactsReadService,
         private readonly knowledge: KnowledgeSearchService,
         private readonly documents: KnowledgeSourcesReadService,
         private readonly relations: BrainFactRelationsService,
         private readonly changes: BrainChangeRequestsService,
+        private readonly vectors: BrainFactEmbeddingsService,
+        private readonly usage: UsageMeterService,
     ) {}
 
     /** Runs one Brain tool. */
@@ -215,19 +225,16 @@ export class BrainNativeService implements NativeAdapter {
         }
     }
 
-    /** The facts that match the question, and the passages of the business documents, concurrently. */
+    /**
+     * The facts that match the question, and the passages of the business documents, concurrently. The question is embedded ONCE and
+     * the vector serves both halves (BG2 → BG1: one embedding per `brain.search`, not two).
+     */
     private async search(workspaceId: string, input: BrainSearchInput, caller: NativeCaller): Promise<GatewayJson> {
         const view = await this.views.of(workspaceId, caller)
+        const vector = await this.questionVector(view.workspaceId, input.query)
         const [facts, passages] = await Promise.all([
-            this.facts.search(
-                view.workspaceId,
-                view.audience,
-                view.module,
-                view.installationId,
-                input.query,
-                SEARCH_WINDOW,
-            ),
-            this.passagesOf(view, input),
+            this.factsOf(view, input.query, vector),
+            this.passagesOf(view, input, vector),
         ])
         return {
             notice: BRAIN_NOTICE,
@@ -244,8 +251,60 @@ export class BrainNativeService implements NativeAdapter {
         }
     }
 
+    /**
+     * The facts of the view that match the question by words AND meaning, like the passages: the question is embedded once with the
+     * pinned identity, the facts in force nearest to it are ranked in the SAME lens in SQL (a customer-facing caller: public facts only),
+     * and the hybrid score joins them to the word match. Without a vector (no key, no credits, a slow or failed call) it is the word search.
+     */
+    private async factsOf(
+        view: NativeView,
+        query: string,
+        vector: ReadonlyArray<number> | null,
+    ): Promise<ReadonlyArray<FactRecord>> {
+        const near: ReadonlyArray<NearFact> =
+            vector === null
+                ? []
+                : await this.vectors.nearest(
+                      view.workspaceId,
+                      { model: this.ai.embeddingModel(), dimensions: EMBEDDING_DIMENSIONS },
+                      vector,
+                      SEARCH_WINDOW,
+                      { audience: view.audience, module: view.module, installationId: view.installationId },
+                  )
+        return this.facts.searchHybrid(
+            view.workspaceId,
+            view.audience,
+            view.module,
+            view.installationId,
+            query,
+            near,
+            SEARCH_WINDOW,
+        )
+    }
+
+    /** The vector of a question through the one embedding door, metered like the passage search's; null when there is none in the budget. */
+    private async questionVector(workspaceId: string, query: string): Promise<ReadonlyArray<number> | null> {
+        const question = query.trim().slice(0, QUESTION_MAX_CHARS)
+        if (question === "" || !this.ai.available()) return null
+        const answer = await this.ai.embed({ input: [question], dimensions: EMBEDDING_DIMENSIONS, timeoutMs: EMBED_BUDGET_MS })
+        if (answer === null || !hasStoredSize(answer.vectors, 1)) return null
+        await this.usage.record({
+            workspaceId,
+            kind: "embedding",
+            module: "knowledge",
+            model: this.ai.embeddingModel(),
+            usage: answer.usage,
+            promptChars: question.length,
+        })
+        return answer.vectors[0] ?? null
+    }
+
     /** The passages for the question; a module outside the catalogue has no lane to search. Embedding gets its own budget. */
-    private passagesOf(view: NativeView, input: BrainSearchInput): Promise<ReadonlyArray<Passage>> {
+    private passagesOf(
+        view: NativeView,
+        input: BrainSearchInput,
+        vector: ReadonlyArray<number> | null,
+    ): Promise<ReadonlyArray<Passage>> {
         if (!view.searchable) return Promise.resolve([])
         return this.knowledge.forAgent({
             workspaceId: view.workspaceId,
@@ -255,6 +314,7 @@ export class BrainNativeService implements NativeAdapter {
             question: input.query,
             limit: input.limit,
             embedTimeoutMs: EMBED_BUDGET_MS,
+            ...(vector === null ? {} : { questionVector: vector }),
         })
     }
 
@@ -332,6 +392,7 @@ export class BrainNativeService implements NativeAdapter {
                 room: input.room,
                 messageId: input.messageId,
                 quote: input.quote,
+                reason: input.reason,
                 validFrom: input.validFrom ?? null,
                 validTo: input.validTo ?? null,
                 proposedBy: view.module,
@@ -340,7 +401,10 @@ export class BrainNativeService implements NativeAdapter {
             })
             return changeAnswerOf(filed)
         } catch (cause) {
-            if (cause instanceof BrainFactsError) throw nativeRefusal("not_found", cause)
+            // A reason that does not say why (BG4's guard) is told as such: the agent can write a better one and file again.
+            if (cause instanceof BrainFactsError) {
+                throw nativeRefusal(cause.params["field"] === "reason" ? "reason_missing" : "not_found", cause)
+            }
             throw cause
         }
     }

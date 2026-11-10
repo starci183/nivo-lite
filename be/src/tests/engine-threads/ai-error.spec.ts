@@ -65,7 +65,8 @@ const aiTasksOver = async (
     const moduleRef = await Test.createTestingModule({
         providers: [
             AiTasksService,
-            { provide: AI_TASKS_OPTIONS, useValue: { timeoutMs: 30_000 } },
+            // The world names its provider: every node model (Auto or the ALL_NODES_ON_CLAUDE switch) is served by Anthropic.
+            { provide: AI_TASKS_OPTIONS, useValue: { timeoutMs: 30_000, providers: { anthropic: true, openrouter: false } } },
             { provide: AI, useValue: ai },
             { provide: AI_TASKS_METER, useValue: meter },
             { provide: NotesService, useValue: mock<NotesService>() },

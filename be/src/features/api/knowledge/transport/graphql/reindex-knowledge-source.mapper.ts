@@ -11,6 +11,7 @@ export const toReindexKnowledgeSourceRequest = (
     workspaceId,
     sourceId: input.sourceId,
     content: input.content,
+    storagePath: input.storagePath,
 })
 
 /** Maps the answer to the GraphQL type. */

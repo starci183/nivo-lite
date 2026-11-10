@@ -451,6 +451,24 @@ environments:
         where: "secrets/seeds-nivo-workspace"
         recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
         keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "anthropic-api-key"
+        member: "ai"
+        key: "ANTHROPIC_API_KEY"
+        where: "secrets/ai"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "nivo-platform-admins"
+        member: "platform"
+        key: "NIVO_PLATFORM_ADMINS"
+        where: "secrets/platform"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
+      - name: "openai-api-key"
+        member: "ai"
+        key: "OPENAI_API_KEY"
+        where: "secrets/ai"
+        recipientPolicy: "its environment's rule of the app's managed .sops.yaml"
+        keyCustody: "The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed."
     # `starci app stack up --env dev --execute` reads this block (PROJECT-STACKS-6). One command brings up the db (own role per environment),
     # Redis and MinIO in containers, migrates, and runs the api, the mcp gateway, the console and the landing natively.
     local:
@@ -556,7 +574,7 @@ environments:
           argv: [node, dist/apps/api/src/main.js]
           cwd: be
           port: api
-          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, OPENROUTER_API_KEY, STARCI_AI_KEY, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM, TELEGRAM_API_ID, TELEGRAM_API_HASH, GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET]
+          files: [AUTH_JWT_PRIVATE_KEY, AUTH_JWT_PUBLIC_KEY, CHANNEL_TOKEN_KEY, ENTITY_ENGINE_CURSOR_KEY, OTP_PEPPER, N8N_SIGNING_SECRET, STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, NIVO_PLATFORM_ADMINS, STARCI_AI_KEY, MAIL_HOST, MAIL_USER, MAIL_PASSWORD, MAIL_FROM, TELEGRAM_API_ID, TELEGRAM_API_HASH, GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET]
           env:
             PORT: "${port.api}"
             PRIMARY_DB_SCHEMA: public
@@ -580,6 +598,9 @@ environments:
             AGENT_RUNS_PARK_SWEEP_MINUTES: "30"
             AGENT_RUNS_PARK_MAX_RESUMES: "5"
             SMTP_ALLOW_PRIVATE_HOSTS: "true"
+            # Embeddings: the pinned OpenAI profile (text-embedding-3-small@1536). The AI pool is ANTHROPIC_API_KEY (chat) + OPENAI_API_KEY
+            # (embeddings); OPENROUTER_API_KEY stays sealed and listed in files: but the pool no longer reads it (owner 2026-11-11).
+            AI_EMBEDDING_MODEL: embed-oa
             STORAGE_ENDPOINT: "http://127.0.0.1:${port.minio}"
             STORAGE_BUCKET_PREFIX: nivo-dev
             MAIL_PORT: "587"
@@ -831,8 +852,8 @@ environments:
         runtimeName: nivo-custody-ai-v1
         version: 1
         where: secrets/ai
-        keys: [STARCI_AI_KEY, OPENROUTER_API_KEY]
-        recipientPolicy: SOPS/age, one member per provider (ai.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys STARCI_AI_KEY (the one gateway virtual key of the api) and the upstream OPENROUTER_API_KEY (the whole AI domain in one member).
+        keys: [STARCI_AI_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY]
+        recipientPolicy: SOPS/age, one member per provider (ai.enc.yaml), sealed to the production server key and the owner key per .sops.yaml; keys STARCI_AI_KEY (the one gateway virtual key of the api), ANTHROPIC_API_KEY (chat), OPENAI_API_KEY (embeddings) and OPENROUTER_API_KEY (sealed, no longer read by the pool since 2026-11-11) (the whole AI domain in one member).
         keyCustody: The owner identity is SOPS_AGE_KEY in the harness secret.env; the server decrypts at deploy with its own key. Never printed.
       - name: vps
         runtimeName: nivo-custody-vps-v1
@@ -1056,12 +1077,13 @@ environments:
             QUEUE_REDIS_PREFIX: nivo
             REALTIME_HUB: redis
             REALTIME_REDIS_PREFIX: nivo-realtime
-            # the in-process AI gateway (declared port above); OPENROUTER_API_KEY and STARCI_AI_KEY come from the sealed ai member
+            # the in-process AI gateway (declared port above); ANTHROPIC_API_KEY (chat), OPENAI_API_KEY (embeddings) and STARCI_AI_KEY come
+            # from the sealed ai member; OPENROUTER_API_KEY stays sealed there but the pool no longer reads it (owner 2026-11-11)
             AI_ROUTER_PORT: "8788"
             AI_ROUTER_KEYS_PATH: /var/lib/ai-router/keys.sqlite
             AI_BASE_URL: "http://127.0.0.1:8788/v1"
             AI_CHAT_MODEL: work
-            AI_EMBEDDING_MODEL: embed
+            AI_EMBEDDING_MODEL: embed-oa
             # How often a parked agent run is tried again, and how many times (agent-runs); APP_BUILD_ID is set per release (KEYS.md).
             AGENT_RUNS_PARK_SWEEP_MINUTES: "30"
             AGENT_RUNS_PARK_MAX_RESUMES: "5"

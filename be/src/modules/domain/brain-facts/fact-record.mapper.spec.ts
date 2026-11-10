@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { isoOf, toFactRecord } from "./fact-record.mapper"
+import * as facts from "@tests/fixtures/builders/brain-facts.builder"
 import type { StoredFact } from "./fact-record.mapper"
 const SUBJECT = Symbol("fact-record.mapper")
 
@@ -133,5 +134,14 @@ describe("fact records", () => {
             decidedAt: null,
             decisionNote: null,
         })
+    })
+})
+
+describe("fact-record.mapper review flags (BG2)", () => {
+    it("reads the flags only when there are some", () => {
+        expect(toFactRecord({ ...facts.rowOf(), reviewFlags: ["stale"] }).flags).toEqual(["stale"])
+        expect(toFactRecord({ ...facts.rowOf(), reviewFlags: [] })).not.toHaveProperty("flags")
+        expect(toFactRecord({ ...facts.rowOf(), reviewFlags: null })).not.toHaveProperty("flags")
+        expect(toFactRecord(facts.rowOf())).toEqual(facts.factOf())
     })
 })

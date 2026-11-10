@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { ConfigurableModuleClass, OPTIONS_TYPE } from "./ai-usage-events.module-definition"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { AiUsageOverviewService } from "./ai-usage-overview.service"
+import { AiWorkUsageService } from "./ai-work-usage.service"
 import { UsageGateService } from "./usage-gate.service"
 
 @Module({})
@@ -13,8 +14,14 @@ export class AiUsageEventsModule extends ConfigurableModuleClass {
         const base = super.register(options)
         return {
             ...base,
-            providers: [...(base.providers ?? []), AiUsageEventsService, AiUsageOverviewService, UsageGateService],
-            exports: [AiUsageEventsService, AiUsageOverviewService, UsageGateService],
+            providers: [
+                ...(base.providers ?? []),
+                AiUsageEventsService,
+                AiUsageOverviewService,
+                UsageGateService,
+                AiWorkUsageService,
+            ],
+            exports: [AiUsageEventsService, AiUsageOverviewService, UsageGateService, AiWorkUsageService],
         }
     }
 }

@@ -68,7 +68,8 @@ describe("AiService without a key", () => {
 
         expect(client.available()).toBe(false)
         expect(client.chatModel()).toBe("work")
-        expect(client.embeddingModel()).toBe("embed")
+        // The old profile name is not a known identity: its vectors never equal `text-embedding-3-small@1536`.
+        expect(client.embeddingModel()).toBe("profile:embed")
         await expect(client.chat(ASK)).resolves.toBeNull()
         await expect(client.embed({ input: ["a"], dimensions: 4, timeoutMs: 1000 })).resolves.toBeNull()
     })
@@ -381,6 +382,29 @@ describe("AiService retrieval", () => {
             status: null,
         })
     })
+
+    it("fails loudly when the gateway does not serve embeddings (no OpenAI key): logged, null, and remembered as not served", async () => {
+        const { client, runner, logger } = await build(true)
+        runner.embed.mockRejectedValueOnce(Object.assign(new Error("transient"), { status: 502 }))
+
+        await expect(client.embed({ input: ["a"], dimensions: 1, timeoutMs: 1 })).resolves.toBeNull()
+        // A transient failure is retried later: embeddings stay served.
+        expect(client.embeddingsServed()).toBe(true)
+
+        runner.embed.mockRejectedValueOnce(Object.assign(new Error("model_not_allowed"), { status: 403 }))
+        await expect(client.embed({ input: ["a"], dimensions: 1, timeoutMs: 1 })).resolves.toBeNull()
+
+        expect(logger.warn).toHaveBeenLastCalledWith(AiLogEvent.EmbeddingFailed, { errorClass: "Error", status: 403 })
+        expect(client.embeddingsServed()).toBe(false)
+    })
+})
+
+describe("AiService embedding identity", () => {
+    it("records and compares vectors by the model identity of the profile, never the profile name", async () => {
+        const { client } = await build(true, { embeddingModel: "embed-oa" })
+
+        expect(client.embeddingModel()).toBe("text-embedding-3-small@1536")
+    })
 })
 
 describe("AiService embed", () => {
@@ -410,5 +434,20 @@ describe("AiService embed", () => {
             errorClass: "Error",
             status: null,
         })
+    })
+
+    it("fails loudly when the gateway does not serve embeddings (no OpenAI key): logged, null, and remembered as not served", async () => {
+        const { client, runner, logger } = await build(true)
+        runner.embed.mockRejectedValueOnce(Object.assign(new Error("transient"), { status: 502 }))
+
+        await expect(client.embed({ input: ["a"], dimensions: 1, timeoutMs: 1 })).resolves.toBeNull()
+        // A transient failure is retried later: embeddings stay served.
+        expect(client.embeddingsServed()).toBe(true)
+
+        runner.embed.mockRejectedValueOnce(Object.assign(new Error("model_not_allowed"), { status: 403 }))
+        await expect(client.embed({ input: ["a"], dimensions: 1, timeoutMs: 1 })).resolves.toBeNull()
+
+        expect(logger.warn).toHaveBeenLastCalledWith(AiLogEvent.EmbeddingFailed, { errorClass: "Error", status: 403 })
+        expect(client.embeddingsServed()).toBe(false)
     })
 })

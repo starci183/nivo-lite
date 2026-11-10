@@ -1,0 +1,87 @@
+{
+  "note": "Shop policy text for the shop-document critic rules. Written for the tests; not a real shop.",
+  "money": {
+    "fee": "Phí giao hàng nội thành: 30.000 đ một đơn.",
+    "mixed": "Bó 350.000đ, ship 25k, cọc 1,5 triệu",
+    "orders": "Khách đã mua từ 5 đơn trở lên được giảm 5% mỗi đơn.",
+    "sign": "Giá 2.000 ₫"
+  },
+  "blanks": {
+    "bracket": "Kệ hoa khai trương: [...] đ",
+    "dots": "Giá: ... đ",
+    "template": "Liên hệ {{ten_shop}} hoặc Shop ABC",
+    "prose": "Tiệm bán hoa bó v.v... và lan hồ điệp…"
+  },
+  "inside": {
+    "first": "## Phí giao hàng\n- Phí giao hàng nội thành: 30.000 đ một đơn.",
+    "second": "## Lưu ý khi giao\n- Phí giao hàng nội thành: 25.000 đ một đơn.",
+    "label": "Phí giao hàng nội thành",
+    "subject": "Giao hàng nội thành",
+    "attribute": "Phí giao hàng",
+    "quoteFirst": "Phí giao hàng nội thành: 30.000 đ một đơn.",
+    "quoteSecond": "Phí giao hàng nội thành: 25.000 đ một đơn.",
+    "a": "30.000 đ",
+    "b": "25.000 đ"
+  },
+  "slip": {
+    "first": "- Phí ship nội thành: 30.000 đ",
+    "second": "- Phí ship nội thành: 300.000 đ",
+    "label": "Phí ship nội thành"
+  },
+  "shop": {
+    "text": "## Bảng giá\n- Giỏ hoa nhỏ: 25.000 đ\n- Phí ship: 300.000 đ\n- Bó hoa hồng đỏ 10 bông: 350.000 đ",
+    "basketQuote": "Giỏ hoa nhỏ: 25.000 đ",
+    "basket": "Giỏ hoa nhỏ",
+    "price": "Giá",
+    "basketValue": "25.000 đ",
+    "seedValue": "2.000 ₫",
+    "seedTitle": "Sản phẩm và bảng giá",
+    "ship": "Ship",
+    "fee": "Phí",
+    "shipValue": "300.000 đ",
+    "shipTruth": "30.000 đ",
+    "shipTitle": "Quy định giao hàng.docx",
+    "rose": "Bó hoa hồng đỏ 10 bông",
+    "roseValue": "350.000 đ",
+    "roseOther": "Bó hồng đỏ 10 bông",
+    "roseTruth": "7.000 ₫",
+    "shopName": "Tiệm",
+    "hours": "Giờ mở cửa",
+    "hoursValue": "8:00 - 20:00",
+    "hoursOther": "7:00 - 21:00",
+    "hoursTitle": "Giờ làm việc.docx"
+  },
+  "vague": {
+    "old": "## Giao nhanh\nKhách cần giao nhanh thì tính thêm, nhân viên báo sau.",
+    "new": "## Giao nhanh\nGiao nhanh trong 2 giờ (nội thành): phụ thu 20.000 đ mỗi đơn.",
+    "cash": "## Thanh toán\n- Không nhận tiền mặt khi giao.",
+    "name": "Giao nhanh"
+  },
+  "template": {
+    "prices": "## Bảng giá\n- Kệ hoa khai trương: [...] đ\n- Giỏ trái cây: ... đ",
+    "abc": "Liên hệ Shop ABC để đặt hàng.",
+    "stand": "Kệ hoa khai trương",
+    "fruit": "Giỏ trái cây",
+    "abcLine": "Liên hệ Shop ABC để đặt hàng.",
+    "bracket": "[...]",
+    "dots": "...",
+    "abcText": "Shop ABC"
+  },
+  "stale": {
+    "offer": "## Khách quen\n- Ưu đãi khách quen có hiệu lực đến 30/06/2026.",
+    "closing": "## Giờ mở cửa\n- Nghỉ Tết Bính Ngọ: từ 16/02/2026 đến hết 20/02/2026, không nhận đơn.",
+    "impossible": "## Khuyến mãi\n- Giảm 10% đến 31/02/2027.",
+    "future": "## Tết\n- Nghỉ Tết từ 14/02/2027 đến 20/02/2027."
+  },
+  "arithmetic": {
+    "text": "## Combo khai trương\n- Kệ hoa: 1.200.000 đ\n- Băng rôn: 150.000 đ\n- Tổng cộng: 1.300.000 đ",
+    "name": "Tổng cộng",
+    "sum": "1.350.000 đ",
+    "stated": "1.300.000 đ"
+  },
+  "missing": {
+    "text": "- Lan hồ điệp: giá tốt",
+    "subject": "Lan hồ điệp",
+    "value": "giá tốt"
+  }
+}

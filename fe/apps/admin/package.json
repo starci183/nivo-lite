@@ -16,7 +16,7 @@
     "@nivo-lite/i18n": "*",
     "@reduxjs/toolkit": "2.11.2",
     "@starci/auth": "0.4.0",
-    "@starci/grammar": "0.37.31",
+    "@starci/grammar": "0.37.33",
     "@starci/next-data": "0.1.0",
     "@starci/next-i18n": "0.1.0",
     "graphql": "16.14.2",

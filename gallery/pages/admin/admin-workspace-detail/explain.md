@@ -38,7 +38,7 @@ Luật: `type-scale-14-12.md`, `blocks-are-real-code.md`.
 Grammar: `SurfaceCard kind="list"`, `Badge` (`frame/SurfaceCard`, `leaf/Badge`). Code: `fe/apps/admin/src/components/composites/AdminRowsCard/index.tsx`.
 
 ## Assistants card ("Trợ lý")
-Vì sao: SAI — rows "chatbot" and "sales" (lower-case keys as titles), a line "ngữ cảnh v4 áp dụng 9 thg 11, 2026 · assist …" cut by width, a "Live"/"setup" status chip and an "openclaw" chip (the runtime name, an internal word) at the end; "đồng bộ ok" as an extra line. The version "v4" is plain text (right, versions never in a chip) but titles and the runtime chip are internal ids; should show the agent names ("Chatbot", "Sales") and drop the runtime chip.
+Vì sao: SAI — rows "accounting", "chatbot", "sales" (lower-case keys as titles, not the agent names), a line "ngữ cảnh v1 áp dụng 7 thg 11, 2026 · assist" cut by width, and a "Live" / "removed" status chip at the end. Re-shot 2026-11-11 with the dev test owner as platform admin: the "openclaw" runtime chip and the "đồng bộ ok" sync line are gone (OpenClaw was removed from the engine). Still to fix in the app: titles should be the agent names, and the nine rows include six "removed" leftover installations that should fold away (`admin` lane, report only).
 Luật: `surfacecard-select-subtitle.md` (a version like "v1" is plain text, never a chip), `type-scale-14-12.md`.
 Grammar: `SurfaceCard kind="list"`. Code: `fe/apps/admin/src/components/composites/AdminRowsCard/index.tsx`.
 

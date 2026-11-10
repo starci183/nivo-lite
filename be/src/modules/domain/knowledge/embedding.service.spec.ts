@@ -11,8 +11,9 @@ const USAGE: AiUsage = { promptTokens: 3, completionTokens: 0, totalTokens: 3, c
 
 const build = async () => {
     const ai = mock<AiService>()
-    ai.embeddingModel.mockReturnValue("embed-model")
+    ai.embeddingModel.mockReturnValue("text-embedding-3-small@1536")
     ai.available.mockReturnValue(true)
+    ai.embeddingsServed.mockReturnValue(true)
     const usage = mock<UsageMeterService>()
     const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
@@ -36,7 +37,14 @@ describe("EmbeddingService", () => {
         const { service } = await build()
 
         expect(service.configured()).toBe(true)
-        expect(service.model()).toBe("embed-model")
+        expect(service.model()).toBe("text-embedding-3-small@1536")
+    })
+
+    it("is not configured once the gateway answered that it does not serve embeddings (no OpenAI key in its pool)", async () => {
+        const { service, ai } = await build()
+        ai.embeddingsServed.mockReturnValue(false)
+
+        expect(service.configured()).toBe(false)
     })
 
     it("embeds in batches of 32, meters every batch and reports the progress", async () => {
@@ -60,7 +68,7 @@ describe("EmbeddingService", () => {
             workspaceId: "ws-1",
             kind: "embedding",
             module: "knowledge",
-            model: "embed-model",
+            model: "text-embedding-3-small@1536",
             usage: USAGE,
             promptChars: 86,
         })

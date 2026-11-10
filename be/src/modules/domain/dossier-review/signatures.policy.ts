@@ -1,3 +1,5 @@
+import { fillBlanksIn } from "./blank.policy"
+import type { BlankMatch } from "./blank.policy"
 import type { FindingEvidence } from "./dossier-review.contracts"
 import type { DossierInputs, FindingCandidate } from "./dossier-inputs.contracts"
 import { meetingDocuments } from "./presence.policy"
@@ -12,17 +14,8 @@ import {
 } from "./rule-kit.policy"
 import type { RuleFamily } from "./rule-kit.policy"
 
-/** Blanks left to fill in: runs of ellipses or of dots, an empty, dotted or underscored bracket, a bracketed figure to choose before a per cent sign. */
-const BLANKS: ReadonlyArray<RegExp> = [
-    new RegExp(String.raw`\u2026{2,}`, "gu"),
-    /\.{5,}/gu,
-    new RegExp(String.raw`\[ ?(?:\.{3}|\u2026)? ?\]`, "gu"),
-    /\[_+\]/gu,
-    /\[\d+(?:[.,]\d+)?\] ?%/gu,
-]
-
-const blanksIn = (text: string): ReadonlyArray<RegExpExecArray> =>
-    BLANKS.flatMap((pattern) => [...text.matchAll(pattern)]).sort((a, b) => a.index - b.index)
+/** The blanks of a stored passage, in order (the shared detector: it also reads a dotted blank that normalisation shortened). */
+const blanksOf = (text: string): ReadonlyArray<BlankMatch> => fillBlanksIn(text)
 
 const unsigned = (inputs: DossierInputs): ReadonlyArray<FindingCandidate> =>
     (inputs.entry?.expects ?? [])
@@ -54,11 +47,11 @@ const placeholders = (inputs: DossierInputs): ReadonlyArray<FindingCandidate> =>
     for (const doc of documentsIn(inputs, ["actual", "draft"])) {
         for (const passage of doc.passages) {
             const text = passage.text.normalize("NFC")
-            const matches = blanksIn(text)
+            const matches = blanksOf(text)
             count += matches.length
             const first = matches[0]
             if (first !== undefined) {
-                const quote = quoteAround(text, first.index, first.index + first[0].length, 40)
+                const quote = quoteAround(text, first.index, first.index + first.text.length, 40)
                 if (evidence.length === 0) firstQuote = quote
                 evidence.push(passageEvidence(doc, passage, quote, "claim", doc.title))
             }

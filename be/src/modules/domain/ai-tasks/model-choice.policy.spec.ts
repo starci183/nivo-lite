@@ -3,9 +3,12 @@ import { modelChoiceOf, modelFactsOf, servedModelOf } from "./model-choice.polic
 import type { ModelChoice, ModelChoiceResult } from "./model-choice.policy"
 
 const SONNET = "claude-sonnet-5-5"
+const HAIKU = "claude-haiku-5-5"
 const DEEPSEEK = "deepseek/deepseek-v4.1-flash"
-const BOTH: ConfiguredProviders = { anthropic: true, openrouter: true }
-const NO_ANTHROPIC: ConfiguredProviders = { anthropic: false, openrouter: true }
+const CLAUDE: ConfiguredProviders = { anthropic: true, openrouter: false }
+const NO_ANTHROPIC: ConfiguredProviders = { anthropic: false, openrouter: false }
+/** The Claude-only wire every chat profile has now: no temperature, no forced tool call, no OpenRouter fields. */
+const CLAUDE_WIRE = { sampling: false, forcedToolChoice: false, upstreamFields: false }
 
 const auto = (weight: DeclaredModel["weight"]): DeclaredModel => ({ model: "auto", weight, source: "declared" })
 
@@ -20,63 +23,46 @@ const brief = (result: ModelChoiceResult) => {
     return { profile: choice.target.name, intended: choice.intended, reason: choice.reason }
 }
 
-describe("modelChoiceOf: Auto, by rule", () => {
-    it("gives a light step the cheap model and a heavy step Sonnet, each on the profile that can fail over", () => {
-        expect(brief(modelChoiceOf(auto("light"), 1, BOTH))).toEqual({ profile: "auto-light", intended: DEEPSEEK, reason: "auto-light" })
-        expect(brief(modelChoiceOf(auto("heavy"), 1, BOTH))).toEqual({ profile: "auto-heavy", intended: SONNET, reason: "auto-heavy" })
+describe("modelChoiceOf: Auto, by rule, Claude only", () => {
+    it("gives a light step Haiku and a heavy step Sonnet, each on the profile that can fail over within Claude", () => {
+        expect(brief(modelChoiceOf(auto("light"), 1, CLAUDE))).toEqual({ profile: "auto-light", intended: HAIKU, reason: "auto-light" })
+        expect(brief(modelChoiceOf(auto("heavy"), 1, CLAUDE))).toEqual({ profile: "auto-heavy", intended: SONNET, reason: "auto-heavy" })
     })
 
     it("steps a light step up to Sonnet after a failed try, inside the same three tries", () => {
-        expect(brief(modelChoiceOf(auto("light"), 2, BOTH))).toEqual({
+        expect(brief(modelChoiceOf(auto("light"), 2, CLAUDE))).toEqual({
             profile: "auto-heavy",
             intended: SONNET,
             reason: "auto-step-up",
         })
-        expect(brief(modelChoiceOf(auto("light"), 3, BOTH)).reason).toBe("auto-step-up")
-        expect(brief(modelChoiceOf(auto("heavy"), 2, BOTH)).reason).toBe("auto-heavy")
+        expect(brief(modelChoiceOf(auto("light"), 3, CLAUDE)).reason).toBe("auto-step-up")
+        expect(brief(modelChoiceOf(auto("heavy"), 2, CLAUDE)).reason).toBe("auto-heavy")
     })
 
-    it("uses the other provider when the one it wants holds no key, and says so", () => {
-        expect(brief(modelChoiceOf(auto("heavy"), 1, NO_ANTHROPIC))).toEqual({
-            profile: "auto-heavy",
-            intended: DEEPSEEK,
-            reason: "auto-other-provider",
-        })
-        expect(brief(modelChoiceOf(auto("light"), 1, NO_ANTHROPIC)).reason).toBe("auto-light")
+    it("fails loudly with no Anthropic key: no other vendor serves it", () => {
+        expect(modelChoiceOf(auto("heavy"), 1, NO_ANTHROPIC)).toEqual({ ok: false, model: SONNET, why: "not-configured" })
+        expect(modelChoiceOf(auto("light"), 1, NO_ANTHROPIC)).toEqual({ ok: false, model: HAIKU, why: "not-configured" })
     })
 
-    it("sends Auto a body both providers accept: no temperature, no forced tool call, the upstream's own fields", () => {
-        expect(chosen(modelChoiceOf(auto("light"), 1, BOTH)).target).toEqual({
-            name: "auto-light",
-            sampling: false,
-            forcedToolChoice: false,
-            upstreamFields: true,
-        })
+    it("sends Auto the Claude body: no temperature, no forced tool call, no OpenRouter fields", () => {
+        expect(chosen(modelChoiceOf(auto("light"), 1, CLAUDE)).target).toEqual({ name: "auto-light", ...CLAUDE_WIRE })
+        expect(chosen(modelChoiceOf(auto("heavy"), 1, CLAUDE)).target).toEqual({ name: "auto-heavy", ...CLAUDE_WIRE })
     })
 })
 
 describe("modelChoiceOf: an explicit model never switches", () => {
     it("asks the profile of that model alone, on every try", () => {
         const sonnet: DeclaredModel = { model: SONNET, weight: "light", source: "node" }
+        const haiku: DeclaredModel = { model: HAIKU, weight: "heavy", source: "node" }
         for (const tryNumber of [1, 2, 3]) {
-            expect(brief(modelChoiceOf(sonnet, tryNumber, BOTH))).toEqual({ profile: "sonnet", intended: SONNET, reason: "explicit" })
+            expect(brief(modelChoiceOf(sonnet, tryNumber, CLAUDE))).toEqual({ profile: "sonnet", intended: SONNET, reason: "explicit" })
+            expect(brief(modelChoiceOf(haiku, tryNumber, CLAUDE))).toEqual({ profile: "haiku", intended: HAIKU, reason: "explicit" })
         }
-        expect(chosen(modelChoiceOf(sonnet, 1, BOTH)).target).toEqual({
-            name: "sonnet",
-            sampling: false,
-            forcedToolChoice: false,
-            upstreamFields: false,
-        })
+        expect(chosen(modelChoiceOf(sonnet, 1, CLAUDE)).target).toEqual({ name: "sonnet", ...CLAUDE_WIRE })
+        expect(chosen(modelChoiceOf(haiku, 1, CLAUDE)).target).toEqual({ name: "haiku", ...CLAUDE_WIRE })
     })
 
-    it("keeps today's body for the cheap model named explicitly", () => {
-        const deepseek: DeclaredModel = { model: DEEPSEEK, weight: "heavy", source: "declared" }
-
-        expect(brief(modelChoiceOf(deepseek, 2, BOTH))).toEqual({ profile: "deepseek", intended: DEEPSEEK, reason: "declared" })
-        expect(chosen(modelChoiceOf(deepseek, 1, BOTH)).target).toMatchObject({ sampling: true, forcedToolChoice: true })
-    })
-
-    it("refuses Sonnet named on the node while Anthropic holds no key: the call fails loudly, it never becomes the cheap model", () => {
+    it("refuses a Claude model named on the node while Anthropic holds no key: the call fails loudly", () => {
         expect(modelChoiceOf({ model: SONNET, weight: "heavy", source: "node" }, 1, NO_ANTHROPIC)).toEqual({
             ok: false,
             model: SONNET,
@@ -85,25 +71,39 @@ describe("modelChoiceOf: an explicit model never switches", () => {
     })
 })
 
+describe("modelChoiceOf: a retired model (DeepSeek flash) on a stored graph", () => {
+    const stored: DeclaredModel = { model: DEEPSEEK, weight: "heavy", source: "node" }
+
+    it("does not crash: it runs on the cheap tier (Haiku, Sonnet behind it) and is booked retired-model", () => {
+        expect(brief(modelChoiceOf(stored, 1, CLAUDE))).toEqual({ profile: "auto-light", intended: HAIKU, reason: "retired-model" })
+        expect(chosen(modelChoiceOf(stored, 1, CLAUDE)).target).toEqual({ name: "auto-light", ...CLAUDE_WIRE })
+        expect(chosen(modelChoiceOf(stored, 1, CLAUDE)).declared).toBe(DEEPSEEK)
+    })
+
+    it("keeps its reason when the cheap tier's profile served Sonnet", () => {
+        expect(modelFactsOf(chosen(modelChoiceOf(stored, 1, CLAUDE)), SONNET).modelReason).toBe("retired-model")
+    })
+
+    it("fails loudly with no Anthropic key", () => {
+        expect(modelChoiceOf(stored, 1, NO_ANTHROPIC)).toEqual({ ok: false, model: HAIKU, why: "not-configured" })
+    })
+})
+
 describe("modelChoiceOf: the default and what nobody declared", () => {
     const DEFAULT: DeclaredModel = { model: SONNET, weight: "heavy", source: "default" }
 
     it("is Sonnet once Anthropic holds a key", () => {
-        expect(brief(modelChoiceOf(DEFAULT, 1, BOTH))).toEqual({ profile: "sonnet", intended: SONNET, reason: "default" })
+        expect(brief(modelChoiceOf(DEFAULT, 1, CLAUDE))).toEqual({ profile: "sonnet", intended: SONNET, reason: "default" })
     })
 
-    it("is the cheap model while Anthropic holds no key, and says so (boot and every node keep working)", () => {
-        expect(brief(modelChoiceOf(DEFAULT, 1, NO_ANTHROPIC))).toEqual({
-            profile: "deepseek",
-            intended: DEEPSEEK,
-            reason: "default-no-key",
-        })
+    it("fails loudly while Anthropic holds no key (it no longer becomes DeepSeek)", () => {
+        expect(modelChoiceOf(DEFAULT, 1, NO_ANTHROPIC)).toEqual({ ok: false, model: SONNET, why: "not-configured" })
     })
 
     it("books an unknown model as such and serves the default", () => {
-        expect(brief(modelChoiceOf({ model: "gpt-9", weight: "light", source: "node" }, 1, NO_ANTHROPIC))).toEqual({
-            profile: "deepseek",
-            intended: DEEPSEEK,
+        expect(brief(modelChoiceOf({ model: "gpt-9", weight: "light", source: "node" }, 1, CLAUDE))).toEqual({
+            profile: "sonnet",
+            intended: SONNET,
             reason: "unknown-model",
         })
     })
@@ -111,9 +111,9 @@ describe("modelChoiceOf: the default and what nobody declared", () => {
 
 describe("modelChoiceOf: the turns of one step", () => {
     it("keeps every later turn on the model of the step's first answer, even an Auto step on a retry", () => {
-        expect(brief(modelChoiceOf(auto("light"), 2, BOTH, DEEPSEEK))).toEqual({
-            profile: "deepseek",
-            intended: DEEPSEEK,
+        expect(brief(modelChoiceOf(auto("light"), 2, CLAUDE, HAIKU))).toEqual({
+            profile: "haiku",
+            intended: HAIKU,
             reason: "step-pinned",
         })
     })
@@ -121,23 +121,24 @@ describe("modelChoiceOf: the turns of one step", () => {
 
 describe("modelFactsOf", () => {
     it("books what was declared, the provider of the served model and why", () => {
-        expect(modelFactsOf(chosen(modelChoiceOf(auto("heavy"), 1, BOTH)), SONNET)).toEqual({
+        expect(modelFactsOf(chosen(modelChoiceOf(auto("heavy"), 1, CLAUDE)), SONNET)).toEqual({
             declaredModel: "auto",
             modelProvider: "anthropic",
             modelReason: "auto-heavy",
         })
     })
 
-    it("books an Auto call the router served with the other model as a failover", () => {
-        expect(modelFactsOf(chosen(modelChoiceOf(auto("heavy"), 1, BOTH)), DEEPSEEK)).toEqual({
+    it("books an Auto call the router served with the other Claude model as a failover", () => {
+        expect(modelFactsOf(chosen(modelChoiceOf(auto("heavy"), 1, CLAUDE)), HAIKU)).toEqual({
             declaredModel: "auto",
-            modelProvider: "openrouter",
+            modelProvider: "anthropic",
             modelReason: "auto-failover",
         })
     })
 
     it("reads a dated form of a model id as that model", () => {
         expect(servedModelOf("claude-sonnet-5-5-20261101")).toBe(SONNET)
+        expect(servedModelOf("claude-haiku-5-5")).toBe(HAIKU)
         expect(servedModelOf("work")).toBeNull()
     })
 })

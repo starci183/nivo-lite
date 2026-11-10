@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
+import { embeddingIdentityOf } from "@nivo-lite/blocks-core"
 import type { EmbeddedChunk } from "./knowledge-chunks.contracts"
 import { passageHashOf } from "./passage-hash.policy"
 import { reusePlanOf } from "./passage-reuse.policy"
@@ -144,6 +145,22 @@ describe("reusePlanOf duplicates, models and passages from before hashes", () =>
         expect(subject.reusePlanOf(["a"], [legacy], MODEL)).toEqual({
             moves: [],
             missing: [{ order: 0, text: "a" }],
+        })
+    })
+})
+
+describe("reusePlanOf across the switch of embeddings to OpenAI (identity, not profile name)", () => {
+    it("reuses no passage stored under the old profile name `embed`: every one is embedded again with the new identity", () => {
+        const identity = embeddingIdentityOf("embed-oa")
+        const old = ["a", "b"].map((text, order) => stored(text, order, "embed"))
+
+        expect(identity).toBe("text-embedding-3-small@1536")
+        expect(reusePlanOf(["a", "b"], old, identity)).toEqual({
+            moves: [],
+            missing: [
+                { order: 0, text: "a" },
+                { order: 1, text: "b" },
+            ],
         })
     })
 })

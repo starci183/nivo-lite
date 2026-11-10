@@ -1,4 +1,6 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
+import { AiUsageOverviewService } from "@modules/domain/ai-usage-events"
+import { LessonCandidatesService } from "@modules/domain/brain-lessons"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import type { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity } from "./persistence/entities"
@@ -16,11 +18,19 @@ import {
     repliedIdsOf,
     stopReplierIdsOf,
     roomViewOf,
+    brainChangeViewerRoleOf,
+    holdsBrainChange,
+    type MessageViewContext,
+    type RoomViewContext,
 } from "./team-chat-view.policy"
-import type { MessageViewContext, RoomViewContext } from "./team-chat-view.policy"
+import type { BrainChangeCost, BrainChangeViewerRole } from "./brain-change-card.contracts"
+import { learningChangeIdsOf } from "./brain-change-card.policy"
 
 /** The most members of a workspace read to name the people who replied to stop cards. */
 const STOP_NAMES_LOOKED = 200
+
+/** The most learning cards of one page whose cost is read (two indexed reads each). */
+const COSTED_CARDS = 20
 
 @Injectable()
 /** Turns the rows of the chat into what a screen shows: names of people and agents, unread counts, pins, file addresses and decision states. */
@@ -32,6 +42,9 @@ export class TeamChatViewsService {
         private readonly files: TeamChatFilesService,
         private readonly approvals: TeamChatApprovalsService,
         private readonly reactions: TeamChatReactionStoreService,
+        // What a learning card's proposal cost (U1): absent in an app that composes neither, then no card shows a cost.
+        @Optional() private readonly lessons?: LessonCandidatesService,
+        @Optional() private readonly usage?: AiUsageOverviewService,
     ) {}
 
     /** The rooms as the viewer sees them, in the order given. */
@@ -130,6 +143,11 @@ export class TeamChatViewsService {
             memberId: viewerId,
         })
         const stopNames = await this.stopNamesOf(workspaceId, stopReplierIdsOf(messages))
+        const viewerRole = holdsBrainChange(messages) ? await this.viewerRoleOf(workspaceId, viewerId) : undefined
+        const brainChangeCosts =
+            viewerRole === "owner" || viewerRole === "manager"
+                ? await this.learningCostsOf(workspaceId, messages)
+                : undefined
         return {
             names,
             pinned,
@@ -138,7 +156,46 @@ export class TeamChatViewsService {
             reactions,
             quoted: new Map(quotedRows.map((row) => [row.id, row])),
             stopNames,
+            ...(viewerRole === undefined ? {} : { viewerRole }),
+            ...(brainChangeCosts === undefined ? {} : { brainChangeCosts }),
         }
+    }
+
+    /**
+     * What producing each learning card of the page cost: the calls booked to the lessons that carry its change id (the judgements and
+     * the draft), exact. Read only for an owner or manager, at most 20 cards a page, each by two indexed reads.
+     */
+    private async learningCostsOf(
+        workspaceId: string,
+        messages: ReadonlyArray<ChatRoomMessageEntity>,
+    ): Promise<ReadonlyMap<string, BrainChangeCost>> {
+        const lessons = this.lessons
+        const usage = this.usage
+        if (lessons === undefined || usage === undefined) return new Map()
+        const changeIds = learningChangeIdsOf(
+            messages.map((message) => message.ref?.agent_message ?? null),
+            COSTED_CARDS,
+        )
+        const costs = new Map<string, BrainChangeCost>()
+        for (const changeId of changeIds) {
+            const group = await lessons.ofChange(workspaceId, changeId)
+            const cost = await usage.lessonsCostOf(
+                workspaceId,
+                group.map((lesson) => lesson.id),
+            )
+            costs.set(changeId, { credits: cost.credits, usd: cost.costUsd })
+        }
+        return costs
+    }
+
+    /**
+     * The viewer's role for a `brain.change` card: owner, manager or member. Read only when the page holds such a card, from the
+     * directory read the stop names use (owners and managers first, bounded), so a deciding viewer is always found in it.
+     */
+    private async viewerRoleOf(workspaceId: string, viewerId: string): Promise<BrainChangeViewerRole> {
+        const rows = await this.people.directory(workspaceId, STOP_NAMES_LOOKED)
+        const row = rows.find((one) => one.user_id === viewerId && one.status === "active")
+        return brainChangeViewerRoleOf(row?.role ?? null)
     }
 
     /**

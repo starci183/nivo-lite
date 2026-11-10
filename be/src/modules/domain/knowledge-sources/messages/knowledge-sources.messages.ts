@@ -14,8 +14,11 @@ export const KNOWLEDGE_SOURCES_MESSAGES: MessageBundle = {
         "errors.KNOWLEDGE_SOURCES_UPLOAD_UNAVAILABLE": "Chưa tạo được địa chỉ tải lên. Hãy thử lại sau.",
         "errors.KNOWLEDGE_SOURCES_FILE_NAME_REQUIRED": "Cần có tên tệp.",
         "errors.KNOWLEDGE_SOURCES_FILE_TYPE_UNSUPPORTED":
-            "Chưa đọc được loại tệp này. Hãy dùng PDF, Word, Excel, PowerPoint, văn bản hoặc CSV.",
+            "Chưa đọc được loại tệp này. Hãy dùng PDF, Word, Excel, PowerPoint, văn bản, CSV, trang HTML hoặc ảnh chụp (JPG, PNG).",
         "errors.KNOWLEDGE_SOURCES_FILE_TOO_LARGE": "Tệp {{size}} MB, lớn hơn mức tối đa {{max}} MB cho một tài liệu.",
+        "errors.KNOWLEDGE_SOURCES_LEGACY_OFFICE":
+            "Đây là tệp Word/Excel/PowerPoint đời cũ (.doc, .xls, .ppt). Hãy mở tệp và lưu lại thành .docx, .xlsx hoặc .pptx rồi tải lên.",
+        "errors.KNOWLEDGE_SOURCES_NOT_A_FILE": "Tài liệu này không phải tệp tải lên, nên không thể thay bằng tệp mới.",
         "errors.KNOWLEDGE_SOURCES_QUOTA_EXCEEDED":
             "Tài liệu {{size}} MB vượt quá giới hạn dữ liệu thô của workspace: đã dùng {{used}} / {{limit}} MB, còn lại {{left}} MB. Hãy xoá bớt tài liệu hoặc chọn tệp nhỏ hơn.",
         "errors.KNOWLEDGE_SOURCES_UPLOAD_MISSING": "Chưa thấy tệp được tải lên. Hãy tải lên lại.",
@@ -36,7 +39,11 @@ export const KNOWLEDGE_SOURCES_MESSAGES: MessageBundle = {
         "errors.KNOWLEDGE_SOURCES_UPLOAD_UNAVAILABLE": "An upload address could not be made. Try again later.",
         "errors.KNOWLEDGE_SOURCES_FILE_NAME_REQUIRED": "A file name is required.",
         "errors.KNOWLEDGE_SOURCES_FILE_TYPE_UNSUPPORTED":
-            "This file type cannot be read yet. Use PDF, Word, Excel, PowerPoint, text or CSV.",
+            "This file type cannot be read yet. Use PDF, Word, Excel, PowerPoint, text, CSV, an HTML page or a photo (JPG, PNG).",
+        "errors.KNOWLEDGE_SOURCES_LEGACY_OFFICE":
+            "This is an old Word/Excel/PowerPoint file (.doc, .xls, .ppt). Open it, save it as .docx, .xlsx or .pptx and upload that.",
+        "errors.KNOWLEDGE_SOURCES_NOT_A_FILE":
+            "This document is not an uploaded file, so it cannot be replaced by a new file.",
         "errors.KNOWLEDGE_SOURCES_FILE_TOO_LARGE":
             "The file is {{size}} MB, over the {{max}} MB limit for one document.",
         "errors.KNOWLEDGE_SOURCES_QUOTA_EXCEEDED":
