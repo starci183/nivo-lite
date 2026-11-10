@@ -55,13 +55,10 @@ BEGIN
   SELECT count(*) INTO v_items   FROM public.work_items
    WHERE status IN ('queued', 'waiting_decision')
      AND (action = 'lead_frozen' OR dedupe_key LIKE 'tool-approval:%' OR proposal->'fields'->>'runId' IS NOT NULL);
-  -- (public.agent_checkpoints is created by the contract file 20261112010700: counted only where it exists)
-  v_threads := 0;
-  IF to_regclass('public.agent_checkpoints') IS NOT NULL THEN
-    EXECUTE $q$SELECT count(DISTINCT c.thread_id) FROM public.agent_checkpoints c
-                 JOIN public.records r ON r.entity = 'agent.run' AND r.workspace_id = c.workspace_id AND r.id::text = c.thread_id
-                WHERE r.data->>'status' IN ('running', 'waiting', 'parked', 'compensating')$q$ INTO v_threads;
-  END IF;
+  -- (public.agent_checkpoints is created by 20261112010700, which always precedes this file)
+  SELECT count(DISTINCT c.thread_id) INTO v_threads FROM public.agent_checkpoints c
+    JOIN public.records r ON r.entity = 'agent.run' AND r.workspace_id = c.workspace_id AND r.id::text = c.thread_id
+   WHERE r.data->>'status' IN ('running', 'waiting', 'parked', 'compensating');
   -- care timers (payment reminder, payment stale, delivery check, occasion ...): each wakes a run that acts on a customer
   SELECT count(*) INTO v_timers  FROM public.agent_tasks WHERE status IN ('open', 'waiting') AND next_action_at IS NOT NULL;
   IF v_runs + v_steps + v_stops + v_freezes + v_holds + v_jobs + v_outbox + v_wakes + v_approvals + v_items + v_threads + v_timers > 0 THEN
