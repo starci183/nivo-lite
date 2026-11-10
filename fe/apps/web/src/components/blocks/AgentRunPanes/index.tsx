@@ -1,13 +1,13 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { usePaneCopy } from "@/hooks/paneFrame"
 import { agentRunGridOf, useAgentRunAiCalls, useAgentRunDetail, useRunAsideWide } from "@/hooks/agentRuns"
 import { useOverviewPhone } from "@/hooks/overview"
 import { useSlotLabels } from "@/hooks/slot"
 import { EMPTY_STEPS_MAP } from "@/hooks/workflowSteps"
-import type { RunDetailView } from "@/modules/types"
+import type { RunDetailView, RunStepView } from "@/modules/types"
 import { AgentRunPanesBase, type AgentRunPanesCopy } from "./component"
 
 /** The run of the instance the page shows. */
@@ -114,13 +114,18 @@ const copyOf = (t: Words): AgentRunPanesCopy => ({
     },
 })
 
+/** No steps yet: one shared empty list, so the step-name map keeps its identity across renders. */
+const EMPTY_STEPS: ReadonlyArray<RunStepView> = []
+
 /** The connected page of one run: reads it with the graph it ran on, keeps the selected step and runs a stopped run again. */
 export const AgentRunPanes = (props: AgentRunPanesProps) => {
     const t = useTranslations("agentRuns")
     const slotLabels = useSlotLabels()
     const isPhone = useOverviewPhone()
     const run = useAgentRunDetail(props.module, props.installationId, props.runId)
-    const aiCalls = useAgentRunAiCalls(props.installationId, props.runId)
+    const steps = "items" in run.slot ? run.slot.items.steps : EMPTY_STEPS
+    const stepLabels = useMemo(() => new Map(steps.map((step) => [step.nodeKey, step.label])), [steps])
+    const aiCalls = useAgentRunAiCalls(props.installationId, props.runId, stepLabels)
     const pane = usePaneCopy()
     const [isAsideOpen, setIsAsideOpen] = useState(false)
     const isWide = useRunAsideWide()

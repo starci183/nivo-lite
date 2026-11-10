@@ -489,7 +489,7 @@ export class ThreadStepService {
             step: { key: view.stepKey, nodeId: nodeStep, title: this.stepTitleOf(nodeStep, turn.locale) ?? view.stepKey },
             by: report === null ? "engine" : "ai",
         }
-        const question = await this.stops.stopped({
+        const { question, told } = await this.stops.opened({
             workspaceId: view.workspaceId,
             runId: view.runId,
             stepKey: view.stepKey,
@@ -510,7 +510,10 @@ export class ThreadStepService {
             facts: report === null ? [...facts, ...triesOf(trouble).filter((one) => !facts.some((fact) => fact.name === one.name))] : facts,
             card,
         })
-        if (report?.customerLine !== null && report?.customerLine !== undefined)
+        // One customer line per stop, ever: when this run's step already told the customer for this stop (its own send, which the
+        // ledger kept and the stop now holds, or an earlier holding line, with no founder's words since), the engine adds none; the
+        // step's line is the one the stop records.
+        if (report?.customerLine !== null && report?.customerLine !== undefined && told === null)
             await this.customerLine(view, turn, report.customerLine, leadId)
         await this.projection?.stepStopped(
             { workspaceId: view.workspaceId, runId: view.runId },

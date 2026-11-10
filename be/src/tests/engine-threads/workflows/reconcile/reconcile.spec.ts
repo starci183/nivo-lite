@@ -239,8 +239,9 @@ describe("reconcile on a thread: what is not clear stops for the founder (DEFAUL
         expect(linesOf(db)).toEqual([CHECKING])
         expect(linesOf(db)[0]).not.toMatch(/DH-?1|DH9999/i)
         const stops = await stopsOf(process, runId)
+        // The run names no customer; the stop takes the one its step told (FX3, D-P11-4), so the hold of that customer finds it.
         expect(stops.map((stop) => [stop.stepKey, stop.kind, stop.state, stop.leadId, stop.conversationId])).toEqual([
-            ["match", "ai_report", "open", null, null],
+            ["match", "ai_report", "open", "lead-1", "conv-1"],
         ])
         expect(db.team).toHaveLength(1)
         expect(stops[0]?.cardMessageId).toBe(db.team[0]?.id)

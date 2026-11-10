@@ -6,7 +6,7 @@ import { RunStopsErrorCode } from "./errors/run-stops.error"
 import { RunStopRecordsService } from "./run-stop-records.service"
 import type { StopBuild } from "./run-stop-records.service"
 import type { RunStop, StopOpen } from "./run-stop.contracts"
-import { RunStopsService, linesWithSendsOf, type KeptSend } from "./run-stops.service"
+import { RunStopsService, linesWithSendsOf, toldCustomerOf, type KeptSend } from "./run-stops.service"
 import { StopCardsService } from "./stop-cards.service"
 
 const NOW = "2026-11-10T10:00:00.000Z"
@@ -255,10 +255,10 @@ describe("RunStopsService.stopped: the stop holds what the step told customers, 
         ...over,
     })
 
-    const withLedger = async (sends: ReadonlyArray<KeptSend>) => {
+    const withLedger = async (sends: ReadonlyArray<KeptSend>, initial: RunStop = stopOf()) => {
         const ledger = mock<GraphNodeEffectsService>({ recordsOf: jest.fn().mockResolvedValue(sends) })
         const records = mock<RunStopRecordsService>()
-        let current = stopOf()
+        let current = initial
         records.open.mockImplementation(() => Promise.resolve(current))
         records.patch.mockImplementation((_ws: string, _id: string, change: StopBuild) => {
             const values = change(current)
@@ -289,6 +289,22 @@ describe("RunStopsService.stopped: the stop holds what the step told customers, 
         ])
     })
 
+    it("D-P11-4: a stop of a run about no customer takes the customer its step told (conversation + the send's lead), so the hold finds it", async () => {
+        const { stops, current } = await withLedger([sendOf()])
+
+        await stops.stopped(OPEN)
+
+        expect(current()).toMatchObject({ leadId: "lead-9", conversationId: "conv-9" })
+    })
+
+    it("D-P11-4: a stop of a run with its own customer keeps it, whoever the step told", async () => {
+        const { stops, current } = await withLedger([sendOf()], stopOf({ leadId: "lead-1", conversationId: "conv-1" }))
+
+        await stops.stopped({ ...OPEN, leadId: "lead-1", conversationId: "conv-1" })
+
+        expect(current()).toMatchObject({ leadId: "lead-1", conversationId: "conv-1" })
+    })
+
     it("keeps each line once when the stop opens again, and leaves out a send with no words or no conversation", async () => {
         const { stops, current } = await withLedger([
             sendOf(),
@@ -300,6 +316,28 @@ describe("RunStopsService.stopped: the stop holds what the step told customers, 
         await stops.stopped(OPEN)
 
         expect(current().customerLines).toHaveLength(1)
+    })
+})
+
+describe("toldCustomerOf", () => {
+    const line = (conversationId: string, at: string) => ({ conversationId, text: "Shop dang kiem tra", at })
+    const none = { leadId: null, conversationId: null }
+
+    it("names the conversation of the oldest line told and the lead a send to it named; null when the stop has a customer or told nobody", () => {
+        const send: KeptSend = {
+            args: { leadId: "lead-9", text: "Shop dang kiem tra" },
+            subject: { kind: "message", id: "m-1", facts: { conversationId: "conv-9" } },
+            at: "2026-11-10T09:00:00.000Z",
+        }
+
+        expect(toldCustomerOf(none, [line("conv-9", "2026-11-10T09:00:00.000Z"), line("conv-2", "2026-11-10T08:00:00.000Z")], [send])).toEqual({
+            leadId: null,
+            conversationId: "conv-2",
+        })
+        expect(toldCustomerOf(none, [line("conv-9", "2026-11-10T09:00:00.000Z")], [send])).toEqual({ leadId: "lead-9", conversationId: "conv-9" })
+        expect(toldCustomerOf(none, [line("conv-9", "2026-11-10T09:00:00.000Z")])).toEqual({ leadId: null, conversationId: "conv-9" })
+        expect(toldCustomerOf({ leadId: "lead-1", conversationId: null }, [line("conv-9", "2026-11-10T09:00:00.000Z")], [send])).toBeNull()
+        expect(toldCustomerOf(none, [])).toBeNull()
     })
 })
 

@@ -21,10 +21,36 @@ export const isRunClosed = (status: string | null): boolean => status === null |
 export const stopHoldsWorkflow = (stop: Pick<HeldStop, "workflowId">, workflowId: string | null): boolean =>
     stop.workflowId === null || stop.workflowId === workflowId
 
-/** Whether an open stop is about the customer: the same lead, else the same conversation. A stop with neither holds nobody. */
-export const stopIsAbout = (stop: Pick<HeldStop, "leadId" | "conversationId">, subject: FreezeSubject): boolean =>
+/** Whether the stopped step told the subject's conversation a line (it is on the stop's `customerLines`). */
+export const stopToldSubject = (
+    stop: Partial<Pick<HeldStop, "toldConversationIds">>,
+    subject: Pick<FreezeSubject, "conversationId">,
+): boolean => subject.conversationId !== null && (stop.toldConversationIds ?? []).includes(subject.conversationId)
+
+/**
+ * Whether an open stop is about the customer: the same lead, else the same conversation, else a conversation the stopped step told a
+ * line (a bank-fed run has no customer of its own; the customer it told is the one it is about). A stop with none holds nobody.
+ */
+export const stopIsAbout = (
+    stop: Pick<HeldStop, "leadId" | "conversationId"> & Partial<Pick<HeldStop, "toldConversationIds">>,
+    subject: FreezeSubject,
+): boolean =>
     (subject.leadId !== null && stop.leadId === subject.leadId) ||
-    (subject.conversationId !== null && stop.conversationId === subject.conversationId)
+    (subject.conversationId !== null && stop.conversationId === subject.conversationId) ||
+    stopToldSubject(stop, subject)
+
+/**
+ * Whether an open stop holds a wake of the customer: a wake of the stop's workflow (`stopHoldsWorkflow`), or ANY wake about a
+ * conversation the stopped step told a line, whatever its workflow (the customer's next line goes to the front desk, not to the
+ * workflow that stopped). The customer was told the shop is checking; what they write next waits for the founder's answer and is
+ * replayed once after it, so no second run talks over the open stop. A wake about the lead alone (a timer, a payment) keeps the
+ * workflow rule.
+ */
+export const stopHoldsWake = (
+    stop: Pick<HeldStop, "workflowId"> & Partial<Pick<HeldStop, "toldConversationIds">>,
+    workflowId: string | null,
+    subject: Pick<FreezeSubject, "conversationId">,
+): boolean => stopHoldsWorkflow(stop, workflowId) || stopToldSubject(stop, subject)
 
 /** The oldest of the stops (by the moment they stopped, then their run), or null for none. */
 export const oldestStopOf = (stops: ReadonlyArray<HeldStop>): HeldStop | null =>

@@ -117,6 +117,10 @@ export interface StopValues {
     readonly kind?: StopKind
     readonly state?: StopState
     readonly reason?: string
+    /** Set only on a stop of a run about no customer, to the customer its step told (`toldCustomerOf`). */
+    readonly leadId?: string | null
+    /** Set only on a stop of a run about no customer, to the conversation its step told. */
+    readonly conversationId?: string | null
     readonly question?: string | null
     readonly detail?: RunStopDetail
     readonly cardMessageId?: string | null

@@ -158,6 +158,7 @@ const OPEN_STOP: HeldStop = {
     workflowId: "wf-front-desk",
     leadId: "lead-1",
     conversationId: "c-1",
+    toldConversationIds: [],
     stoppedAt: "2026-11-04T10:00:00.000Z",
 }
 

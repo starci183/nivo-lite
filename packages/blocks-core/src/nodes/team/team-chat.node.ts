@@ -63,6 +63,12 @@ export interface TeamChatInput {
     readonly locale: "vi" | "en"
 }
 
+/**
+ * The input as a graph binds it: `replyTo` may be left out. A ref that finds null is left out by the binder (`resolveParams`: the
+ * node's own default applies), so a message that replies to nothing arrives WITHOUT the key; its default is null.
+ */
+type TeamChatGiven = Omit<TeamChatInput, "replyTo"> & { readonly replyTo?: TeamChatLine | null | undefined }
+
 /** What the turn answered: the words posted in the room. */
 export interface TeamChatOutput {
     /** The answer posted as a reply to the asked message. */
@@ -81,7 +87,7 @@ const lineSchema = z.object({
 })
 
 const params: NodeSchema<NoParams> = z.strictObject({})
-const input: NodeSchema<TeamChatInput> = z.object({
+const input: NodeSchema<TeamChatInput, TeamChatGiven> = z.object({
     roomId: z.string().min(1).max(MAX_ID),
     messageId: z.string().min(1).max(MAX_ID),
     text: z.string().min(1).max(TEAM_CHAT_TEXT_MAX),
@@ -89,7 +95,7 @@ const input: NodeSchema<TeamChatInput> = z.object({
     intent: z.enum(["answer", "capture"]),
     asker: z.object({ name: z.string().max(MAX_LINE), standing: z.enum(["owner", "manager", "staff"]) }),
     lines: z.array(lineSchema).max(TEAM_CHAT_LINES_MAX),
-    replyTo: lineSchema.nullable(),
+    replyTo: lineSchema.nullable().default(null),
     locale: z.enum(["vi", "en"]),
 })
 const output: NodeSchema<TeamChatOutput> = z.object({
@@ -158,7 +164,11 @@ const MONEY_REFUSAL = "Dạ số liệu doanh thu chỉ chủ tiệm hoặc qu�
  * manager states a lasting rule. Its tools are the truth-graph reads and `nivo.brain.change.propose` only: nothing that acts on a customer or on
  * money. The node's code, not the model, posts the answer in the room as a reply to the asked message, once per message and agent.
  */
-export const teamChatNode: NodeDefinition<NodeSchema<TeamChatInput>, NodeSchema<TeamChatOutput>, NodeSchema<NoParams>> =
+export const teamChatNode: NodeDefinition<
+    NodeSchema<TeamChatInput, TeamChatGiven>,
+    NodeSchema<TeamChatOutput>,
+    NodeSchema<NoParams>
+> =
     defineNode({
         id: "team.chat",
         role: "output",

@@ -8,11 +8,19 @@ import { aiCallRowsOf, type AiCallRowView } from "@/modules/agentRuns"
 /** The tag of a call kind (`<node id>:<tag>`), or the whole kind when it has none. */
 const tagOf = (purpose: string): string => purpose.slice(purpose.lastIndexOf(":") + 1)
 
+/** The node id of a call kind (`<node id>:<tag>`), or the whole kind when it has no tag. */
+const nodeOf = (purpose: string): string => (purpose.includes(":") ? purpose.slice(0, purpose.lastIndexOf(":")) : purpose)
+
 /**
- * The AI calls of one run as table rows, read apart from the page's own read. Empty while it is read, when it failed (a back end
+ * The AI calls of one run as table rows, read apart from the page's own read. A call kind is named by its words when the app has
+ * them, else by the run's step it belongs to (`stepLabels`, node key → title), else by its bare tag; never the raw kind. Empty while it is read, when it failed (a back end
  * without `aiCalls`) or when the run called no AI: the page then leaves the section out.
  */
-export const useAgentRunAiCalls = (installationId: string, runId: string): ReadonlyArray<AiCallRowView> => {
+export const useAgentRunAiCalls = (
+    installationId: string,
+    runId: string,
+    stepLabels: ReadonlyMap<string, string>,
+): ReadonlyArray<AiCallRowView> => {
     const t = useTranslations("agentRuns")
     const format = useFormatter()
     const read = useQueryAgentRunAiCallsSwr({ installationId, runId })
@@ -31,7 +39,8 @@ export const useAgentRunAiCalls = (installationId: string, runId: string): Reado
                     }),
                 purposeOf: (purpose) => {
                     const key = `aiPurpose_${tagOf(purpose)}`
-                    return t.has(key) ? t(key) : purpose
+                    if (t.has(key)) return t(key)
+                    return stepLabels.get(tagOf(purpose)) ?? stepLabels.get(nodeOf(purpose)) ?? tagOf(purpose)
                 },
                 maxTry: (count) => t("aiMaxTry", { count }),
                 cached: (count) => t("aiCached", { count }),
@@ -40,6 +49,6 @@ export const useAgentRunAiCalls = (installationId: string, runId: string): Reado
                 slowest: (value) => t("aiSlowest", { value }),
                 finish: (reasons) => t("aiFinish", { reasons }),
             }),
-        [calls, format, t],
+        [calls, format, stepLabels, t],
     )
 }

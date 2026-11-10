@@ -16,7 +16,15 @@ import type {
     StopSendRefusal,
 } from "./run-stop.contracts"
 import { StopCardsService } from "./stop-cards.service"
-import { answerIndexOf, stopAnswerOf, stopDecisionOf, stopQuestionOf, stopRouteOf, stopSendRefusalOf } from "./stop-gate.policy"
+import {
+    answerIndexOf,
+    stopAnswerOf,
+    stopDecisionOf,
+    stopQuestionOf,
+    stopRouteOf,
+    stopSendRefusalOf,
+    stopToldOf,
+} from "./stop-gate.policy"
 
 /** The run a stop belongs to. */
 export interface StopRunRef {
@@ -24,6 +32,14 @@ export interface StopRunRef {
     readonly workspaceId: string
     /** The run (the thread). */
     readonly runId: string
+}
+
+/** A stop just opened: the question the gate hands `scope.stop`, and the line the customer was already told for it (or null). */
+export interface StopOpened {
+    /** The question of the stop. */
+    readonly question: StopQuestion
+    /** The newest line the customer was told for this stop with no founder's words after it, or null. */
+    readonly told: RunStopCustomerLine | null
 }
 
 /** The most customer lines a stop holds (`agent.run-stop.customerLines`). */
@@ -69,6 +85,40 @@ ${text}`)
     return [...lines, ...added].toSorted((left, right) => left.at.localeCompare(right.at)).slice(-STOP_LINES_MAX)
 }
 
+/** The customer a stop is about, as its record names them. */
+export interface StopCustomerRef {
+    /** The lead, when known. */
+    readonly leadId: string | null
+    /** The conversation, when known. */
+    readonly conversationId: string | null
+}
+
+/**
+ * The customer a stop of a run about NO customer (a bank-fed reconcile: no lead, no conversation) is about once its step told one a
+ * line: the conversation of the oldest line told, and the lead a send to that conversation named (a send addressed by `leadId`). Null
+ * when the stop already names a customer (its run's own: never replaced) or nothing was told. Written on the stop record, so the reads
+ * that find the open stops of a customer (by lead, by conversation) find this one too and hold that customer's next wakes.
+ */
+export const toldCustomerOf = (
+    stop: StopCustomerRef,
+    lines: ReadonlyArray<RunStopCustomerLine>,
+    sends: ReadonlyArray<KeptSend> = [],
+): StopCustomerRef | null => {
+    if (stop.leadId !== null || stop.conversationId !== null) return null
+    const first = lines.toSorted((left, right) => left.at.localeCompare(right.at))[0]
+    if (first === undefined) return null
+    const leadId =
+        sends
+            .filter(
+                (send) =>
+                    (textOf(send.subject.facts, "conversationId") ?? textOf(send.args, "conversationId")) ===
+                    first.conversationId,
+            )
+            .map((send) => textOf(send.args, "leadId") ?? textOf(send.subject.facts, "leadId"))
+            .find((id): id is string => id !== null) ?? null
+    return { leadId, conversationId: first.conversationId }
+}
+
 @Injectable()
 /**
  * The stops of thread runs: the one mechanism for every run that cannot go on by itself, with a customer or without. A step that cannot
@@ -78,7 +128,8 @@ ${text}`)
  * The stop resolves when the step then completes (`completed`), or at once on `skip`, and its card says so. While it is open, a customer
  * the stopped step already told is not told again until the founder answers in words (`sendRefusal`, read by the send door). What the
  * customer was told is kept on the stop (`customerLines`): the engine's own line (`lineSent`) and, each time the stop opens, the
- * customer sends of its step that the effect ledger kept (D.1), whatever conversation they went to.
+ * customer sends of its step that the effect ledger kept (D.1), whatever conversation they went to. A stop of a run about no customer
+ * (bank-fed) takes the customer its step told as its own (`toldCustomerOf`), so the hold of that customer finds it.
  */
 export class RunStopsService {
     constructor(
@@ -90,14 +141,24 @@ export class RunStopsService {
 
     /** Opens the stop of a step (or opens it again), posts or folds its card, and answers the question the gate hands `scope.stop`. */
     async stopped(input: StopOpen): Promise<StopQuestion> {
+        return (await this.opened(input)).question
+    }
+
+    /**
+     * `stopped`, and the line the customer was already told for this stop (`stopToldOf`: the step's own sends the ledger kept, read while
+     * the stop opens, or an earlier holding line; none after the founder's newest words), or null. The engine reads it before it sends a
+     * holding line of its own, so a stop tells the customer one line, ever. No read beyond the one `stopped` makes.
+     */
+    async opened(input: StopOpen): Promise<StopOpened> {
         const now = this.clock.now().toISOString()
         const stop = await this.withSends(input.workspaceId, await this.records.open(input, now))
+        const told = stopToldOf(stop)
         const messageId = await this.cards.posted(input.workspaceId, stop, input.card, now)
-        if (messageId === null || messageId === stop.cardMessageId) return stopQuestionOf(stop)
+        if (messageId === null || messageId === stop.cardMessageId) return { question: stopQuestionOf(stop), told }
         const carded = await this.records.patch(input.workspaceId, stop.id, (fresh) =>
             fresh.cardMessageId === messageId ? null : { cardMessageId: messageId },
         )
-        return stopQuestionOf(carded ?? stop)
+        return { question: stopQuestionOf(carded ?? stop), told }
     }
 
     /**
@@ -174,7 +235,7 @@ export class RunStopsService {
         await this.records.patch(ref.workspaceId, stop.id, (fresh) =>
             fresh.state !== "open" || fresh.customerLines.some((one) => one.conversationId === line.conversationId && one.at === line.at)
                 ? null
-                : { customerLines: [...fresh.customerLines, line] },
+                : { customerLines: [...fresh.customerLines, line], ...toldCustomerOf(fresh, [line]) },
         )
     }
 
@@ -197,7 +258,9 @@ export class RunStopsService {
         if (sends.length === 0) return stop
         const filled = await this.records.patch(workspaceId, stop.id, (fresh) => {
             const lines = linesWithSendsOf(fresh.customerLines, sends)
-            return lines === null ? null : { customerLines: lines }
+            const told = toldCustomerOf(fresh, lines ?? fresh.customerLines, sends)
+            if (lines === null && told === null) return null
+            return { ...(lines === null ? {} : { customerLines: lines }), ...told }
         })
         return filled ?? stop
     }

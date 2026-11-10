@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { RunStopAnswer } from "@nivo-lite/blocks-core/entities"
+import type { RunStopAnswer, RunStopCustomerLine } from "@nivo-lite/blocks-core/entities"
 import type {
     FounderAnswerJson,
     RunStop,
@@ -104,4 +104,16 @@ export const stopSendRefusalOf = (
     if (last === undefined) return null
     const answeredSince = stop.answers.some((answer) => answer.kind === "answer" && answer.at > last.at)
     return answeredSince ? null : { code: "already_told_for_this_stop", line: last }
+}
+
+/**
+ * The line the customer was already told for this stop, in any conversation, or null: the newest of the stop's customer lines (the
+ * step's own sends the ledger kept, and the engine's holding line) with no answer in words after it. One customer line per stop, ever
+ * (design 8.3): when the step itself already told the customer, the engine adds no holding line of its own; the step's line is the one.
+ * A button or a deadline is no new answer; the founder's words are (the stop may then tell the outcome).
+ */
+export const stopToldOf = (stop: Pick<RunStop, "customerLines" | "answers">): RunStopCustomerLine | null => {
+    const last = stop.customerLines.toSorted((left, right) => left.at.localeCompare(right.at)).at(-1)
+    if (last === undefined) return null
+    return stop.answers.some((answer) => answer.kind === "answer" && answer.at > last.at) ? null : last
 }

@@ -24,6 +24,7 @@ const SELECT: ReadonlyArray<string> = [
     "workflowId",
     "leadId",
     "conversationId",
+    "customerLines",
     "state",
     "stoppedAt",
 ]
@@ -41,6 +42,17 @@ const eq = (field: string, value: string): FilterExpr => ({ op: "eq", field, val
 
 const textOf = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null)
 
+/** The conversations a stop's `customerLines` (`{ lines: [{ conversationId, text, at }] }`) went to, once each, in the order told. */
+const toldOf = (customerLines: unknown): ReadonlyArray<string> => {
+    const lines: unknown =
+        typeof customerLines === "object" && customerLines !== null ? Reflect.get(customerLines, "lines") : undefined
+    if (!Array.isArray(lines)) return []
+    const told = lines.flatMap((line: unknown) =>
+        typeof line === "object" && line !== null ? (textOf(Reflect.get(line, "conversationId")) ?? []) : [],
+    )
+    return [...new Set(told)]
+}
+
 /** The open stop a row holds, or null for a row that is not open or names no run, step or agent (it holds nobody). */
 const heldStopOf = (row: RecordRow): HeldStop | null => {
     const { data } = row
@@ -55,6 +67,7 @@ const heldStopOf = (row: RecordRow): HeldStop | null => {
         workflowId: textOf(data.workflowId),
         leadId: textOf(data.leadId),
         conversationId: textOf(data.conversationId),
+        toldConversationIds: toldOf(data.customerLines),
         stoppedAt: textOf(data.stoppedAt) ?? row.createdAt,
     }
 }
@@ -94,7 +107,9 @@ export class LeadFreezeStopsService {
                 customer.conversationId === null
                     ? []
                     : (await this.read(tx, eq("state", OPEN), NEWEST, OPEN_PAGE)).filter(
-                          (stop) => stop.conversationId === customer.conversationId,
+                          (stop) =>
+                              stop.conversationId === customer.conversationId ||
+                              (customer.conversationId !== null && stop.toldConversationIds.includes(customer.conversationId)),
                       )
             return distinctOf([...ofLead, ...ofConversation])
         })

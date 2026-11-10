@@ -184,6 +184,7 @@ describe("LeadFreezesService.frozen and waitingOf: what the engine asks without 
             workflowId: "wf-front-desk",
             leadId: "lead-1",
             conversationId: "c-1",
+            toldConversationIds: [],
             stoppedAt: "2026-11-04T10:01:00.000Z",
         })
         await expect(service.frozen("ws-1", ofWorkflow("wf-front-desk"))).resolves.toBe(true)
@@ -197,8 +198,8 @@ describe("LeadFreezesService.frozen and waitingOf: what the engine asks without 
         records.set("freeze-2", holdOf({ id: "freeze-2", key: "lead:lead-2|wf:wf-consult", leadId: "lead-2" }))
         records.set("freeze-3", frozenFreezeOf({ id: "freeze-3", key: "lead:lead-1|wf:wf-old", frozenRunId: "run-old" }))
         openStops.push(
-            { runId: "run-1", stepKey: "claim-ack", agentId: "a", workflowId: "wf-consult", leadId: "lead-1", conversationId: "c-1", stoppedAt: "x" },
-            { runId: "run-5", stepKey: "match", agentId: "a", workflowId: "wf-reconcile", leadId: "lead-1", conversationId: null, stoppedAt: "2026-11-04T10:02:00.000Z" },
+            { runId: "run-1", stepKey: "claim-ack", agentId: "a", workflowId: "wf-consult", leadId: "lead-1", conversationId: "c-1", toldConversationIds: [], stoppedAt: "x" },
+            { runId: "run-5", stepKey: "match", agentId: "a", workflowId: "wf-reconcile", leadId: "lead-1", conversationId: null, toldConversationIds: [], stoppedAt: "2026-11-04T10:02:00.000Z" },
         )
 
         await expect(

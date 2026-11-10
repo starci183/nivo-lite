@@ -14,7 +14,7 @@ import {
     isRunClosed,
     isThreadHold,
     oldestStopOf,
-    stopHoldsWorkflow,
+    stopHoldsWake,
     stopIsAbout,
     stopSubjectOf,
     threadHoldOf,
@@ -105,7 +105,7 @@ export class LeadFreezeStopHoldsService implements OnModuleInit {
         turn: AgentTurnView | null,
     ): Promise<HeldStop | null> {
         const workflowId = workflowOfTrigger(trigger)
-        const about = (await this.openAbout(workspaceId, subject)).filter((stop) => stopHoldsWorkflow(stop, workflowId))
+        const about = (await this.openAbout(workspaceId, subject)).filter((stop) => stopHoldsWake(stop, workflowId, subject))
         if (about.length === 0) return null
         const ownRunId = turn === null ? null : await this.ownRunOf(turn)
         const open = about.filter((stop) => stop.runId !== ownRunId)

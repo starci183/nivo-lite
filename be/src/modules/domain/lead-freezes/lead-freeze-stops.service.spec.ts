@@ -62,6 +62,7 @@ describe("LeadFreezeStopsService: the open stops a freeze reads", () => {
             workflowId: "wf-front-desk",
             leadId: "lead-1",
             conversationId: "c-1",
+            toldConversationIds: [],
             stoppedAt: "2026-11-10T10:00:00.000Z",
         })
         expect(engine.list.mock.calls.map(([, query]) => [query.where, query.order])).toEqual([
@@ -114,6 +115,28 @@ describe("LeadFreezeStopsService: the open stops a freeze reads", () => {
         await expect(service.openOfCustomer("ws-1", { leadId: null, conversationId: null })).resolves.toEqual([])
 
         expect(engine.list).toHaveBeenCalledTimes(2)
+        expect(problemsOf(engine)).toEqual([])
+    })
+
+    it("D-P11-4: a stop of a run about no customer is found by the conversation its step TOLD (customerLines), read with the select", async () => {
+        const { service, engine } = await build()
+        const told = rowOf("stop-5", {
+            ...OPEN_ROW.data,
+            runId: "run-bank",
+            stepKey: "match",
+            workflowId: "wf-reconcile",
+            leadId: null,
+            conversationId: null,
+            customerLines: { lines: [{ conversationId: "c-1", text: "Shop da nhan, dang kiem tra", at: "2026-11-10T10:00:00.000Z" }] },
+        })
+        engine.list.mockResolvedValue(pageOf([told, rowOf("stop-6", { ...told.data, runId: "run-other", customerLines: { lines: [] } })]))
+
+        const open = await service.openOfCustomer("ws-1", { leadId: null, conversationId: "c-1" })
+
+        expect(open.map((stop) => [stop.runId, stop.leadId, stop.conversationId, stop.toldConversationIds])).toEqual([
+            ["run-bank", null, null, ["c-1"]],
+        ])
+        expect(engine.list.mock.calls[0]?.[1].select).toContain("customerLines")
         expect(problemsOf(engine)).toEqual([])
     })
 

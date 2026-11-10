@@ -44,7 +44,9 @@ const isHolding = (freeze: OptionalLeadFreeze): freeze is LeadFreeze => holds(fr
 /**
  * The holds of customers whose thread run waits at a stop. While a stop of a run of the customer's workflow stands open, no new run of
  * THAT workflow starts for the customer: the start of every graph run asks `hold` first, and a wake of the held workflow is recorded as a
- * pending event instead (a line they wrote, a bank transaction, a timer, a hand-off). Every other workflow of the customer runs as usual.
+ * pending event instead (a line they wrote, a bank transaction, a timer, a hand-off). A conversation the stopped step TOLD a line is held
+ * whatever the workflow its next wake takes (`stopHoldsWake`): that is how a bank-fed run, which has no customer of its own, holds the
+ * customer it told. Every other workflow of the customer runs as usual.
  * The stop (its card, its answer box, its decisions) is the one thing that tells the founder; when it closes the customer is released
  * and the pending events are written again as wakes, in the order they came (`LeadFreezeStopHoldsService`).
  */

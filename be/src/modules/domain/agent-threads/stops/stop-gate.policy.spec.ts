@@ -7,6 +7,7 @@ import {
     stopQuestionOf,
     stopRouteOf,
     stopSendRefusalOf,
+    stopToldOf,
 } from "./stop-gate.policy"
 
 const GATE = "__freeze"
@@ -131,5 +132,26 @@ describe("stopSendRefusalOf: one customer line per stop until the founder answer
     it("refuses nothing once the stop is resolved, or when there is no stop", () => {
         expect(stopSendRefusalOf({ ...STOP, state: "resolved", customerLines: [LINE] }, "conv-1")).toBeNull()
         expect(stopSendRefusalOf(null, "conv-1")).toBeNull()
+    })
+})
+
+describe("stopToldOf: what the customer was already told for this stop (FX2, D-P11-2)", () => {
+    const EARLY = { conversationId: "conv-2", text: "Dạ tiệm đang xem lại ạ", at: "2026-11-10T10:00:01.000Z" }
+
+    it("nothing told: null; told in any conversation: the newest line", () => {
+        expect(stopToldOf(STOP)).toBeNull()
+        expect(stopToldOf({ ...STOP, customerLines: [LINE, EARLY] })).toEqual(LINE)
+    })
+
+    it("a retry or a deadline keeps the line; the founder's words after it clear it, a line after the words counts again", () => {
+        const retried = { ...STOP, customerLines: [LINE], answers: [stopAnswerOf({ kind: "retry", by: "u1", at: "2026-11-10T10:01:00.000Z" })] }
+        expect(stopToldOf(retried)).toEqual(LINE)
+        const answered = {
+            ...retried,
+            answers: [stopAnswerOf({ kind: "answer", text: "ghi nhận", by: "u1", at: "2026-11-10T10:02:00.000Z" })],
+        }
+        expect(stopToldOf(answered)).toBeNull()
+        const after = { ...LINE, text: "Dạ tiệm đã ghi nhận ạ", at: "2026-11-10T10:03:00.000Z" }
+        expect(stopToldOf({ ...answered, customerLines: [LINE, after] })).toEqual(after)
     })
 })

@@ -3,6 +3,7 @@ import type { DynamicModule } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import type { GraphSpec, GraphSpecNode } from "@nivo-lite/agent-sdk/graph"
+import { TOOL } from "@nivo-lite/blocks-core"
 import {
     AgentGraphAiCoreService,
     AgentGraphStepMemoryService,
@@ -10,7 +11,7 @@ import {
     AgentWorkflowRunsService,
 } from "@modules/domain/agent-graphs"
 import { ChatConversationsService } from "@modules/domain/chat-records"
-import { GraphNodeHostService, GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import { GraphNodeEffectsService, GraphNodeHostService, GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import type { NodeRunInput } from "@modules/domain/graph-nodes"
 import { CHECKPOINT_STORE, GRAPH_THREADS, LanggraphModule } from "@modules/integrations/langgraph"
 import type { GraphThreads, ThreadGraph } from "@modules/integrations/langgraph"
@@ -78,7 +79,13 @@ class LoopRuntimeWorldModule {}
 interface World {
     killAt?: string | null
     failAt?: string | null
+    /** The step key (`<node>[<i>]`) whose own customer send the ledger keeps (FX2: one customer line per stop). */
+    toldAt?: string
+    /** The holding line the AI core's report chooses for the customer; absent, the AI core decides nothing (an AI-error stop). */
+    holdingLine?: string
 }
+
+const STEP_LINE = "Shop dang xem gia hoa lily a."
 
 const build = async (world: World) => {
     let stop: RunStop | null = null
@@ -148,6 +155,30 @@ const build = async (world: World) => {
             return Promise.resolve(stop)
         }),
     })
+    // The ledger's customer sends of one run + step (P5's `recordsOf`), read by the stop as it opens.
+    const ledger = mock<GraphNodeEffectsService>({
+        recordsOf: jest.fn((_ws: string, place: { readonly runId: string; readonly stepKey: string }) =>
+            Promise.resolve(
+                place.runId === REF.runId && place.stepKey === world.toldAt
+                    ? [
+                          {
+                              effect: TOOL.customerMessageSend,
+                              args: { conversationId: "conv-1", text: STEP_LINE },
+                              subject: { kind: "message", id: "m-1", facts: { conversationId: "conv-1" } },
+                              at: "2026-11-11T09:59:00.000Z",
+                          },
+                      ]
+                    : [],
+            ),
+        ) as never,
+    })
+    const sent: Array<{ readonly key: string; readonly text: unknown }> = []
+    const send = {
+        execute: jest.fn((_turn: unknown, payload: Readonly<Record<string, unknown>>, call: { readonly key: string }) => {
+            sent.push({ key: call.key, text: payload.text })
+            return Promise.resolve({ kind: "message", id: `m-${String(sent.length + 1)}` })
+        }),
+    }
     const definitions = new Map(NODE_IDS.map((id) => [id, { effects: [], title: { vi: id, en: id } }]))
     const providers = [
         { provide: CHECKPOINT_STORE, useValue: memoryCheckpointStore().port },
@@ -165,6 +196,7 @@ const build = async (world: World) => {
             ThreadStepService,
             RunStopsService,
             { provide: RunStopRecordsService, useValue: records },
+            { provide: GraphNodeEffectsService, useValue: ledger },
             {
                 provide: StopCardsService,
                 useValue: mock<StopCardsService>({ posted: jest.fn().mockResolvedValue("msg-1"), resolved: jest.fn().mockResolvedValue(undefined) }),
@@ -178,10 +210,19 @@ const build = async (world: World) => {
                 provide: GraphNodeRegistryService,
                 useValue: mock<GraphNodeRegistryService>({
                     installed: jest.fn(() => ({ nodes: definitions }) as never),
-                    optionalExecutorOf: jest.fn().mockReturnValue(undefined),
+                    optionalExecutorOf: jest.fn((id: string) => (id === TOOL.customerMessageSend ? send : undefined)) as never,
                 }),
             },
-            { provide: AgentGraphAiCoreService, useValue: mock<AgentGraphAiCoreService>({ decide: jest.fn().mockResolvedValue(null) }) },
+            {
+                provide: AgentGraphAiCoreService,
+                useValue: mock<AgentGraphAiCoreService>({
+                    decide: jest.fn().mockResolvedValue(
+                        world.holdingLine === undefined
+                            ? null
+                            : { kind: "report", reason: "Khong lay duoc gia.", question: "Gia lily?", suggestions: [], customerLine: world.holdingLine },
+                    ),
+                }),
+            },
             { provide: AgentGraphStepMemoryService, useValue: memory },
             { provide: AgentWorkflowRunsService, useValue: mock<AgentWorkflowRunsService>({ pinsOf: jest.fn().mockResolvedValue([]) }) },
             {
@@ -218,7 +259,7 @@ const build = async (world: World) => {
             },
         ],
     }
-    return { threads, graph, ran, stopOf: () => stop }
+    return { threads, graph, ran, stopOf: () => stop, sent, ledger }
 }
 
 /** The loop's output in the old engine's shape: every element, the output of its last body step. */
@@ -266,5 +307,26 @@ describe("the for-each runtime on the real node function and the real LangGraph 
 
         expect(ran).toEqual(["list", "each", "price[0]", "note[0]", "price[1]", "price[1]", "note[1]", "price[2]", "note[2]", "after"])
         expect(resumed.status === "ended" ? resumed.state.steps.each : null).toEqual({ output: SUMMARY })
+    })
+
+    // FX2 (D-P11-2): one customer line per stop, read by the iteration's own key.
+    it("an iteration whose step already told the customer stops with that line on the stop; the engine adds no holding line", async () => {
+        const { threads, graph, stopOf, sent, ledger } = await build({ failAt: "price[1]", toldAt: "price[1]", holdingLine: "Shop kiem tra gia a." })
+
+        const stopped = await threads.start(REF, graph, { trigger: { locale: "vi", conversationId: "conv-1" } })
+
+        expect(stopped.status).toBe("stopped")
+        expect(ledger.recordsOf).toHaveBeenCalledWith(REF.workspaceId, { runId: REF.runId, stepKey: "price[1]" }, [TOOL.customerMessageSend])
+        expect(stopOf()?.customerLines.map((line) => line.text)).toEqual([STEP_LINE])
+        expect(sent).toEqual([])
+    })
+
+    it("the send of ANOTHER iteration does not count: the engine's holding line goes out once, under this iteration's key", async () => {
+        const { threads, graph, stopOf, sent } = await build({ failAt: "price[1]", toldAt: "price[0]", holdingLine: "Shop kiem tra gia a." })
+
+        await threads.start(REF, graph, { trigger: { locale: "vi", conversationId: "conv-1" } })
+
+        expect(sent).toEqual([{ key: `honest-line:${REF.runId}:price[1]`, text: "Shop kiem tra gia a." }])
+        expect(stopOf()?.customerLines.map((line) => line.text)).toEqual(["Shop kiem tra gia a."])
     })
 })

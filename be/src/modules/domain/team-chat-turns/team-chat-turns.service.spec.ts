@@ -1,8 +1,14 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
 import { LATEST_VERSION, WORKFLOW_CALL_MEMBER, WORKFLOW_PARAMS_MEMBER } from "@nivo-lite/agent-sdk/graph"
+import { coreNodes } from "@nivo-lite/blocks-core"
+import type { TeamChatInput } from "@nivo-lite/blocks-core"
 import { WORKFLOW_TEMPLATES, latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
-import { AgentTagService } from "@modules/domain/agent-work"
+import { AgentTagService, tagContextOf } from "@modules/domain/agent-work"
+import type { AgentTagRequest, AgentWakeContext } from "@modules/domain/agent-work"
+import { tagPayloadTextOf } from "@modules/domain/agent-work/agent-tag.policy"
+import { bindNode } from "@modules/domain/agent-graphs/agent-graph-step-memory.service"
+import { triggerScopeOf } from "@modules/domain/agent-graphs/policies/graph-flow.policy"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentCard } from "@modules/domain/agents"
 import { BrainChangeRequestsService } from "@modules/domain/brain-facts"
@@ -250,6 +256,89 @@ describe("TeamChatTurnsService: the common-room rule", () => {
                 expect(takingTriggerOf(graph, source, { conversationId: "c1", channel: "zalo", text: "hi" })).toBeNull()
             expect(template.primary).toBe(false)
         }
+    })
+})
+
+/**
+ * D-P11-3: the input the `team.chat` step RECEIVES, from the router's real output, through the real path a wake takes (the tag door's
+ * context, stored as JSON, the trigger scope, the template's own bindings, the binder) into the REAL node input schema. A hand-built
+ * input hid that the binder leaves out a ref that finds null, so a message replying to nothing lost its `replyTo` key.
+ */
+describe("TeamChatTurnsService: the router's real output is a valid team.chat input", () => {
+    const chatNode = coreNodes.find((node) => node.id === "team.chat")
+    const template = WORKFLOW_TEMPLATES.find((one) => one.id === "sales.team-chat")
+
+    /** What the step is given for the turn the router started: tag door → stored wake → trigger scope → template bindings → binder. */
+    const stepInputOf = (request: AgentTagRequest): Readonly<Record<string, unknown>> => {
+        const stored = JSON.parse(JSON.stringify(tagContextOf(request, tagPayloadTextOf(request) ?? undefined))) as AgentWakeContext
+        const trigger = triggerScopeOf({ source: "tag", context: stored, actorMemberId: "seat-owner" })
+        const graph = template === undefined ? undefined : latestTemplateVersion(template).graph
+        const node = graph?.nodes.find((one) => one.step === "team.chat")
+        if (node === undefined) throw new Error("sales.team-chat has no team.chat step")
+        return bindNode(chatNode, node, { trigger, steps: {}, namespace: "sales.team-chat", memory: null }).input
+    }
+
+    const startedInput = async (line: PersonLineHeard): Promise<Readonly<Record<string, unknown>>> => {
+        const { service, tags } = await build()
+        await service.heard(line)
+        const [request] = tags.tagAgent.mock.calls[0] ?? []
+        if (request === undefined) throw new Error("no turn started")
+        return stepInputOf(request)
+    }
+
+    const parsed = (
+        given: Readonly<Record<string, unknown>>,
+    ): { readonly error?: { readonly issues: unknown } | undefined; readonly data?: TeamChatInput | undefined } => {
+        if (chatNode === undefined) throw new Error("team.chat is not a core node")
+        const result = chatNode.input.safeParse(given)
+        return result.success ? { data: result.data as TeamChatInput } : { error: result.error }
+    }
+
+    it("a private-room message that replies to nothing: the key arrives absent and the node takes it as null", async () => {
+        const given = await startedInput(lineOf({ room: DIRECT_ROOM, body: "từ mai phí ship nội thành là 35k nhé" }))
+
+        expect("replyTo" in given).toBe(false)
+        const result = parsed(given)
+        expect(result.error?.issues).toBeUndefined()
+        expect(result.data).toMatchObject({
+            room: "direct",
+            intent: "answer",
+            text: "từ mai phí ship nội thành là 35k nhé",
+            asker: { name: "Anh", standing: "owner" },
+            replyTo: null,
+            locale: "vi",
+        })
+    })
+
+    it("a common-room @mention by staff, with the room's lines: valid, standing and lines kept", async () => {
+        const given = await startedInput(lineOf({ userId: STAFF, agentMentions: [SALES], body: "@Sales hôm nay có đơn nào chưa giao?" }))
+
+        const result = parsed(given)
+        expect(result.error?.issues).toBeUndefined()
+        expect(result.data).toMatchObject({ room: "common", asker: { name: "Lan", standing: "staff" }, replyTo: null })
+        expect(result.data?.lines).toHaveLength(2)
+    })
+
+    it("a reply to an agent line: valid, the line replied to kept", async () => {
+        const report = agentLine(JSON.stringify({ kind: "report.daily", intent: "report" }), "text")
+        const given = await startedInput(lineOf({ body: "sao hôm nay ít đơn vậy?", repliedTo: report }))
+
+        const result = parsed(given)
+        expect(result.error?.issues).toBeUndefined()
+        expect(result.data?.replyTo).toMatchObject({ id: "m-card", by: "agent", name: "Kế toán" })
+    })
+
+    it("an empty room (no line before the message): `lines` arrives as an empty list, valid", async () => {
+        const { service, tags, store } = await build()
+        store.threadKeys.mockResolvedValue([])
+        store.messagesByIds.mockResolvedValue([])
+        await service.heard(lineOf({ room: DIRECT_ROOM, body: "Em ơi" }))
+        const [request] = tags.tagAgent.mock.calls[0] ?? []
+        if (request === undefined) throw new Error("no turn started")
+
+        const result = parsed(stepInputOf(request))
+        expect(result.error?.issues).toBeUndefined()
+        expect(result.data).toMatchObject({ lines: [], replyTo: null })
     })
 })
 

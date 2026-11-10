@@ -49,3 +49,13 @@ Grammar: như trên.
 Vì sao: mỗi nhánh một dòng, nhánh lượt này đã đi có chip "Đã đi" và dòng "Lượt này đã đi nhánh …" làm dòng phụ; tên nhánh lấy từ chữ của cổng trên sơ đồ.
 Luật: workflow-memory-contracts (cổng "lỗi" và nhánh); ui-laws.md (Language: no raw keys).
 Grammar: `SurfaceCard kind="list" layout="rows"`, `ListRowData.badges`, `D:/starci-lanes/nivo-auth-ux/node_modules/@starci/grammar/dist/core/surfaceCardData.d.ts`.
+
+## Bảng "Gọi AI" dưới sơ đồ (chip số loại; Loại gọi, Lần gọi, Token vào + từ cache, Token ra + suy luận, Thời gian + chậm nhất, Chi phí, Mô hình)
+Vì sao: một dòng cho mỗi loại gọi AI của lượt, để chủ thấy lượt này tốn bao nhiêu và gọi mô hình nào; số căn phải, số phụ (cache, suy luận, chậm nhất) cỡ 12 xám dưới số chính; chi phí đổi sang US$. Cột "Loại gọi" phải là tên tiếng Việt của bước (như "Hiểu ý khách"); dòng "sales.consult-turn:consult" là khoá thô chưa được dịch, ghi là lỗi cần sửa ở phần dịch tên loại gọi của fe.
+Luật: table-heroui-native-section-head (bảng HeroUI gốc, đầu mục = nhãn + chip); type-scale-14-12; ui-laws.md (Language: no raw keys).
+Grammar: `SurfaceCard kind="table"` + `Table` (cột số `align="end"`), `D:/starci-lanes/nivo-auth-ux/node_modules/@starci/grammar/dist/core/surfaceCardData.d.ts`.
+
+## Ở 390 (điện thoại)
+Vì sao: sơ đồ đổi thành danh sách "Các bước" (mỗi bước một dòng: tên, trạng thái, thời gian, mũi tên) vì sơ đồ trái sang phải không đọc được ở bề ngang này; cột phải thành ngăn kéo mở khi bấm một bước; bảng "Gọi AI" cuộn ngang trong thẻ, mặc định thấy 3 cột đầu.
+Luật: flowgraph-card-style (390: kéo và thu phóng); ui-laws.md (Layout B: aside thành ngăn kéo khi hẹp).
+Grammar: `FlowGraph` thay bằng `SurfaceCard kind="list"` ở bề hẹp, `Pane area="aside" collapse="drawer"`.

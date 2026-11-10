@@ -120,6 +120,11 @@ export interface HeldStop {
     readonly leadId: string | null
     /** The conversation of the run, when it has one. */
     readonly conversationId: string | null
+    /**
+     * The conversations the stopped step told a line (the stop's `customerLines`), whatever the run is about: a bank-fed run has no
+     * customer of its own and still told the order's customer "received, checking".
+     */
+    readonly toldConversationIds: ReadonlyArray<string>
     /** When it stopped, ISO text. */
     readonly stoppedAt: string
 }

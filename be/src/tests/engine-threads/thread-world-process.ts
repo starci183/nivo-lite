@@ -134,6 +134,8 @@ export interface ThreadDb extends Outside {
     fence: number
     /** How many turns were made. */
     turns: number
+    /** When true, run ids are uuid-shaped, as on the app: the ledger then keeps each step call's run and step (P5's `placeOf`). */
+    readonly uuidRuns?: boolean
 }
 
 /** What a database starts with. */
@@ -142,6 +144,8 @@ export interface DbOptions {
     readonly leadId?: string | null
     /** The account the conversation came in on. */
     readonly connectionId?: string
+    /** Run ids shaped as the app's (uuid), so the ledger's run + step read (`recordsOf`) sees the step's calls; absent: `run-<n>`. */
+    readonly uuidRuns?: boolean
 }
 
 /** The front desk as blocks-core ships it. */
@@ -197,6 +201,7 @@ export const threadDbOf = (options: DbOptions = {}): ThreadDb => {
         forgetTaskWrites: false,
         fence: 10,
         turns: 0,
+        ...(options.uuidRuns === true ? { uuidRuns: true } : {}),
     }
 }
 
@@ -252,7 +257,7 @@ const graphsOf = (db: ThreadDb): AgentGraphsService => {
 export const openedRun = (db: ThreadDb, input: RunOpen): RunView => {
     const known = [...db.runs.values()].find((run) => run.wakeId === input.wakeId)
     if (known !== undefined) return known
-    const id = `run-${db.runs.size + 1}`
+    const id = db.uuidRuns === true ? `00000000-0000-4000-8000-${String(db.runs.size + 1).padStart(12, "0")}` : `run-${db.runs.size + 1}`
     const view: RunView = {
         id,
         workspaceId: WS,

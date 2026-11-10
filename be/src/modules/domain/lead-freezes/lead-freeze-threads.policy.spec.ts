@@ -25,6 +25,7 @@ const STOP: HeldStop = {
     workflowId: "wf-front-desk",
     leadId: "lead-1",
     conversationId: "c-1",
+    toldConversationIds: [],
     stoppedAt: "2026-11-10T10:00:00.000Z",
 }
 
@@ -52,6 +53,23 @@ describe("lead-freeze-threads.policy: which open stop holds a wake", () => {
         expect(stopIsAbout({ leadId: null, conversationId: "c-1" }, conversation)).toBe(true)
         expect(stopIsAbout({ leadId: "lead-2", conversationId: "c-2" }, { ...lead, conversationId: "c-1" })).toBe(false)
         expect(stopIsAbout({ leadId: null, conversationId: null }, { ...lead, conversationId: "c-1" })).toBe(false)
+    })
+
+    it("D-P11-4: a stop whose step TOLD a conversation is about it and holds its wakes whatever the workflow; a lead-only wake keeps the workflow rule", async () => {
+        const { stopIsAbout, stopHoldsWake } = await buildPolicy()
+        const bankFed = { workflowId: "wf-reconcile", leadId: null, conversationId: null, toldConversationIds: ["c-1"] }
+        const line = { key: "lead:lead-1|wf:wf-front-desk", leadId: "lead-1", conversationId: "c-1" }
+        const timer = { key: "lead:lead-1|wf:wf-care", leadId: "lead-1", conversationId: null }
+
+        expect(stopIsAbout(bankFed, line)).toBe(true)
+        expect(stopIsAbout(bankFed, { ...line, conversationId: "c-2" })).toBe(false)
+        // The customer's next line goes to the front desk, not to the reconcile that stopped: still held.
+        expect(stopHoldsWake(bankFed, "wf-front-desk", line)).toBe(true)
+        expect(stopHoldsWake(bankFed, "wf-care", timer)).toBe(false)
+        expect(stopHoldsWake({ ...bankFed, toldConversationIds: [] }, "wf-front-desk", line)).toBe(false)
+        // The workflow rule stands as before for a stop that told nobody.
+        expect(stopHoldsWake(STOP, "wf-front-desk", timer)).toBe(true)
+        expect(stopHoldsWake(STOP, "wf-consult", line)).toBe(false)
     })
 
     it("picks the oldest open stop, ties broken by the run", async () => {
