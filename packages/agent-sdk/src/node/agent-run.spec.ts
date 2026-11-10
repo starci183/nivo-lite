@@ -212,6 +212,45 @@ describe("context.agent.run", () => {
         })
     })
 
+    it("takes a required call as done when the host refuses it as already done for the same stop: the agent reads the refusal and the step can end", async () => {
+        const refused = { kind: "refused", id: "already_told_for_this_stop", facts: { conversationId: "c-1", line: "Em đang kiểm tra ạ." } }
+        const { ran, json, fake } = run({ model: [PAY, DONE] }, { execute: () => Promise.resolve(refused) })
+
+        await expect(ran).resolves.toMatchObject({ output: { result: "paid" }, effects: [] })
+
+        expect(json.mock.calls[1]?.[1].input).toMatchObject({
+            calls: [
+                {
+                    tool: "payment.order.settle",
+                    ok: false,
+                    refused: { code: "already_told_for_this_stop", data: { conversationId: "c-1" } },
+                },
+            ],
+        })
+        expect(fake.executed).toHaveLength(0)
+    })
+
+    it("takes no other refusal as done, nor a thrown error that only carries that code: the required call stays unmet", async () => {
+        const thrown = Object.assign(new Error("x"), { code: "already_told_for_this_stop", params: {} })
+        const stuck = { confused: { reason: "Không gửi được", question: null } }
+        const other = run(
+            { model: [PAY, DONE, stuck] },
+            { execute: () => Promise.resolve({ kind: "refused", id: "channel_no_access" }) },
+        )
+        const raised = run({ model: [PAY, DONE, stuck] }, { execute: () => Promise.reject(thrown) })
+
+        for (const { ran, json } of [other, raised]) {
+            const cause = await ran.then(
+                () => null,
+                (failure: unknown) => failure,
+            )
+            expect(isNodeConfused(cause)).toBe(true)
+            expect(json.mock.calls[2]?.[1].input).toMatchObject({
+                calls: [{ ok: false }, { done: "refused", refused: { code: "REQUIRED_CALL_MISSING" } }],
+            })
+        }
+    })
+
     it("feeds the facts a tool answers back to the agent, and makes the refused call again under the same key", async () => {
         const answers = [
             { kind: "refused", id: "waits_owner" },
@@ -316,5 +355,137 @@ describe("defineNode requires", () => {
         expect(() =>
             defineNode({ ...settleNode, id: "payment.other", requires: ["order.record"] }),
         ).toThrow("REQUIRES_UNDECLARED")
+    })
+})
+
+describe("context.agent.run on a host that takes the turns itself (`ports.agent`)", () => {
+    const TELL = { call: { tool: "agent-message.post", args: { text: "Đã nhận tiền" } } }
+    const STUCK = { confused: { reason: "Đơn đã đóng", question: "Xử lý khoản dư thế nào?" } }
+
+    /** What a run came to, in a shape two loops can be compared by. */
+    const outcomeOf = async ({ ran, fake }: ReturnType<typeof run>) => ({
+        end: await ran.then(
+            (done) => ({ output: done.output, effects: done.effects }),
+            (thrown: unknown) => (isNodeConfused(thrown) ? { confused: thrown.confusion } : { failed: String(thrown) }),
+        ),
+        executed: fake.executed,
+    })
+
+    it.each([
+        ["calls, then the output", { model: [PAY, TELL, DONE] }],
+        ["an early output refused until the required call succeeded", { model: [DONE, PAY, DONE] }],
+        ["an output that does not fit, then one that does", { model: [PAY, { done: { result: "maybe" } }, DONE] }],
+        ["a tool the step does not declare, then the call", { model: [{ call: { tool: "order.create", args: {} } }, PAY, DONE] }],
+        ["a confusion", { model: [PAY, STUCK] }],
+        ["a refusal that satisfies nothing, then a confusion", { model: [PAY, DONE, STUCK], answers: { "payment.order.settle": [{ kind: "refused", id: "waits_owner" }] } }],
+        ["a send already told for the stop counts as done", { model: [PAY, DONE], answers: { "payment.order.settle": [{ kind: "refused", id: "already_told_for_this_stop" }] } }],
+        ["turns run out", { model: [TELL, TELL, TELL, TELL] }],
+    ] as const)("ends as the runner's own loop does: %s", async (_what, script) => {
+        const own = await outcomeOf(run({ ...script }))
+        const host = await outcomeOf(run({ ...script, agentLoop: true }))
+
+        expect(host).toEqual(own)
+    })
+
+    it("hands the host the step laid out for the cache: craft and policy without the tool set or a turn shape, the step apart, the tools as a list", async () => {
+        const { ran, fake, json } = run({ model: [PAY, DONE], agentLoop: true })
+        await ran
+
+        const [loop] = fake.agentLoops
+        expect(json).not.toHaveBeenCalled()
+        expect(loop?.purpose).toBe("payment.settle:agent")
+        expect(loop?.maxTurns).toBe(4)
+        expect(loop?.instructions).toContain("You act by calling tools")
+        expect(loop?.instructions).not.toContain('{"call"')
+        expect(loop?.instructions).not.toContain('"name":"payment.order.settle"')
+        expect(loop?.step).toContain("Mark the order paid with the bank transaction, then tell the team.")
+        expect(loop?.step).toContain('"required":["payment.order.settle"],"tools":["payment.order.settle","agent-message.post"]}')
+        expect(loop?.tools.map((tool) => tool.name)).toEqual(["agent-message.post", "payment.order.settle"])
+        expect(loop?.tools[1]?.argsSchema).toMatchObject({ type: "object", required: ["orderId", "transactionId"] })
+        expect(loop?.input).toEqual({ input: { orderId: "o-1", transactionId: "tx-1" } })
+        expect(loop?.volatile).toBeUndefined()
+    })
+
+    it("keeps the words of two steps of one agent the same up to the step, and the step the same on every try", async () => {
+        const first = run({ model: [PAY, DONE], agentLoop: true })
+        const again = run({ model: [PAY, STUCK], agentLoop: true })
+        await first.ran
+        await again.ran.catch(() => null)
+
+        expect(again.fake.agentLoops[0]?.instructions).toBe(first.fake.agentLoops[0]?.instructions)
+        expect(again.fake.agentLoops[0]?.step).toBe(first.fake.agentLoops[0]?.step)
+        expect(JSON.stringify(again.fake.agentLoops[0]?.tools)).toBe(JSON.stringify(first.fake.agentLoops[0]?.tools))
+    })
+
+    it("answers each call with the fact the model reads, under the runner's own call key, and refuses arguments that are no object", async () => {
+        const { ran, fake } = run({ model: [{ call: { tool: "payment.order.settle", args: "o-1" } }, PAY, DONE], agentLoop: true })
+        await ran
+
+        expect(fake.agentFacts.map((fact) => fact.answer)).toEqual([
+            { ok: false, refused: expect.objectContaining({ code: "TOOL_ARGS_INVALID" }) },
+            { ok: true, subject: { kind: "payment.order.settle", id: "payment.order.settle-1" } },
+            { ok: true },
+        ])
+        expect(fake.executed.map((one) => one.key)).toEqual([PAY_KEY])
+    })
+
+    it("lets nothing act after the agent has ended, and takes a confusion only with a reason", async () => {
+        const fake = scriptedNodePorts({})
+        const seen: Array<unknown> = []
+        const agent: NonNullable<NodeHostPorts["agent"]> = async (loop) => {
+            seen.push(loop.confused({ reason: "", question: null }))
+            seen.push(await loop.call("payment.order.settle", PAY.call.args))
+            seen.push(loop.done(DONE.done))
+            seen.push(await loop.call("agent-message.post", { text: "late" }))
+            seen.push(loop.done(DONE.done))
+            seen.push(loop.confused({ reason: "late", question: null }))
+            return { turns: 3 }
+        }
+        const ran = await runNode(
+            {
+                node: settleNode,
+                params: {},
+                input: { orderId: "o-1", transactionId: "tx-1" },
+                turn: EXAMPLE_TURN,
+                grant: { rights: [] },
+                effects: new Map([markPaid, tellTeam].map((effect) => [effect.id, effect])),
+                tools: new Map(),
+                key: "run-1:settle",
+            },
+            { ...fake.ports, agent },
+        )
+
+        expect(ran.output).toEqual({ result: "paid", orderId: "o-1" })
+        expect(seen).toEqual([
+            { ok: false, refused: expect.objectContaining({ code: "CONFUSION_INVALID" }) },
+            { ok: true, subject: expect.objectContaining({ kind: "payment.order.settle" }) },
+            { ok: true },
+            { ok: false, refused: expect.objectContaining({ code: "STEP_ENDED" }) },
+            { ok: false, refused: expect.objectContaining({ code: "STEP_ENDED" }) },
+            { ok: false, refused: expect.objectContaining({ code: "STEP_ENDED" }) },
+        ])
+        expect(fake.executed.map((one) => one.id)).toEqual(["payment.order.settle"])
+    })
+
+    it("answers confused when the host returns without an output or a confusion taken", async () => {
+        const fake = scriptedNodePorts({})
+        const cause = await runNode(
+            {
+                node: settleNode,
+                params: {},
+                input: { orderId: "o-1", transactionId: "tx-1" },
+                turn: EXAMPLE_TURN,
+                grant: { rights: [] },
+                effects: new Map([markPaid, tellTeam].map((effect) => [effect.id, effect])),
+                tools: new Map(),
+                key: "run-1:settle",
+            },
+            { ...fake.ports, agent: () => Promise.resolve({ turns: 4 }) },
+        ).then(
+            () => null,
+            (thrown: unknown) => thrown,
+        )
+
+        expect(isNodeConfused(cause) ? cause.confusion.reason : null).toBe("AGENT_TURNS_EXHAUSTED after 4 turns")
     })
 })

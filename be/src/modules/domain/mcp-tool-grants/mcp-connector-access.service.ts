@@ -10,7 +10,7 @@ import type {
     ProviderAttachmentRecord,
     ProviderAttachmentView,
 } from "./mcp-tool-grants.contracts"
-import { McpConnectorAccessEntity } from "./persistence/entities"
+import { McpConnectorAccessEntity, McpDefaultAccountEntity } from "./persistence/entities"
 
 /** The most attachments one read answers. */
 const ACCESS_LIMIT = 500
@@ -32,16 +32,18 @@ const ticksOf = (stored: unknown): AbilityTicks =>
 
 const viewOf = (row: McpConnectorAccessEntity): ProviderAttachmentView => ({
     agentId: row.agentId,
+    connectionId: row.connectionId,
     provider: row.provider,
     abilities: ticksOf(row.abilities),
 })
 
-const pairKey = (agentId: string, provider: string): string => `${agentId}:${provider}`
+const pairKey = (agentId: string, connectionId: string): string => `${agentId}:${connectionId}`
 
 @Injectable()
 /**
- * The attachments of agents to the providers a workspace connected, each with the abilities ticked: the one reader and writer of
- * public.mcp_connector_access, and the one place that right is stored. A row is an attachment; a key of its `abilities` is a tick. What
+ * The attachments of agents to the accounts a workspace connected (one connection each), each with the abilities ticked: the one
+ * reader and writer of public.mcp_connector_access and public.mcp_default_accounts, and the one place that right is stored. A row is
+ * an attachment to one account; a key of its `abilities` is a tick. What
  * an ability is and how a call is judged against a tick are the gateway's catalogue and policy; this capability keeps the rows.
  */
 export class McpConnectorAccessService {
@@ -54,7 +56,7 @@ export class McpConnectorAccessService {
     async listOfAgent(workspaceId: string, agentId: string): Promise<ReadonlyArray<ProviderAttachmentView>> {
         const rows = await this.entityManager.find(McpConnectorAccessEntity, {
             where: { workspaceId, agentId },
-            order: { provider: "ASC" },
+            order: { provider: "ASC", connectionId: "ASC" },
             take: ACCESS_LIMIT,
         })
         return rows.map(viewOf)
@@ -64,7 +66,7 @@ export class McpConnectorAccessService {
     async listOfWorkspace(workspaceId: string): Promise<ReadonlyArray<ProviderAttachmentView>> {
         const rows = await this.entityManager.find(McpConnectorAccessEntity, {
             where: { workspaceId },
-            order: { provider: "ASC", agentId: "ASC" },
+            order: { provider: "ASC", connectionId: "ASC", agentId: "ASC" },
             take: ACCESS_LIMIT,
         })
         return rows.map(viewOf)
@@ -79,12 +81,13 @@ export class McpConnectorAccessService {
         if (owned.length === 0) return "unknown_agent"
         const held = await this.entityManager.findOne(McpConnectorAccessEntity, {
             select: { id: true },
-            where: { workspaceId: record.workspaceId, agentId: record.agentId, provider: record.provider },
+            where: { workspaceId: record.workspaceId, agentId: record.agentId, connectionId: record.connectionId },
         })
         if (held !== null) return "held"
         await this.entityManager.insert(McpConnectorAccessEntity, {
             workspaceId: record.workspaceId,
             agentId: record.agentId,
+            connectionId: record.connectionId,
             provider: record.provider,
             abilities: { ...record.abilities },
             updatedBy,
@@ -93,16 +96,22 @@ export class McpConnectorAccessService {
     }
 
     /** Detaches an agent from a provider: the row and every tick on it go. False when there was none. */
-    async detach(workspaceId: string, agentId: string, provider: string): Promise<boolean> {
-        const removed = await this.entityManager.delete(McpConnectorAccessEntity, { workspaceId, agentId, provider })
+    async detach(workspaceId: string, agentId: string, connectionId: string): Promise<boolean> {
+        const removed = await this.entityManager.delete(McpConnectorAccessEntity, { workspaceId, agentId, connectionId })
         return (removed.affected ?? 0) > 0
+    }
+
+    /** Detaches an agent from every account: an agent that was removed holds no right. Answers how many attachments went. */
+    async detachAgent(workspaceId: string, agentId: string): Promise<number> {
+        const removed = await this.entityManager.delete(McpConnectorAccessEntity, { workspaceId, agentId })
+        return removed.affected ?? 0
     }
 
     /** Ticks an ability in a mode, changes its mode, or unticks it (mode null), on an attachment that exists. */
     async setAbility(change: AbilityTickChange): Promise<TickOutcome> {
         return this.entityManager.transaction(async (tx) => {
             const row = await tx.findOne(McpConnectorAccessEntity, {
-                where: { workspaceId: change.workspaceId, agentId: change.agentId, provider: change.provider },
+                where: { workspaceId: change.workspaceId, agentId: change.agentId, connectionId: change.connectionId },
                 lock: { mode: "pessimistic_write" },
             })
             if (row === null) return "not_attached"
@@ -127,16 +136,16 @@ export class McpConnectorAccessService {
         const wanted = await this.owned(records)
         if (wanted.length === 0) return []
         const existing = await this.entityManager.find(McpConnectorAccessEntity, {
-            select: { agentId: true, provider: true },
+            select: { agentId: true, connectionId: true },
             where: { agentId: In([...new Set(wanted.map((record) => record.agentId))]) },
             take: ACCESS_LIMIT,
         })
-        const held = new Set(existing.map((row) => pairKey(row.agentId, row.provider)))
+        const held = new Set(existing.map((row) => pairKey(row.agentId, row.connectionId)))
         const missing = [
             ...new Map(
                 wanted
-                    .filter((record) => !held.has(pairKey(record.agentId, record.provider)))
-                    .map((record) => [pairKey(record.agentId, record.provider), record]),
+                    .filter((record) => !held.has(pairKey(record.agentId, record.connectionId)))
+                    .map((record) => [pairKey(record.agentId, record.connectionId), record]),
             ).values(),
         ]
         if (missing.length === 0) return []
@@ -145,12 +154,31 @@ export class McpConnectorAccessService {
             missing.map((record) => ({
                 workspaceId: record.workspaceId,
                 agentId: record.agentId,
+                connectionId: record.connectionId,
                 provider: record.provider,
                 abilities: { ...record.abilities },
                 updatedBy,
             })),
         )
         return missing
+    }
+
+    /** The connection a workspace named as its default account of a kind, or null when it named none. */
+    async defaultAccountOf(workspaceId: string, kind: string): Promise<string | null> {
+        const row = await this.entityManager.findOne(McpDefaultAccountEntity, {
+            select: { connectionId: true },
+            where: { workspaceId, kind },
+        })
+        return row?.connectionId ?? null
+    }
+
+    /** Names the workspace's default account of a kind: one per workspace and kind, the newer choice replacing the older. */
+    async setDefaultAccount(workspaceId: string, kind: string, connectionId: string, updatedBy: string): Promise<void> {
+        await this.entityManager.upsert(
+            McpDefaultAccountEntity,
+            { workspaceId, kind, connectionId, updatedBy },
+            ["workspaceId", "kind"],
+        )
     }
 
     /** The records whose agent belongs to the record's own workspace. */

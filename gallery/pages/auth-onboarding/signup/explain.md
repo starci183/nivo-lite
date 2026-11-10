@@ -37,9 +37,9 @@ Vì sao: SAI — a marketing sentence parked under the card as `note`; a subtitl
 Luật: `surfacecard-select-subtitle.md`.
 Grammar: `SurfaceCard note`; fix in `components/frames/AuthPanel/index.tsx`.
 
-## Chân trang pháp lý
-Vì sao: SAI — same legal bar as login; on 390 the links wrap and the arrow detaches; each link must stay on one line.
-Luật: `page-header-left-sublabel-xs.md`.
+## Chân trang pháp lý ("Chính sách quyền riêng tư", "Điều khoản sử dụng")
+Vì sao: one centred bar of two standalone secondary links in the foreground colour (red is kept for the one CTA); since Grammar 0.37.14 internal links carry no arrow, so each link stays on one line at 390.
+Luật: `red-budget-links-foreground`, `page-header-left-sublabel-xs.md`.
 Grammar: `NavLandmark layout="bar"`, `node_modules/@starci/grammar/dist/core/frame/NavLandmark/index.d.ts`.
 
 ## Bố cục điện thoại 390

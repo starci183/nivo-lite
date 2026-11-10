@@ -15,7 +15,7 @@ import { useTelegramUserWizard } from "@/hooks/telegram-user-wizard"
 interface TelegramUserWizardProps {
     /** The actual workspace reads shared with this selected wizard. */
     readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
-    /** Workspace agents (any module): every agent may be given read access to a data source. */
+    /** Workspace agents (any module): every agent may be bound to a data source. */
     readonly agents: ReadonlyArray<AgentOption>
     /** Continue or edit this existing connection instead of creating a new one. */
     readonly resumeId?: string

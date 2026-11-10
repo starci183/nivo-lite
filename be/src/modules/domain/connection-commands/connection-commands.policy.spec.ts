@@ -67,7 +67,7 @@ const routes: ReadonlyArray<Route> = [
     {
         kind: "grant.set",
         input: { connectionId: CONNECTION, agentId: AGENT, access: "read" },
-        args: [actor, CONNECTION, AGENT, "read"],
+        args: [actor, CONNECTION, AGENT, true],
         call: (s) => s.grants.setGrant,
     },
     {
@@ -76,7 +76,7 @@ const routes: ReadonlyArray<Route> = [
             connectionId: CONNECTION,
             agents: [AGENT, { agentId: OTHER }, { agentId: AGENT, access: "auto" }],
         },
-        args: [actor, CONNECTION, [{ agentId: AGENT }, { agentId: OTHER }, { agentId: AGENT, access: "auto" }]],
+        args: [actor, CONNECTION, [{ agentId: AGENT }, { agentId: OTHER }, { agentId: AGENT }]],
         call: (s) => s.grants.setConnectionAgents,
     },
     {
@@ -88,7 +88,7 @@ const routes: ReadonlyArray<Route> = [
         args: [
             actor,
             AGENT,
-            [{ connectionId: CONNECTION }, { connectionId: OTHER }, { connectionId: CONNECTION, access: "ask" }],
+            [{ connectionId: CONNECTION }, { connectionId: OTHER }, { connectionId: CONNECTION }],
         ],
         call: (s) => s.grants.setAgentConnections,
     },
@@ -351,14 +351,19 @@ describe("connection commands policy", () => {
 })
 
 describe("connection commands policy access and optional fields", () => {
-    it.each(["read", "ask", "auto", null])("passes the grant level %p unchanged", async (access) => {
+    it.each([
+        ["read", true],
+        ["ask", true],
+        ["auto", true],
+        [null, false],
+    ] as const)("binds for the level %p (the level itself is ignored: rights live in attachments)", async (access, bound) => {
         const subject = await buildSubject()
 
         const services = build()
 
         await subject.runCommand(services, actor, "grant.set", { connectionId: CONNECTION, agentId: AGENT, access })
 
-        expect(services.grants.setGrant).toHaveBeenCalledWith(actor, CONNECTION, AGENT, access)
+        expect(services.grants.setGrant).toHaveBeenCalledWith(actor, CONNECTION, AGENT, bound)
     })
 
     it.each([undefined, "owner", "READ", 1, {}, []])("refuses the grant level %p", async (access) => {
@@ -429,7 +434,7 @@ describe("connection commands policy", () => {
                 list.map(() => ({ [idKey]: id })),
             )
         })
-        it("keeps all optional levels and leaves undefined access absent", async () => {
+        it("checks and drops the levels a client still sends: every wish is a binding", async () => {
             const subject = await buildSubject()
             const services = build()
             const list = [
@@ -442,12 +447,7 @@ describe("connection commands policy", () => {
             expect(routeFor(kind).call(services)).toHaveBeenCalledWith(
                 actor,
                 listKey === "agents" ? CONNECTION : AGENT,
-                [
-                    { [idKey]: id },
-                    { [idKey]: id, access: "read" },
-                    { [idKey]: id, access: "ask" },
-                    { [idKey]: id, access: "auto" },
-                ],
+                [{ [idKey]: id }, { [idKey]: id }, { [idKey]: id }, { [idKey]: id }],
             )
         })
     })

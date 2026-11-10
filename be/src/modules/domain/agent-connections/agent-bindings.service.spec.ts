@@ -1,10 +1,8 @@
 import { Test } from "@nestjs/testing"
 import {
-    askLink,
     inboundLinks,
     linkOf,
     outboundLinks,
-    readOnlyOutboundLink,
     toolLink,
     twoAgentLinks,
 } from "@tests/fixtures/builders/agent-connections.builder"
@@ -104,7 +102,7 @@ describe("AgentBindingsService > agentsFor", () => {
         const em = mockEntityManager({ find: [AgentConnectionEntity, []] })
         const { service, agents } = await build(em)
 
-        await expect(service.agentsFor("c1", "inbound_chat", { acting: true })).resolves.toEqual([])
+        await expect(service.agentsFor("c1", "inbound_chat", {})).resolves.toEqual([])
         expect(agents.activeCreatedAmong).not.toHaveBeenCalled()
     })
 
@@ -120,7 +118,7 @@ describe("AgentBindingsService > agentsFor", () => {
 
 describe("AgentBindingsService > connectionsFor", () => {
     it("includes pending read grants with the default options and names the bot", async () => {
-        const link = readOnlyOutboundLink()
+        const link = linkOf({ connectionId: "c1", purpose: "outbound_chat" })
         const em = mockEntityManager({ find: [AgentConnectionEntity, [link]] })
         const { service } = await build(em, { connections: [connectionOf("c1", "pending", 1, "shop_bot")] })
 
@@ -132,7 +130,6 @@ describe("AgentBindingsService > connectionsFor", () => {
                 botUsername: "shop_bot",
                 accountMasked: null,
                 status: "pending",
-                access: "read",
                 purpose: "outbound_chat",
             },
         ])
@@ -224,7 +221,6 @@ const GRANT = {
     agentId: "a1",
     connectionId: "c1",
     purpose: "inbound_chat" as const,
-    access: "ask" as const,
 }
 
 describe("AgentBindingsService > grant", () => {
@@ -241,11 +237,11 @@ describe("AgentBindingsService > grant", () => {
         expect(connections.holds).toHaveBeenCalledWith("w1", "c1", expect.anything())
         expect(em.createQueryBuilder).toHaveBeenCalledWith(AgentConnectionEntity, "ac")
         expect(write?.callsOf("values")).toEqual([
-            [{ agentId: "a1", connectionId: "c1", workspaceId: "w1", purpose: "inbound_chat", access: "ask" }],
+            [{ agentId: "a1", connectionId: "c1", workspaceId: "w1", purpose: "inbound_chat" }],
         ])
         expect(write?.callsOf("orUpdate")).toEqual([
             [
-                ["purpose", "access"],
+                ["purpose"],
                 ["agent_id", "connection_id"],
             ],
         ])
@@ -278,8 +274,8 @@ describe("AgentBindingsService > grant", () => {
 })
 
 describe("AgentBindingsService > writeGrant", () => {
-    const grant = { ...GRANT, purpose: "tool" as const, access: "auto" as const }
-    const values = [{ agentId: "a1", connectionId: "c1", workspaceId: "w1", purpose: "tool", access: "auto" }]
+    const grant = { ...GRANT, purpose: "tool" as const }
+    const values = [{ agentId: "a1", connectionId: "c1", workspaceId: "w1", purpose: "tool" }]
 
     it("writes the proved grant with the primary manager by default", async () => {
         const em = mockEntityManager()
@@ -359,7 +355,7 @@ describe("AgentBindingsService > agentIdsOf", () => {
 })
 
 describe("AgentBindingsService > stored grants", () => {
-    const READ = { select: { agentId: true, connectionId: true, access: true }, order: { createdAt: "ASC" }, take: 500 }
+    const READ = { select: { agentId: true, connectionId: true }, order: { createdAt: "ASC" }, take: 500 }
 
     it.each([
         {
@@ -378,10 +374,10 @@ describe("AgentBindingsService > stored grants", () => {
             where: { workspaceId: "w1", connectionId: "c1" },
         },
     ])("lists the grants of $name, oldest first, bounded", async ({ ask, where }) => {
-        const em = mockEntityManager({ find: [AgentConnectionEntity, [askLink()]] })
+        const em = mockEntityManager({ find: [AgentConnectionEntity, [linkOf()]] })
         const { service } = await build(em)
 
-        await expect(ask(service)).resolves.toEqual([{ agentId: "a1", connectionId: "c1", access: "ask" }])
+        await expect(ask(service)).resolves.toEqual([{ agentId: "a1", connectionId: "c1" }])
         expect(em.find).toHaveBeenCalledWith(AgentConnectionEntity, { ...READ, where })
     })
 
@@ -401,9 +397,9 @@ describe("AgentBindingsService > stored grants", () => {
 describe("AgentBindingsService > connectionsOfAgents", () => {
     it("lists the grants of several agents in one read, one entry per grant, in the order of the agents", async () => {
         const links = [
-            linkOf({ agentId: "a2", connectionId: "c1", purpose: "data_source", access: "read" }),
+            linkOf({ agentId: "a2", connectionId: "c1", purpose: "data_source" }),
             linkOf({ agentId: "a1", connectionId: "c1", purpose: "bank_feed" }),
-            linkOf({ agentId: "a1", connectionId: "c2", purpose: "tool", access: "ask" }),
+            linkOf({ agentId: "a1", connectionId: "c2", purpose: "tool" }),
         ]
         const em = mockEntityManager({ find: [AgentConnectionEntity, links] })
         const { service, members, connections } = await build(em, {
@@ -435,10 +431,10 @@ describe("AgentBindingsService > connectionsOfAgents", () => {
 describe("AgentBindingsService > grantsWithAgents", () => {
     it("lists every grant of the workspace beside its active agent, oldest grant first, in two reads", async () => {
         const links = [
-            linkOf({ agentId: "a1", connectionId: "c1", purpose: "bank_feed", access: "auto" }),
-            linkOf({ agentId: "a2", connectionId: "c1", purpose: "data_source", access: "read" }),
-            linkOf({ agentId: "a1", connectionId: "c2", purpose: "tool", access: "ask" }),
-            linkOf({ agentId: "a3", connectionId: "c2", purpose: "tool", access: "ask" }),
+            linkOf({ agentId: "a1", connectionId: "c1", purpose: "bank_feed" }),
+            linkOf({ agentId: "a2", connectionId: "c1", purpose: "data_source" }),
+            linkOf({ agentId: "a1", connectionId: "c2", purpose: "tool" }),
+            linkOf({ agentId: "a3", connectionId: "c2", purpose: "tool" }),
         ]
         const em = mockEntityManager({ find: [AgentConnectionEntity, links] })
         const { service, members, agents } = await build(em, {
@@ -448,10 +444,10 @@ describe("AgentBindingsService > grantsWithAgents", () => {
         const grants = await service.grantsWithAgents("u1", "w1")
 
         expect(members.require).toHaveBeenCalledWith("u1", "w1")
-        expect(grants.map((grant) => [grant.connectionId, grant.agentName, grant.purpose, grant.access])).toEqual([
-            ["c1", "Ke toan", "bank_feed", "auto"],
-            ["c1", "Tro ly", "data_source", "read"],
-            ["c2", "Ke toan", "tool", "ask"],
+        expect(grants.map((grant) => [grant.connectionId, grant.agentName, grant.purpose])).toEqual([
+            ["c1", "Ke toan", "bank_feed"],
+            ["c1", "Tro ly", "data_source"],
+            ["c2", "Ke toan", "tool"],
         ])
         expect(em.find).toHaveBeenCalledTimes(1)
         expect(agents.activeCreatedAmong).toHaveBeenCalledTimes(1)

@@ -187,8 +187,9 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
     }
 
     /**
-     * What the send may do on the conversation's channel: the CALLING agent's "send to customer" ability on the provider of that
-     * channel, whoever's conversation it is (a hand-off lends the right to speak there, not the ability). The website chat goes
+     * What the send may do on the conversation's channel: the CALLING agent's "send to customer" ability on the very account the
+     * conversation came in on (its connection: with two Zalo OAs, being attached to the other one is not enough), whoever's
+     * conversation it is (a hand-off lends the right to speak there, not the ability). The website chat goes
      * through no provider and is no provider right.
      */
     private async rightOf(turn: NodeTurn, conversation: ChatTurnConversation): Promise<SendRight> {
@@ -196,7 +197,10 @@ export class ChannelSendExecutorService implements NodeEffectExecutor, OnModuleI
         const verdict =
             provider === null || this.abilities === undefined
                 ? null
-                : await this.abilities.judge(conversation.workspaceId, turn.agentId, this.effect, false, provider)
+                : await this.abilities.judge(conversation.workspaceId, turn.agentId, this.effect, false, {
+                      provider,
+                      ...(conversation.connectionId === null ? {} : { connectionId: conversation.connectionId }),
+                  })
         return sendRightOf(verdict, conversation.agent.approvalRule)
     }
 

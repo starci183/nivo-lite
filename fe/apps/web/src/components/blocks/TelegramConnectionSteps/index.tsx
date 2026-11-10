@@ -45,7 +45,7 @@ export const TelegramConnectionSteps = (props: TelegramConnectionStepsProps) => 
                 toggle,
                 retryWebhook: reload,
                 retryChecks: reload,
-                pickGrant: grants.on.pick,
+                removeGrant: grants.on.remove,
                 assignGrant: grants.on.assign,
                 retryGrants: grants.on.retry,
             }}

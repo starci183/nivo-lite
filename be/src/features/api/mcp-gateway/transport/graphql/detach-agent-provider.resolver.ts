@@ -22,7 +22,7 @@ export class DetachAgentProviderResolver {
     ): Promise<boolean> {
         await this.commandBus.execute(
             new DetachAgentProviderCommand({
-                request: { workspaceId, agentId: input.agentId, provider: input.provider },
+                request: { workspaceId, agentId: input.agentId, connectionId: input.connectionId },
                 principal,
             }),
         )

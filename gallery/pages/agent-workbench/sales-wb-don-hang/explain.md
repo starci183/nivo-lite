@@ -19,7 +19,7 @@ Luật: `pink-page-surface-rule`, `nivo-surface-layering`.
 Grammar: `Pane` content="cards", `PaneGrid`; `node_modules/@starci/grammar/dist/core/frame/PaneGrid/index.d.ts`.
 
 ## Card bảng "Đơn hàng"
-Một SurfaceCard: tiêu đề + chip đếm ngay sau nhãn, ô tìm, tab lọc có chip đếm, bảng, phân trang. Tab lọc Tất cả, Nháp, Đã xác nhận, Đã xuất hóa đơn, Đã thanh toán, Đã hủy, Lỗi hệ thống; chip đếm xám vì chưa trạng thái nào là việc chờ chủ; ô Tổng trống hiện "—" (đơn nháp chưa có tổng).
+Một SurfaceCard: tiêu đề + chip đếm ngay sau nhãn, ô tìm, tab lọc có chip đếm, bảng, phân trang. Tab lọc Tất cả, Nháp, Đã xác nhận, Đã xuất hóa đơn, Đã thanh toán, Đã hủy, Lỗi hệ thống; chip đếm xám vì chưa trạng thái nào là việc chờ chủ; ô Tổng trống hiện "—" (đơn nháp chưa có tổng). Mã đơn, Tổng, Trạng thái, Ngày là fit; Món là cột fill, cắt bằng dấu ba chấm. CẢNH BÁO nhỏ: cột Khách là px cố định 200 (spec `sales.workbench.json` trong blocks-core, không thuộc fe) nên chừa khoảng trống thừa giữa Khách và Món khi tên ngắn; theo luật 0.37.9 nên là fit hoặc fill. Cột ngắn là fit + một dòng, không xuống dòng; chỉ cột fill cắt bằng dấu ba chấm. Bảng là thẻ trắng kiểu danh sách (Grammar 0.37.8+: không khung xám). Đã soi 1440/1920/390 với Grammar 0.37.17. Lỗi còn mở ở 390 (Grammar, đầu mục có nhãn + chip đếm): chip rơi xuống dòng dưới và nhãn bị cắt nửa trên (xem 390.png).
 
 Vì sao: Cùng một tập dữ liệu (tìm + lọc + bảng + phân trang) là MỘT card; mỗi vùng header là một hàng riêng ngăn bằng divider do shell vẽ. Dưới 768 cột phụ gập vào dòng.
 

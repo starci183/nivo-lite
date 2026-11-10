@@ -15,4 +15,5 @@ export const toAgentConnectionCandidatesRequest = (
 /** Maps the grantable connections to the GraphQL type. */
 export const toAgentConnectionCandidatesType = (
     candidates: ReadonlyArray<ConnectionCandidate>,
-): Array<AgentConnectionCandidateType> => candidates.map((candidate) => ({ ...candidate }))
+): Array<AgentConnectionCandidateType> =>
+    candidates.map((candidate) => ({ ...candidate, access: candidate.bound ? "auto" : null }))

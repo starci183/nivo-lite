@@ -23,13 +23,12 @@ const accountLabelOf = (grant: Grant): string => {
 /** The most provider logos a row shows before the rest fold into "+N". */
 const LOGO_LIMIT = 3
 
-/** One granted connection: its provider mark, the account and the access level. */
-const grantChipOf = (grant: Grant, index: number, t: CatalogCopy): CatalogGrantChip => ({
+/** One bound connection: its provider mark and the account. */
+const grantChipOf = (grant: Grant, index: number): CatalogGrantChip => ({
     id: `${grant.connectionId}-${grant.purpose}-${String(index)}`,
     logo: isProvider(grant.provider) ? (PROVIDER_LOGO[grant.provider] ?? null) : null,
     label: accountLabelOf(grant),
     brand: isProvider(grant.provider) ? PROVIDERS[grant.provider].brand : grant.name,
-    level: t(grant.access === "auto" || grant.access === "ask" ? `access_${grant.access}` : "access_read"),
 })
 
 /** The knowledge line, the note of a customer facing agent and the count of facts waiting. */
@@ -69,9 +68,9 @@ export const catalogRowOf = (
     counts: AgentCounts | undefined,
     canAdd: boolean,
 ): AgentCatalogRow => {
-    const grants = (agent.catalog?.grants ?? []).map((grant, index) => grantChipOf(grant, index, t))
+    const grants = (agent.catalog?.grants ?? []).map((grant, index) => grantChipOf(grant, index))
     /** A connection the agent has whose provider is not connected (an error, pending or disconnected): it cannot act through it. */
-    const missingLabels = [...new Set((agent.catalog?.grants ?? []).filter((grant) => grant.status !== "connected").map((grant) => grantChipOf(grant, 0, t).brand))].map((brand) => t("cardMissing", { brand }))
+    const missingLabels = [...new Set((agent.catalog?.grants ?? []).filter((grant) => grant.status !== "connected").map((grant) => grantChipOf(grant, 0).brand))].map((brand) => t("cardMissing", { brand }))
     const needsConnection = MODULE_REGISTRY[agent.moduleKey].connectionProviders.length > 0
     const subtitle = agent.handle === "" ? agent.roleName : `@${agent.handle}`
     return {

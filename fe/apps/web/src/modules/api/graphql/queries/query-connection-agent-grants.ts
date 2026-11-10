@@ -10,7 +10,6 @@ type QueryConnectionAgentGrantsResponse = ConnectionAgentGrantsQuery
 const query1: TypedDocumentNode<QueryConnectionAgentGrantsResponse> = gql`
     query ConnectionAgentGrants {
         connectionAgentGrants {
-            access
             agentId
             agentName
             connectionId
@@ -31,7 +30,7 @@ const queryMap: Record<QueryConnectionAgentGrants, TypedDocumentNode<QueryConnec
 /** Apollo params for {@link queryConnectionAgentGrants}. */
 type QueryConnectionAgentGrantsParams = QueryParams<QueryConnectionAgentGrants>
 
-/** Every grant of the workspace beside its agent: which agent uses which connection, for what, at which level. */
+/** Every grant of the workspace beside its agent: which agent is bound to which connection, and for what. */
 export const queryConnectionAgentGrants = async ({
     query = QueryConnectionAgentGrants.Query1,
     signal,

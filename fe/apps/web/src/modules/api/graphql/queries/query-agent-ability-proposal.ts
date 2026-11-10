@@ -13,7 +13,16 @@ type Document = TypedDocumentNode<QueryAgentAbilityProposalResponse, InputVariab
 
 const query1: Document = gql`
     query AgentAbilityProposal($input: AgentAbilityProposalInput!) {
-        agentAbilityProposal(input: $input) { provider abilities { id mode } }
+        agentAbilityProposal(input: $input) {
+            provider
+            connectionId
+            accountLabel
+            connected
+            abilities {
+                id
+                mode
+            }
+        }
     }
 `
 
@@ -25,9 +34,12 @@ const queryMap: Record<QueryAgentAbilityProposalDocument, Document> = {
     [QueryAgentAbilityProposalDocument.Query1]: query1,
 }
 
-type QueryAgentAbilityProposalParams = QueryParams<QueryAgentAbilityProposalDocument, QueryAgentAbilityProposalRequest> & { request: QueryAgentAbilityProposalRequest }
+type QueryAgentAbilityProposalParams = QueryParams<
+    QueryAgentAbilityProposalDocument,
+    QueryAgentAbilityProposalRequest
+> & { request: QueryAgentAbilityProposalRequest }
 
-/** The connected providers a template names, with the abilities it ticks (the create dialog pre-ticks them). Rejects with the back end failure. */
+/** One line per connected account of the providers a template names, with the abilities it pre-ticks, and a line per named provider not connected. Rejects with the back end failure. */
 export const queryAgentAbilityProposal = async ({
     query = QueryAgentAbilityProposalDocument.Query1,
     request,

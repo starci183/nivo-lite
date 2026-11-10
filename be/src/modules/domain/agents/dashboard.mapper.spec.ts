@@ -1,13 +1,11 @@
 import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
-import type { BoundConnectionView as BoundConnection } from "./agents.port"
 import type { LensCounts } from "./agents.contracts"
 import type { Installation } from "./agents.port"
 import {
     agentIdOf,
     agentOf,
     clip,
-    connectionItemsOf,
     decisionHrefOf,
     itemOf,
     knowledgeOf,
@@ -20,7 +18,6 @@ type Subject = {
     decisionHrefOf: typeof decisionHrefOf
     itemOf: typeof itemOf
     totalOf: typeof totalOf
-    connectionItemsOf: typeof connectionItemsOf
     knowledgeOf: typeof knowledgeOf
     agentIdOf: typeof agentIdOf
     agentOf: typeof agentOf
@@ -37,17 +34,6 @@ const rowOf = builder<DashboardLine>({
     total: "7",
 })
 
-const connectionOf = builder<BoundConnection>({
-    id: "c1",
-    provider: "telegram",
-    name: "Shop bot",
-    status: "connected",
-    access: "auto",
-    purpose: "inbound_chat",
-    botUsername: "shop_bot",
-    accountMasked: null,
-})
-
 const COUNTS: LensCounts = {
     audience: "customer",
     documents: { public: 2, internal: 1 },
@@ -61,7 +47,7 @@ const buildSubject = async () => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: { clip, decisionHrefOf, itemOf, totalOf, connectionItemsOf, knowledgeOf, agentIdOf, agentOf },
+                useValue: { clip, decisionHrefOf, itemOf, totalOf, knowledgeOf, agentIdOf, agentOf },
             },
         ],
     }).compile()
@@ -114,29 +100,6 @@ describe("dashboard mapper", () => {
 
         expect(subject.totalOf([rowOf()])).toBe(7)
         expect(subject.totalOf([])).toBe(0)
-    })
-
-    it("lists each connection once with a plain status", async () => {
-        const subject = await buildSubject()
-
-        const items = subject.connectionItemsOf([
-            connectionOf(),
-            connectionOf(),
-            connectionOf({ id: "c2", status: "error" }),
-            connectionOf({ id: "c3", status: "pending" }),
-        ])
-
-        expect(items.map((item) => `${item.id}:${item.status}`)).toEqual(["c1:connected", "c2:error", "c3:pending"])
-        expect(items[0]).toEqual({
-            id: "c1",
-            name: "Shop bot",
-            provider: "telegram",
-            botUsername: "shop_bot",
-            accountMasked: null,
-            status: "connected",
-            access: "auto",
-            purpose: "inbound_chat",
-        })
     })
 })
 

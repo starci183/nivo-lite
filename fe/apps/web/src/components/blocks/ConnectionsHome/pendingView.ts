@@ -1,25 +1,26 @@
 import type { useFormatter, useTranslations } from "next-intl"
-import { providerLogoOf, providerNameOf, type useProviderTemplateCandidates } from "@/hooks/providerRights"
+import { accountTitleOf, pickLabel, providerLogoOf, type useProviderTemplateCandidates } from "@/hooks/providerRights"
 import type { PendingAttachmentView } from "./types"
 
-/** The pending providers as the rows of "needs you" draw them, every word resolved (the agents joined by the reader's language). */
+/** The pending accounts as the rows of "needs you" draw them, every word resolved (the agents joined by the reader's language). */
 export const pendingViewsOf = (
     t: ReturnType<typeof useTranslations<"agentRights">>,
     format: ReturnType<typeof useFormatter>,
+    locale: string,
     rows: ReturnType<typeof useProviderTemplateCandidates>["rows"],
 ): ReadonlyArray<PendingAttachmentView> =>
     rows.map((row) => {
-        const provider = providerNameOf(row.provider)
+        const provider = pickLabel(row.provider.label, locale)
         const agents = format.list(
             row.candidates.map((candidate) => candidate.agentName),
             { type: "conjunction" },
         )
         return {
-            id: row.provider,
-            title: t("pendingTitle", { provider, agents }),
-            body: t("pendingBody", { provider }),
+            id: row.account.connectionId,
+            title: t("pendingTitle", { account: accountTitleOf(provider, row.account.accountLabel), agents }),
+            body: t("pendingBody"),
             name: provider,
-            logo: providerLogoOf(row.provider),
+            logo: providerLogoOf(row.provider.provider),
             laterLabel: t("pendingLater"),
             attachLabel: t("pendingAttach"),
         }

@@ -36,6 +36,21 @@ describe("parseBegin", () => {
         expect(parseBegin({ result }, "agent-1", "agent")).toEqual({ result, ended: [] })
     })
 
+    it("reads the wait an idle answer tells: how long is left and the wake it is for; a plain idle when either is missing or malformed", async () => {
+        const { parseBegin } = await buildSubject()
+
+        expect(parseBegin({ result: "idle", ended: [], waitMs: 1099.2, waitFor: "wake-9" }, "agent-1", "conversation:c")).toEqual({
+            result: "idle",
+            ended: [],
+            wait: { ms: 1100, wakeId: "wake-9" },
+        })
+        for (const answer of [{ waitMs: 1100 }, { waitFor: "wake-9" }, { waitMs: 0, waitFor: "wake-9" }, { waitMs: "1100", waitFor: "wake-9" }]) {
+            expect(parseBegin({ result: "idle", ...answer }, "agent-1", "conversation:c")).toEqual({ result: "idle", ended: [] })
+        }
+        // Only an idle scope waits: the fields mean nothing on another answer.
+        expect(parseBegin({ result: "busy", waitMs: 1100, waitFor: "wake-9" }, "agent-1", "conversation:c")).toEqual({ result: "busy", ended: [] })
+    })
+
     it("reads a begun turn for the agent and scope it was asked about", async () => {
         const { parseBegin } = await buildSubject()
         expect(parseBegin(begun(), "agent-1", "agent")).toEqual({

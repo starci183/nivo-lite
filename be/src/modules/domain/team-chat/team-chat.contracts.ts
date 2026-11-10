@@ -1,5 +1,6 @@
 import type { TeamChatErrorCode } from "./errors/team-chat.error"
 import type { ReactionView, ReplyView } from "./team-chat-reaction.contracts"
+import type { StopCardView } from "./stop-card.contracts"
 
 /** The most characters a person's message holds; a longer body is refused so one message cannot swell a thread page. */
 export const BODY_MAX = 8000
@@ -143,6 +144,8 @@ export interface MessageView {
     readonly replyTo: ReplyView | null
     /** Whose words a forwarded message carries (empty when the author is unknown); null when the message was not forwarded. */
     readonly forwardedFrom: string | null
+    /** The typed stop a `workflow.stopped` card is about (its state, needs and the founder's replies); null for any other line. */
+    readonly stop: StopCardView | null
 }
 
 /** One room as a screen shows it, for one viewer. */

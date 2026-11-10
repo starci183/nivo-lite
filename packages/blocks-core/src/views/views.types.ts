@@ -26,39 +26,35 @@ export interface ItemsRegionView {
     readonly more: string | null
 }
 
-/** One connection bound to an agent. */
+/** One provider attached to an agent, read only: what the agent may do through it. */
 export interface ConnectionRow {
-    /** The key the list draws the connection under. */
+    /** The key the list draws the row under: the connection id of the attached account. */
     readonly id: string
-    /** The name of the provider the agent acts through. */
+    /** The provider and the account, in the viewer's words ("SePay · MB •••• 5252"). */
     readonly name: string
-    /** What the connection lets the agent do, in a line. */
+    /** The abilities the agent holds on it, with the mode of each ("Đọc giao dịch · Tạo QR (Hỏi)"), or the words that it holds none. */
     readonly description: string
-    /** The words of its state, for instance "Connected". */
-    readonly statusLabel: string
-    /** The colour family of the state badge. */
-    readonly statusTone: BadgeTone
-    /** The words of what the agent may do through it, for instance "Read only". */
-    readonly accessLabel: string
-    /** The provider the connection is with (`sepay`, `google`), which picks its mark; absent draws none. */
-    readonly provider?: string | undefined
-    /** What the agent may do through it as the raw level (`read`, `ask`, `auto`); absent for an account that is not granted. */
+    /** The provider key (`sepay`, `zalo_oa`), which picks its mark. */
+    readonly provider: string
+    /** The highest level the agent holds on it as a raw value (`read`, `ask`, `auto`); absent when it holds no ability. */
     readonly access?: string | undefined
-    /** The masked bank account, when the connection is a bank feed. */
+    /** The masked account of the connection, when it has one (a bank feed). */
     readonly accountMasked?: string | undefined
-    /** False for an account of the same kind the agent has not been granted: the row offers `actionLabel` in place of the badges. */
-    readonly isGranted?: boolean | undefined
-    /** The words of the command that grants the account; set with `isGranted` false. */
-    readonly actionLabel?: string | undefined
+    /** The account's own label ("MB •••• 5252", the OA name, the sheet name). */
+    readonly account?: string | undefined
+    /** Whether this is the shop's default receiving account (every agent's QR draws on it); data only, the aside draws no marker. */
+    readonly isDefaultReceiving?: boolean | undefined
 }
 
-/** What the connections region shows once read. */
+/** What the connections region shows once read: the accounts attached to the agent, one row each, and the link to its rights. */
 export interface ConnectionsRegionView {
-    /** The words of the link to the page where connections are managed. */
-    readonly manageLabel: string
-    /** Where the manage link goes. */
-    readonly manageHref: string
-    /** The connections bound to the agent. */
+    /** The heading of the region, in the viewer's words ("Tài khoản đã gắn"); empty keeps the block's own label. */
+    readonly label: string
+    /** The words of the one link of the region, to the agent's rights ("Quyền"). */
+    readonly rightsLabel: string
+    /** Where that link goes: the agent's connections route. */
+    readonly rightsHref: string
+    /** The accounts attached to the agent. */
     readonly rows: ReadonlyArray<ConnectionRow>
 }
 

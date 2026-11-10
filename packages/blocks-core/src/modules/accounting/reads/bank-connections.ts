@@ -1,10 +1,10 @@
 import type { BankConnection } from "../../../rules/accounting/recent"
 import type { ConnectionRow } from "../../../views/views.types"
 
-/** The connections of the agent a bank payment can come through: the ones it is granted, with a provider and a level. */
+/** The providers attached to the agent a bank payment can come through: the ones it holds an ability on, with its level. */
 export const bankConnectionsOf = (rows: ReadonlyArray<ConnectionRow>): ReadonlyArray<BankConnection> =>
     rows.flatMap((row) =>
-        row.isGranted === false || row.provider === undefined || row.access === undefined
+        row.access === undefined
             ? []
             : [
                   {

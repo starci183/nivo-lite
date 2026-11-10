@@ -26,7 +26,7 @@ export class AttachAgentProviderResolver {
                 request: {
                     workspaceId,
                     agentId: input.agentId,
-                    wish: { provider: input.provider, abilities: toAbilityWishes(input.abilities) },
+                    wish: { connectionId: input.connectionId, abilities: toAbilityWishes(input.abilities) },
                 },
                 principal,
             }),

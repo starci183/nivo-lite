@@ -1,4 +1,4 @@
-import type { Access, Purpose } from "@modules/domain/agent-connections"
+import type { Purpose } from "@modules/domain/agent-connections"
 import type { Locale } from "@modules/platform/i18n"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 
@@ -35,10 +35,10 @@ export interface CreateAgentInstanceRequest {
     readonly providerRights?: ReadonlyArray<AgentProviderRight> | null | undefined
 }
 
-/** One provider a new agent is attached to, with the abilities wanted. */
+/** One connected account a new agent is attached to, with the abilities wanted. */
 export interface AgentProviderRight {
-    /** The provider. */
-    readonly provider: string
+    /** The connected account (the connection id). */
+    readonly connectionId: string
     /** The abilities wanted, by id: `off`, `auto` or `ask`; an ability left out is off. */
     readonly abilities: Readonly<Record<string, string>>
 }
@@ -124,8 +124,6 @@ export interface ChannelChoice extends ChannelChoiceOwner {
 export interface CopiedGrant {
     /** The connection. */
     readonly connectionId: string
-    /** The level the sibling has. */
-    readonly access: Access
 }
 
 /** Who publishes the copied graph. */

@@ -12,9 +12,8 @@ export const isChannelPurpose = (purpose: string): boolean => {
     return purposes.includes(purpose)
 }
 
-/** Whether a grant makes its agent answer the channel: a channel purpose with access to act (ask or auto), not only to read. */
-export const answersChannel = (purpose: string, access: string): boolean =>
-    isChannelPurpose(purpose) && (access === "ask" || access === "auto")
+/** Whether a binding makes its agent answer the channel: a channel purpose. What it may do there lives in its attachment's rights. */
+export const answersChannel = (purpose: string): boolean => isChannelPurpose(purpose)
 
 /** Oldest grant first, then the agent id, so the same holders always give the same owner. */
 const byGrantedAt = (left: ChannelHolder, right: ChannelHolder): number =>
@@ -26,18 +25,18 @@ const byGrantedAt = (left: ChannelHolder, right: ChannelHolder): number =>
  */
 export const channelOwnerOf = (holders: ReadonlyArray<ChannelHolder>, module: string): OptionalChannelOwner =>
     [...holders]
-        .filter((holder) => holder.module === module && answersChannel(holder.purpose, holder.access))
+        .filter((holder) => holder.module === module && answersChannel(holder.purpose))
         .sort(byGrantedAt)[0] ?? null
 
 /**
  * The agent that already answers the connection for the role of a claim, when the claim would make a second one: null when the claim
- * does not answer the channel (it only reads, or its purpose is no channel purpose), or the role's owner is the claiming agent itself.
+ * does not answer the channel (its purpose is no channel purpose), or the role's owner is the claiming agent itself.
  */
 export const ownershipConflictOf = (
     holders: ReadonlyArray<ChannelHolder>,
     claim: ChannelClaim,
 ): OptionalChannelOwner => {
-    if (!answersChannel(claim.purpose, claim.access)) return null
+    if (!answersChannel(claim.purpose)) return null
     const owner = channelOwnerOf(
         holders.filter((holder) => holder.agentId !== claim.agentId),
         claim.module,

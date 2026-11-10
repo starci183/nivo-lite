@@ -1,16 +1,7 @@
 import { AgentsService } from "@modules/domain/agents"
-import { KnowledgeSearchToolService } from "@modules/domain/agent-knowledge"
-import { TurnGatewayToolsService, TurnHandoffService } from "@modules/domain/customer-turns"
-import { ApprovalRequesterService, ModuleApprovalGateService, ModulePerformersService } from "@modules/domain/decisions"
-import {
-    BookingToolsService,
-    ConversationLeadsService,
-    InboundStatusService,
-    LeadWriterService,
-    OutboundAccessService,
-} from "@modules/domain/work-performers"
+import { ModuleApprovalGateService, ModulePerformersService } from "@modules/domain/decisions"
+import { InboundStatusService, OutboundAccessService } from "@modules/domain/work-performers"
 import { ModulesService } from "@modules/domain/modules"
-import { ToolTokenService } from "@modules/integrations/openclaw"
 import { ModuleTextGeneratorService } from "@modules/domain/ai-generations"
 import { ModuleOutboundMailService } from "@modules/domain/email-messages"
 import type { ModuleOpsPorts } from "@modules/domain/module-ops"
@@ -43,38 +34,6 @@ interface BookingPorts {
 
 /** The delivery of booking notices through the customer's existing conversation and channel. */
 export const BOOKING_PORTS: BookingPorts = { notifier: BookingNotifierService }
-
-/** The ports the agent-tools capability reaches the rest of the app through, by port name. */
-interface AgentToolsPorts {
-    /** The knowledgeSearch port. */
-    readonly knowledgeSearch: typeof KnowledgeSearchToolService
-    /** The leadWriter port. */
-    readonly leadWriter: typeof LeadWriterService
-    /** The bookingTools port. */
-    readonly bookingTools: typeof BookingToolsService
-    /** The approvalRequester port. */
-    readonly approvalRequester: typeof ApprovalRequesterService
-    /** The conversationLeads port. */
-    readonly conversationLeads: typeof ConversationLeadsService
-    /** The gatewayTools port. */
-    readonly gatewayTools: typeof TurnGatewayToolsService
-    /** The agentHandoff port. */
-    readonly agentHandoff: typeof TurnHandoffService
-    /** The toolTokens port. */
-    readonly toolTokens: typeof ToolTokenService
-}
-
-/** The ports the agent-tools capability reaches the rest of the app through. */
-export const AGENT_TOOLS_PORTS: AgentToolsPorts = {
-    knowledgeSearch: KnowledgeSearchToolService,
-    leadWriter: LeadWriterService,
-    bookingTools: BookingToolsService,
-    approvalRequester: ApprovalRequesterService,
-    conversationLeads: ConversationLeadsService,
-    gatewayTools: TurnGatewayToolsService,
-    agentHandoff: TurnHandoffService,
-    toolTokens: ToolTokenService,
-}
 
 /** The ports the decisions capability reaches the rest of the app through, by port name. */
 interface DecisionsPorts {

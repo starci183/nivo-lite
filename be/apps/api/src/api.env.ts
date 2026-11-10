@@ -30,8 +30,10 @@ import { parseRedisConfig } from "@modules/integrations/redis"
 import { parseRemoteFilesConfig } from "@modules/integrations/remote-files"
 import { parseAiTasksConfig } from "@modules/domain/ai-tasks"
 import { parseAgentRunsConfig } from "@modules/domain/agent-runs"
+import { parseAgentThreadsConfig } from "@modules/domain/agent-threads"
+import { parseAgentLoopConfig } from "@modules/domain/graph-nodes"
+import { parseLanggraphConfig } from "@modules/integrations/langgraph"
 import { parseEntityEngineConfig } from "@modules/domain/entity-engine"
-import { parseAgentTurnsConfig } from "@modules/domain/agent-turns"
 import { parseOpenclawConfig } from "@modules/integrations/openclaw"
 import { parseVideoConfig } from "@modules/domain/video"
 import { parseFfmpegConfig } from "@modules/integrations/ffmpeg"
@@ -81,8 +83,6 @@ export interface ApiOptions {
     /** The running build and how often a parked run is run again. */
     readonly agentRuns?: ReturnType<typeof parseAgentRunsConfig>
     /** The key that signs entity-engine cursors. */ readonly entityEngine: ReturnType<typeof parseEntityEngineConfig>
-    /** The secret that signs the calls of the OpenClaw bridge plugin. */
-    readonly agentTurns: ReturnType<typeof parseAgentTurnsConfig>
     /** The prompt library tunables and the AI endpoint it calls. */
     readonly aiTasks: ReturnType<typeof parseAiTasksConfig>
     /** The key that seals the credentials of the connections. */
@@ -137,9 +137,21 @@ export interface ApiOptions {
     readonly tts: ReturnType<typeof parseTtsConfig>
     /** Where the video renderer finds its assets and how it runs ffmpeg. */
     readonly video: ReturnType<typeof parseVideoConfig>
+    /** The bounds of the LangGraph integration; reading them is also the guard that refuses a LangSmith tracing switch at boot. */
+    readonly langgraph?: ReturnType<typeof parseLanggraphConfig>
+    /** The workflows whose new runs start on a LangGraph thread (`AGENT_ENGINE_LANGGRAPH`); none unless the flag names them. */
+    readonly agentThreads?: ReturnType<typeof parseAgentThreadsConfig>
+    /** The nodes whose agent runs on the prebuilt loop with native tool calling (`AGENT_LOOP=prebuilt:<ids>`); none unless the flag names them. */
+    readonly agentLoop?: ReturnType<typeof parseAgentLoopConfig>
 }
-/** Reads the API environment; missing or invalid values fail boot and secret readers prefer mounted files. */
+/**
+ * Reads the API environment; missing or invalid values fail boot and secret readers prefer mounted files. The LangGraph options are
+ * read first and always, whatever the engine flag says: a tracing switch in the environment stops the boot before anything else.
+ */
 export const readApiEnv = (env: EnvSource): ApiOptions => ({
+    langgraph: parseLanggraphConfig(env),
+    agentThreads: parseAgentThreadsConfig(env),
+    agentLoop: parseAgentLoopConfig(env),
     server: parseServerConfig(env),
     httpSecurity: { ...parseHttpSecurityConfig(env), webhooks: {} },
     database: parsePrimaryDatabaseConfig(env),
@@ -158,7 +170,6 @@ export const readApiEnv = (env: EnvSource): ApiOptions => ({
     openclaw: parseOpenclawConfig(env),
     agentRuns: parseAgentRunsConfig(env),
     entityEngine: parseEntityEngineConfig(env),
-    agentTurns: parseAgentTurnsConfig(env),
     aiTasks: parseAiTasksConfig(env, parseAiConfig(env)),
     connectionSecrets: parseConnectionSecretsConfig(env),
     channels: parseChannelsConfig(env),

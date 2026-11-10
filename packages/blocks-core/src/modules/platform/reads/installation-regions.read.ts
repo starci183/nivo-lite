@@ -17,23 +17,23 @@ const variables: z.ZodObject<{ installation: z.ZodUUID; module: z.ZodString }> =
 export const agentTabPath = (module: string, installation: string, tab: string): string =>
     `/agents/${module}/${installation}/${tab}`
 
-/** The region shown while the installation has no agent: no connection, nothing known. */
-const NO_CONNECTIONS: Pick<ConnectionsRegionView, "rows"> = { rows: [] }
+/** The region shown while the installation has no agent: no provider attached. */
+const NO_CONNECTIONS: Omit<ConnectionsRegionView, "rightsHref"> = { label: "", rightsLabel: "", rows: [] }
 
-/** `platform.installation-connections`: the connections the agent of an installation acts through, with the link to its Connections tab. */
+/** `platform.installation-connections`: the providers attached to the agent of an installation, with the link to its rights (Connections tab). */
 export const installationConnectionsRead: ReadDefinition = defineRead({
     id: "platform.installation-connections",
     dataKind: "platform-agent-connections",
     shape: "record",
-    fields: ["manageLabel", "manageHref", "rows"],
+    fields: ["label", "rightsLabel", "rightsHref", "rows"],
     paths: { rows: "list" },
     variables,
     permission: PLATFORM_VIEW,
     ports: { graphs: agentGraphs, connections: agentConnectionsPort },
     run: async ({ graphs, connections }, given): Promise<ConnectionsRegionView> => {
         const agent = await agentOfInstallation(graphs, given.installation)
-        const region = agent === null ? { manageLabel: "", ...NO_CONNECTIONS } : await connections.of(agent)
-        return { ...region, manageHref: agentTabPath(given.module, given.installation, "connections") }
+        const region = agent === null ? NO_CONNECTIONS : await connections.of(agent)
+        return { ...region, rightsHref: agentTabPath(given.module, given.installation, "connections") }
     },
 })
 

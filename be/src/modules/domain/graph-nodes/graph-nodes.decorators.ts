@@ -1,6 +1,6 @@
 import { injector } from "@modules/platform/composition"
 import type { TypedParameterDecorator } from "@modules/platform/composition"
-import type { EffectOnce, NodeModelDoor, NodeToolDoor } from "./graph-nodes.contracts"
+import type { EffectOnce, NodeAgentLoops, NodeModelDoor, NodeToolDoor } from "./graph-nodes.contracts"
 import type { GraphNodesOptions } from "./graph-nodes.options"
 
 /** Token of the graph-nodes options: the install the app assembled. */
@@ -32,3 +32,10 @@ export const GRAPH_EFFECT_ONCE: unique symbol = Symbol("domain.graph-nodes.effec
 
 /** Injects the once-per-key ledger of effects. Parameter type: EffectOnce. */
 export const InjectGraphEffectOnce = (): TypedParameterDecorator<EffectOnce> => injector<EffectOnce>(GRAPH_EFFECT_ONCE)
+
+/** Token of the host's own loop for a step's agent. Absent in an app that binds none: every agent then runs the runner's JSON loop. */
+export const GRAPH_NODE_AGENT_LOOPS: unique symbol = Symbol("domain.graph-nodes.agent-loops")
+
+/** Injects the host's own agent loop. Parameter type: NodeAgentLoops. */
+export const InjectGraphNodeAgentLoops = (): TypedParameterDecorator<NodeAgentLoops> =>
+    injector<NodeAgentLoops>(GRAPH_NODE_AGENT_LOOPS)

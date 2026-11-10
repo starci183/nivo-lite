@@ -107,6 +107,38 @@ export const DEFAULT_DEBOUNCE_MS = 6000
 /** The longest a burst may keep a turn waiting when the app root names none, milliseconds. */
 export const DEFAULT_DEBOUNCE_MAX_MS = 20_000
 
+/**
+ * The source a follow-up drain is keyed under: a drain that came before its conversation's burst window ended schedules one more
+ * for the time the database says is left. It is a word of the job's dedupe key only; no wake has this source.
+ */
+export const REARM_SOURCE = "rearm"
+
+/**
+ * The most follow-up drains one chain may schedule. Each waits out what the database says is left, so one is enough unless the
+ * clocks move again while it waits; past this many the wake is left to the minute sweep, so a clock that never settles cannot keep
+ * a chain of jobs alive.
+ */
+export const REARM_MAX_HOPS = 5
+
+/** The shortest wait of a follow-up drain, milliseconds: a wait of a few milliseconds is not turned into a job that comes back at once. */
+export const REARM_MIN_WAIT_MS = 250
+
+/** How many follow-ups led to this drain: what its payload carries, none for the drain a wake, a finished turn or the sweep started. */
+export const rearmHopOf = (payload: object): number => {
+    const hop: unknown = "rearm" in payload ? payload.rearm : 0
+    return typeof hop === "number" && Number.isInteger(hop) && hop > 0 ? hop : 0
+}
+
+/**
+ * The fact a follow-up drain is deduplicated on: the scope, the wake the wait is for and the hop. Every drain of a burst that waits
+ * for the same newest message at the same hop asks for the same follow-up, so the burst gets one; a follow-up that itself came
+ * early asks for the next hop, which is a new job.
+ */
+export const rearmEventKeyOf = (scopeKey: string, wakeId: string, hop: number): string => `${scopeKey}:${wakeId}:${String(hop)}`
+
+/** How long a follow-up drain waits: what the database said is left, never under the floor. */
+export const rearmWaitMsOf = (waitMs: number): number => Math.max(REARM_MIN_WAIT_MS, Math.ceil(waitMs))
+
 /** The window in force: what the app root named, never below zero, or the default. */
 export const debounceMsOf = (named: number | undefined): number => Math.max(0, named ?? DEFAULT_DEBOUNCE_MS)
 

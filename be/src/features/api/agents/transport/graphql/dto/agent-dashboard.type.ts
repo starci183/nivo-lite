@@ -1,6 +1,5 @@
 import { Field, ObjectType } from "@nestjs/graphql"
 import { AgentDashboardAgentType } from "./agent-dashboard-agent.type"
-import { AgentDashboardConnectionsRegionType } from "./agent-dashboard-connections-region.type"
 import { AgentDashboardDoneRegionType } from "./agent-dashboard-done-region.type"
 import { AgentDashboardKnowledgeRegionType } from "./agent-dashboard-knowledge-region.type"
 import { AgentDashboardWaitingRegionType } from "./agent-dashboard-waiting-region.type"
@@ -19,10 +18,6 @@ export class AgentDashboardType {
     /** The work finished by policy in seven days. */
     @Field(() => AgentDashboardDoneRegionType)
     done!: AgentDashboardDoneRegionType
-
-    /** The connections bound to the agent. */
-    @Field(() => AgentDashboardConnectionsRegionType)
-    connections!: AgentDashboardConnectionsRegionType
 
     /** What the agent can read. */
     @Field(() => AgentDashboardKnowledgeRegionType)

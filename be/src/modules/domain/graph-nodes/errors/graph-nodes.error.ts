@@ -23,6 +23,8 @@ export enum GraphNodesErrorCode {
     ToolApprovalRequired = "GRAPH_NODES_TOOL_APPROVAL_REQUIRED",
     /** A tool call came without a valid run token: nothing the host minted stands behind it. */
     ToolTokenInvalid = "GRAPH_NODES_TOOL_TOKEN_INVALID",
+    /** The `AGENT_LOOP` flag is not `prebuilt:<node ids>`, names a node that is not installed, or names nodes where no loop is bound. */
+    AgentLoopFlagInvalid = "GRAPH_NODES_AGENT_LOOP_FLAG_INVALID",
     /** The NIVO MCP door refused or failed a node tool call (the reason rides in the params). */
     ToolFailed = "GRAPH_NODES_TOOL_FAILED",
     /** An effect ran but its ledger record could not be written or found, so a repeat could not tell it ran. */
@@ -43,6 +45,7 @@ export const GRAPH_NODES_ERROR_KINDS: Record<GraphNodesErrorCode, ErrorKind> = {
     [GraphNodesErrorCode.ToolConnectionRefused]: "forbidden",
     [GraphNodesErrorCode.ToolApprovalRequired]: "forbidden",
     [GraphNodesErrorCode.ToolTokenInvalid]: "forbidden",
+    [GraphNodesErrorCode.AgentLoopFlagInvalid]: "internal",
     [GraphNodesErrorCode.ToolFailed]: "unavailable",
     [GraphNodesErrorCode.EffectNotRecorded]: "internal",
     [GraphNodesErrorCode.EffectKeyTaken]: "internal",

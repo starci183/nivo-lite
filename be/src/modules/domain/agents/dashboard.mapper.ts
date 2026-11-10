@@ -1,8 +1,7 @@
-import type { BoundConnectionView, OptionalInstallation } from "./agents.port"
+import type { OptionalInstallation } from "./agents.port"
 import type {
     DashboardAgent,
     OptionalId,
-    ConnectionItem,
     DashboardItem,
     KnowledgeData,
     LensCounts,
@@ -48,32 +47,6 @@ export const itemOf = (row: DashboardLine, decisionHref: string): DashboardItem 
 
 /** The count of rows before the limit; every row of a page carries it. */
 export const totalOf = (rows: ReadonlyArray<DashboardLine>): number => Number(rows[0]?.total ?? 0)
-
-const statusOf = (status: string): ConnectionItem["status"] => {
-    if (status === "connected") return "connected"
-    return status === "error" ? "error" : "pending"
-}
-
-/** The connections bound to the agent, each once, as dashboard lines. */
-export const connectionItemsOf = (bound: ReadonlyArray<BoundConnectionView>): ReadonlyArray<ConnectionItem> => {
-    const seen = new Set<string>()
-    return bound.flatMap((connection) => {
-        if (seen.has(connection.id)) return []
-        seen.add(connection.id)
-        return [
-            {
-                id: connection.id,
-                name: connection.name,
-                provider: connection.provider,
-                botUsername: connection.botUsername,
-                accountMasked: connection.accountMasked,
-                status: statusOf(connection.status),
-                access: connection.access,
-                purpose: connection.purpose,
-            },
-        ]
-    })
-}
 
 /** The knowledge region: the lens counts and the gaps with their questions clipped. */
 export const knowledgeOf = (counts: LensCounts, gaps: OpenGaps | null): KnowledgeData => ({

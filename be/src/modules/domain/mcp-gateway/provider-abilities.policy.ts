@@ -18,6 +18,12 @@ export interface ProviderAbility {
      * the provider is then known only from the conversation, and the tool's executor asks with it.
      */
     readonly channels?: ReadonlyArray<string>
+    /**
+     * `default` for an ability whose tool must act on ONE account and must not choose it by itself (a payment QR): the call is judged
+     * on the workspace's default account of the provider's kind. Absent, a tool with no account of its own in the call is judged over
+     * every account of the provider the agent is attached to.
+     */
+    readonly account?: "default"
 }
 
 /** One provider a workspace can connect, with the abilities an agent can be given on it. */
@@ -64,7 +70,7 @@ export const PROVIDER_CATALOGUE: ReadonlyArray<ProviderSpec> = [
                 tools: [TOOL.bankTransactions, "sepay.transactions.list", "sepay.transactions.debits", "sepay.status"],
             },
             { id: "credit.rematch", scope: "write", tools: [TOOL.paymentRematch] },
-            { id: "qr.create", scope: "write", tools: [TOOL.paymentQrCreate] },
+            { id: "qr.create", scope: "write", tools: [TOOL.paymentQrCreate], account: "default" },
         ],
     },
     { provider: "payos", kind: "payment", abilities: [] },
@@ -109,54 +115,97 @@ export const isAbilityTool = (tool: string): boolean => holdersOf(tool).length >
 export const isChannelBound = (tool: string): boolean =>
     holdersOf(tool).some((held) => held.ability.channels !== undefined)
 
+/** The kind whose default account a tool acts on, or null for a tool that names its account another way or acts on any. */
+export const defaultAccountKindOf = (tool: string): ProviderKind | null => {
+    const spec = PROVIDER_CATALOGUE.find((entry) =>
+        entry.abilities.some((ability) => ability.account === "default" && ability.tools.includes(tool)),
+    )
+    return spec?.kind ?? null
+}
+
+/** The account a call acts on, as far as the caller knows it. */
+export interface AccountTarget {
+    /** The provider the call goes through (the channel's provider of a send). */
+    readonly provider?: string | undefined
+    /** The connected account the call acts on (the conversation's connection, the default receiving account). */
+    readonly connectionId?: string | undefined
+}
+
 /** What an agent's attachments decide about one call of an ability tool. */
 export type AbilityVerdict =
-    | { readonly kind: "allow"; readonly provider: string; readonly ability: string }
-    | { readonly kind: "approval"; readonly provider: string; readonly ability: string }
+    | { readonly kind: "allow"; readonly provider: string; readonly ability: string; readonly connectionId: string }
+    | { readonly kind: "approval"; readonly provider: string; readonly ability: string; readonly connectionId: string }
     | {
           readonly kind: "refuse"
-          /** `not_attached`: the agent is attached to no provider that has the tool; `ability_off`: attached, the ability not ticked. */
-          readonly reason: "not_attached" | "ability_off"
+          /**
+           * `not_attached`: the agent is attached to no account the call may act on; `ability_off`: attached, the ability not ticked;
+           * `no_default_account`: the tool acts on the workspace's default account of a kind and the workspace has none.
+           */
+          readonly reason: "not_attached" | "ability_off" | "no_default_account"
           /** The ability the call needs. */
           readonly ability: string
           /** The providers on which that ability would allow it. */
           readonly providers: ReadonlyArray<string>
+          /** The account the call would act on, when the call names one. */
+          readonly connectionId?: string | undefined
       }
 
 /**
  * The verdict of one call against the attachments of the calling agent, default deny, or null when the tool is no provider right (or,
- * for a channel-bound tool, when no provider is named: its executor asks once it knows the channel). The providers that have the tool
- * are the candidates (the one named, for a channel-bound tool). Attached to none: `not_attached`. Attached, the ability not ticked:
- * `ability_off`. Ticked: a read runs; a write runs by itself on `auto` and, on `ask`, only once a person approved this call. When
- * several attached providers hold the same provider-neutral tool, `ask` on any of them asks: the stricter tick wins.
+ * for a channel-bound tool, when no provider is named: its executor asks once it knows the conversation). An attachment is to ONE
+ * connected account. When the call names its account (`target.connectionId`: the conversation's connection of a send, the default
+ * receiving account of a payment QR), only the agent's attachment to that very account counts: attached to another account of the same
+ * provider is `not_attached`. When it names none (a read over the bank feeds, the ledger), every account of a provider that has the
+ * tool counts: attached to none is `not_attached`; attached with the ability ticked on none is `ability_off`. Ticked: a read runs; a
+ * write runs by itself on `auto` and, on `ask`, only once a person approved this call; among several ticked accounts `ask` on any of
+ * them asks, so the stricter tick wins.
  */
 export const judgeAbility = (
     rows: ReadonlyArray<ProviderAttachmentView>,
     tool: string,
     approved: boolean,
-    provider?: string,
+    target: AccountTarget = {},
 ): AbilityVerdict | null => {
     const holders = holdersOf(tool)
     const [first] = holders
     if (first === undefined) return null
-    if (provider === undefined && first.ability.channels !== undefined) return null
-    const candidates = provider === undefined ? holders : holders.filter((held) => held.provider === provider)
+    if (target.provider === undefined && target.connectionId === undefined && first.ability.channels !== undefined)
+        return null
+    const candidates =
+        target.provider === undefined ? holders : holders.filter((held) => held.provider === target.provider)
     const [candidate] = candidates
     if (candidate === undefined) return null
-    const refusal = { ability: candidate.ability.id, providers: candidates.map((held) => held.provider) }
-    const attached = candidates.flatMap((held) => {
-        const row = rows.find((entry) => entry.provider === held.provider)
-        return row === undefined ? [] : [{ ...held, mode: row.abilities[held.ability.id] }]
-    })
+    const refusal = {
+        ability: candidate.ability.id,
+        providers: candidates.map((held) => held.provider),
+        ...(target.connectionId === undefined ? {} : { connectionId: target.connectionId }),
+    }
+    const reach =
+        target.connectionId === undefined ? rows : rows.filter((row) => row.connectionId === target.connectionId)
+    const attached = candidates.flatMap((held) =>
+        reach
+            .filter((row) => row.provider === held.provider)
+            .map((row) => ({ ...held, connectionId: row.connectionId, mode: row.abilities[held.ability.id] })),
+    )
     if (attached.length === 0) return { kind: "refuse", reason: "not_attached", ...refusal }
     const ticked = attached.flatMap((held) => (held.mode === undefined ? [] : [{ ...held, mode: held.mode }]))
     const [ready] = ticked
     if (ready === undefined) return { kind: "refuse", reason: "ability_off", ...refusal }
     const asking = ticked.find((held) => held.ability.scope === "write" && held.mode === "ask")
-    if (asking !== undefined && !approved)
-        return { kind: "approval", provider: asking.provider, ability: asking.ability.id }
-    return { kind: "allow", provider: ready.provider, ability: ready.ability.id }
+    if (asking !== undefined && !approved) {
+        return {
+            kind: "approval",
+            provider: asking.provider,
+            ability: asking.ability.id,
+            connectionId: asking.connectionId,
+        }
+    }
+    return { kind: "allow", provider: ready.provider, ability: ready.ability.id, connectionId: ready.connectionId }
 }
+
+/** The accounts among the attachments on which a tool's ability is ticked: what a read over several accounts may cover. */
+export const accountsHolding = (rows: ReadonlyArray<ProviderAttachmentView>, tool: string): ReadonlyArray<string> =>
+    rows.filter((row) => holdsTool(row, tool)).map((row) => row.connectionId)
 
 /** True when the attachment row lets some call of the tool through (ticked, whatever the mode). */
 export const holdsTool = (row: ProviderAttachmentView, tool: string): boolean =>
@@ -186,8 +235,7 @@ export const exceedsCeiling = (spec: ProviderSpec, ticks: AbilityTicks): boolean
 
 /** The ticks a person asked for, as they are stored, or the first entry that is no ability of the provider or no valid mode. */
 export type WishedTicks =
-    | { readonly ok: true; readonly ticks: AbilityTicks }
-    | { readonly ok: false; readonly ability: string }
+    { readonly ok: true; readonly ticks: AbilityTicks } | { readonly ok: false; readonly ability: string }
 
 /** The ticks a person asked for on a provider (`off` leaves an ability unticked), or the entry that cannot be stored. */
 export const ticksOfWish = (spec: ProviderSpec, wish: Readonly<Record<string, string>>): WishedTicks => {
@@ -197,7 +245,8 @@ export const ticksOfWish = (spec: ProviderSpec, wish: Readonly<Record<string, st
         ability: spec.abilities.find((entry) => entry.id === id),
     }))
     const bad = entries.find(
-        (entry) => entry.ability === undefined || (entry.mode !== "off" && entry.mode !== "auto" && entry.mode !== "ask"),
+        (entry) =>
+            entry.ability === undefined || (entry.mode !== "off" && entry.mode !== "auto" && entry.mode !== "ask"),
     )
     if (bad !== undefined) return { ok: false, ability: bad.id }
     return {
@@ -217,7 +266,10 @@ export const ticksOfWish = (spec: ProviderSpec, wish: Readonly<Record<string, st
  * kind nor the provider (the agent is not proposed it at all) or the provider has no ability. The provider's own entry replaces its
  * kind's, ability by ability; an ability the provider does not have is passed over, and `off` or an ability left out stays unticked.
  */
-export const ticksOfTemplate = (template: ModuleAgentAbilities | undefined, spec: ProviderSpec): AbilityTicks | null => {
+export const ticksOfTemplate = (
+    template: ModuleAgentAbilities | undefined,
+    spec: ProviderSpec,
+): AbilityTicks | null => {
     const kind = template?.kinds?.[spec.kind]
     const own = template?.providers?.[spec.provider]
     if ((kind === undefined && own === undefined) || spec.abilities.length === 0) return null

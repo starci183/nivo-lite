@@ -1,34 +1,29 @@
-import { Test } from "@nestjs/testing"
-import { mock } from "@starci/jest-preset"
-import { GAPS_SHOWN, regionKey, toneOfStatus } from "./platform-regions.policy"
+import { ABILITY_SEPARATOR, GAPS_SHOWN, abilitiesHeld, accessOf, pick, regionKey } from "./platform-regions.policy"
 
-interface Subject {
-    readonly toneOfStatus: typeof toneOfStatus
-    readonly regionKey: typeof regionKey
-    readonly gapsShown: number
-}
-
-const SUBJECT = Symbol("platform-regions.policy")
-
-const build = async () => {
-    const moduleRef = await Test.createTestingModule({
-        providers: [{ provide: SUBJECT, useValue: mock<Subject>({ toneOfStatus, regionKey, gapsShown: GAPS_SHOWN }) }],
-    }).compile()
-    return moduleRef.get<Subject>(SUBJECT)
-}
+const READ = { id: "bank.read", label: { vi: "Đọc giao dịch", en: "Read transactions" }, scope: "read" as const }
+const QR = { id: "payment.qr", label: { vi: "Tạo QR", en: "Create QR" }, scope: "write" as const }
 
 describe("platform regions policy", () => {
-    it("tones the badge of a connection by its status, neutral for one it does not know", async () => {
-        const policy = await build()
-        expect(policy.toneOfStatus("connected")).toBe("success")
-        expect(policy.toneOfStatus("error")).toBe("danger")
-        expect(policy.toneOfStatus("pending")).toBe("warning")
-        expect(policy.toneOfStatus("disconnected")).toBe("neutral")
+    it("names the words of a region by group and value, lists five gaps and parts abilities with a middle dot", () => {
+        expect(regionKey("connections", "title")).toBe("workbench.platform.connections.title")
+        expect(GAPS_SHOWN).toBe(5)
+        expect(ABILITY_SEPARATOR).toBe(" · ")
+        expect(pick(READ.label, "vi")).toBe("Đọc giao dịch")
+        expect(pick(READ.label, "en")).toBe("Read transactions")
     })
 
-    it("names the words of a region by group and value, and lists five gaps", async () => {
-        const policy = await build()
-        expect(policy.regionKey("status", "connected")).toBe("workbench.platform.status.connected")
-        expect(policy.gapsShown).toBe(5)
+    it("keeps the abilities an attachment ticks, in the provider's order, each with its mode", () => {
+        expect(abilitiesHeld([READ, QR], { "payment.qr": "ask", "bank.read": "auto", "other": "auto" })).toEqual([
+            { ...READ, mode: "auto" },
+            { ...QR, mode: "ask" },
+        ])
+        expect(abilitiesHeld([READ, QR], { "payment.qr": "off" })).toEqual([])
+    })
+
+    it("says the highest level held: auto for a write that acts alone, ask for one that waits, read, or none", () => {
+        expect(accessOf([{ ...READ, mode: "auto" }, { ...QR, mode: "auto" }])).toBe("auto")
+        expect(accessOf([{ ...READ, mode: "auto" }, { ...QR, mode: "ask" }])).toBe("ask")
+        expect(accessOf([{ ...READ, mode: "auto" }])).toBe("read")
+        expect(accessOf([])).toBeNull()
     })
 })

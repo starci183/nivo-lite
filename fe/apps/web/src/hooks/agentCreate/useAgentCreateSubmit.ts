@@ -64,7 +64,7 @@ export const useAgentCreateSubmit = (
                     connectionIds: form.canGrantChannels ? [...form.chosenChannels] : [],
                     startFrom: copyFrom === null ? "default" : "copy",
                     copyFrom,
-                    providerRights: providerRights().map((one) => ({ provider: one.provider, abilities: [...one.abilities] })),
+                    providerRights: providerRights().map((one) => ({ connectionId: one.connectionId, abilities: [...one.abilities] })),
                 }),
             { successMessage: t("created", { name }) },
         )

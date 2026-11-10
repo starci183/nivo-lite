@@ -13,6 +13,7 @@ import type {
 } from "./agentWorkflows.types"
 import type {
     WorkflowDetailView,
+    WorkflowDiffGrantView,
     WorkflowDiffStepView,
     WorkflowDiffView,
     WorkflowHeadView,
@@ -158,24 +159,26 @@ const shortOf = (json: string | null): string => {
     return text
 }
 
-/** The line under a changed step: the parts that changed, then the settings with their values before and after, all in words. */
-const stepLineOf = (
+/** What a changed step says of its change: the parts that changed in words, and the settings with their values before and after. */
+const stepChangeOf = (
     step: WorkflowDiffWire["steps"][number],
     words: StepWordsOf | undefined,
     context: WorkflowContext,
-): string => {
-    if (step.change !== "changed") return words?.line ?? ""
-    return [
-        step.parts.map((part) => (context.has(`part_${part}`) ? context.t(`part_${part}`) : part)).join(", "),
-        ...step.params
-            .slice(0, 3)
-            .map(
-                (param) =>
-                    `${words?.params.get(param.name) ?? param.name}: ${shortOf(param.beforeJson)} → ${shortOf(param.afterJson)}`,
-            ),
-    ]
-        .filter((part) => part !== "")
-        .join(" · ")
+): { readonly description: string; readonly change?: { readonly from: string; readonly to: string } } => {
+    if (step.change !== "changed") return { description: words?.line ?? "" }
+    const description = step.parts
+        .map((part) => (context.has(`part_${part}`) ? context.t(`part_${part}`) : part))
+        .join(", ")
+    const params = step.params.slice(0, 3)
+    if (params.length === 0) return { description }
+    const nameOf = (name: string): string => words?.params.get(name) ?? name
+    return {
+        description,
+        change: {
+            from: params.map((param) => `${nameOf(param.name)}: ${shortOf(param.beforeJson)}`).join(", "),
+            to: params.map((param) => `${nameOf(param.name)}: ${shortOf(param.afterJson)}`).join(", "),
+        },
+    }
 }
 
 /** The marks of a diff, by the key of the step. */
@@ -187,50 +190,97 @@ const marksOf = (diff: WorkflowDiffWire): ReadonlyMap<string, WorkflowMark> =>
         ]),
     )
 
-/** The lines beyond the steps: what wakes the graph, and the rights, tools and effects gained and lost. */
-const otherLinesOf = (diff: WorkflowDiffWire, context: WorkflowContext): ReadonlyArray<string> => {
-    const lists: ReadonlyArray<readonly [string, ReadonlyArray<string>]> = [
-        ["rightsAdded", diff.rightsAdded],
-        ["rightsRemoved", diff.rightsRemoved],
-        ["toolsAdded", diff.toolsAdded],
-        ["toolsRemoved", diff.toolsRemoved],
-        ["effectsAdded", diff.effectsAdded],
-        ["effectsRemoved", diff.effectsRemoved],
+/** The plain words of a right (`message:read.body` reads as what the kind and the access allow); a kind the catalog does not name says a general phrase, never the key. */
+const rightWordOf = (right: string, context: WorkflowContext): string => {
+    const [head = "", access = ""] = (right.split(".")[0] ?? "").split(":")
+    const key = `right_${head}_${access}`
+    if (context.has(key)) return context.t(key)
+    return context.t(access === "write" ? "rightOtherWrite" : "rightOtherRead")
+}
+
+/** The plain words of a tool or an effect (`customer.message.send`); one the catalog does not name says a general phrase, never the id. */
+const grantWordOf = (kind: "tool" | "effect", id: string, context: WorkflowContext): string => {
+    const key = `grant_${kind}_${id.replaceAll(".", "_")}`
+    if (context.has(key)) return context.t(key)
+    return context.t(kind === "tool" ? "toolOther" : "effectOther")
+}
+
+/** The rights, tools and actions gained and lost, one row each in the owner's words, and what wakes the graph when that changed. */
+const grantsOf = (diff: WorkflowDiffWire, context: WorkflowContext): ReadonlyArray<WorkflowDiffGrantView> => {
+    const ofRight = (rights: ReadonlyArray<string>): string[] => [
+        ...new Set(rights.map((right) => rightWordOf(right, context))),
     ]
-    return [
-        ...(diff.triggerChanged ? [context.t("triggerChanged")] : []),
-        ...lists
-            .filter(([, items]) => items.length > 0)
-            .map(([key, items]) => context.t(`line_${key}`, { list: items.join(", ") })),
+    const lists: ReadonlyArray<readonly [string, "added" | "removed", ReadonlyArray<string>]> = [
+        ["right", "added", ofRight(diff.rightsAdded)],
+        ["right", "removed", ofRight(diff.rightsRemoved)],
+        ["tool", "added", [...new Set(diff.toolsAdded.map((id) => grantWordOf("tool", id, context)))]],
+        ["tool", "removed", [...new Set(diff.toolsRemoved.map((id) => grantWordOf("tool", id, context)))]],
+        ["effect", "added", [...new Set(diff.effectsAdded.map((id) => grantWordOf("effect", id, context)))]],
+        ["effect", "removed", [...new Set(diff.effectsRemoved.map((id) => grantWordOf("effect", id, context)))]],
     ]
+    return lists.flatMap(([kind, mark, words]) =>
+        words.map((title) => ({
+            key: `${kind}-${mark}-${title}`,
+            title,
+            kindLabel: context.t(`grantKind_${kind}`),
+            mark,
+            markLabel: context.t(`mark_${mark}`),
+        })),
+    )
+}
+
+/** "+2 steps · -1 steps · 3 changed": the count of each mark of the steps, a mark none has left out. */
+const summaryOf = (marks: ReadonlyMap<string, WorkflowMark>, context: WorkflowContext): string => {
+    const count = (mark: WorkflowMark): number => [...marks.values()].filter((one) => one === mark).length
+    const parts = [
+        count("added") === 0 ? "" : context.t("summaryAdded", { count: count("added") }),
+        count("removed") === 0 ? "" : context.t("summaryRemoved", { count: count("removed") }),
+        count("changed") === 0 ? "" : context.t("summaryChanged", { count: count("changed") }),
+    ]
+    return parts.filter((part) => part !== "").join(" · ")
 }
 
 /**
- * A diff as the drawer draws it: the steps added, removed and changed, the other changes, the steps where both sides changed and the
- * owner's side stays, and the map with the changed steps painted.
+ * A version against the one before it, as its page draws it: the steps added, removed and changed, the rights, tools and actions gained
+ * or lost, and the map with the changed steps painted. A first version has nothing before it: it carries `first` and the plain map.
  */
-export const diffViewOf = (
-    diff: WorkflowDiffWire,
-    conflicts: ReadonlyArray<string>,
-    context: WorkflowContext,
-): WorkflowDiffView => {
+export const diffViewOf = (diff: WorkflowDiffWire, context: WorkflowContext): WorkflowDiffView => {
+    if (diff.beforeJson === null)
+        return {
+            first: context.t("diffFirstNote"),
+            summary: "",
+            steps: [],
+            grants: [],
+            flow: flowOfGraph(diff.afterJson, null, new Map(), context),
+        }
     const marks = marksOf(diff)
     const words = stepWordsOf([graphOfJson(diff.afterJson, context), graphOfJson(diff.beforeJson, context)])
     const titleOf = (key: string): string => words.get(key)?.title ?? humanLabelOf(key)
-    const steps = diff.steps.map((step): WorkflowDiffStepView => {
-        const mark = marks.get(step.key) ?? "changed"
-        return {
-            key: step.key,
-            title: titleOf(step.key),
-            mark,
-            markLabel: context.t(`mark_${mark}`),
-            description: stepLineOf(step, words.get(step.key), context),
-        }
-    })
+    const triggerRow: ReadonlyArray<WorkflowDiffGrantView> = diff.triggerChanged
+        ? [
+              {
+                  key: "trigger",
+                  title: context.t("triggerChanged"),
+                  kindLabel: context.t("grantKind_trigger"),
+                  mark: "changed",
+                  markLabel: context.t("mark_changed"),
+              },
+          ]
+        : []
     return {
-        steps,
-        lines: otherLinesOf(diff, context),
-        kept: conflicts.length === 0 ? "" : context.t("kept", { steps: conflicts.map((conflict) => titleOf(conflict)).join(", ") }),
+        first: "",
+        summary: summaryOf(marks, context),
+        steps: diff.steps.map((step): WorkflowDiffStepView => {
+            const mark = marks.get(step.key) ?? "changed"
+            return {
+                key: step.key,
+                title: titleOf(step.key),
+                mark,
+                markLabel: context.t(`mark_${mark}`),
+                ...stepChangeOf(step, words.get(step.key), context),
+            }
+        }),
+        grants: [...triggerRow, ...grantsOf(diff, context)],
         flow: flowOfGraph(diff.afterJson, diff.beforeJson, marks, context),
     }
 }
@@ -249,7 +299,9 @@ export const templateRowOf = (template: WorkflowTemplateWire, context: WorkflowC
     name: template.name,
     summary: template.summary,
     meta: context.t("templateMeta", { latest: template.latestVersion, shops: template.shops }),
-    role: context.has(`roleChip_${template.moduleKey}`) ? context.t(`roleChip_${template.moduleKey}`) : template.moduleKey,
+    role: context.has(`roleChip_${template.moduleKey}`)
+        ? context.t(`roleChip_${template.moduleKey}`)
+        : template.moduleKey,
     source: templateSourceOf(template, context),
     needs:
         template.requires.length === 0

@@ -32,7 +32,7 @@ Vì sao: SAI — a list card with a green left bar on the first row and plain ro
 Luật: `nivo-surface-layering.md`, `owner-colors-exact.md`.
 Grammar: `SurfaceCard` + `ListRow`, `Badge`, `node_modules/@starci/grammar/dist/core/composite/ListRow/index.d.ts`.
 
-## Khối "Agent dùng kết nối này 1" (ô chọn "Giao cho agent", dòng Chatbot "Tự làm trong giới hạn ▾")
-Vì sao: SAI — the head has label + count chip but the chip is at the far RIGHT; inside the card a full-width Select "Giao cho agent" is a header zone with a divider then the agent row; the same assignment control is a grey button in the head on the Zalo detail and a floating pill on the payOS detail: three forms of one command.
-Luật: `table-heroui-native-section-head.md` (count chip next to the label), `surfacecard-zones-api.md`.
-Grammar: `Select`, `SurfaceCard headers`, `node_modules/@starci/grammar/dist/core/branch/Select/index.d.ts`; composite `ConnectionGrantRows`.
+## Khối "Agent dùng kết nối này 1" (ô chọn "Giao cho agent", dòng Chatbot với nút "Gỡ")
+Vì sao: the agents bound to this connection, one list card: agent avatar + name, and at the row end one neutral sm "Gỡ" (owner only) that unbinds the agent; the card's header zone holds the "Giao cho agent" Select that binds another agent (owner only, when one is left). There is no per-connection level any more (K-BLK 2026-11-10, "one rights model"): what each agent may do through the account is ticked on the agent's Quyền tab, so the row carries no "Tự làm / Hỏi trước / Chỉ đọc" picker. Still open from the old audit: the head's count chip placement and the three forms of the bind command (header Select here, none on payOS overview while no agent is bound).
+Luật: `provider-rights-abilities.md` (one rights model, rights per connected account on the Quyền tab), `verify-against-visualize.md` (sm button, no icon), `row-control-clearance.md` (control keeps p-3/p-4), `table-heroui-native-section-head.md`.
+Grammar: `SurfaceCard kind="list" headers`, `Select`, `Button intent="neutral" size="sm"`, `node_modules/@starci/grammar/dist/core/composite/SurfaceCard/index.d.ts`, `node_modules/@starci/grammar/dist/core/leaf/Button/index.d.ts`; composite `ConnectionGrantRows`, frame `ConnectionGrantsBand`.

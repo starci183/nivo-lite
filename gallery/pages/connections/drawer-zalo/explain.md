@@ -23,7 +23,7 @@ Luật: `surfacecard-select-subtitle.md` (row title noun + subtitle), `table-her
 Grammar: `SurfaceCard` + `ListRow`, `node_modules/@starci/grammar/dist/core/composite/ListRow/index.d.ts`.
 
 ## Khối "Kết nối của bạn" (số lượng, thẻ kết nối)
-Vì sao: SAI/OK split. OK: label + grey count chip on the left, as the head law says. The body is a card "Zalo OA" with the actions "Kiểm tra", "Mở trang →" (red link), "Agent (1)" and ⋯, the chip "Đã kết nối" and the raw ids "OA 2128053712141851033 · App 1149718821626934740 · Đang dùng bởi: Chatbot"; that card packs four controls in a row (a neutral pill, a red link, a count pill, ⋯) with mixed shapes, and raw ids in the subtitle which belong in "Chi tiết kỹ thuật".
+Vì sao: SAI/OK split. OK: label + grey count chip on the left, as the head law says. The body is a card "Zalo OA" with the actions "Kiểm tra", "Mở trang →" (red link) and ⋯ (the "Agent (n)" level picker is gone: the per-connection level was retired, K-BLK 2026-11-10; binding lives on the connection's Agent tab and rights on the agent's Quyền tab), the chip "Đã kết nối" and the raw ids "OA 2128053712141851033 · App 1149718821626934740 · Đang dùng bởi: Chatbot"; that card packs three controls in a row (a neutral pill, a red link, ⋯) with mixed shapes, and raw ids in the subtitle which belong in "Chi tiết kỹ thuật".
 Luật: `table-heroui-native-section-head.md` (raw ids; section head label + count chip), `suggestion-button-sm.md` (one pill pattern), `page-header-left-sublabel-xs.md` (sm buttons no icon: "Mở trang →" has an arrow).
 Grammar: `SurfaceCard`, `Button size="sm"`, `DropdownMenu`, `node_modules/@starci/grammar/dist/core/frame/SurfaceCard/index.d.ts`; composite `ConnectionRowBody`.
 

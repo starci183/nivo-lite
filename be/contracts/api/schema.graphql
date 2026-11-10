@@ -344,6 +344,7 @@ type AgentAppliedRuleType {
 type AgentAttachmentType {
   abilities: [AbilityTickType!]!
   agentId: ID!
+  connectionId: ID!
   provider: String!
 }
 
@@ -362,7 +363,7 @@ type AgentCatalogEntryType {
 }
 
 type AgentCatalogGrantType {
-  access: String!
+  access: String! @deprecated(reason: "Rights live in the agent's attachments (tab Quyền); a binding has no level. Always \"auto\" for a bound pair; removed next release.")
   accountMasked: String
   botUsername: String
   connectionId: ID!
@@ -396,9 +397,10 @@ input AgentChannelChoicesInput {
 }
 
 type AgentConnectionCandidateType {
-  access: String
+  access: String @deprecated(reason: "Rights live in the agent's attachments (tab Quyền); a binding has no level. Always \"auto\" for a bound pair; removed next release.")
   accountMasked: String
   botUsername: String
+  bound: Boolean!
   id: ID!
   name: String!
   provider: String!
@@ -411,7 +413,7 @@ input AgentConnectionCandidatesInput {
 }
 
 type AgentConnectionType {
-  access: String!
+  access: String! @deprecated(reason: "Rights live in the agent's attachments (tab Quyền); a binding has no level. Always \"auto\" for a bound pair; removed next release.")
   accountMasked: String
   botUsername: String
   id: ID!
@@ -425,22 +427,6 @@ type AgentDashboardAgentType {
   id: ID!
   mode: String!
   name: String!
-}
-
-type AgentDashboardConnectionType {
-  access: String!
-  accountMasked: String
-  botUsername: String
-  id: ID!
-  name: String!
-  provider: String!
-  purpose: String!
-  status: String!
-}
-
-type AgentDashboardConnectionsRegionType {
-  data: [AgentDashboardConnectionType!]
-  ok: Boolean!
 }
 
 type AgentDashboardDocumentCountsType {
@@ -506,7 +492,6 @@ type AgentDashboardKnowledgeType {
 
 type AgentDashboardType {
   agent: AgentDashboardAgentType
-  connections: AgentDashboardConnectionsRegionType!
   done: AgentDashboardDoneRegionType!
   knowledge: AgentDashboardKnowledgeRegionType!
   waiting: AgentDashboardWaitingRegionType!
@@ -774,7 +759,7 @@ input AgentProviderAbilityInput {
 
 input AgentProviderRightInput {
   abilities: [AgentProviderAbilityInput!]! @inputBounds(maxItems: 20)
-  provider: String! @inputBounds(maxLength: 31)
+  connectionId: ID! @inputBounds(maxLength: 36)
 }
 
 type AgentRecentRegionType {
@@ -1259,12 +1244,12 @@ input AssignInboxLeadInput {
 input AttachAgentProviderInput {
   abilities: [AbilityWishInput!]! @inputBounds(maxItems: 20)
   agentId: ID! @inputBounds(maxLength: 36)
-  provider: String! @inputBounds(maxLength: 31)
+  connectionId: ID! @inputBounds(maxLength: 36)
 }
 
 input AttachProviderByTemplateInput {
   agentIds: [ID!]! @inputBounds(maxItems: 50, itemMaxLength: 36)
-  provider: String! @inputBounds(maxLength: 31)
+  connectionId: ID! @inputBounds(maxLength: 36)
 }
 
 input AttachedFileInput {
@@ -2220,7 +2205,7 @@ input ConnectTelegramInput {
 }
 
 type ConnectionAgentGrantType {
-  access: String!
+  access: String! @deprecated(reason: "Rights live in the agent's attachments (tab Quyền); a binding has no level. Always \"auto\" for a bound pair; removed next release.")
   agentId: ID!
   agentName: String!
   connectionId: ID!
@@ -2244,7 +2229,7 @@ type ConnectionCheckType {
 }
 
 type ConnectionGrantType {
-  access: String!
+  access: String! @deprecated(reason: "Rights live in the agent's attachments (tab Quyền); a binding has no level. Always \"auto\" for a bound pair; removed next release.")
   agentId: ID!
 }
 
@@ -2274,6 +2259,9 @@ type ConnectionType {
 }
 
 input ConnectionWishInput {
+  """
+  Ignored: a binding has no level any more (rights live in the agent's attachments). Removed next release.
+  """
   access: String @inputBounds(maxLength: 8)
   connectionId: ID! @inputBounds(maxLength: 64)
 }
@@ -2821,7 +2809,7 @@ input DeleteWorkspaceInput {
 
 input DetachAgentProviderInput {
   agentId: ID! @inputBounds(maxLength: 36)
-  provider: String! @inputBounds(maxLength: 31)
+  connectionId: ID! @inputBounds(maxLength: 36)
 }
 
 type DeviceSessionType {
@@ -3168,6 +3156,9 @@ type GoogleStateType {
 }
 
 input GrantAgentConnectionInput {
+  """
+  Ignored: a binding has no level any more (rights live in the agent's attachments). Removed next release.
+  """
   access: String!
   agentId: ID! @inputBounds(maxLength: 36)
   connectionId: ID! @inputBounds(maxLength: 36)
@@ -3175,6 +3166,9 @@ input GrantAgentConnectionInput {
 }
 
 input GrantWishInput {
+  """
+  Ignored: a binding has no level any more (rights live in the agent's attachments). Removed next release.
+  """
   access: String @inputBounds(maxLength: 8)
   agentId: ID! @inputBounds(maxLength: 64)
 }
@@ -4529,6 +4523,7 @@ type Mutation {
   setConnectionAgents(input: SetConnectionAgentsInput!): Boolean!
   setConnectionGrant(input: SetConnectionGrantInput!): Boolean!
   setContentAutomation(input: SetContentAutomationInput!): ContentBrandSettingsType!
+  setDefaultReceivingAccount(input: SetDefaultReceivingAccountInput!): Boolean!
   setDefaultSmtp(input: SetDefaultSmtpInput!): Boolean!
   setHiringInterviewStatus(input: SetHiringInterviewStatusInput!): Boolean!
   setHiringJobStatus(input: SetHiringJobStatusInput!): HiringStatusType!
@@ -4765,7 +4760,9 @@ input ProposeBrandKitInput {
 
 type ProposedAttachmentType {
   abilities: [AbilityTickType!]!
+  accountLabel: String
   connected: Boolean!
+  connectionId: ID
   provider: String!
 }
 
@@ -4779,6 +4776,15 @@ type ProviderAbilityType {
   label: AbilityLabelType!
   scope: String!
   tools: [String!]!
+}
+
+type ProviderAccountType {
+  accountLabel: String!
+  connected: Boolean!
+  connectionId: ID!
+  isDefaultReceiving: Boolean!
+  kind: String!
+  provider: String!
 }
 
 input ProviderKeysInput {
@@ -4795,7 +4801,7 @@ type ProviderKeysResultType {
 
 type ProviderRightType {
   abilities: [ProviderAbilityType!]!
-  accountLabel: String
+  accounts: [ProviderAccountType!]!
   connected: Boolean!
   kind: String!
   kindLabel: AbilityLabelType!
@@ -4816,7 +4822,7 @@ type ProviderTemplateCandidateType {
 }
 
 input ProviderTemplateCandidatesInput {
-  provider: String! @inputBounds(maxLength: 31)
+  connectionId: ID! @inputBounds(maxLength: 36)
 }
 
 input PublicBookingPageInput {
@@ -5952,8 +5958,8 @@ type SepayWebhookEventType {
 input SetAgentAbilityInput {
   ability: String! @inputBounds(maxLength: 41)
   agentId: ID! @inputBounds(maxLength: 36)
+  connectionId: ID! @inputBounds(maxLength: 36)
   mode: String!
-  provider: String! @inputBounds(maxLength: 31)
 }
 
 input SetAgentAvatarInput {
@@ -6043,6 +6049,10 @@ input SetConnectionGrantInput {
 input SetContentAutomationInput {
   key: String!
   on: Boolean!
+}
+
+input SetDefaultReceivingAccountInput {
+  connectionId: ID! @inputBounds(maxLength: 36)
 }
 
 input SetDefaultSmtpInput {

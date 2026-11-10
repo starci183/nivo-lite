@@ -35,7 +35,7 @@ const placeholderAgentOf = (key: string): AgentCatalogRow => ({
     isInitials: false,
     seed: key,
     subtitle: "-",
-    grants: [{ id: key, logo: null, label: "-", brand: "-", level: "-" }],
+    grants: [{ id: key, logo: null, label: "-", brand: "-" }],
     roleName: "-",
     missingLabels: [],
     tasks7d: 0,

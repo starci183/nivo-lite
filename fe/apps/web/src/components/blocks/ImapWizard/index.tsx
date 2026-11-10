@@ -24,7 +24,7 @@ import { ImapWizardBase } from "./component"
 interface ImapWizardProps {
     /** The actual workspace reads shared with this selected wizard. */
     readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
-    /** Workspace agents (any module): every agent may be given read access to the mailbox. */
+    /** Workspace agents (any module): every agent may be bound to the mailbox. */
     readonly agents: ReadonlyArray<AgentOption>
     /** Continue or edit this existing mailbox instead of creating a new one. */
     readonly resumeId?: string

@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common"
 import { In } from "typeorm"
 import type { EntityManager } from "typeorm"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
-import { isAccess } from "./agent-bindings.policy"
 import { InjectBindingAgents } from "./agent-connections.decorators"
 import type { BindingAgentsDirectory } from "./agent-connections.port"
 import type { ChannelClaim, ChannelConflict, ChannelHolder, OptionalChannelOwner } from "./agent-connections.contracts"
@@ -68,7 +67,7 @@ export class ChannelOwnersService {
         return mine.flatMap((link) => {
             const owner = ownershipConflictOf(
                 holders.filter((holder) => holder.connectionId === link.connectionId),
-                { agentId, module, purpose: link.purpose, access: link.access },
+                { agentId, module, purpose: link.purpose },
             )
             return owner === null ? [] : [{ connectionId: link.connectionId, owner }]
         })
@@ -131,7 +130,6 @@ export class ChannelOwnersService {
                     agentName: agent.name,
                     module: agent.module,
                     purpose: CHANNEL_PURPOSES.find((purpose) => purpose === link.purpose) ?? "inbound_chat",
-                    access: isAccess(link.access) ? link.access : "read",
                     grantedAt: link.createdAt,
                 },
             ]

@@ -14,16 +14,6 @@ const cors = { 'access-control-allow-origin': BASE, 'access-control-allow-creden
   const b = await chromium.launch()
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'vi-VN' })
   await ctx.addCookies([{ name: 'NIVO_LOCALE', value: 'vi', url: BASE }])
-  await ctx.route('http://localhost:3999/**', async (route) => {
-    const req = route.request()
-    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors })
-    const headers = { ...req.headers(), origin: 'http://localhost:3000' }; delete headers.host
-    try {
-      const resp = await route.fetch({ url: req.url().replace('http://localhost:3999', 'http://127.0.0.1:18787'), headers })
-      const out = { ...resp.headers() }; for (const k of Object.keys(out)) if (k.startsWith('access-control-')) delete out[k]
-      return route.fulfill({ response: resp, headers: { ...out, ...cors } })
-    } catch { return route.fulfill({ status: 502, headers: cors, body: '' }) }
-  })
   const p = await ctx.newPage()
   try {
     await p.goto(BASE + '/login', { waitUntil: 'networkidle', timeout: 300000 }); await p.waitForTimeout(5000)
@@ -31,6 +21,7 @@ const cors = { 'access-control-allow-origin': BASE, 'access-control-allow-creden
     await p.getByRole('button', { name: /Đăng nhập/ }).first().click()
     await p.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 120000 }).catch(() => undefined)
     await p.waitForLoadState('networkidle'); await p.waitForTimeout(3000)
+    if (!/\/workspaces\//.test(p.url())) { await p.getByRole('link', { name: 'Mở', exact: true }).first().click().catch(async () => { await p.getByRole('button', { name: 'Mở', exact: true }).first().click() }); await p.waitForURL(/\/workspaces\//, { timeout: 60000 }); await p.waitForLoadState('networkidle'); await p.waitForTimeout(2000) }
     const ws = (p.url().match(/\/workspaces\/([^/]+)/) || [])[1]
     console.log('ws', ws, p.url())
     await p.goto(`${BASE}/workspaces/${ws}/agents`, { waitUntil: 'networkidle' }); await p.waitForTimeout(3000)
@@ -51,24 +42,31 @@ const cors = { 'access-control-allow-origin': BASE, 'access-control-allow-creden
       await clearBubble(); await visit(frameUrl)
       if (process.env.FRAME_TAB) { await p.getByRole('tab', { name: process.env.FRAME_TAB }).first().click().catch(() => {}); await p.waitForTimeout(2000) }
       await shoot(p, `${ROOT}shell/khung-chung/${w}.png`)
+      if (process.env.TROLY === '1') {
       // 2. khung-chung-tro-ly: toggle on through the menu, then menu open
       await visit(frameUrl)
       if (process.env.FRAME_TAB) { await p.getByRole('tab', { name: process.env.FRAME_TAB }).first().click().catch(() => {}); await p.waitForTimeout(2000) }
-      const avatar = p.locator('header button[aria-haspopup="menu"]').last()
+      const pos = await p.evaluate(() => { const bs = [...document.querySelectorAll('button[aria-haspopup]')].map((e) => e.getBoundingClientRect()).filter((r) => r.top < 70 && r.width > 0).sort((a, b) => b.right - a.right); return bs[0] ? { x: bs[0].left + bs[0].width / 2, y: bs[0].top + bs[0].height / 2 } : null })
+      if (!pos) throw new Error('no avatar')
+      const avatar = { click: () => p.mouse.click(pos.x, pos.y) }
       await avatar.click(); await p.waitForTimeout(600)
+      if (process.env.DBG) console.log(await p.evaluate(() => [...document.querySelectorAll('[role^=menu]')].map((e) => e.getAttribute('role') + ':' + e.innerText.slice(0, 40))))
       await p.getByRole('menuitemcheckbox', { name: /Hiện trợ lý NIVO/ }).click(); await p.waitForTimeout(800)
       if (!(await p.getByRole('menuitemcheckbox', { name: /Hiện trợ lý NIVO/ }).isVisible().catch(() => false))) { await avatar.click(); await p.waitForTimeout(600) }
       await shoot(p, `${ROOT}shell/khung-chung-tro-ly/${w}.png`)
       await p.keyboard.press('Escape')
+      }
+      if (process.env.TROLY !== '1') {
       // 3. agents-catalog, bubble hidden
       await clearBubble(); await visit(`${BASE}/workspaces/${ws}/agents`)
       await shoot(p, `${ROOT}agents-catalog/dang-chay/${w}.png`)
       // 4. menu of the first card
-      const more = p.locator('main button[aria-haspopup="menu"]').first()
+      const more = p.getByRole('button', { name: /Tuỳ chọn của/ }).first()
       await more.click(); await p.waitForTimeout(800)
       await p.mouse.move(0, 0)
       await shoot(p, `${ROOT}agents-catalog/dang-chay-menu/${w}.png`)
       await p.keyboard.press('Escape')
+      }
       console.log('done', w)
     }
     await clearBubble()

@@ -40,9 +40,9 @@ Luật: `surfacecard-select-subtitle.md` (flat fields: title 14/500 + content), 
 Grammar: `Input kind="password" revealLabel hideLabel`, `node_modules/@starci/grammar/dist/core/branch/Input/index.d.ts`; composite `EmailField`.
 
 ## Liên kết "Quên mật khẩu?"
-Vì sao: an inline text link: exact primary, hover underline, trailing arrow, right-aligned under the password it relates to.
-Luật: `page-header-left-sublabel-xs.md` (link = hover underline + anchor icon, 14 inherits), `owner-colors-exact.md`.
-Grammar: `Link href`, `node_modules/@starci/grammar/dist/core/leaf/Link/index.d.ts`.
+Vì sao: a standalone secondary link, right-aligned under the password it relates to, in the foreground colour (no arrow, no red: the sign-in button is the one red call to action).
+Luật: `red-budget-links-foreground` (standalone secondary link = foreground), `page-header-left-sublabel-xs.md`.
+Grammar: `Link variant="plain"` (0.37.14), `node_modules/@starci/grammar/dist/core/leaf/Link/index.d.ts`.
 
 ## Nút "Đăng nhập" (chính)
 Vì sao: the only commit button of the card, full width, pill, primary red; no icon because the label says the action.
@@ -60,9 +60,9 @@ Luật: `grammar-core-heroui.md`.
 Grammar: `Alert tone title description`, `node_modules/@starci/grammar/dist/core/composite/Alert/index.d.ts`; `TextAction`.
 
 ## Chân trang pháp lý ("Chính sách quyền riêng tư", "Điều khoản sử dụng")
-Vì sao: SAI — (partly right, see the flagged part) legal links at the bottom of the entry frame, one bar, centred, link style. On the phone they wrap and the arrow glyph detaches to the far right of its own cell (see 390.png), so the phone footer is unfinished: SAI — the bar must keep each link on one line (stack them or shrink the gap) on 390.
-Luật: `page-header-left-sublabel-xs.md` (link look), `verify-against-visualize.md`.
-Grammar: `NavLandmark layout="bar"` + `Link`, `node_modules/@starci/grammar/dist/core/frame/NavLandmark/index.d.ts`; `EntryFrame footer`.
+Vì sao: one centred bar of two standalone secondary links in the foreground colour (red is kept for the one CTA); since Grammar 0.37.14 internal links carry no arrow, so each link stays on one line at 390.
+Luật: `red-budget-links-foreground` (legal links = foreground, not red), `verify-against-visualize.md`.
+Grammar: `NavLandmark layout="bar"` + `Link variant="plain"`, `node_modules/@starci/grammar/dist/core/frame/NavLandmark/index.d.ts`; `EntryFrame footer`.
 
 ## Bố cục điện thoại 390
 Vì sao: the card fills the width minus a 16px gutter, the logo and language button stay on the top bar, the fields keep full width; only the legal footer misbehaves (above). The card sits lower than on desktop because the centred frame keeps vertical centring.

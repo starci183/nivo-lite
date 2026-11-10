@@ -80,6 +80,11 @@ export class LeadFreezeRunsService {
         return (await this.runs.runOf(workspaceId, runId))?.status ?? null
     }
 
+    /** The run a wake already opened (a wake tried again), or null when it opened none. */
+    runOfWake(workspaceId: string, wakeId: string): Promise<OptionalText> {
+        return this.runs.runIdOfWake(workspaceId, wakeId)
+    }
+
     /** The title of the failed step in the owner's language: the installed node's own title, else the node's key. */
     async stepTitleOf(workspaceId: string, run: StoppedRun): Promise<OptionalText> {
         if (run.failed === null) return null

@@ -1,4 +1,5 @@
 import {
+    Badge,
     Cluster,
     DropdownMenu,
     IconButton,
@@ -40,7 +41,8 @@ const writeItemOf = (row: CapabilityRowView, mode: CapabilityModeView): SelectIt
 })
 
 /** One row as a select item. */
-const itemOf = (row: CapabilityRowView): SelectItemData => (row.mode === undefined ? readItemOf(row) : writeItemOf(row, row.mode))
+const itemOf = (row: CapabilityRowView): SelectItemData =>
+    row.mode === undefined ? readItemOf(row) : writeItemOf(row, row.mode)
 
 /** The input of the head parts. */
 interface HeadInput {
@@ -66,22 +68,26 @@ const HeadEnd = ({ head }: HeadInput) => {
     )
 }
 
-/** The head of a provider card: the logo and name over the kind line, the end of the head at the end. */
+/** The head of an account card: the logo and "<provider> · <account>" over the kind line, its chip beside, the end of the head at the end. */
 const Head = ({ head }: HeadInput) => (
     <Cluster gap="inline" justify="between" align="center" wrap={false}>
-        <IdentityLockup
-            title={head.name}
-            subtitle={head.line}
-            markShape="rounded"
-            {...(head.logo === undefined ? {} : { logoSrc: head.logo })}
-        />
+        <Cluster gap="identity" align="center">
+            <IdentityLockup
+                title={head.name}
+                subtitle={head.line}
+                markShape="rounded"
+                {...(head.logo === undefined ? {} : { logoSrc: head.logo })}
+            />
+            {head.badge === undefined ? null : <Badge tone="success">{head.badge}</Badge>}
+        </Cluster>
         <HeadEnd head={head} />
     </Cluster>
 )
 
 /**
- * One provider of an agent as a card: a head with the provider's logo, name and kind line (and the more-menu, or the link to
- * connect it), then a choice card of the capabilities the agent may use (checkbox rows; a write one also carries its mode).
+ * One connected account of an agent as a card: a head with the provider's logo, "<provider> · <account>", the kind line and a chip
+ * (and the more-menu, or the link to connect it), then a choice card of the capabilities the agent may use on that account (checkbox
+ * rows; a write one also carries its mode pill as the row's control).
  */
 export const ProviderRightsCard = (props: ProviderRightsCardProps) => {
     const view = props.props

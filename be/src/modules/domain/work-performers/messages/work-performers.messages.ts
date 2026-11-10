@@ -52,6 +52,8 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.orderNoAmount": "chưa có số tiền",
         "performers.orderConfirmed": "Đã xác nhận đơn {{no}} · {{amount}}",
         "performers.runResumed": "Chạy lại từ bước lỗi",
+        "performers.toolApprovalRefused":
+            "Chủ cửa hàng không cho phép gọi {{tool}} với các tham số này. Không gọi lại đúng lệnh đó cho việc này: làm tiếp mà không cần nó, hoặc báo lại chủ cửa hàng.",
         "performers.orderCancelled": "Đã hủy đơn {{no}}",
         "performers.invoiceSummary": "Xuất hóa đơn cho {{name}} · {{amount}}",
         "performers.invoiceIssued": "Đã tạo hồ sơ thanh toán nội bộ {{no}} · {{amount}} · {{label}}",
@@ -110,6 +112,7 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "errors.WORK_PERFORMERS_BOOKING_NOT_MOVED": "Chưa đổi được lịch sang giờ khách muốn ({{reason}}).",
         "errors.WORK_PERFORMERS_REMINDER_EMPTY": "Không có nội dung nhắc.",
         "errors.WORK_PERFORMERS_APPROVAL_INVALID": "Yêu cầu duyệt không có lệnh kết nối để thực hiện.",
+        "errors.WORK_PERFORMERS_APPROVAL_NOT_OWNER": "Chỉ chủ workspace mới duyệt được thao tác này.",
         "errors.WORK_PERFORMERS_CONNECTOR_REFUSED": "Kết nối chưa thực hiện {{tool}} ({{code}}).",
         "performers.chatBooking.askService": "Bạn muốn đặt dịch vụ nào ạ? Bên mình có: {{services}}.",
         "performers.chatBooking.askDate": "Bạn muốn đặt {{service}} vào ngày nào ạ?",
@@ -190,6 +193,8 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "performers.orderNoAmount": "no amount yet",
         "performers.orderConfirmed": "Confirmed order {{no}} · {{amount}}",
         "performers.runResumed": "Run again from the failed step",
+        "performers.toolApprovalRefused":
+            "The shop owner did not allow {{tool}} with these arguments. Do not make that exact call again for this work: go on without it, or report back to the owner.",
         "performers.orderCancelled": "Order {{no}} cancelled",
         "performers.invoiceSummary": "Issue the invoice for {{name}} · {{amount}}",
         "performers.invoiceIssued": "Created internal payment record {{no}} · {{amount}} · {{label}}",
@@ -250,6 +255,7 @@ export const WORK_PERFORMERS_MESSAGES: MessageBundle = {
         "errors.WORK_PERFORMERS_BOOKING_NOT_MOVED": "The booking could not be moved to the time asked ({{reason}}).",
         "errors.WORK_PERFORMERS_REMINDER_EMPTY": "The reminder has no text.",
         "errors.WORK_PERFORMERS_APPROVAL_INVALID": "The approval carries no connector call to perform.",
+        "errors.WORK_PERFORMERS_APPROVAL_NOT_OWNER": "Only the workspace owner can approve this action.",
         "errors.WORK_PERFORMERS_CONNECTOR_REFUSED": "The connector did not perform {{tool}} ({{code}}).",
         "performers.chatBooking.askService": "Which service would you like to book? We offer: {{services}}.",
         "performers.chatBooking.askDate": "Which day would you like {{service}}?",

@@ -1,6 +1,6 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
 import { Type } from "class-transformer"
-import { ArrayMaxSize, IsArray, IsString, IsUUID, Matches, MaxLength, ValidateNested } from "class-validator"
+import { ArrayMaxSize, IsArray, IsString, IsUUID, MaxLength, ValidateNested } from "class-validator"
 import { AbilityWishInput } from "./ability-wish.input"
 
 @InputType()
@@ -13,12 +13,12 @@ export class AttachAgentProviderInput {
     @IsUUID()
     agentId!: string
 
-    /** The provider key. */
-    @Field(() => String)
+    /** The connected account: the connection id. */
+    @Field(() => ID)
     @IsString()
-    @MaxLength(31)
-    @Matches(/^[a-z][a-z0-9_-]{1,30}$/u)
-    provider!: string
+    @MaxLength(36)
+    @IsUUID()
+    connectionId!: string
 
     /** The abilities wanted; an ability left out is off. */
     @Field(() => [AbilityWishInput])

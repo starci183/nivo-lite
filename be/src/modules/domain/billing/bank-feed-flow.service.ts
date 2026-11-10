@@ -17,13 +17,18 @@ const RECORD_LOCALE = "vi"
 const BANK_FEED_TAG_SOURCE = "bank_feed"
 
 /** The movement of a credit or debit the bank feed handed over, as the `payment.transaction` record keeps it. */
-const movementOf = (credit: IncomingCredit, direction: PaymentMovement["direction"]): PaymentMovement => ({
+const movementOf = (
+    credit: IncomingCredit,
+    direction: PaymentMovement["direction"],
+    connectionId: string,
+): PaymentMovement => ({
     direction,
     amountVnd: Math.round(credit.amount),
     reference: credit.content === "" ? null : credit.content,
     payer: credit.payer ?? null,
     externalRef: credit.eventId,
     account: credit.account ?? null,
+    connectionId,
     occurredAt: credit.occurredAt ?? null,
 })
 
@@ -51,7 +56,7 @@ export class BankFeedFlowService {
      * receipt; null when the engine refused it. A repeat of the same transaction answers the same record with `created` false.
      */
     record(tx: EntityManager, connection: ProvenConnection, credit: IncomingCredit): Promise<OptionalRecordedMovement> {
-        return this.transactions.record(tx, connection.workspaceId, movementOf(credit, "credit"))
+        return this.transactions.record(tx, connection.workspaceId, movementOf(credit, "credit", connection.connectionId))
     }
 
     /**
@@ -89,7 +94,7 @@ export class BankFeedFlowService {
      * supplier payment is not matched against the workspace's invoices. The receipt claim already made it once per delivery.
      */
     async debit(tx: EntityManager, connection: ProvenConnection, credit: IncomingCredit): Promise<FeedCreditAnswer> {
-        await this.transactions.record(tx, connection.workspaceId, movementOf(credit, "debit"))
+        await this.transactions.record(tx, connection.workspaceId, movementOf(credit, "debit", connection.connectionId))
         return { status: "debited" }
     }
 }

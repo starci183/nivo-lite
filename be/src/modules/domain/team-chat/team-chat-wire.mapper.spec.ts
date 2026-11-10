@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { TeamChatErrorCode } from "./errors/team-chat.error"
+import type { StopCardView } from "./stop-card.contracts"
 import {
     roomPayloadOf,
     messagePayloadOf,
@@ -88,6 +89,7 @@ const MESSAGE: MessageView = {
     reactions: [],
     replyTo: null,
     forwardedFrom: null,
+    stop: null,
 }
 
 const ROOM: ChatRoomView = {
@@ -192,6 +194,37 @@ describe("wire shapes", () => {
             subject.messageWireOf({ ...MESSAGE, approval: { ...APPROVAL, decidedAt: null, status: "pending" } })
                 .approval,
         ).toMatchObject({ decidedAt: null })
+    })
+
+    it("carries the typed stop of a stop card as the view built it, and null for any other line", async () => {
+        const subject = await buildSubject()
+        const stop: StopCardView = {
+            stopId: "stop-1",
+            runId: "run-1",
+            stepKey: "match",
+            stepTitle: "Khớp giao dịch",
+            workflowTitle: "Đối soát tiền về",
+            moduleKey: "accounting",
+            leadId: null,
+            conversationId: null,
+            kind: "ai_report",
+            by: "ai",
+            state: "answered",
+            headline: "Quy trình đang dừng",
+            message: "Tiệm nhận 500 ₫ cho đơn DH-0003, còn thiếu 500 ₫.",
+            question: "Ghi nhận đã trả hay giữ đơn mở?",
+            suggestions: [],
+            facts: [],
+            needs: { answer: false, decisions: [], verdicts: [] },
+            replies: [{ kind: "answer", text: "Giữ đơn mở", by: "seat-1", at: ISO, byName: "Lan" }],
+            repeats: 1,
+            firstAt: ISO,
+            stoppedAt: ISO,
+            resolvedAt: null,
+            revision: 2,
+        }
+        expect(subject.messageWireOf({ ...MESSAGE, stop }).stop).toEqual(stop)
+        expect(subject.messageWireOf(MESSAGE).stop).toBeNull()
     })
 
     it("shows a room with its members and last message, a list, a page and an absent room", async () => {

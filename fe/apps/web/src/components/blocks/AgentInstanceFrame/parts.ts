@@ -5,7 +5,7 @@ import type { ConnectionNeedsProps } from "@/components/leaves/ConnectionNeeds"
 import type { useTranslations } from "next-intl"
 import type { useAgentWorkView } from "@/hooks/agentWork"
 import type { useConnectionNeedsCopy, useInstanceHeader } from "@/hooks/installations"
-import { AGENTS_ROUTE, APP_ROUTES, CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
+import { AGENTS_ROUTE, APP_ROUTES, workspaceHref } from "@/modules/routes"
 
 /** What the header shows once the instance is known, every word resolved. */
 export interface InstanceHeaderView {
@@ -66,6 +66,23 @@ export interface FrameSubTabs {
 /** The path of the page of one run, below the Work tab: the run is the segment after `runs`. */
 export const RUN_PATH: RegExp = /\/work\/runs\/([^/?#]+)/
 
+/** The path of the page of one version of a workflow, below the workflows tab: the workflow key, then the version number. */
+export const VERSION_PATH: RegExp = /(\/workflows\/([^/?#]+))\/versions\/(\d+)/
+
+/** The crumb of the open version of a workflow, from the path; null when the path names no version. */
+export const versionCrumbOf = (
+    pathname: string,
+    words: ReturnType<typeof useTranslations<"agentWorkflowPages">>,
+): AgentCrumbsInput["version"] => {
+    const match = VERSION_PATH.exec(pathname)
+    if (match === null) return null
+    return {
+        workflowLabel: words("crumbWorkflow"),
+        workflowHref: `${pathname.slice(0, (match.index ?? 0) + (match[1] ?? "").length)}/versions`,
+        label: words("crumbVersion", { number: match[3] ?? "" }),
+    }
+}
+
 /** What the crumbs of the agent need: its name, and the run and the Work tab when a run is open. */
 interface AgentCrumbsInput {
     readonly header: ReturnType<typeof useInstanceHeader>
@@ -77,11 +94,17 @@ interface AgentCrumbsInput {
     readonly workLabel: string
     readonly workHref: string
     readonly runLabel: string
+    /** The version of a workflow that is open: the way back to the versions of that workflow, and its own crumb; null on any other page. */
+    readonly version: {
+        readonly workflowLabel: string
+        readonly workflowHref: string
+        readonly label: string
+    } | null
 }
 
 /** The crumbs from the agent on: its name (a link when a run is open), and the Work tab and the run under it. */
 export const agentCrumbsOf = (input: AgentCrumbsInput): ReadonlyArray<BreadcrumbItem> => {
-    const { header, runId } = input
+    const { header, runId, version } = input
     if (input.isLoading) return [{ id: "agent", label: "", isLoading: true }]
     const agent = {
         id: "agent",
@@ -90,6 +113,15 @@ export const agentCrumbsOf = (input: AgentCrumbsInput): ReadonlyArray<Breadcrumb
             ? {}
             : { href: workspaceHref(input.workspaceId, `${AGENTS_ROUTE}/${input.module}/${input.installationId}`) }),
     }
+    if (version !== null)
+        return [
+            {
+                ...agent,
+                href: workspaceHref(input.workspaceId, `${AGENTS_ROUTE}/${input.module}/${input.installationId}`),
+            },
+            { id: "workflow", label: version.workflowLabel, href: version.workflowHref },
+            { id: "version", label: version.label },
+        ]
     return runId === null
         ? [agent]
         : [agent, { id: "work", label: input.workLabel, href: input.workHref }, { id: "run", label: input.runLabel }]
@@ -187,7 +219,6 @@ interface InstanceViewInput {
     readonly module: string
     readonly installationId: string
     readonly workspaceId: string
-    readonly isConnections: boolean
     readonly canPackage: boolean
 }
 
@@ -203,9 +234,7 @@ export const instanceViewOf = (input: InstanceViewInput): InstanceHeaderView => 
         statusTone: resolved.statusTone,
         subtitle: resolved.subtitle,
         needs: { lines: needs.linesOf(resolved.connectionNeeds), linkLabel: needs.linkLabel, href: needs.href },
-        primary: input.isConnections
-            ? { label: t("addConnection"), href: workspaceHref(input.workspaceId, CONSOLE_ROUTES.connections) }
-            : null,
+        primary: null,
         profileHref: resolved.profileHref,
         packageHref: input.canPackage
             ? workspaceHref(input.workspaceId, `${AGENTS_ROUTE}/templates/package/${input.installationId}`)

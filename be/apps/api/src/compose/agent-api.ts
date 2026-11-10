@@ -1,5 +1,4 @@
 import type { DynamicModule } from "@nestjs/common"
-import { AgentToolsHttpModule } from "@features/api/agent-tools"
 import { AgentsGraphqlModule } from "@features/api/agents"
 import { DecisionsGraphqlModule } from "@features/api/decisions"
 import { AGENTS_ERROR_KINDS, AGENTS_MESSAGES } from "@modules/domain/agents"
@@ -10,7 +9,6 @@ import type { MessageBundle } from "@modules/platform/i18n"
 export const agentApiModules = (): Array<DynamicModule> => [
     AgentsGraphqlModule.register({}),
     DecisionsGraphqlModule.register({}),
-    AgentToolsHttpModule.register({}),
 ]
 
 /** The error kinds of the capabilities this group registers, in registration order. */

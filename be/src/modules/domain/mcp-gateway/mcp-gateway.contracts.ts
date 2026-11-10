@@ -486,8 +486,8 @@ export interface GrantInput {
 export interface AbilityInput {
     /** The agent. */
     readonly agentId: string
-    /** The provider. */
-    readonly provider: string
+    /** The connected account. */
+    readonly connectionId: string
     /** The ability id. */
     readonly ability: string
     /** `off` (unticked), `auto` or `ask`. */

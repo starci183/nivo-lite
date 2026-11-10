@@ -63,34 +63,47 @@ export const DONE_VIEW: ItemsRegionView = {
 /** The agent has finished nothing yet. */
 export const DONE_NONE: ItemsRegionView = { count: null, rows: [], linkLabel: "", linkHref: "", more: null }
 
-/** Two connections bound to the agent. */
+/** Three accounts attached to the agent: two SePay accounts (MB is the default receiving one) and a Google sheet. */
 export const CONNECTIONS_VIEW: ConnectionsRegionView = {
-    manageLabel: "Qu\u1ea3n l\u00fd k\u1ebft n\u1ed1i",
-    manageHref: "",
+    label: "T\u00e0i kho\u1ea3n \u0111\u00e3 g\u1eafn",
+    rightsLabel: "Quy\u1ec1n",
+    rightsHref: "",
     rows: [
         {
-            id: "zalo",
-            name: "Zalo OA",
-            description: "Nh\u1eadn v\u00e0 tr\u1ea3 l\u1eddi tin nh\u1eafn c\u1ee7a kh\u00e1ch",
-            statusLabel: "\u0110\u00e3 k\u1ebft n\u1ed1i",
-            statusTone: "success",
-            accessLabel: "\u0110\u1ecdc v\u00e0 g\u1eedi",
+            id: "conn-mb",
+            name: "SePay \u00b7 MB \u2022\u2022\u2022\u2022 5252",
+            description: "\u0110\u1ecdc giao d\u1ecbch \u00b7 D\u00f2 l\u1ea1i ti\u1ec1n (T\u1ef1 \u0111\u1ed9ng)",
+            provider: "sepay",
+            access: "auto",
+            accountMasked: "MB \u2022\u2022\u2022\u2022 5252",
+            account: "MB \u2022\u2022\u2022\u2022 5252",
+            isDefaultReceiving: true,
         },
         {
-            id: "sepay",
-            name: "SePay",
-            description: "\u0110\u1ecdc giao d\u1ecbch ng\u00e2n h\u00e0ng",
-            statusLabel: "\u0110\u00e3 k\u1ebft n\u1ed1i",
-            statusTone: "success",
-            accessLabel: "Ch\u1ec9 \u0111\u1ecdc",
+            id: "conn-vcb",
+            name: "SePay \u00b7 VCB \u2022\u2022\u2022\u2022 0071",
+            description: "\u0110\u1ecdc giao d\u1ecbch",
+            provider: "sepay",
+            access: "read",
+            accountMasked: "VCB \u2022\u2022\u2022\u2022 0071",
+            account: "VCB \u2022\u2022\u2022\u2022 0071",
+        },
+        {
+            id: "conn-sheet",
+            name: "Google \u00b7 S\u1ed5 thu NIVO",
+            description: "Ghi s\u1ed5 (H\u1ecfi)",
+            provider: "google",
+            access: "ask",
+            account: "S\u1ed5 thu NIVO",
         },
     ],
 }
 
 /** The agent has no connection. */
 export const CONNECTIONS_NONE: ConnectionsRegionView = {
-    manageLabel: "Qu\u1ea3n l\u00fd k\u1ebft n\u1ed1i",
-    manageHref: "",
+    label: "Tài khoản đã gắn",
+    rightsLabel: "Quy\u1ec1n",
+    rightsHref: "",
     rows: [],
 }
 

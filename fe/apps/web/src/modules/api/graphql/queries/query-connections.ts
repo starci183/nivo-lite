@@ -26,10 +26,6 @@ const query1: TypedDocumentNode<QueryConnectionsResponse> = gql`
                 content
             }
             agentIds
-            grants {
-                agentId
-                access
-            }
         }
     }
 `

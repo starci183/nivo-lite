@@ -51,6 +51,7 @@ const transactionData = z.object({
     occurredAt: z.string().max(MAX_TIME),
     status: z.enum(["unmatched", "matched", "needs_review", "other_income"]),
     externalRef: nullableText(MAX_ID).optional(),
+    connectionId: nullableText(MAX_ID).optional(),
 })
 
 /** The declared fields of a `sales.order` record the module reads. */
@@ -112,6 +113,7 @@ export const TRANSACTION_FIELDS: ReadonlyArray<string> = [
     "orderId",
     "occurredAt",
     "status",
+    "connectionId",
 ]
 
 /** The fields a query for order rows selects. */

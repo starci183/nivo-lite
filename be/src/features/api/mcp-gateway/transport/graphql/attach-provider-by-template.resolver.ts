@@ -21,7 +21,7 @@ export class AttachProviderByTemplateResolver {
     ): Promise<Array<string>> {
         const result = await this.commandBus.execute(
             new AttachProviderByTemplateCommand({
-                request: { workspaceId, provider: input.provider, agentIds: input.agentIds },
+                request: { workspaceId, connectionId: input.connectionId, agentIds: input.agentIds },
                 principal,
             }),
         )

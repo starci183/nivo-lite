@@ -10,7 +10,6 @@ export { isChannelPurpose } from "./channel-ownership.policy"
 export { AgentConnectionsModule } from "./agent-connections.module"
 export { PURPOSES } from "./agent-bindings.policy"
 export type {
-    Access,
     BoundAgent,
     BoundConnection,
     ConnectionGrant,

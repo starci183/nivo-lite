@@ -11,6 +11,7 @@ import {
     INSTALLING_MEMBER as MEMBER,
     installationRecordOf as recordOf,
 } from "@tests/fixtures/builders/module-install.builder"
+import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
 import { AgentRemovalService } from "./agent-removal.service"
 import { ModulesErrorCode } from "./errors/modules.error"
 import { ModuleReadinessService } from "./module-readiness.service"
@@ -38,6 +39,8 @@ const build = async () => {
     readiness.withNeeds.mockImplementation((record) =>
         Promise.resolve({ ...record, ...VIEWED_AGENT, connectionNeeds: [], lifecycle: "removed" }),
     )
+    const abilities = mock<ProviderAbilitiesService>()
+    abilities.detachAgent.mockResolvedValue(2)
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentRemovalService,
@@ -49,9 +52,10 @@ const build = async () => {
             { provide: EventsService, useValue: events },
             { provide: InstallationChangesService, useValue: sync },
             { provide: ModuleReadinessService, useValue: readiness },
+            { provide: ProviderAbilitiesService, useValue: abilities },
         ],
     }).compile()
-    return { tx, service: moduleRef.get(AgentRemovalService), installations, members, agents, rules, events, sync }
+    return { tx, service: moduleRef.get(AgentRemovalService), installations, members, agents, rules, events, sync, abilities }
 }
 
 describe("AgentRemovalService > remove", () => {
@@ -77,6 +81,22 @@ describe("AgentRemovalService > remove", () => {
             { workspaceId: "ws-1", installationId: "inst-1", force: false },
             expect.anything(),
         )
+    })
+
+    it("leaves a removed agent attached to no connected account, and touches no attachment when nothing is removed", async () => {
+        const { service, installations, abilities } = await build()
+        installations.find
+            .mockResolvedValueOnce(recordOf({ isMulti: false }))
+            .mockResolvedValueOnce(recordOf({ status: "removed", liveEnabled: false }))
+            .mockResolvedValueOnce(recordOf({ status: "removed", liveEnabled: false }))
+        installations.markRemoved.mockResolvedValue("done")
+
+        await service.remove("u1", "ws-1", "inst-1")
+        expect(abilities.detachAgent).toHaveBeenCalledWith("ws-1", "agent-1")
+
+        abilities.detachAgent.mockClear()
+        await service.remove("u1", "ws-1", "inst-1")
+        expect(abilities.detachAgent).not.toHaveBeenCalled()
     })
 
     it("removes an installation that has no agent without touching agents or rules", async () => {

@@ -20,7 +20,7 @@ import { AGENT_ROLES_HREF, workspaceHref } from "@/modules/routes"
 import { useAgentWorkView } from "@/hooks/agentWork"
 import { navigation } from "@/modules/i18n"
 import { AgentInstanceFrameBase, type InstanceHeaderView, type InstanceSwitch } from "./component"
-import { RUN_PATH, agentCrumbsOf, instanceViewOf, frameSubTabsOf, rootCrumbsOf, tabOf } from "./parts"
+import { RUN_PATH, agentCrumbsOf, instanceViewOf, frameSubTabsOf, rootCrumbsOf, tabOf, versionCrumbOf } from "./parts"
 
 const PLACEHOLDER: InstanceHeaderView = {
     name: "-",
@@ -121,6 +121,7 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                         workLabel: t("tab_work"),
                         workHref: hrefOf("work"),
                         runLabel: runId === null ? "" : tr("crumbRun", { id: runId.slice(0, 6) }),
+                        version: versionCrumbOf(pathname, twp),
                     }),
                 ],
                 tabsLabel: t("tabsLabel"),
@@ -144,7 +145,6 @@ export const AgentInstanceFrame = (props: AgentInstanceFrameProps) => {
                     module: props.module,
                     installationId: props.installationId,
                     workspaceId,
-                    isConnections: selected === "connections",
                     canPackage: isManager(member),
                 }),
             }}

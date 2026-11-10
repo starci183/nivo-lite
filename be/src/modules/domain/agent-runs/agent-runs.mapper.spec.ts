@@ -6,7 +6,15 @@ import {
     stepRecordOf as sampleStep,
     stepRowOf,
 } from "@tests/fixtures/builders/agent-runs.builder"
-import { handlerViewsOf, routeStepOf, runRecordOf, runViewOf, stepRecordOf, stepViewOf } from "./agent-runs.mapper"
+import {
+    handlerViewsOf,
+    routeStepOf,
+    runEngineOf,
+    runRecordOf,
+    runViewOf,
+    stepRecordOf,
+    stepViewOf,
+} from "./agent-runs.mapper"
 
 const SUBJECT = Symbol("agent-runs.mapper")
 
@@ -15,13 +23,22 @@ const buildSubject = async () => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: { handlerViewsOf, routeStepOf, runRecordOf, runViewOf, stepRecordOf, stepViewOf },
+                useValue: {
+                    handlerViewsOf,
+                    routeStepOf,
+                    runEngineOf,
+                    runRecordOf,
+                    runViewOf,
+                    stepRecordOf,
+                    stepViewOf,
+                },
             },
         ],
     }).compile()
     return moduleRef.get<{
         handlerViewsOf: typeof handlerViewsOf
         routeStepOf: typeof routeStepOf
+        runEngineOf: typeof runEngineOf
         runRecordOf: typeof runRecordOf
         runViewOf: typeof runViewOf
         stepRecordOf: typeof stepRecordOf
@@ -45,6 +62,14 @@ describe("run records", () => {
         const { runRecordOf } = await buildSubject()
         expect(runRecordOf(runRowOf()).errorCode).toBeNull()
         expect(runRecordOf(runRowOf({ error: { code: 3 } })).errorCode).toBeNull()
+    })
+
+    it("reads the engine a run is on: legacy for a row that names none, else the one it names", async () => {
+        const { runEngineOf } = await buildSubject()
+        expect(runEngineOf(runRowOf())).toBe("legacy")
+        expect(runEngineOf(runRowOf({ engine: null }))).toBe("legacy")
+        expect(runEngineOf(runRowOf({ engine: "langgraph" }))).toBe("langgraph")
+        expect(() => runEngineOf(runRowOf({ engine: "openclaw" }))).toThrow()
     })
 
     it.each([

@@ -56,20 +56,18 @@ const connectionRow: z.ZodType<ConnectionRow> = z.object({
     id,
     name: text,
     description: text,
-    statusLabel: text,
-    statusTone: badgeTone,
-    accessLabel: text,
-    provider: text.optional(),
+    provider: text,
     access: text.optional(),
     accountMasked: text.optional(),
-    isGranted: z.boolean().optional(),
-    actionLabel: text.optional(),
+    account: text.optional(),
+    isDefaultReceiving: z.boolean().optional(),
 })
 
 /** The shape of the connections region. */
 export const connectionsRegionView: z.ZodType<ConnectionsRegionView> = z.object({
-    manageLabel: text,
-    manageHref: text,
+    label: text,
+    rightsLabel: text,
+    rightsHref: text,
     rows: list(connectionRow),
 })
 

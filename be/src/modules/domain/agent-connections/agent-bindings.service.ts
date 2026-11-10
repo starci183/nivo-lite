@@ -12,8 +12,6 @@ import {
     PURPOSES,
     boundAgentsOf,
     boundConnectionsOf,
-    exceedsManagerCeiling,
-    isAccess,
     isPurpose,
     handoversFrom,
     purposesOf,
@@ -55,9 +53,9 @@ const GRANTS_MAX = 500
 
 @Injectable()
 /**
- * The one resolver of "which agent listens and speaks on which connection". agent_connections (agent, connection, purpose, access) is
+ * The one resolver of "which agent listens and speaks on which connection". agent_connections (agent, connection, purpose) is
  * the single source: webhooks, the chat turn, outbound delivery and the shift notifier all ask here and nobody guesses "the first
- * connected Telegram" on their own. Only active agents count; with `acting`, a binding whose access is "read" does not count. The
+ * connected Telegram" on their own. Only active agents count; what an agent may do on a connection is not here but in its attachment's rights. The
  * reads take ids a verified source resolved (a webhook connection, a conversation agent); the grants require a manager.
  */
 export class AgentBindingsService {
@@ -95,7 +93,6 @@ export class AgentBindingsService {
                     module: agent.module,
                     name: agent.name,
                     created_at: agent.createdAt.toISOString(),
-                    access: link.access,
                     purpose: link.purpose,
                 })),
         )
@@ -175,7 +172,6 @@ export class AgentBindingsService {
                     agentName: agent.name,
                     module: agent.module,
                     purpose: link.purpose,
-                    access: isAccess(link.access) ? link.access : "read",
                 },
             ]
         })
@@ -184,14 +180,14 @@ export class AgentBindingsService {
     /** Inbound chat: the front door agent of a connection and the agents it hands over to. */
     async routeInbound(connectionId: string): Promise<InboundRoute> {
         return splitRoute(
-            await this.agentsFor(connectionId, "inbound_chat", { acting: true, modules: INBOUND_MODULES }),
+            await this.agentsFor(connectionId, "inbound_chat", { modules: INBOUND_MODULES }),
         )
     }
 
     /** The agents a conversation own agent can hand over to; none for a conversation without a connection (website chat). */
     async handoversOf(connectionId: OptionalConnectionId, agent: ModuleRef): Promise<ReadonlyArray<BoundAgent>> {
         if (connectionId === null) return []
-        const bound = await this.agentsFor(connectionId, "inbound_chat", { acting: true, modules: INBOUND_MODULES })
+        const bound = await this.agentsFor(connectionId, "inbound_chat", { modules: INBOUND_MODULES })
         return handoversFrom(bound, agent.module)
     }
 
@@ -200,7 +196,7 @@ export class AgentBindingsService {
         const caller = await this.members.require(userId, grant.workspaceId, GOVERNORS)
         const byManager = caller.role !== "owner"
         if (byManager) await this.requireManaged(userId, grant.workspaceId, grant.agentId)
-        const granted = await this.entityManager.transaction((manager) => this.upsert(manager, grant, byManager))
+        const granted = await this.entityManager.transaction((manager) => this.upsert(manager, grant))
         if (!granted) {
             throw new AgentConnectionsError({
                 code: AgentConnectionsErrorCode.TargetNotFound,
@@ -295,12 +291,12 @@ export class AgentBindingsService {
         manager: EntityManager,
     ): Promise<Array<StoredGrant>> {
         const links = await manager.find(AgentConnectionEntity, {
-            select: { agentId: true, connectionId: true, access: true },
+            select: { agentId: true, connectionId: true },
             where,
             order: { createdAt: "ASC" },
             take: GRANTS_MAX,
         })
-        return links.map((link) => ({ agentId: link.agentId, connectionId: link.connectionId, access: link.access }))
+        return links.map((link) => ({ agentId: link.agentId, connectionId: link.connectionId }))
     }
 
     /** Every grant of the workspace, oldest first. */
@@ -383,7 +379,6 @@ export class AgentBindingsService {
                             name: connection.name,
                             status: connection.status,
                             created_at: connection.createdAt.toISOString(),
-                            access: link.access,
                             purpose: link.purpose,
                             bot_username: connection.botUsername,
                             account_masked: connection.accountMasked,
@@ -398,22 +393,9 @@ export class AgentBindingsService {
         throw new AgentConnectionsError({ code: AgentConnectionsErrorCode.OutOfScope, params: { agentId } })
     }
 
-    /** Refuses a manager's grant that raises the access above what the owner allows: asking first, or the level the grant already has. */
-    private async requireWithinCeiling(manager: EntityManager, grant: BindingGrant): Promise<void> {
-        const existing = await manager.findOne(AgentConnectionEntity, {
-            select: { access: true },
-            where: { agentId: grant.agentId, connectionId: grant.connectionId },
-        })
-        if (!exceedsManagerCeiling(grant.access, existing?.access ?? null)) return
-        throw new AgentConnectionsError({
-            code: AgentConnectionsErrorCode.AccessAboveCeiling,
-            params: { agentId: grant.agentId, access: grant.access },
-        })
-    }
-
     /**
      * Refuses a grant that would give a role a second agent answering the same channel connection (one role, many agents: each
-     * channel is answered by exactly one agent of a role). A grant that only reads, or of a purpose that is no channel, passes.
+     * channel is answered by exactly one agent of a role). A grant of a purpose that is no channel passes.
      */
     private async requireChannelFree(manager: EntityManager, grant: BindingGrant): Promise<void> {
         const [agent] = await this.agents.activeCreatedAmong(grant.workspaceId, [grant.agentId], 1)
@@ -421,7 +403,7 @@ export class AgentBindingsService {
         await this.owners.requireFree(
             grant.workspaceId,
             grant.connectionId,
-            { agentId: grant.agentId, module: agent.module, purpose: grant.purpose, access: grant.access },
+            { agentId: grant.agentId, module: agent.module, purpose: grant.purpose },
             manager,
         )
     }
@@ -430,12 +412,11 @@ export class AgentBindingsService {
      * Grants (or changes the grant of) a connection to an agent of the same workspace; answers false when either is not in the
      * workspace. Both rows are held while the grant is written, so neither can leave the workspace in between.
      */
-    private async upsert(manager: EntityManager, grant: BindingGrant, byManager = false): Promise<boolean> {
+    private async upsert(manager: EntityManager, grant: BindingGrant): Promise<boolean> {
         const held =
             (await this.agents.holds(grant.workspaceId, grant.agentId, manager)) &&
             (await this.connections.holds(grant.workspaceId, grant.connectionId, manager))
         if (!held) return false
-        if (byManager) await this.requireWithinCeiling(manager, grant)
         await this.requireChannelFree(manager, grant)
         await manager
             .createQueryBuilder(AgentConnectionEntity, "ac")
@@ -445,9 +426,8 @@ export class AgentBindingsService {
                 connectionId: grant.connectionId,
                 workspaceId: grant.workspaceId,
                 purpose: grant.purpose,
-                access: grant.access,
             })
-            .orUpdate(["purpose", "access"], ["agent_id", "connection_id"])
+            .orUpdate(["purpose"], ["agent_id", "connection_id"])
             .execute()
         return true
     }

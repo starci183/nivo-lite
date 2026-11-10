@@ -16,6 +16,10 @@ export enum AgentWorkLogEvent {
     TurnFailed = "agent_work.turn_failed",
     /** A turn ran past its heartbeat budget, so its lease is left to lapse and its signal aborted. */
     TurnOverran = "agent_work.turn_overran",
+    /** A drain came before the burst window of its conversation ended, so one more drain was scheduled for the time left. */
+    DrainRearmed = "agent_work.drain_rearmed",
+    /** A drain came early again after its last allowed follow-up: the wake is left to the minute sweep. */
+    DrainRearmSpent = "agent_work.drain_rearm_spent",
     /** The heartbeat could not renew the lease. */
     HeartbeatFailed = "agent_work.heartbeat_failed",
 }

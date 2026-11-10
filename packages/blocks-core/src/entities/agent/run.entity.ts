@@ -19,6 +19,9 @@ export const RUN_STATUSES: readonly [string, ...Array<string>] = [
     "cancelled",
 ]
 
+/** Which engine drives a run: the step store of today (`legacy`) or a LangGraph thread (`langgraph`). A run ends on the engine it began on. */
+export const RUN_ENGINES: readonly [string, ...Array<string>] = ["legacy", "langgraph"]
+
 /** A bounded JSON object: the trigger a run keeps, or the error it stopped with. */
 type RunJson = { readonly [key: string]: JsonValue }
 
@@ -46,6 +49,7 @@ type RunFields = {
     readonly endedAt: FieldDef<"timestamptz", true>
     readonly cancelledAt: FieldDef<"timestamptz", true>
     readonly cancelledBy: FieldDef<"text", true>
+    readonly engine: FieldDef<"enum", false>
 }
 
 const runFields: RunFields = {
@@ -72,6 +76,7 @@ const runFields: RunFields = {
     endedAt: field.timestamptz({ nullable: true }),
     cancelledAt: field.timestamptz({ nullable: true }),
     cancelledBy: field.text({ maxLength: MAX_ID, nullable: true }),
+    engine: field.enum({ of: RUN_ENGINES, default: { literal: "legacy" } }),
 }
 
 /**

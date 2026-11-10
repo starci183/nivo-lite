@@ -1,4 +1,5 @@
 import type {
+    FreezeReleaseReason,
     FreezeState,
     FreezeSubject,
     LeadFreeze,
@@ -27,6 +28,13 @@ const LINE = "\n"
 
 /** The mark of a wake written again after a freeze, so a replay is never held for the freeze it came from. */
 export const REPLAY_MARK = "~after-freeze-"
+
+/**
+ * The reason a freeze names when it is the hold of a thread run's stop: no owner item, no retry of its own. The stop (its card, its
+ * answer box, its three decisions) is the one thing that tells the founder; the freeze only holds the customer's new wakes and
+ * replays them once the stop closes.
+ */
+export const THREAD_STOP_REASON = "run_stop"
 
 /** The words of the owner's item: a key of the capability's messages, with its parameters filled, in the owner's language. */
 export type Say = (key: string, params?: Readonly<Record<string, string | number>>) => string
@@ -226,12 +234,11 @@ export const foldLines = (
 
 /**
  * The events to replay on release, in the order they came: after a successful retry the lines it showed the failed turn were answered by
- * it, so they are left out; after a skip nothing answered them, so every event is replayed.
+ * it, so they are left out; after a skip nothing answered them, so every event is replayed. A thread run's stop never folds a line into
+ * the stopped step, so when it closes every event is replayed.
  */
-export const replayOf = (
-    pending: ReadonlyArray<PendingEvent>,
-    reason: "retried" | "skipped",
-): ReadonlyArray<PendingEvent> => (reason === "retried" ? pending.filter((each) => !each.folded) : pending)
+export const replayOf = (pending: ReadonlyArray<PendingEvent>, reason: FreezeReleaseReason): ReadonlyArray<PendingEvent> =>
+    reason === "retried" ? pending.filter((each) => !each.folded) : pending
 
 /** The key a replayed wake is written under: the event's own, marked with the freeze and its episode, so one release writes it once. */
 export const replayKeyOf = (event: PendingEvent, freezeId: string, episode: number): string =>
@@ -366,6 +373,7 @@ export const stateOf = (freeze: LeadFreeze | null): FreezeState | null => {
         pendingCount: freeze.pending.filter((each) => !each.folded).length,
         heldBy: freeze.heldBy,
         frozenAt: freeze.frozenAt,
+        onStop: freeze.frozenReason === THREAD_STOP_REASON,
     }
 }
 

@@ -3,7 +3,10 @@ import { mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { runViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { AgentRunCancelService } from "./agent-run-cancel.service"
+import { AgentRunRecoveryService } from "./agent-run-recovery.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
+import { AgentRunsViewService } from "./agent-runs-view.service"
+import type { RunEngine } from "./agent-runs-view.contracts"
 import type { OwnerCancelRequest, RunCancelResult, RunView } from "./agent-runs-engine.contracts"
 
 const REQUEST: OwnerCancelRequest = { principalId: "user-1", workspaceId: "ws-1", runId: "run-1" }
@@ -11,7 +14,7 @@ const REQUEST: OwnerCancelRequest = { principalId: "user-1", workspaceId: "ws-1"
 /** The refusal the members door answers for a seat that does not govern the workspace. */
 const ROLE_FORBIDDEN = "WORKSPACE_MEMBERS_ROLE_FORBIDDEN"
 
-const build = async (run: RunView | null, result: RunCancelResult = { kind: "cancelled" }) => {
+const build = async (run: RunView | null, result: RunCancelResult = { kind: "cancelled" }, engine: RunEngine = "legacy") => {
     const members = mock<WorkspaceMembersService>()
     members.require.mockResolvedValue({
         userId: "user-1",
@@ -25,14 +28,22 @@ const build = async (run: RunView | null, result: RunCancelResult = { kind: "can
     const runs = mock<AgentRunStoreService>()
     runs.runById.mockResolvedValue(run)
     runs.cancel.mockResolvedValue(result)
+    const view = mock<AgentRunsViewService>()
+    view.detail.mockImplementation((_ws, _agent, runId) =>
+        Promise.resolve(run === null ? null : { run: { id: runId } as never, engine, steps: [] }),
+    )
+    const recovery = mock<AgentRunRecoveryService>()
+    recovery.abandon.mockResolvedValue("abandoned")
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentRunCancelService,
             { provide: WorkspaceMembersService, useValue: members },
             { provide: AgentRunStoreService, useValue: runs },
+            { provide: AgentRunsViewService, useValue: view },
+            { provide: AgentRunRecoveryService, useValue: recovery },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentRunCancelService), members, runs }
+    return { service: moduleRef.get(AgentRunCancelService), members, runs, recovery }
 }
 
 describe("AgentRunCancelService", () => {
@@ -60,6 +71,29 @@ describe("AgentRunCancelService", () => {
 
         await expect(ended.service.cancel(REQUEST)).resolves.toEqual({ kind: "not_cancellable", note: null })
         await expect(again.service.cancel(REQUEST)).resolves.toEqual({ kind: "already_cancelled", note: null })
+    })
+
+    it("gives a parked run up the way abandon does (dead, by the member, off every resume pass) and answers cancelled", async () => {
+        const { service, runs, recovery } = await build(runViewOf({ status: "parked" }))
+
+        await expect(service.cancel(REQUEST)).resolves.toEqual({ kind: "cancelled", note: "effects_kept" })
+        expect(recovery.abandon).toHaveBeenCalledWith("ws-1", "run-1", "member-1")
+        expect(runs.cancel).not.toHaveBeenCalled()
+    })
+
+    it("answers not cancellable for a parked run another writer closed first", async () => {
+        const { service, recovery } = await build(runViewOf({ status: "parked" }))
+        recovery.abandon.mockResolvedValue("not_held")
+
+        await expect(service.cancel(REQUEST)).resolves.toEqual({ kind: "not_cancellable", note: null })
+    })
+
+    it("refuses a run on a LangGraph thread with thread_run and touches neither the run nor its steps", async () => {
+        const { service, runs, recovery } = await build(runViewOf({ status: "waiting" }), { kind: "cancelled" }, "langgraph")
+
+        await expect(service.cancel(REQUEST)).resolves.toEqual({ kind: "thread_run", note: null })
+        expect(runs.cancel).not.toHaveBeenCalled()
+        expect(recovery.abandon).not.toHaveBeenCalled()
     })
 
     it("refuses a seat that does not govern the workspace before it reads the run", async () => {

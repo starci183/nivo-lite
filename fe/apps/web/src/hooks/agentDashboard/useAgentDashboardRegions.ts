@@ -6,10 +6,8 @@ import type { DataSlot, SlotLabels } from "@/modules/types"
 import { maskPhones } from "@/modules/utils"
 import { useFormatter, useTranslations } from "next-intl"
 import { PENDING_DASHBOARD, type AgentDashboardView, type DashboardRow } from "./agentDashboard.shared"
-import { useAgentDashboardConnections } from "./useAgentDashboardConnections"
 import { useAgentDashboardKnowledge, type KnowledgeBody } from "./useAgentDashboardKnowledge"
 import { actionWordOf } from "@/hooks/actionWord"
-import type { BadgeTone } from "@starci/grammar/common"
 import { CONSOLE_ROUTES, workspaceHref } from "@/modules/routes"
 import { useWorkspaceId } from "@/hooks/workspaces"
 
@@ -75,32 +73,6 @@ interface DoneBody extends EmptyWords {
     rows: DashboardListRow[]
 }
 
-/** One connection row as the region draws it. */
-interface ConnectionRowView {
-    id: string
-    name: string
-    description: string
-    statusLabel: string
-    statusTone: BadgeTone
-    accessLabel: string
-}
-
-/** The blank row that stands for a connection while the read is pending. */
-interface BlankConnectionRow extends DashboardListRow {
-    name: string
-    statusLabel: string
-    statusTone: "neutral"
-    accessLabel: string
-}
-
-/** The body of the connections region. */
-interface ConnectionsBody extends EmptyWords {
-    summary: string
-    manageLabel: string
-    manageHref: string
-    rows: ConnectionRowView[]
-}
-
 /** One region: its title, its slot, the same-shape placeholder and the words of its status. */
 interface DashboardRegion<Body, Placeholder = Body> {
     label: string
@@ -113,11 +85,10 @@ interface DashboardRegion<Body, Placeholder = Body> {
 export interface AgentDashboardRegionsView {
     waiting: DashboardRegion<WaitingBody, Omit<WaitingBody, "count"> & { count: string }>
     done: DashboardRegion<DoneBody>
-    connections: DashboardRegion<ConnectionsBody, Omit<ConnectionsBody, "rows"> & { rows: BlankConnectionRow[] }>
     knowledge: DashboardRegion<KnowledgeBody>
 }
 
-/** The four common regions of an agent workbench (waiting, done, connections, knowledge): each one a slot, its same-shape placeholder and the words of its status. */
+/** The three common regions of an agent workbench (waiting, done, knowledge): each one a slot, its same-shape placeholder and the words of its status. */
 export const useAgentDashboardRegions = (
     slot: DataSlot<AgentDashboardView>,
     input: RegionsInput,
@@ -127,7 +98,6 @@ export const useAgentDashboardRegions = (
     const g = useTranslations("governance")
     const slotLabels = useSlotLabels()
     const whenOf = whenOfFormat(useFormatter())
-    const connections = useAgentDashboardConnections("items" in slot ? slot.items : PENDING_DASHBOARD)
     const actionOf = (action: string): string => actionWordOf(g, action)
     const rowOf = (item: DashboardRow) => ({
         id: item.id,
@@ -137,7 +107,7 @@ export const useAgentDashboardRegions = (
     })
     const waitingOf = (dashboard: AgentDashboardView) => ({
         count: dashboard.waiting.total > 0 ? String(dashboard.waiting.total) : null,
-        rows: dashboard.waiting.items.map(rowOf),
+        rows: dashboard.waiting.items.map((item) => rowOf(item)),
         openLabel: t("waitingOpen"),
         more:
             dashboard.waiting.total > dashboard.waiting.items.length
@@ -150,18 +120,11 @@ export const useAgentDashboardRegions = (
         count: t("doneCount", { n: dashboard.done.count }),
         logLabel: t("doneLog"),
         logHref: workspaceHref(workspaceId, CONSOLE_ROUTES.inbox),
-        rows: dashboard.done.items.map(rowOf),
+        rows: dashboard.done.items.map((item) => rowOf(item)),
         emptyMessage: t("doneEmpty"),
         emptyDescription: t("doneEmptyBody"),
     })
     const knowledgeViewOf = useAgentDashboardKnowledge(input.hasOwnGaps, whenOf)
-    const blankConnection = {
-        ...PLACEHOLDER_ROW,
-        name: "-",
-        statusLabel: "-",
-        statusTone: "neutral" as const,
-        accessLabel: "-",
-    }
     return {
         waiting: {
             label: t("waitingTitle"),
@@ -174,16 +137,6 @@ export const useAgentDashboardRegions = (
             slot: regionSlotOf(slot, (dashboard) => dashboard.done.isFailed, doneOf),
             placeholder: { ...doneOf(PENDING_DASHBOARD), rows: [PLACEHOLDER_ROW] },
             labels: slotLabels(t("doneEmpty")),
-        },
-        connections: {
-            label: t("connTitle"),
-            slot: regionSlotOf(
-                slot,
-                (dashboard) => dashboard.connections.isFailed,
-                () => connections,
-            ),
-            placeholder: { ...connections, rows: [blankConnection] },
-            labels: slotLabels(t("connEmpty")),
         },
         knowledge: {
             label: t("knowTitle"),

@@ -6,10 +6,9 @@ import { mapSlot, slotOfSwr } from "@/hooks/slot"
 import { useQueryAgentDashboardSwr } from "@/hooks/swr"
 import type { ModuleKey } from "@/modules/catalog"
 import type { DataSlot } from "@/modules/types"
-import { toAgentDashboard } from "./agentDashboard.shared"
-import type { AgentDashboardView } from "./agentDashboard.shared"
+import { toAgentDashboard, type AgentDashboardView } from "./agentDashboard.shared"
 
-/** The common regions of one module's workbench (waiting, done, connections, knowledge), read from the back end in the browser. */
+/** The common regions of one module's workbench (waiting, done, knowledge), read from the back end in the browser. */
 export const useAgentDashboard = (
     module: ModuleKey,
     installationId: string | null,

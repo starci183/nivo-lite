@@ -45,7 +45,6 @@ export const arrangeFeedOwners = (
                       id: feedWorld.agent.id,
                       module: "accounting",
                       name: "Accountant",
-                      access: "auto",
                       purpose: "bank_feed",
                   },
               ],

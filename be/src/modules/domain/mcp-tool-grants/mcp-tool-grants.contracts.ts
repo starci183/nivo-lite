@@ -57,13 +57,15 @@ export type AbilityMode = "auto" | "ask"
 /** The abilities ticked on one attachment, by ability id; an ability with no key is not held. */
 export type AbilityTicks = Readonly<Record<string, AbilityMode>>
 
-/** One attachment: an agent of a workspace attached to one provider, with the abilities ticked. */
+/** One attachment: an agent of a workspace attached to one connected account (a connection), with the abilities ticked on it. */
 export interface ProviderAttachmentRecord {
     /** The workspace. */
     readonly workspaceId: string
     /** The agent; it must be one of the workspace. */
     readonly agentId: string
-    /** The provider. */
+    /** The connected account: the connection row. */
+    readonly connectionId: string
+    /** The provider of that connection. */
     readonly provider: string
     /** The abilities ticked. */
     readonly abilities: AbilityTicks
@@ -75,8 +77,8 @@ export interface AbilityTickChange {
     readonly workspaceId: string
     /** The agent. */
     readonly agentId: string
-    /** The provider. */
-    readonly provider: string
+    /** The connected account. */
+    readonly connectionId: string
     /** The ability id. */
     readonly ability: string
     /** The mode it is held in, or null to untick it. */
@@ -89,7 +91,9 @@ export interface AbilityTickChange {
 export interface ProviderAttachmentView {
     /** The agent. */
     readonly agentId: string
-    /** The provider. */
+    /** The connected account. */
+    readonly connectionId: string
+    /** The provider of that account. */
     readonly provider: string
     /** The abilities ticked. */
     readonly abilities: AbilityTicks

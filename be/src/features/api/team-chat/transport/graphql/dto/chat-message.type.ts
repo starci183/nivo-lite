@@ -7,6 +7,7 @@ import { ChatReportRefType } from "./chat-report-ref.type"
 import { ChatApprovalType } from "./chat-approval.type"
 import { ChatReactionType } from "./chat-reaction.type"
 import { ChatReplyType } from "./chat-reply.type"
+import { ChatStopCardType } from "./chat-stop-card.type"
 
 @ObjectType()
 /** One message of a room. */
@@ -82,4 +83,8 @@ export class ChatMessageType {
     /** Whose words it carries when it was forwarded (empty when unknown); null when it was not forwarded. */
     @Field(() => String, { nullable: true })
     forwardedFrom!: string | null
+
+    /** The typed stop a `workflow.stopped` card is about (state, needs, the founder's replies); null for any other line. */
+    @Field(() => ChatStopCardType, { nullable: true })
+    stop!: ChatStopCardType | null
 }

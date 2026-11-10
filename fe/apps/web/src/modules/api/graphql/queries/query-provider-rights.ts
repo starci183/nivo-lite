@@ -13,13 +13,43 @@ const query1: Document = gql`
         providerRights {
             providers {
                 provider
-                label { vi en }
+                label {
+                    vi
+                    en
+                }
                 kind
-                kindLabel { vi en }
+                kindLabel {
+                    vi
+                    en
+                }
                 connected
-                abilities { id label { vi en } scope tools }
+                abilities {
+                    id
+                    label {
+                        vi
+                        en
+                    }
+                    scope
+                    tools
+                }
+                accounts {
+                    connectionId
+                    provider
+                    kind
+                    accountLabel
+                    connected
+                    isDefaultReceiving
+                }
             }
-            attachments { agentId provider abilities { id mode } }
+            attachments {
+                agentId
+                connectionId
+                provider
+                abilities {
+                    id
+                    mode
+                }
+            }
         }
     }
 `
@@ -34,7 +64,7 @@ const queryMap: Record<QueryProviderRightsDocument, Document> = {
 
 type QueryProviderRightsParams = QueryParams<QueryProviderRightsDocument>
 
-/** Every provider of the shop with its abilities, and the providers attached to the agents (owner or manager). Rejects with the back end failure. */
+/** Every provider of the shop with its abilities and connected accounts, and the accounts attached to the agents (owner or manager). Rejects with the back end failure. */
 export const queryProviderRights = async ({
     query = QueryProviderRightsDocument.Query1,
     signal,

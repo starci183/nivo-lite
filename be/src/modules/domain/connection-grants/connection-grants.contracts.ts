@@ -1,31 +1,24 @@
 import type { ConnectionRecord } from "@modules/domain/connections"
-import type { Access } from "@modules/domain/agent-connections"
 
-/** One agent wanted on a connection; without a level it keeps its current one (or starts at ask). */
+/** One agent wanted on a connection (bound to it). */
 export interface AgentGrantWish {
     /** The agent. */
     readonly agentId: string
-    /** The level, when the caller picks one. */
-    readonly access?: Access | undefined
 }
 
-/** One connection wanted for an agent; without a level it keeps its current one (or starts at ask). */
+/** One connection wanted for an agent (the agent bound to it). */
 export interface ConnectionGrantWish {
     /** The connection. */
     readonly connectionId: string
-    /** The level, when the caller picks one. */
-    readonly access?: Access | undefined
 }
 
-/** One agent access to a connection, as the console lists it. */
+/** One agent bound to a connection, as the console lists it. */
 export interface ConnectionGrantEntry {
     /** The agent. */
     readonly agentId: string
-    /** The level of access. */
-    readonly access: Access
 }
 
-/** One connection an agent is allowed to use, with the access it already has. */
+/** One connection an agent is allowed to use, and whether it is bound to it already. */
 export interface ConnectionCandidate {
     /** The connection. */
     readonly id: string
@@ -41,11 +34,11 @@ export interface ConnectionCandidate {
     readonly status: string
     /** What this agent would use it for. */
     readonly purpose: string
-    /** The access the agent already has, or null when it has none yet. */
-    readonly access: Access | null
+    /** Whether the agent is already bound to it. */
+    readonly bound: boolean
 }
 
-/** One connection of the workspace with the access of each agent that uses it. */
+/** One connection of the workspace with the agents bound to it. */
 export interface ConnectionBoardEntry {
     /** The connection, without any secret. */
     readonly connection: ConnectionRecord

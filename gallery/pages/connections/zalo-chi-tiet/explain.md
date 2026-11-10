@@ -34,10 +34,10 @@ Vì sao: SAI — a list card of three checks (title + 12 muted result, a coloure
 Luật: `nivo-surface-layering.md` (aside pane), `table-heroui-native-section-head.md`, `owner-colors-exact.md`.
 Grammar: `SurfaceCard` + `ListRow`, `Badge`, `node_modules/@starci/grammar/dist/core/composite/ListRow/index.d.ts`; composite `ConnectionNoticeList`.
 
-## Khối "Agent dùng kết nối này 1" với nút "Giao cho agent ▾" và dòng Chatbot "Tự làm trong giới hạn ▾"
-Vì sao: SAI/OK split. OK: label + grey count chip on the left, one list card with the agent avatar, name and a Select-like grey button at the right for the permission level. SAI: the assignment control "Giao cho agent ▾" is a grey select button placed in the HEAD row at the right (the right side of a section head holds one link or ⓘ), whereas on the Telegram detail it is a full-width Select inside the card header zone and on the payOS detail a floating pill on the pink: three forms for one command.
-Luật: `table-heroui-native-section-head.md` (section head right side), `surfacecard-zones-api.md` (toolbar zone).
-Grammar: `Select`, `DropdownMenu`, `SurfaceCard headers`, `node_modules/@starci/grammar/dist/core/branch/Select/index.d.ts`; composite `ConnectionGrantRows`.
+## Khối "Agent dùng kết nối này 1" (ô chọn "Giao cho agent", dòng Chatbot với nút "Gỡ")
+Vì sao: the agents bound to this connection, one list card: agent avatar + name, and at the row end one neutral sm "Gỡ" (owner only) that unbinds the agent; the card's header zone holds the "Giao cho agent" Select that binds another agent (owner only, when one is left). There is no per-connection level any more (K-BLK 2026-11-10, "one rights model"): what each agent may do through the account is ticked on the agent's Quyền tab, so the row carries no "Tự làm / Hỏi trước / Chỉ đọc" picker. Still open from the old audit: the head's count chip placement and the three forms of the bind command (header Select here, none on payOS overview while no agent is bound).
+Luật: `provider-rights-abilities.md` (one rights model, rights per connected account on the Quyền tab), `verify-against-visualize.md` (sm button, no icon), `row-control-clearance.md` (control keeps p-3/p-4), `table-heroui-native-section-head.md`.
+Grammar: `SurfaceCard kind="list" headers`, `Select`, `Button intent="neutral" size="sm"`, `node_modules/@starci/grammar/dist/core/composite/SurfaceCard/index.d.ts`, `node_modules/@starci/grammar/dist/core/leaf/Button/index.d.ts`; composite `ConnectionGrantRows`, frame `ConnectionGrantsBand`.
 
 ## Bố cục điện thoại 390
 Vì sao: CHƯA RÕ — `390.png` exists but the detail layout at phone width is not judged beyond the nav row and blank strip common to all 390 shots.

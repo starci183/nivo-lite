@@ -41,7 +41,7 @@ const attentionRowsOf = (view: ConnectionsListView, on: ConnectionsHomeCommands)
         }
     })
 
-/** One row per provider that waits for "attach by template?": its mark, the question, and two neutral small pills. */
+/** One row per connected account that waits for "attach by template?": its mark, the question naming the account, and two neutral small pills. */
 const pendingRowsOf = (pending: ReadonlyArray<PendingAttachmentView>, on: ConnectionsHomeCommands): ReadonlyArray<ListRowData> =>
     pending.map(
         (row): ListRowData => ({
@@ -65,7 +65,7 @@ const pendingRowsOf = (pending: ReadonlyArray<PendingAttachmentView>, on: Connec
         }),
     )
 
-/** The section of what needs the owner: the providers waiting to be attached, then the connections that need handling; nothing when none. */
+/** The section of what needs the owner: the accounts waiting to be attached, then the connections that need handling; nothing when none. */
 export const AttentionSection = (props: AttentionSectionProps) => {
     const count = props.view.attention.length + props.pending.length
     if (count === 0) return null

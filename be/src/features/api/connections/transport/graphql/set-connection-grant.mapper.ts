@@ -9,5 +9,5 @@ export const toSetConnectionGrantRequest = (
     workspaceId,
     connectionId: input.connectionId,
     agentId: input.agentId,
-    access: input.access,
+    bound: input.access !== null,
 })

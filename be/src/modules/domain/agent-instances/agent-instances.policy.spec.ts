@@ -165,20 +165,17 @@ describe("agent instances policy > channelProblemOf", () => {
 })
 
 describe("agent instances policy > copiedGrantsOf", () => {
-    it("copies the shared connections the sibling uses at its level, never a channel nor an unused one", async () => {
+    it("copies the shared connections the sibling is bound to, never a channel nor an unused one", async () => {
         const subject = await buildSubject()
 
         expect(
             subject.copiedGrantsOf([
-                { id: "db1", purpose: "data_source", access: "read" },
-                { id: "api1", purpose: "tool", access: "ask" },
-                { id: "tg1", purpose: "outbound_chat", access: "auto" },
-                { id: "fb1", purpose: "lead_source", access: "ask" },
-                { id: "db2", purpose: "data_source", access: null },
+                { id: "db1", purpose: "data_source", bound: true },
+                { id: "api1", purpose: "tool", bound: true },
+                { id: "tg1", purpose: "outbound_chat", bound: true },
+                { id: "fb1", purpose: "lead_source", bound: true },
+                { id: "db2", purpose: "data_source", bound: false },
             ]),
-        ).toEqual([
-            { connectionId: "db1", access: "read" },
-            { connectionId: "api1", access: "ask" },
-        ])
+        ).toEqual([{ connectionId: "db1" }, { connectionId: "api1" }])
     })
 })

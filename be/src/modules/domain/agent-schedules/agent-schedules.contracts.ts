@@ -55,26 +55,6 @@ export interface SweepReport {
     readonly removed: number
 }
 
-/** One thing an agent says to its owner after a background turn. */
-export interface BackgroundLine {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The agent that speaks. */
-    readonly agentId: string
-    /** The wake the line answers: the key the line is posted under, so a retried settle says it once. */
-    readonly wakeId: string
-    /** When the wake was written: a line the same words already said since then is not said again. */
-    readonly wakeCreatedAt: Date
-    /** What it says. */
-    readonly text: string
-}
-
-/** How an agent speaks to its owner after a turn nobody was waiting on (the Office); bound by the capability that owns the thread. */
-export interface BackgroundVoice {
-    /** Says the line once per wake. */
-    say(line: BackgroundLine): Promise<void>
-}
-
 /** The delivery of an event a reactor claims in the inbox: its queue and the business key of the fact. */
 export interface EventClaim {
     /** The reactor's queue, the first half of the inbox key. */

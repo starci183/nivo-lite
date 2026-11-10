@@ -181,6 +181,7 @@ export class PaymentEffectsService implements OnModuleInit {
                 result: already ? "already_paid" : "paid",
                 transactionId: given.transactionId,
                 ...factOf("orderNo", order?.data.orderNo),
+                ...factOf("connectionId", transaction?.data.connectionId),
                 ...expected,
                 ...received,
                 ...difference,

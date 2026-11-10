@@ -7,10 +7,10 @@ area: connections
 
 Twin capture of `payos-chi-tiet-open`; superseded by it. Grammar paths under `node_modules/@starci/grammar/dist/core/`.
 
-## Nút "Giao cho agent" nổi
-Vì sao: SAI — a neutral pill floating on the pink with no block, as in `payos-chi-tiet-open`; the "Agent dùng kết nối này" block it belongs to is not drawn because no agent is assigned.
-Luật: `table-heroui-native-section-head.md`, `pink-page-surface-rule.md`.
-Grammar: `Select`, `node_modules/@starci/grammar/dist/core/branch/Select/index.d.ts`.
+## Cột trái (chỉ khối "Thông tin kết nối", không còn nút nổi)
+Vì sao: the floating "Giao cho agent" pill was the old per-connection level picker (`ConnectionAccessMenu`) and is gone with the level (K-BLK 2026-11-10); with no agent bound the overview shows no agents block (`ConnectionAgents isHiddenWhenEmpty`), binding lives on the Agent tab and rights on the agent's Quyền tab. The left column now starts with the facts card level with the rail head.
+Luật: `provider-rights-abilities.md`, `pink-page-surface-rule.md` (no loose control on the well).
+Grammar: `Grid kind="main-rail"`, `Stack gap="region"`, `node_modules/@starci/grammar/dist/core/frame/Grid/index.d.ts`; block `ConnectionOpenContent` (draws nothing when the row has nothing to say).
 
 ## Phần còn lại của trang
 Vì sao: SAI — as `payos-chi-tiet-open/explain.md` (two-row facts card with no information, empty events as a card).

@@ -502,12 +502,12 @@ describe("McpGatewayAdminService provider abilities", () => {
     it("reads the board and a module's proposal, for an owner or manager", async () => {
         const { admin, connections, access } = await build()
         access.templateProposal.mockResolvedValue([
-            { provider: "zalo_oa", abilities: { "customer.send": "auto" }, connected: true },
+            { provider: "zalo_oa", connectionId: "conn-oa", accountLabel: "OA", abilities: { "customer.send": "auto" }, connected: true },
         ])
 
         await expect(admin.providerBoard(OWNER)).resolves.toEqual({ providers: [], attachments: [] })
         await expect(admin.abilityProposal(OWNER, "sales")).resolves.toEqual([
-            { provider: "zalo_oa", abilities: { "customer.send": "auto" }, connected: true },
+            { provider: "zalo_oa", connectionId: "conn-oa", accountLabel: "OA", abilities: { "customer.send": "auto" }, connected: true },
         ])
         expect(connections.authorize).toHaveBeenCalledWith(OWNER, ["owner", "manager"])
         expect(access.templateProposal).toHaveBeenCalledWith("ws-1", "sales")
@@ -518,7 +518,7 @@ describe("McpGatewayAdminService provider abilities", () => {
         access.attach.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false, reason: "not_connected" })
         access.setAbility.mockResolvedValue({ ok: true })
         access.detach.mockResolvedValue({ ok: false, reason: "not_attached" })
-        const wish = { provider: "zalo_oa", abilities: { "customer.send": "ask" } }
+        const wish = { connectionId: "conn-oa", abilities: { "customer.send": "ask" } }
 
         await expect(admin.attachProvider(OWNER, "agent-1", wish)).resolves.toBeUndefined()
         await expect(admin.attachProvider(OWNER, "agent-1", wish)).rejects.toMatchObject({
@@ -527,15 +527,15 @@ describe("McpGatewayAdminService provider abilities", () => {
         })
         expect(access.attach).toHaveBeenCalledWith({ workspaceId: "ws-1", agentId: "agent-1" }, wish, "owner-1", "owner")
 
-        await admin.setAbility(OWNER, { agentId: "agent-1", provider: "zalo_oa", ability: "customer.send", mode: "auto" })
+        await admin.setAbility(OWNER, { agentId: "agent-1", connectionId: "conn-oa", ability: "customer.send", mode: "auto" })
         expect(access.setAbility).toHaveBeenCalledWith(
-            { workspaceId: "ws-1", agentId: "agent-1", provider: "zalo_oa" },
+            { workspaceId: "ws-1", agentId: "agent-1", connectionId: "conn-oa" },
             "customer.send",
             "auto",
             "owner-1",
             "owner",
         )
-        await expect(admin.detachProvider(OWNER, "agent-1", "zalo_oa")).rejects.toMatchObject({
+        await expect(admin.detachProvider(OWNER, "agent-1", "conn-oa")).rejects.toMatchObject({
             params: { reason: "not_attached" },
         })
     })
@@ -546,7 +546,7 @@ describe("McpGatewayAdminService provider abilities", () => {
         access.attach.mockResolvedValue({ ok: false, reason: "owner_only" })
         access.setAbility.mockResolvedValue({ ok: false, reason: "owner_only" })
         access.attachByTemplate.mockResolvedValue(["a1"])
-        const wish = { provider: "zalo_oa", abilities: { "customer.send": "auto" } }
+        const wish = { connectionId: "conn-oa", abilities: { "customer.send": "auto" } }
 
         await expect(admin.attachProvider(OWNER, "agent-1", wish)).rejects.toMatchObject({
             code: McpGatewayErrorCode.AttachmentRefused,
@@ -554,11 +554,11 @@ describe("McpGatewayAdminService provider abilities", () => {
         })
         expect(access.attach).toHaveBeenCalledWith({ workspaceId: "ws-1", agentId: "agent-1" }, wish, "owner-1", "manager")
         await expect(
-            admin.setAbility(OWNER, { agentId: "agent-1", provider: "zalo_oa", ability: "customer.send", mode: "auto" }),
+            admin.setAbility(OWNER, { agentId: "agent-1", connectionId: "conn-oa", ability: "customer.send", mode: "auto" }),
         ).rejects.toMatchObject({ params: { reason: "owner_only" } })
         expect(access.setAbility.mock.calls[0]?.[4]).toBe("manager")
-        await admin.attachByTemplate(OWNER, "telegram", ["a1"])
-        expect(access.attachByTemplate).toHaveBeenCalledWith("ws-1", "telegram", ["a1"], "owner-1", "manager")
+        await admin.attachByTemplate(OWNER, "conn-tg", ["a1"])
+        expect(access.attachByTemplate).toHaveBeenCalledWith("ws-1", "conn-tg", ["a1"], "owner-1", "manager")
     })
 
     it("lists who a template would attach to a newly connected provider, and attaches the listed agents", async () => {
@@ -567,8 +567,20 @@ describe("McpGatewayAdminService provider abilities", () => {
         access.templateCandidates.mockResolvedValue([candidate])
         access.attachByTemplate.mockResolvedValue(["a1"])
 
-        await expect(admin.templateCandidates(OWNER, "telegram")).resolves.toEqual([candidate])
-        await expect(admin.attachByTemplate(OWNER, "telegram", ["a1"])).resolves.toEqual(["a1"])
-        expect(access.attachByTemplate).toHaveBeenCalledWith("ws-1", "telegram", ["a1"], "owner-1", "owner")
+        await expect(admin.templateCandidates(OWNER, "conn-tg")).resolves.toEqual([candidate])
+        await expect(admin.attachByTemplate(OWNER, "conn-tg", ["a1"])).resolves.toEqual(["a1"])
+        expect(access.attachByTemplate).toHaveBeenCalledWith("ws-1", "conn-tg", ["a1"], "owner-1", "owner")
+    })
+
+    it("lets only the owner name the default receiving account, and throws the reason when it cannot be one", async () => {
+        const { admin, access, connections } = await build()
+        access.setDefaultAccount.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: false, reason: "not_connected" })
+
+        await expect(admin.setDefaultReceivingAccount(OWNER, "conn-mb")).resolves.toBeUndefined()
+        expect(connections.authorize).toHaveBeenLastCalledWith(OWNER, ["owner"])
+        expect(access.setDefaultAccount).toHaveBeenCalledWith("ws-1", "conn-mb", "owner-1")
+        await expect(admin.setDefaultReceivingAccount(OWNER, "conn-mb")).rejects.toMatchObject({
+            params: { reason: "not_connected" },
+        })
     })
 })

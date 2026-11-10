@@ -5,6 +5,7 @@ import type { ConnectionRecord, ConnectionStatusFacts } from "@modules/domain/co
 import { McpGatewayErrorCode } from "@modules/domain/mcp-gateway"
 import { BankTransactionsRegistryService } from "@modules/domain/provider-registry"
 import type { BankTransaction } from "@modules/domain/provider-registry"
+import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
 import { BANK_MANIFEST, BankNativeService } from "./bank-native.service"
 import type { NativeView } from "./native-view.policy"
 import { NativeViewService } from "./native-view.service"
@@ -92,7 +93,10 @@ describe("BankNativeService", () => {
         )
 
         expect(views.internalOf).toHaveBeenCalledWith("ws-1", CALLER)
-        expect(answer).toEqual({ provider: "sepay", transactions: [TRANSACTION] })
+        expect(answer).toEqual({
+            provider: "sepay",
+            transactions: [{ ...TRANSACTION, connectionId: "conn-1", account: "SePay" }],
+        })
         expect(transactions).toHaveBeenCalledWith(record("live"), {
             since: new Date("2026-11-01T00:00:00.000Z"),
             until: new Date("2026-11-04T00:00:00.000Z"),
@@ -150,5 +154,45 @@ describe("BankNativeService", () => {
         await expect(service.invoke("ws-1", "other", {}, CALLER)).rejects.toMatchObject({
             code: McpGatewayErrorCode.UnknownTool,
         })
+    })
+
+    it("reads every account the calling agent may read, each movement naming its account, and none it may not", async () => {
+        const views = mock<NativeViewService>()
+        views.internalOf.mockResolvedValue(VIEW)
+        const bindings = mock<ConnectionBindingsReadService>()
+        const abilities = mock<ProviderAbilitiesService>()
+        abilities.accountsOfAgent.mockResolvedValue(["mb", "vcb"])
+        const transactions = jest.fn((connection: ConnectionRecord) =>
+            Promise.resolve([{ ...TRANSACTION, id: `tx-${connection.id}`, occurredAt: connection.id === "mb" ? "2026-11-02" : "2026-11-03" }]),
+        )
+        const moduleRef = await Test.createTestingModule({
+            providers: [
+                BankNativeService,
+                BankTransactionsRegistryService,
+                { provide: NativeViewService, useValue: views },
+                { provide: ConnectionBindingsReadService, useValue: bindings },
+                { provide: ProviderAbilitiesService, useValue: abilities },
+            ],
+        }).compile()
+        moduleRef.get(BankTransactionsRegistryService).register({ provider: "sepay", transactions })
+        bindings.ofProvider.mockResolvedValue(["mb", "vcb", "acb"].map((id) => ({ ...feed("connected"), id })))
+        bindings.recordOf.mockImplementation((_workspaceId, id) => Promise.resolve({ ...record("live"), id, name: `Account ${id}` }))
+        const service = moduleRef.get(BankNativeService)
+
+        const answer = await service.invoke("ws-1", "transactions", {}, CALLER)
+
+        expect(abilities.accountsOfAgent).toHaveBeenCalledWith("ws-1", CALLER.agentId, "bank.transactions")
+        expect(answer).toMatchObject({
+            provider: "sepay",
+            transactions: [
+                { id: "tx-vcb", connectionId: "vcb", account: "Account vcb" },
+                { id: "tx-mb", connectionId: "mb", account: "Account mb" },
+            ],
+        })
+        expect(transactions).toHaveBeenCalledTimes(2)
+
+        abilities.accountsOfAgent.mockClear()
+        await service.invoke("ws-1", "transactions", {}, { ...CALLER, engine: true })
+        expect(abilities.accountsOfAgent).not.toHaveBeenCalled()
     })
 })

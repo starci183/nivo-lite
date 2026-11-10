@@ -11,7 +11,6 @@ const grantOf = (agentId: string, id: string, purpose: AgentGrantView["connectio
         botUsername: null,
         accountMasked: "***9999",
         status: "connected",
-        access: "auto",
         purpose,
     },
 })

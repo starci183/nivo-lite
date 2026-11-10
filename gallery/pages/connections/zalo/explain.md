@@ -30,14 +30,9 @@ Luật: `table-heroui-native-section-head.md` (section head: label + count chip 
 Grammar: `Section title count`, `Badge`, `node_modules/@starci/grammar/dist/core/frame/Section/index.d.ts`.
 
 ## Bảng kết nối (Tài khoản, Trạng thái, Agent dùng, Thao tác)
-Vì sao: SAI — columned data in the native grey frame with the white body and header labels (correct, and unlike the hub it has a real Trạng thái column), but: the row shows the Zalo logo, "Zalo OA" and a raw subtitle "OA 2128053712141851033 · App 1149718821626934740" (two long ids), a status chip "Đang chạy", the agent Chatbot with the pink chip "Tự làm", and the link "Mở →"; the "Tự làm"/"Chỉ đọc" chips are tinted pink or grey although they are a normal permission mode (pink is reserved for work waiting on the owner); the row subtitle holds ids that belong in a collapsed "Chi tiết kỹ thuật" list; "Mở →" is a red link in a column titled "Thao tác" while the primary row action elsewhere is a neutral button.
+Vì sao: SAI — columned data in the native grey frame with the white body and header labels (correct, and unlike the hub it has a real Trạng thái column), but: the row shows the Zalo logo, "Zalo OA" and a raw subtitle "OA 2128053712141851033 · App 1149718821626934740" (two long ids), a status chip "Đang chạy", the agent Chatbot with "Nhận tin khách", no level chip (the per-connection level was retired, K-BLK 2026-11-10; rights live on the agent's Quyền tab), and the link "Mở →"; the row subtitle holds ids that belong in a collapsed "Chi tiết kỹ thuật" list; "Mở →" is a red link in a column titled "Thao tác" while the primary row action elsewhere is a neutral button.
 Luật: `table-heroui-native-section-head.md` (native table; raw ids in "Chi tiết kỹ thuật"; links: → for navigation), `type-scale-14-12.md`.
 Grammar: `DataTable`, `Badge`, `Link`, `node_modules/@starci/grammar/dist/core/branch/DataTable/index.d.ts`, `node_modules/@starci/grammar/dist/core/leaf/Link/index.d.ts`; frame `ConnectionProviderTable`.
-
-## Dòng "Cùng cách ghi với tab Kết nối của agent: agent · dùng để · mức quyền." dưới bảng
-Vì sao: SAI — a 12px caption that explains how to read the table in developer language ("agent · dùng để · mức quyền"); it is not a legend of the data and should be the table's head subtitle in plain words or removed.
-Luật: `surfacecard-select-subtitle.md` (captions only for legends), `table-heroui-native-section-head.md`.
-Grammar: `Text size="xs" tone="muted"`, `node_modules/@starci/grammar/dist/core/leaf/Text/index.d.ts`.
 
 ## Khối "Về Zalo OA" (Mang về, Cần chuẩn bị, Dành cho, tên nhà cung cấp)
 Vì sao: SAI — a block label over a white details card: four rows (the provider's own name as first term, then Mang về, Cần chuẩn bị, Dành cho) in a two-column DescriptionList. The first row repeats the page title as a term, the list is static documentation that the Thư viện drawer shows too, and it is a white card without the grey native frame; it belongs in the library drawer (and in a collapsed "Về ..." disclosure here), not as a permanent block of the provider page.

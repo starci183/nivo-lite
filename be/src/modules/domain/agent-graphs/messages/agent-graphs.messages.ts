@@ -35,6 +35,7 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
         "agentGraphs.wake.untaken.title": "Tin của khách chưa có quy trình nào nhận",
         "agentGraphs.wake.untaken.text":
             "Một tin của khách không được quy trình nào xử lý nên khách chưa được trả lời. Kênh: {{channel}}. Hội thoại: {{conversation}}. Lý do: {{why}}. Quy trình đang chạy: {{running}} (nhận từ: {{sources}}).",
+        "agentGraphs.wake.reason.no_workflow": "trợ lý này chưa có quy trình nào",
         "agentGraphs.wake.reason.no_workflow_running": "trợ lý này không có quy trình nào đang bật",
         "agentGraphs.wake.reason.no_trigger_takes_wake": "không quy trình đang bật nào nhận tin từ kênh này",
         "agentGraphs.wake.failed.title": "Một lượt xử lý không chạy được",
@@ -145,6 +146,7 @@ export const AGENT_GRAPHS_MESSAGES: MessageBundle = {
         "agentGraphs.wake.untaken.title": "A customer message no workflow took",
         "agentGraphs.wake.untaken.text":
             "A customer message was handled by no workflow, so the customer has no answer yet. Channel: {{channel}}. Conversation: {{conversation}}. Why: {{why}}. Running workflows: {{running}} (triggered by: {{sources}}).",
+        "agentGraphs.wake.reason.no_workflow": "this assistant has no workflow yet",
         "agentGraphs.wake.reason.no_workflow_running": "this assistant has no workflow switched on",
         "agentGraphs.wake.reason.no_trigger_takes_wake": "no running workflow takes messages from this channel",
         "agentGraphs.wake.failed.title": "A turn could not run",

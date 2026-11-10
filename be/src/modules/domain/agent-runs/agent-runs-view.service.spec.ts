@@ -5,46 +5,40 @@ import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { AgentRunRecordsService } from "./agent-run-records.service"
 import { AgentRunsViewService, stepDetailOf } from "./agent-runs-view.service"
 import { wireScope } from "@tests/fixtures/builders/agent-graph-records.builder"
+import { runRecordOf, runRowOf } from "@tests/fixtures/builders/agent-runs.builder"
 
-const runOf = (id: string, agentId = "agent-1"): never => ({ id, agentId }) as never
-
-const stepRow = (data: Record<string, unknown>): RecordRow =>
-    ({
-        id: "s-1",
-        version: "1",
-        workspaceId: "ws-1",
-        data: {
-            runId: "run-1",
-            ordinal: 1,
-            stepKey: "evidence",
-            nodeKey: "evidence",
-            kind: "graph_node",
-            effect: { kind: "read" },
-            input: {},
-            result: null,
-            status: "failed",
-            attempt: 2,
-            maxAttempts: 3,
-            deadlineMs: 1000,
-            claimedUntil: null,
-            notBefore: null,
-            waitItemId: null,
-            workItemId: null,
-            compAttempts: 0,
-            errorCode: "tool_denied",
-            startedAt: "2026-11-09T07:59:01.000Z",
-            endedAt: "2026-11-09T07:59:03.000Z",
-            durationMs: 2000,
-            doorCalls: { calls: [{ tool: "sheets.append", ok: false, failure: "403", effectKey: "k" }, { tool: 1 }] },
-            ...data,
-        },
-    }) as unknown as RecordRow
-
-const engineOf = (): EntityEngineService => {
-    const engine = mock<EntityEngineService>()
-    wireScope(engine)
-    return engine
-}
+const stepRow = (data: Record<string, unknown>): RecordRow => ({
+    id: "s-1",
+    version: "1",
+    workspaceId: "ws-1",
+    createdAt: "2026-11-09T07:59:00.000Z",
+    updatedAt: "2026-11-09T07:59:00.000Z",
+    data: {
+        runId: "run-1",
+        ordinal: 1,
+        stepKey: "evidence",
+        nodeKey: "evidence",
+        kind: "graph_node",
+        effect: { kind: "read" },
+        input: {},
+        result: null,
+        status: "failed",
+        attempt: 2,
+        maxAttempts: 3,
+        deadlineMs: 1000,
+        claimedUntil: null,
+        notBefore: null,
+        waitItemId: null,
+        workItemId: null,
+        compAttempts: 0,
+        errorCode: "tool_denied",
+        startedAt: "2026-11-09T07:59:01.000Z",
+        endedAt: "2026-11-09T07:59:03.000Z",
+        durationMs: 2000,
+        doorCalls: { calls: [{ tool: "sheets.append", ok: false, failure: "403", effectKey: "k" }, { tool: 1 }] },
+        ...data,
+    },
+})
 
 describe("stepDetailOf", () => {
     it("reads the moments, the tries, the error and the door calls of a step row, dropping a call that names no tool", () => {
@@ -63,29 +57,34 @@ describe("stepDetailOf", () => {
     })
 })
 
-const build = async (records: AgentRunRecordsService): Promise<AgentRunsViewService> => {
+const build = async (): Promise<{
+    service: AgentRunsViewService
+    engine: ReturnType<typeof mock<EntityEngineService>>
+    records: ReturnType<typeof mock<AgentRunRecordsService>>
+}> => {
+    const engine = mock<EntityEngineService>()
+    wireScope(engine)
+    const records = mock<AgentRunRecordsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentRunsViewService,
-            { provide: EntityEngineService, useValue: engineOf() },
+            { provide: EntityEngineService, useValue: engine },
             { provide: AgentRunRecordsService, useValue: records },
         ],
     }).compile()
-    return moduleRef.get(AgentRunsViewService)
+    return { service: moduleRef.get(AgentRunsViewService), engine, records }
 }
 
 describe("AgentRunsViewService", () => {
     it("lists the newest runs of the agent with the progress of their steps and the work item of each", async () => {
-        const records = mock<AgentRunRecordsService>({
-            runsOfAgent: jest.fn().mockResolvedValue([runOf("run-1"), runOf("run-2")]),
-            stepCountsOf: jest.fn().mockResolvedValue([
-                { groups: { runId: "run-1" }, measures: { total: 5, done: 2, begun: 3, failed: 0 } },
-            ]),
-            workItemsOf: jest.fn().mockResolvedValue([
-                { groups: { runId: "run-2", workItemId: "w-9" }, measures: { steps: 1 } },
-            ]),
-        })
-        const service = await build(records)
+        const { service, records } = await build()
+        records.runsOfAgent.mockResolvedValue([runRecordOf({ id: "run-1" }), runRecordOf({ id: "run-2" })])
+        records.stepCountsOf.mockResolvedValue([
+            { groups: { runId: "run-1" }, measures: { total: 5, done: 2, begun: 3, failed: 0 } },
+        ])
+        records.workItemsOf.mockResolvedValue([
+            { groups: { runId: "run-2", workItemId: "w-9" }, measures: { steps: 1 } },
+        ])
 
         const entries = await service.list("ws-1", "agent-1")
 
@@ -94,15 +93,23 @@ describe("AgentRunsViewService", () => {
         expect(records.runsOfAgent).toHaveBeenCalledWith(expect.anything(), "agent-1", 50)
     })
 
-    it("answers the run with its steps, and nothing for a run of another agent or a run that is not there", async () => {
-        const records = mock<AgentRunRecordsService>({
-            run: jest.fn().mockResolvedValueOnce(runOf("run-1")).mockResolvedValueOnce(runOf("run-2", "agent-2")).mockResolvedValueOnce(null),
-            stepRowsOf: jest.fn().mockResolvedValue([stepRow({})]),
-        })
-        const service = await build(records)
+    it("answers the run with its steps and its engine, and nothing for a run of another agent or a run that is not there", async () => {
+        const { service, engine, records } = await build()
+        engine.get
+            .mockResolvedValueOnce(runRowOf({ engine: "langgraph" }, "run-1"))
+            .mockResolvedValueOnce(runRowOf({}, "run-0"))
+            .mockResolvedValueOnce(runRowOf({ agentId: "agent-2" }, "run-2"))
+            .mockResolvedValueOnce(null)
+        records.stepRowsOf.mockResolvedValue([stepRow({})])
 
-        await expect(service.detail("ws-1", "agent-1", "run-1")).resolves.toMatchObject({ steps: [{ stepKey: "evidence" }] })
+        await expect(service.detail("ws-1", "agent-1", "run-1")).resolves.toMatchObject({
+            run: { id: "run-1" },
+            engine: "langgraph",
+            steps: [{ stepKey: "evidence" }],
+        })
+        await expect(service.detail("ws-1", "agent-1", "run-0")).resolves.toMatchObject({ engine: "legacy" })
         await expect(service.detail("ws-1", "agent-1", "run-2")).resolves.toBeNull()
         await expect(service.detail("ws-1", "agent-1", "run-3")).resolves.toBeNull()
+        expect(engine.get).toHaveBeenCalledWith(expect.anything(), "agent.run", "run-1")
     })
 })

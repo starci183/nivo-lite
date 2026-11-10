@@ -59,33 +59,6 @@ export interface RowCopyLabels {
     readonly hide: string
 }
 
-/** One access level offered to an agent. */
-export interface AccessOptionView {
-    readonly value: string
-    readonly label: string
-    readonly description?: string
-}
-
-/** One agent in a row's access picker. */
-export interface AccessAgentView {
-    readonly id: string
-    readonly name: string
-    readonly isUsable: boolean
-    readonly current: string
-    readonly options: ReadonlyArray<AccessOptionView>
-}
-
-/** A row's agent access picker (or its read-only summary). */
-export interface AccessView {
-    readonly isEditable: boolean
-    readonly summary: string
-    readonly triggerLabel: string
-    readonly isPending: boolean
-    readonly emptyLabel: string
-    readonly unusableLabel: string
-    readonly agents: ReadonlyArray<AccessAgentView>
-}
-
 /** The words of the SMTP extras. */
 export interface RowSmtpLabels {
     readonly defaultBadge: string
@@ -125,7 +98,6 @@ export interface RowView {
     readonly usedBy: string
     readonly state: "negative" | "cautionary" | "unavailable" | "neutral"
     readonly primary: RowPrimary | null
-    readonly access: AccessView | null
     /** The connection's own page (SePay, Zalo OA), when its provider has one. */
     readonly page: { readonly href: string; readonly label: string } | null
     readonly menuLabel: string

@@ -207,3 +207,75 @@ describe("TeamChatViewsService reactions and replies", () => {
         expect(view?.replyTo).toBeNull()
     })
 })
+
+describe("TeamChatViewsService stop cards", () => {
+    const SEAT = "81111111-1111-4111-8111-111111111111"
+    const stopLine = (replies: ReadonlyArray<{ readonly by: string }>) =>
+        Object.assign(new ChatRoomMessageEntity(), {
+            ...card,
+            kind: "text",
+            ref: {
+                agent_message: JSON.stringify({
+                    kind: "workflow.stopped",
+                    title: "Quy trình đang dừng",
+                    payload: {
+                        workflow: { moduleKey: "sales", key: "consult", title: "Tư vấn bán hàng" },
+                        step: { key: "consult", nodeId: "sales.consult", title: "Tư vấn" },
+                        runId: "run-1",
+                        leadId: null,
+                        conversationId: null,
+                        by: "ai",
+                        reason: "Khách hỏi giá sỉ.",
+                        question: "Báo giá nào?",
+                        facts: [],
+                        suggestions: [],
+                        decisions: [],
+                        repeats: 1,
+                        firstAt: "2026-11-10T10:00:00.000Z",
+                        lastAt: "2026-11-10T10:00:00.000Z",
+                        stop: {
+                            version: 1,
+                            stopId: "stop-1",
+                            runId: "run-1",
+                            stepKey: "consult",
+                            kind: "ai_report",
+                            state: "answered",
+                            headline: "Đã nhận trả lời",
+                            needs: { answer: false, decisions: [], verdicts: [] },
+                            replies: replies.map((reply) => ({
+                                kind: "answer",
+                                text: "Giá sỉ 10%",
+                                by: reply.by,
+                                at: "2026-11-10T10:05:00.000Z",
+                            })),
+                            repeats: 1,
+                            stoppedAt: "2026-11-10T10:00:00.000Z",
+                            resolvedAt: null,
+                            revision: 2,
+                        },
+                    },
+                }),
+            },
+        })
+
+    it("names the founder who replied to a stop card by the seat the stop keeps", async () => {
+        const { views, people } = await build()
+        people.directory.mockResolvedValue([
+            { id: SEAT, user_id: ANA, display_name: "Ana", role: "owner", status: "active" },
+            { id: "other", user_id: "u2", display_name: "Ben", role: "manager", status: "active" },
+        ])
+
+        const [view] = await views.messageViews(WS, [stopLine([{ by: SEAT }])], ANA)
+
+        expect(view?.stop?.replies).toEqual([
+            { kind: "answer", text: "Giá sỉ 10%", by: SEAT, at: "2026-11-10T10:05:00.000Z", byName: "Ana" },
+        ])
+    })
+
+    it("reads no directory when no card on the page has a reply", async () => {
+        const { views, people } = await build()
+        const [view] = await views.messageViews(WS, [stopLine([])], ANA)
+        expect(view?.stop?.state).toBe("answered")
+        expect(people.directory).not.toHaveBeenCalled()
+    })
+})

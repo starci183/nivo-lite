@@ -17,7 +17,7 @@ Vì sao: SAI — the skeleton is the correct first-read state (heading and the D
 Luật: `verify-against-visualize.md`, ui-laws loading skeleton rules.
 Grammar: `DescriptionList items isLoading`, `node_modules/@starci/grammar/dist/core/composite/DescriptionList/index.d.ts`; `Button endArrow isLoading`; `Heading isLoading`.
 
-## Chân trang pháp lý
-Vì sao: SAI — (partly right, see the flagged part) legal link bar; correct on 1440, the same wrap defect on 390 as login.
-Luật: `page-header-left-sublabel-xs.md`.
+## Chân trang pháp lý ("Chính sách quyền riêng tư", "Điều khoản sử dụng")
+Vì sao: one centred bar of two standalone secondary links in the foreground colour (red is kept for the one CTA); since Grammar 0.37.14 internal links carry no arrow, so each link stays on one line at 390.
+Luật: `red-budget-links-foreground`, `page-header-left-sublabel-xs.md`.
 Grammar: `NavLandmark layout="bar"`, `node_modules/@starci/grammar/dist/core/frame/NavLandmark/index.d.ts`.

@@ -41,10 +41,6 @@ export interface ConnectionsDataView {
                       at: string
                       content: string
                   } | null
-                  grants: Array<{
-                      agentId: string
-                      access: string
-                  }>
               }[],
               Error
           >

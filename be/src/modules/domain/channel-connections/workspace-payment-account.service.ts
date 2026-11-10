@@ -44,4 +44,16 @@ export class WorkspacePaymentAccountService {
         }
         return null
     }
+
+    /**
+     * The account of one named bank feed (the shop's default receiving account, as the gateway judged it): null when that feed is not
+     * live or stores no full account number. Never falls back to another feed: the shop chose which account takes the money.
+     */
+    async accountOfConnection(workspaceId: string, connectionId: string): Promise<OptionalWorkspacePaymentAccount> {
+        const byProvider = await Promise.all(
+            BANK_FEEDS.map((provider) => this.connections.feedAccountsOf(workspaceId, provider, FEEDS_MAX)),
+        )
+        const feed = byProvider.flat().find((one) => one.id === connectionId)
+        return feed === undefined ? null : accountOfFeed(feed)
+    }
 }

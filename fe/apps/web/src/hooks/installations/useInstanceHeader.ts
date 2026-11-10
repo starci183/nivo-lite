@@ -4,8 +4,7 @@ import { useLocale, useTranslations } from "next-intl"
 import { useModuleCatalog } from "@/hooks/moduleCatalog"
 import { loadingSlot, slotOfReads } from "@/hooks/slot"
 import { useWorkspaceId } from "@/hooks/workspaces"
-import { MODULE_REGISTRY, pickCopy } from "@/modules/catalog"
-import type { ModuleKey } from "@/modules/catalog"
+import { MODULE_REGISTRY, pickCopy, type ModuleKey } from "@/modules/catalog"
 import {
     agentLifecycleOf,
     agentLifecycleTone,
@@ -15,16 +14,15 @@ import {
     type InstallationConnectionNeed,
 } from "@/modules/installations"
 import { agentProfileHref, workspaceHref } from "@/modules/routes"
-import { useInstanceCounts } from "./useInstanceCounts"
-import type { InstanceCounts } from "./useInstanceCounts"
+import { useInstanceCounts, type InstanceCounts } from "./useInstanceCounts"
 import { useInstanceGuard } from "./useInstanceGuard"
 import { useInstallations } from "./useInstallations"
 import type { DataSlot } from "@/modules/types"
 
-/** The accounts the header names: none while they load, a soft "none yet" once the read says there are none. */
-const namesOf = (names: ReadonlyArray<string> | undefined, none: string): ReadonlyArray<string> => {
-    if (names === undefined) return []
-    return names.length === 0 ? [none] : names
+/** The attached accounts in the header line: nothing while they load, a soft "none yet" at 0, else "3 accounts". */
+const accountsOf = (count: number | undefined, none: string, some: (count: number) => string): ReadonlyArray<string> => {
+    if (count === undefined) return []
+    return count === 0 ? [none] : [some(count)]
 }
 
 /** The view `useInstanceHeader` returns. */
@@ -87,7 +85,7 @@ export const useInstanceHeader = (module: ModuleKey, installationId: string): In
         subtitle: agentSubtitleOf({
             handle: installation?.agentHandle ?? "",
             roleName: typeName,
-            channels: namesOf(counts.grantedNames, t("headerNoGrants")),
+            channels: accountsOf(counts.grants, t("headerNoGrants"), (count) => t("headerAccounts", { count })),
         }),
         isEarly: def.status === "early",
         lifecycle,

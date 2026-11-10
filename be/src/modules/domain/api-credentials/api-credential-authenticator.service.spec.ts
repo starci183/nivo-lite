@@ -4,7 +4,6 @@ import { HiringOffersService, HiringInterviewsService, HiringPostingService } fr
 import { WorkspaceInvitesService } from "@modules/domain/workspace-invites"
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { AgentToolsService } from "@modules/domain/agent-tools"
 import { ApiKeysService } from "@modules/domain/api-keys"
 import { ApiCredentialAuthenticatorService } from "./api-credential-authenticator.service"
 
@@ -14,7 +13,6 @@ const build = async () => {
     const interviews = mock<HiringInterviewsService>()
     const invites = mock<WorkspaceInvitesService>()
     const keys = mock<ApiKeysService>()
-    const tools = mock<AgentToolsService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             ApiCredentialAuthenticatorService,
@@ -23,14 +21,12 @@ const build = async () => {
             { provide: HiringInterviewsService, useValue: interviews },
             { provide: WorkspaceInvitesService, useValue: invites },
             { provide: ApiKeysService, useValue: keys },
-            { provide: AgentToolsService, useValue: tools },
         ],
     }).compile()
     return {
         authenticator: moduleRef.get(ApiCredentialAuthenticatorService),
         posting,
         keys,
-        tools,
         offers,
         interviews,
         invites,
@@ -51,17 +47,12 @@ describe("ApiCredentialAuthenticatorService", () => {
         expect(keys.authenticate).not.toHaveBeenCalled()
     })
 
-    it("proves a tool token without executing its tool", async () => {
-        const { authenticator, tools } = await build()
-        tools.authenticate.mockResolvedValue({ jobId: "job-1", workspaceId: "ws-1" })
+    it("admits no agent token: an agent reaches the app through the MCP gateway alone", async () => {
+        const { authenticator } = await build()
 
-        await expect(authenticator.authenticate({ kind: "tool-token" }, "Bearer tool", undefined)).resolves.toEqual({
-            kind: "tool-token",
-            subject: "job-1",
-            workspaceId: "ws-1",
+        await expect(authenticator.authenticate({ kind: "tool-token" }, "Bearer tool", undefined)).rejects.toMatchObject({
+            code: IdentityErrorCode.Unauthenticated,
         })
-        expect(tools.authenticate).toHaveBeenCalledWith("Bearer tool")
-        expect(tools.runBearerTool).not.toHaveBeenCalled()
     })
 
     it("propagates credential failures", async () => {
@@ -152,15 +143,14 @@ describe("credential refusal ownership", () => {
 
     it.each(doors)("preserves invalid and missing credential refusals for %p", async (metadata) => {
         for (const raw of ["invalid", ""]) {
-            const { authenticator, keys, tools, posting, offers, interviews, invites } = await build()
+            const { authenticator, keys, posting, offers, interviews, invites } = await build()
             const refusal = new IdentityError({ code: IdentityErrorCode.Unauthenticated })
             keys.verifyCredential.mockRejectedValue(refusal)
-            tools.authenticate.mockRejectedValue(refusal)
             posting.requireOpen.mockRejectedValue(refusal)
             offers.authenticateLink.mockRejectedValue(refusal)
             interviews.authenticateLink.mockRejectedValue(refusal)
             invites.authenticateLink.mockRejectedValue(refusal)
-            await expect(authenticator.authenticate(metadata, raw)).rejects.toBe(refusal)
+            await expect(authenticator.authenticate(metadata, raw)).rejects.toEqual(refusal)
         }
     })
 })

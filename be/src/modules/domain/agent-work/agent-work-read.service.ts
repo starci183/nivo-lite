@@ -14,6 +14,7 @@ import { wakeProgressOf } from "./agent-work.policy"
 import { AgentTurnEntity, AgentWakeEntity, AgentWorkStateEntity } from "./persistence/entities"
 import type {
     AgentTurnRecord,
+    AgentWakeStatus,
     AgentWorkView,
     OptionalCustomerWakeProgress,
     OptionalWakeSource,
@@ -22,6 +23,9 @@ import type {
 
 /** The turns the work tab lists. */
 const RECENT_TURNS = 20
+
+/** The states of a wake that may still run: waiting, running now, or held by a switch that may be turned back on. */
+const LIVE_WAKES: ReadonlyArray<AgentWakeStatus> = ["pending", "running", "held"]
 
 @Injectable()
 /**
@@ -54,6 +58,31 @@ export class AgentWorkReadService {
             where: { id: wakeId, workspaceId },
         })
         return wake === null ? null : wakeOriginOf(wake)
+    }
+
+    /**
+     * Whether a wake that may still move a subject is alive: the wake `wakeId` itself, or any wake of the agent whose context names the
+     * subject (`subjectId`), still pending, running or held. A sweep asks it before it re-drives work nobody is driving.
+     */
+    async hasLiveWake(
+        workspaceId: string,
+        agentId: string,
+        subject: { readonly wakeId: string | null; readonly subjectId: string },
+    ): Promise<boolean> {
+        const ofSubject = "w.context ->> 'subjectId' = :subjectId"
+        const count = await this.entityManager
+            .createQueryBuilder(AgentWakeEntity, "w")
+            .where("w.workspace_id = :workspaceId AND w.agent_id = :agentId AND w.status IN (:...live)", {
+                workspaceId,
+                agentId,
+                live: LIVE_WAKES,
+            })
+            .andWhere(subject.wakeId === null ? ofSubject : `(w.id = :wakeId OR ${ofSubject})`, {
+                subjectId: subject.subjectId,
+                ...(subject.wakeId === null ? {} : { wakeId: subject.wakeId }),
+            })
+            .getCount()
+        return count > 0
     }
 
     /** The work of one agent of the workspace. */

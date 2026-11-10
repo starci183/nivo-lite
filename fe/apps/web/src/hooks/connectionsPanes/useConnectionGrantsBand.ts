@@ -15,13 +15,13 @@ interface ConnectionGrantsBandRead {
         readonly labels: SlotLabels
     }
     readonly on: {
-        readonly pick: (agentId: string, level: string) => void
+        readonly remove: (agentId: string) => void
         readonly assign: (agentId: string) => void
         readonly retry: () => void
     }
 }
 
-/** The agents of one connection with their levels, worded for the band a connection page draws inside its agents step. */
+/** The agents bound to one connection, worded for the band a connection page draws inside its agents step. */
 export const useConnectionGrantsBand = (connectionId: string): ConnectionGrantsBandRead => {
     const t = useTranslations("connections")
     const labels = useSlotLabels()
@@ -34,6 +34,6 @@ export const useConnectionGrantsBand = (connectionId: string): ConnectionGrantsB
             slot: grants.slot,
             labels: labels(t("grantsEmpty")),
         },
-        on: { pick: grants.pick, assign: grants.assign, retry: grants.retry },
+        on: { remove: grants.remove, assign: grants.assign, retry: grants.retry },
     }
 }

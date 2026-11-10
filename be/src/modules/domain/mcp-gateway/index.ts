@@ -13,7 +13,8 @@ export {
     gatewaySearchSchema,
     gatewayToolNameSchema,
 } from "./gateway-tools.schema"
-export { domainNameIn } from "./connector-call.policy"
+export { CALL_WORDS_MAX, abilityDecisionOf, callWordsOf, domainNameIn } from "./connector-call.policy"
+export type { AbilityDecision, CallWord } from "./connector-call.policy"
 export { RoutedNativeAdapter } from "./adapters/routed-native.adapter"
 export type { NativeToolHandler } from "./adapters/routed-native.adapter"
 export { argumentsOf, invalidArguments, unknownTool } from "./native-arguments.policy"
@@ -59,6 +60,7 @@ export type { ConversationLeadsGate, GatewayRun } from "./mcp-gateway.contracts"
 export { ProviderAbilitiesService } from "./provider-abilities.service"
 export type {
     AbilityView,
+    AccountView,
     AttachmentChangeResult,
     AttachmentRefusal,
     AttachmentWish,
@@ -70,5 +72,5 @@ export type {
     TemplateProposal,
 } from "./provider-abilities.service"
 export { PROVIDER_CATALOGUE, isAbilityTool, providerOfChannel } from "./provider-abilities.policy"
-export type { AbilityVerdict, ProviderAbility, ProviderKind, ProviderSpec } from "./provider-abilities.policy"
+export type { AbilityVerdict, AccountTarget, ProviderAbility, ProviderKind, ProviderSpec } from "./provider-abilities.policy"
 export type { AbilityLabel } from "./messages/provider-abilities.labels"

@@ -212,6 +212,26 @@ export const itemOf = (item: WorkItem): AgentRunItem => ({
 /** The statuses of a run that stopped on a failed step and may be run again from it. */
 const RESUMABLE: ReadonlySet<string> = new Set(["parked", "failed", "dead"])
 
+/** The statuses of a run of the old engine its owner may cancel: queued or running, waiting, or parked for a later try (given up). */
+const CANCELLABLE: ReadonlySet<string> = new Set(["running", "waiting", "parked"])
+
+/**
+ * What the run page offers on a run. A run of the old engine: Resume from its failed step, Cancel while it runs, waits or is parked. A
+ * run on a LangGraph thread never offers the old Resume (its stop is answered on its card); its Cancel is the stop's `skip`, so it is
+ * offered only while the thread waits at a stop.
+ */
+export const runActionsOf = (
+    detail: RunDetail,
+    stepFailed: number,
+    undone: boolean,
+): { readonly canResume: boolean; readonly canCancel: boolean } =>
+    detail.engine === "langgraph"
+        ? { canResume: false, canCancel: detail.run.status === "waiting" }
+        : {
+              canResume: RESUMABLE.has(detail.run.status) && !undone && stepFailed > 0,
+              canCancel: CANCELLABLE.has(detail.run.status),
+          }
+
 /** One run with its steps: the row is made from the steps, so it agrees with them. */
 export const detailOf = (
     detail: RunDetail,
@@ -241,8 +261,7 @@ export const detailOf = (
         }),
         steps: steps.map(stepLineOf),
         item: item === null ? null : itemOf(item),
-        canResume: RESUMABLE.has(detail.run.status) && !undone && entry.stepFailed > 0,
-        canCancel: detail.run.status === "running" || detail.run.status === "waiting",
+        ...runActionsOf(detail, entry.stepFailed, undone),
         decision: null,
     }
 }

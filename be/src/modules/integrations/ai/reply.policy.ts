@@ -22,7 +22,8 @@ const firstNumber = (...candidates: ReadonlyArray<unknown>): number | null =>
  * What a call used, read from LangChain: tokens from the message `usage_metadata` (input, output, total) or the `tokenUsage` of the
  * response metadata, the cost from the raw usage object the endpoint sent (OpenRouter and the gateway report `cost`), and the
  * prompt tokens the provider served from its cache: LangChain's `input_token_details.cache_read`, else the raw usage's
- * `prompt_tokens_details.cached_tokens` (OpenAI and OpenRouter) or `prompt_cache_hit_tokens` (DeepSeek's own name).
+ * `prompt_tokens_details.cached_tokens` (OpenAI and OpenRouter) or `prompt_cache_hit_tokens` (DeepSeek's own name), and the
+ * answer tokens that were hidden reasoning: `output_token_details.reasoning`, else `completion_tokens_details.reasoning_tokens`.
  */
 export const usageOf = (usageMetadata: unknown, responseMetadata: unknown): AiUsage => {
     const tokenUsage = fieldOf(responseMetadata, "tokenUsage")
@@ -32,6 +33,10 @@ export const usageOf = (usageMetadata: unknown, responseMetadata: unknown): AiUs
         completionTokens: firstNumber(fieldOf(usageMetadata, "output_tokens"), fieldOf(tokenUsage, "completionTokens")),
         totalTokens: firstNumber(fieldOf(usageMetadata, "total_tokens"), fieldOf(tokenUsage, "totalTokens")),
         costUsd: numberOf(fieldOf(raw, "cost")),
+        reasoningTokens: firstNumber(
+            fieldOf(fieldOf(usageMetadata, "output_token_details"), "reasoning"),
+            fieldOf(fieldOf(raw, "completion_tokens_details"), "reasoning_tokens"),
+        ),
         cachedTokens: firstNumber(
             fieldOf(fieldOf(usageMetadata, "input_token_details"), "cache_read"),
             fieldOf(fieldOf(raw, "prompt_tokens_details"), "cached_tokens"),

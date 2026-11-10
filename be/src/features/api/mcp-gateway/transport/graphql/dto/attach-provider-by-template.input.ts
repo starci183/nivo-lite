@@ -1,15 +1,15 @@
 import { Field, ID, InputType } from "@nestjs/graphql"
-import { ArrayMaxSize, IsArray, IsString, IsUUID, Matches, MaxLength } from "class-validator"
+import { ArrayMaxSize, IsArray, IsString, IsUUID, MaxLength } from "class-validator"
 
 @InputType()
 /** Attaches the listed agents to a provider by their template. */
 export class AttachProviderByTemplateInput {
-    /** The provider key. */
-    @Field(() => String)
+    /** The connected account: the connection id. */
+    @Field(() => ID)
     @IsString()
-    @MaxLength(31)
-    @Matches(/^[a-z][a-z0-9_-]{1,30}$/u)
-    provider!: string
+    @MaxLength(36)
+    @IsUUID()
+    connectionId!: string
 
     /** The agents to attach, among those the template names for the provider. */
     @Field(() => [ID])

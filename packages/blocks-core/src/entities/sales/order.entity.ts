@@ -62,6 +62,8 @@ type OrderFields = {
     readonly recipientPhone: FieldDef<"text", true>
     readonly deliveryAddress: FieldDef<"text", true>
     readonly deliveryAt: FieldDef<"text", true>
+    readonly qrConnectionId: FieldDef<"uuid", true>
+    readonly paidConnectionId: FieldDef<"uuid", true>
     readonly amountVnd: FieldDef<"money_vnd", true>
     readonly status: FieldDef<"enum", false>
     readonly confirmedBy: FieldDef<"text", true>
@@ -85,6 +87,10 @@ const orderFields: OrderFields = {
     recipientPhone: field.text({ maxLength: MAX_LINE, nullable: true }),
     /** The day and the time window of the delivery, in the customer's words (not an instant: "thứ Bảy 9-11h"). */
     deliveryAt: field.text({ maxLength: MAX_LINE, nullable: true }),
+    /** The account the payment QR was drawn on (the shop's default receiving account at that moment). */
+    qrConnectionId: field.uuid({ nullable: true }),
+    /** The account the money that paid the order actually came into (the settling transaction's account). */
+    paidConnectionId: field.uuid({ nullable: true }),
     amountVnd: field.moneyVnd({ nullable: true }),
     status: field.enum({ of: ORDER_STATUSES, default: { literal: "draft" } }),
     confirmedBy: field.text({ maxLength: MAX_LINE, nullable: true }),

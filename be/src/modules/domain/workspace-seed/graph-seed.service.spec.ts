@@ -156,7 +156,7 @@ describe("GraphSeedService > default provider rights", () => {
         const { service, abilities, print } = await build()
         abilities.attachDefaults.mockResolvedValue({
             ok: true,
-            attached: [{ provider: "google", abilities: { "ledger.write": "auto" } }],
+            attached: [{ connectionId: "conn-google", provider: "google", abilities: { "ledger.write": "auto" } }],
         })
 
         await service.run(LEDGER_TEXT, "NIVO")
@@ -402,7 +402,6 @@ describe("GraphSeedService > connection assignment", () => {
             agentId: "agent-1",
             connectionId: SEPAY,
             purpose: "bank_feed",
-            access: "auto",
         })
         expect(print).toHaveBeenCalledWith("accounting agent agent-1 live, graph created, 1 connections assigned")
     })
@@ -418,7 +417,7 @@ describe("GraphSeedService > connection assignment", () => {
         ])
     })
 
-    it("assigns the sales agent to the SePay account as a data source it only reads", async () => {
+    it("assigns the sales agent to the SePay account as a data source", async () => {
         const { service, bindings, print, text } = await asModule("sales")
 
         await service.run(text, "NIVO")
@@ -429,7 +428,6 @@ describe("GraphSeedService > connection assignment", () => {
             agentId: "agent-1",
             connectionId: SEPAY,
             purpose: "data_source",
-            access: "read",
         })
         expect(print).toHaveBeenCalledWith("sales agent agent-1 live, graph created, 1 connections assigned")
     })

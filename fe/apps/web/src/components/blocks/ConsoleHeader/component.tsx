@@ -88,22 +88,21 @@ const withCommandLook = (item: DropdownMenuItem): DropdownMenuItem => {
 
 /** Gives the account page and sign-out items their leading glyph (sign out marked destructive). */
 const withLooks = (entries: ReadonlyArray<DropdownMenuEntry>): ReadonlyArray<DropdownMenuEntry> =>
-    entries.map((entry) =>
-        entry.kind === "section"
+    entries.map((entry) => {
+        if (entry.kind === "switch") return entry
+        return entry.kind === "section"
             ? { ...entry, items: entry.items.map((item) => withCommandLook(item)) }
-            : withCommandLook(entry),
-    )
+            : withCommandLook(entry)
+    })
 
-/** The assistant toggle: a one-item checkable section (Grammar's menu has no switch entry), hidden until the member checks it. */
-const guideBubbleSection = ({ props, on }: ConsoleHeaderBaseProps): DropdownMenuEntry => ({
-    kind: "section",
-    id: "guide-bubble",
-    items: [{ id: GUIDE_BUBBLE_ITEM, label: props.guideBubbleLabel, description: props.guideBubbleDescription }],
-    selection: {
-        mode: "multiple",
-        selectedIds: props.isGuideBubbleShown ? [GUIDE_BUBBLE_ITEM] : [],
-        onChange: (ids) => on.chooseGuideBubble(ids.includes(GUIDE_BUBBLE_ITEM)),
-    },
+/** The assistant toggle: a menu switch entry, off until the member turns it on. */
+const guideBubbleSwitch = ({ props, on }: ConsoleHeaderBaseProps): DropdownMenuEntry => ({
+    kind: "switch",
+    id: GUIDE_BUBBLE_ITEM,
+    label: props.guideBubbleLabel,
+    description: props.guideBubbleDescription,
+    isSelected: props.isGuideBubbleShown,
+    onChange: on.chooseGuideBubble,
 })
 
 const Actions = ({ props, on }: ConsoleHeaderBaseProps) => {
@@ -143,7 +142,7 @@ const Actions = ({ props, on }: ConsoleHeaderBaseProps) => {
             </div>
             <DropdownMenu
                 placement="bottom end"
-                entries={[...withLooks(props.accountEntries), guideBubbleSection({ props, on }), ...overflow]}
+                entries={[...withLooks(props.accountEntries), guideBubbleSwitch({ props, on }), ...overflow]}
                 trigger={
                     <AvatarButton
                         size="control"

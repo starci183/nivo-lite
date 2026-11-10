@@ -1,5 +1,4 @@
 import type {
-    Access,
     AgentsForOptions,
     BoundAgent,
     BoundAgentFacts,
@@ -35,15 +34,9 @@ export const isPurpose = (value: string): value is Purpose => {
     return purposes.includes(value)
 }
 
-/** True when a stored text is one of the three access levels. */
-export const isAccess = (value: string): value is Access => value === "read" || value === "ask" || value === "auto"
-
 /** The purposes a selector names, as a list. */
 export const purposesOf = (selector: PurposeSelector): ReadonlyArray<Purpose> =>
     typeof selector === "string" ? [selector] : selector
-
-/** Anything that is not a known access level counts as the least one: an agent may look, not act. */
-const accessOf = (value: string): Access => (isAccess(value) ? value : "read")
 
 const byCreatedAt = <T extends { readonly created_at: string }>(a: T, b: T): number =>
     a.created_at.localeCompare(b.created_at)
@@ -52,7 +45,6 @@ const agentOf = (row: BoundAgentFacts, purpose: Purpose): BoundAgent => ({
     id: row.id,
     module: row.module,
     name: row.name,
-    access: accessOf(row.access),
     purpose,
 })
 
@@ -63,7 +55,6 @@ const connectionOf = (row: BoundConnectionFacts, purpose: Purpose): BoundConnect
     botUsername: row.bot_username,
     accountMasked: row.account_masked,
     status: row.status,
-    access: accessOf(row.access),
     purpose,
 })
 
@@ -74,7 +65,6 @@ export const boundAgentsOf = (
 ): ReadonlyArray<BoundAgent> =>
     [...rows]
         .sort(byCreatedAt)
-        .filter((row) => !(options.acting === true && accessOf(row.access) === "read"))
         .filter((row) => options.modules === undefined || options.modules.includes(row.module))
         .flatMap((row) => (isPurpose(row.purpose) ? [agentOf(row, row.purpose)] : []))
 
@@ -87,7 +77,6 @@ export const boundConnectionsOf = (
         .sort(byCreatedAt)
         .filter((row) => row.status !== "disconnected")
         .filter((row) => !(options.connectedOnly === true && row.status !== "connected"))
-        .filter((row) => !(options.acting === true && accessOf(row.access) === "read"))
         .filter((row) => options.providers === undefined || options.providers.includes(row.provider))
         .flatMap((row) => (isPurpose(row.purpose) ? [connectionOf(row, row.purpose)] : []))
 
@@ -107,17 +96,3 @@ export const splitRoute = (bound: ReadonlyArray<BoundAgent>): InboundRoute => {
 /** The agents a conversation's own agent can hand over to: the bound ones of another module, one per module. */
 export const handoversFrom = (bound: ReadonlyArray<BoundAgent>, module: string): ReadonlyArray<BoundAgent> =>
     firstOfEachModule(bound.filter((agent) => agent.module !== module))
-
-const LEVELS: ReadonlyArray<Access> = ["read", "ask", "auto"]
-
-/** The most a manager may grant on their own: asking first. Acting alone is the owner's to give. */
-const MANAGER_CEILING: Access = "ask"
-
-/**
- * Whether a manager's grant widens an agent's access past what the owner allows: the level asked is above both the managers' ceiling
- * and the level the grant already has (a manager may leave an owner-given level as it is, or lower it, never raise it).
- */
-export const exceedsManagerCeiling = (requested: Access, existing: string | null): boolean => {
-    const allowed = Math.max(LEVELS.indexOf(MANAGER_CEILING), existing === null ? 0 : LEVELS.indexOf(accessOf(existing)))
-    return LEVELS.indexOf(requested) > allowed
-}

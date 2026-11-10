@@ -11,12 +11,12 @@ export class SetAgentAbilityInput {
     @IsUUID()
     agentId!: string
 
-    /** The provider key. */
-    @Field(() => String)
+    /** The connected account: the connection id. */
+    @Field(() => ID)
     @IsString()
-    @MaxLength(31)
-    @Matches(/^[a-z][a-z0-9_-]{1,30}$/u)
-    provider!: string
+    @MaxLength(36)
+    @IsUUID()
+    connectionId!: string
 
     /** The ability id. */
     @Field(() => String)

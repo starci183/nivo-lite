@@ -8,7 +8,7 @@ import { ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionRecord } from "@modules/domain/connections"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
-import { ModuleInstallService, ModulesService } from "@modules/domain/modules"
+import { AgentRemovalService, ModuleInstallService, ModulesService } from "@modules/domain/modules"
 import type { ModuleDefinition } from "@modules/domain/modules"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember, WorkspaceRole } from "@modules/domain/workspace-members"
@@ -94,7 +94,6 @@ const build = async (role: WorkspaceRole = "owner") => {
             agentName: "Lan",
             module: "sales",
             purpose: "outbound_chat",
-            access: "ask",
             grantedAt: new Date("2026-11-01T00:00:00.000Z"),
         },
     ])
@@ -111,9 +110,10 @@ const build = async (role: WorkspaceRole = "owner") => {
             knowledgeWaiting: 2,
             knowledgeSkipped: 0,
         },
-        grants: [{ connectionId: "db1", access: "read" }],
+        grants: [{ connectionId: "db1" }],
     })
     const logger = mock<Logger>()
+    const removal = mock<AgentRemovalService>()
     const abilities = mock<ProviderAbilitiesService>()
     abilities.wishProblem.mockResolvedValue(null)
     abilities.attachDefaults.mockResolvedValue({ ok: true, attached: [] })
@@ -131,6 +131,7 @@ const build = async (role: WorkspaceRole = "owner") => {
             { provide: ChannelOwnersService, useValue: owners },
             { provide: AgentSetupCopyService, useValue: setupCopy },
             { provide: ProviderAbilitiesService, useValue: abilities },
+            { provide: AgentRemovalService, useValue: removal },
             { provide: LOGGER, useValue: logger },
         ],
     }).compile()
@@ -145,6 +146,7 @@ const build = async (role: WorkspaceRole = "owner") => {
         setupCopy,
         logger,
         abilities,
+        removal,
     }
 }
 
@@ -220,7 +222,7 @@ describe("AgentInstanceCreationService > create", () => {
         expect(grants.setAgentConnections).toHaveBeenCalledWith(
             { principalId: "u1", workspaceId: "w1" },
             "agent-minh",
-            [{ connectionId: "zl1" }, { connectionId: "db1", access: "read" }],
+            [{ connectionId: "zl1" }, { connectionId: "db1" }],
         )
         expect(created.copied).toEqual({
             fromInstallationId: "inst-lan",
@@ -255,7 +257,7 @@ describe("AgentInstanceCreationService > create, provider rights", () => {
 
     it("attaches exactly what the owner left of the proposal, checked before anything is written", async () => {
         const { service, abilities, install } = await build()
-        const providerRights = [{ provider: "zalo_oa", abilities: { "customer.send": "ask" } }]
+        const providerRights = [{ connectionId: "conn-zalo", abilities: { "customer.send": "ask" } }]
 
         await service.create("u1", { ...REQUEST, providerRights })
         expect(abilities.wishProblem).toHaveBeenCalledWith("w1", providerRights, "owner")
@@ -279,7 +281,7 @@ describe("AgentInstanceCreationService > create, provider rights", () => {
 describe("AgentInstanceCreationService > create, a manager's provider rights", () => {
     it("gives the proposal and checks an edit as a manager, who may not let an agent act by itself", async () => {
         const { service, abilities } = await build("manager")
-        const providerRights = [{ provider: "zalo_oa", abilities: { "customer.send": "ask" } }]
+        const providerRights = [{ connectionId: "conn-zalo", abilities: { "customer.send": "ask" } }]
 
         await service.create("u1", { ...REQUEST, providerRights })
 
@@ -290,6 +292,62 @@ describe("AgentInstanceCreationService > create, a manager's provider rights", (
             "u1",
             "manager",
         )
+    })
+})
+
+describe("AgentInstanceCreationService > create is all or nothing", () => {
+    const COPY = { ...REQUEST, startFrom: "copy" as const, copyFrom: "inst-sibling" }
+
+    it("takes the installation back when the copy of the sibling's setup fails, and throws the failure", async () => {
+        const { service, setupCopy, removal, abilities, grants } = await build()
+        const failure = new Error("ENTITY_ENGINE_MUTATION_INVALID")
+        setupCopy.copy.mockRejectedValue(failure)
+
+        await expect(service.create("u1", COPY)).rejects.toBe(failure)
+
+        expect(removal.remove).toHaveBeenCalledWith("u1", "w1", "inst-minh")
+        expect(grants.setAgentConnections).not.toHaveBeenCalled()
+        expect(abilities.attachDefaults).not.toHaveBeenCalled()
+    })
+
+    it("takes it back when a later write fails too: the picture, the channels, the provider rights", async () => {
+        const failure = new Error("write refused")
+        const dressed = await build()
+        dressed.identity.setAvatarPreset.mockRejectedValue(failure)
+        await expect(dressed.service.create("u1", { ...REQUEST, avatarPreset: "role" })).rejects.toBe(failure)
+        expect(dressed.removal.remove).toHaveBeenCalledTimes(1)
+
+        const attached = await build()
+        attached.abilities.attachDefaults.mockRejectedValue(failure)
+        await expect(attached.service.create("u1", REQUEST)).rejects.toBe(failure)
+        expect(attached.removal.remove).toHaveBeenCalledWith("u1", "w1", "inst-minh")
+    })
+
+    it("leaves the name free: the same request succeeds once the cause is gone", async () => {
+        const { service, abilities, removal } = await build()
+        abilities.attachDefaults.mockRejectedValueOnce(new Error("once"))
+
+        await expect(service.create("u1", REQUEST)).rejects.toThrow("once")
+        await expect(service.create("u1", REQUEST)).resolves.toMatchObject({ agentId: "agent-minh" })
+        expect(removal.remove).toHaveBeenCalledTimes(1)
+    })
+
+    it("never removes an installation it did not make, removes nothing on success, and keeps the first failure when the removal fails", async () => {
+        const raced = await build()
+        raced.install.install.mockResolvedValue({ installationId: "inst-other", agentId: "agent-other", created: false })
+        raced.abilities.attachDefaults.mockRejectedValue(new Error("late"))
+        await expect(raced.service.create("u1", REQUEST)).rejects.toThrow("late")
+        expect(raced.removal.remove).not.toHaveBeenCalled()
+
+        const fine = await build()
+        await fine.service.create("u1", REQUEST)
+        expect(fine.removal.remove).not.toHaveBeenCalled()
+
+        const stuck = await build()
+        stuck.abilities.attachDefaults.mockRejectedValue(new Error("first"))
+        stuck.removal.remove.mockRejectedValue(new Error("removal down"))
+        await expect(stuck.service.create("u1", REQUEST)).rejects.toThrow("first")
+        expect(stuck.logger.error).toHaveBeenCalled()
     })
 })
 

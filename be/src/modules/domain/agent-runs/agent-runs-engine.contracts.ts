@@ -241,8 +241,11 @@ export interface OwnerResumeRequest {
 
 /** What the owner's door answers: "resumed" with the step the run goes on from, or why it was not resumed with no step. */
 export interface OwnerResumeAnswer {
-    /** "resumed", or not_found, compensated, not_parked, no_failed_step, exhausted or outcome_unknown. */
-    readonly kind: ResumeResult["kind"]
+    /**
+     * "resumed", or not_found, compensated, not_parked, no_failed_step, exhausted, outcome_unknown, or thread_run (a run on a LangGraph
+     * thread moves only through its stop).
+     */
+    readonly kind: ResumeResult["kind"] | "thread_run"
     /** The step the run goes on from, when it was resumed. */
     readonly stepKey: string | null
 }
@@ -265,8 +268,8 @@ export interface RunCancelResult {
 
 /** What the owner door answers to a cancel. */
 export interface OwnerCancelAnswer {
-    /** `cancelled`, `already_cancelled`, `not_cancellable` or `not_found`. */
-    readonly kind: RunCancelResult["kind"]
+    /** `cancelled`, `already_cancelled`, `not_cancellable`, `not_found` or `thread_run` (the run's stop is answered instead: skip). */
+    readonly kind: RunCancelResult["kind"] | "thread_run"
     /** `effects_kept` when the run was cancelled: whatever its steps already sent or did stays as it is; null otherwise. */
     readonly note: "effects_kept" | null
 }

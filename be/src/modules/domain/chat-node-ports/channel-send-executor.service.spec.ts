@@ -102,7 +102,7 @@ const build = async () => {
     registry.portOf.mockReturnValue(leads)
     team.execute.mockResolvedValue({ kind: "chat-message", id: "team-1" })
     registry.optionalExecutorOf.mockImplementation((effect) => (effect === TOOL.teamMessagePost ? team : undefined))
-    access.judge.mockResolvedValue({ kind: "allow", provider: "telegram", ability: "customer.send" })
+    access.judge.mockResolvedValue({ kind: "allow", provider: "telegram", ability: "customer.send", connectionId: "k1" })
     drafts.draftOf.mockResolvedValue(null)
     drafts.propose.mockResolvedValue({ id: "d1", status: "proposed", text: "Hello" })
     const executor = moduleRef.get(ChannelSendExecutorService)
@@ -419,13 +419,16 @@ describe("ChannelSendExecutorService send on the conversation's channel", () => 
             facts: { reason: "ability_off" },
         })
         expect(messages.storeAgentLine).not.toHaveBeenCalled()
-        access.judge.mockResolvedValue({ kind: "approval", provider: "telegram", ability: "customer.send" })
+        access.judge.mockResolvedValue({ kind: "approval", provider: "telegram", ability: "customer.send", connectionId: "k1" })
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({ id: "waits_owner" })
         expect(drafts.propose).toHaveBeenCalled()
         expect(messages.storeAgentLine).not.toHaveBeenCalled()
-        access.judge.mockResolvedValue({ kind: "allow", provider: "telegram", ability: "customer.send" })
+        access.judge.mockResolvedValue({ kind: "allow", provider: "telegram", ability: "customer.send", connectionId: "k1" })
         await expect(executor.execute(TURN, SEND, CALL)).resolves.toMatchObject({ kind: "message" })
-        expect(access.judge).toHaveBeenCalledWith("ws-1", TURN.agentId, TOOL.customerMessageSend, false, "telegram")
+        expect(access.judge).toHaveBeenCalledWith("ws-1", TURN.agentId, TOOL.customerMessageSend, false, {
+            provider: "telegram",
+            connectionId: "k1",
+        })
     })
 
     it("judges the provider of the channel the conversation is on, and no provider right at all on the website chat", async () => {
@@ -433,7 +436,10 @@ describe("ChannelSendExecutorService send on the conversation's channel", () => 
 
         conversations.turnOf.mockResolvedValue({ kind: "ok", value: conversation({ channel: "zalo", externalId: "123" }) })
         await executor.execute(TURN, SEND, CALL)
-        expect(access.judge).toHaveBeenLastCalledWith("ws-1", TURN.agentId, TOOL.customerMessageSend, false, "zalo_oa")
+        expect(access.judge).toHaveBeenLastCalledWith("ws-1", TURN.agentId, TOOL.customerMessageSend, false, {
+            provider: "zalo_oa",
+            connectionId: "k1",
+        })
 
         access.judge.mockClear()
         conversations.turnOf.mockResolvedValue({

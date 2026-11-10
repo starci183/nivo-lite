@@ -5,6 +5,8 @@ import { McpCallLogService } from "@modules/domain/mcp-call-log"
 import { McpConnectorsService } from "@modules/domain/mcp-connectors"
 import { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
 import { AgentDirectoryService } from "@modules/domain/agents"
+import { ConnectionBindingsReadService } from "@modules/domain/connections"
+import type { ConnectionStatusFacts } from "@modules/domain/connections"
 import { McpConnectorAccessService, McpToolGrantsService } from "@modules/domain/mcp-tool-grants"
 import type { ProviderAttachmentView } from "@modules/domain/mcp-tool-grants"
 import { MCP_REMOTE, McpError, McpErrorCode } from "@modules/integrations/mcp"
@@ -57,7 +59,16 @@ const build = async (
     const access = mock<McpConnectorAccessService>()
     access.listOfAgent.mockResolvedValue(attachments ?? [])
     access.listOfWorkspace.mockResolvedValue(attachments ?? [])
-    const abilities = new ProviderAbilitiesService(access, mock<AgentDirectoryService>())
+    access.defaultAccountOf.mockResolvedValue(null)
+    const bindings = mock<ConnectionBindingsReadService>()
+    bindings.ofProvider.mockImplementation((_workspaceId, provider) =>
+        Promise.resolve(
+            provider === "sepay"
+                ? [mock<ConnectionStatusFacts>({ id: "conn-mb", name: "MB", status: "connected", accountMasked: null })]
+                : [],
+        ),
+    )
+    const abilities = new ProviderAbilitiesService(access, mock<AgentDirectoryService>(), bindings)
     const adapters = [native, ...added.map((extra) => mock<NativeAdapter>({ manifest: extra }))]
     const doubles = {
         clock,
@@ -614,6 +625,7 @@ describe("McpGatewayService NIVO effect tools", () => {
 /** The attachment of the spec agent to SePay, with the abilities ticked. */
 const sepay = (abilities: ProviderAttachmentView["abilities"]): ProviderAttachmentView => ({
     agentId: "sales",
+    connectionId: "conn-mb",
     provider: "sepay",
     abilities,
 })
@@ -629,7 +641,7 @@ const QR_CALLER: GatewayCaller = { ...STEP_CALLER, run: { ...STEP_RUN, stepTools
 describe("McpGatewayService provider abilities: the decision table", () => {
     it("not attached: refuses a provider tool, whatever the tool grants say", async () => {
         const { gateway, native, callLog } = await build({}, gwt.OPEN_SEPAY_MANIFEST, [], [
-            { agentId: "sales", provider: "zalo_oa", abilities: { "customer.send": "auto" } },
+            { agentId: "sales", connectionId: "conn-oa", provider: "zalo_oa", abilities: { "customer.send": "auto" } },
         ])
 
         await expect(gateway.call(CALLER, "sepay.transactions.list", {})).resolves.toEqual({

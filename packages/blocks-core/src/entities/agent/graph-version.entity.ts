@@ -16,6 +16,7 @@ export const GRAPH_CHANGE_KINDS: readonly [string, ...Array<string>] = [
     "template",
     "rollback",
     "spec",
+    "copy",
 ]
 
 /** The frozen wiring document of a version. */

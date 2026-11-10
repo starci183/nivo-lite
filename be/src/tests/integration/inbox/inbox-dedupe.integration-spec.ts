@@ -5,12 +5,10 @@ import { DecisionsService, EvidenceService, WorkPlacementService } from "@module
 import { McpGatewayAdminService, McpGatewayService } from "@modules/domain/mcp-gateway"
 import { GatewayReceiptsService } from "@modules/domain/mcp-gateway-receipts"
 import type { GatewayCallResult } from "@modules/domain/mcp-gateway-receipts"
-import { lineClientIdOf, TeamChatStoreService } from "@modules/domain/team-chat"
 import { WorkItemsService } from "@modules/domain/work-items"
 import { persistOfficeRows } from "../../fixtures/builders/office-chain.builder"
 import { API_APP_MODULES } from "../../world/api-app.options"
 import { createDedupeRemoteServer } from "../../world/dedupe-remote-server.service"
-import { hubNoteProof } from "../../world/inbox-dedupe-proof.service"
 import { TestWorldError, TestWorldErrorCode } from "../../world/test-world.error"
 import { useTestWorld } from "../../world/use-test-world"
 import {
@@ -18,12 +16,10 @@ import {
     cleanInboxClaim,
     cleanGatewayClaims,
     holdEvidence,
-    noteLines,
     failTransaction,
 } from "../../world/inbox-database.service"
 import { removeAuthUsers, removeWorkspace } from "../../world/proof-accounts.service"
 import { grantConnectorTools } from "../../fixtures/builders/mcp-agent.builder"
-import { insertProofCard } from "../../fixtures/builders/proof-card.builder"
 
 const world = useTestWorld({ modules: API_APP_MODULES })
 const identity = {
@@ -201,76 +197,5 @@ describe("durable HAKUEN write dedupe on the migrated local database", () => {
             detail: "operation_pending",
         })
         expect(operation).toHaveBeenCalledTimes(1)
-    })
-})
-
-describe("durable OpenClaw Hub-note dedupe on the migrated local database", () => {
-    it("says one team-chat line for 24 concurrent calls of one operation", async () => {
-        const notes = hubNoteProof(world, WS)
-        const key = world.key("openclaw-concurrent")
-        const title = world.key("one-action-card")
-        const clientId = lineClientIdOf(`hub.note:${key}`)
-        await Promise.all(Array.from({ length: 24 }, () => notes.postOnce(title, identity.agents.sales, key)))
-        expect(await noteLines(world.db.primary, WS, clientId)).toHaveLength(1)
-    })
-
-    it("keeps no line when the store hits a database foreign-key failure, then accepts the retry", async () => {
-        const notes = hubNoteProof(world, WS)
-        const key = world.key("openclaw-rollback")
-        const title = world.key("retry-action-card")
-        const clientId = lineClientIdOf(`hub.note:${key}`)
-        const store = world.resolve(TeamChatStoreService)
-        const insert = store.insertLine.bind(store)
-        const refused = jest
-            .spyOn(store, "insertLine")
-            .mockImplementationOnce((line) => insert({ ...line, roomId: world.id() }))
-        try {
-            await expect(notes.postOnce(title, identity.agents.sales, key)).rejects.toMatchObject({
-                code: "23503",
-            })
-            expect(refused).toHaveBeenCalledTimes(1)
-        } finally {
-            refused.mockRestore()
-        }
-        expect(await noteLines(world.db.primary, WS, clientId)).toHaveLength(0)
-        await notes.postOnce(title, identity.agents.sales, key)
-        expect(await noteLines(world.db.primary, WS, clientId)).toHaveLength(1)
-    })
-})
-
-describe("Hub card validation on the migrated local database", () => {
-    it.each([
-        "draft_post",
-        "video_ready",
-        "approval_request",
-        "schedule_confirmed",
-        "weekly_report",
-        "booking_held",
-        "daily_summary",
-        "handoff_note",
-        "exception",
-        "action_done",
-    ])("stores the v1 %s card without changing its payload", async (type) => {
-        const card = { v: 1, type, title: world.key("valid-card") }
-        await expect(insertProofCard(world.db.primary, WS, card)).resolves.toEqual([{ card }])
-    })
-
-    it("retains ordinary message lines without a card", async () => {
-        await expect(insertProofCard(world.db.primary, WS, null)).resolves.toEqual([{ card: null }])
-    })
-
-    it.each([
-        { name: "an unsupported type", card: { v: 1, type: "unsupported", title: "Invalid card" } },
-        { name: "a version 2 payload", card: { v: 2, type: "action_done", title: "Invalid card" } },
-        { name: "a non-object payload", card: [{ v: 1, type: "action_done", title: "Invalid card" }] },
-        {
-            name: "a payload exceeding 65536 UTF-8 bytes",
-            card: { v: 1, type: "action_done", title: "\u00e9".repeat(32768) },
-        },
-    ])("rejects $name with the card check constraint", async ({ card }) => {
-        await expect(insertProofCard(world.db.primary, WS, card)).rejects.toMatchObject({
-            code: "23514",
-            constraint: "messages_card_check",
-        })
     })
 })

@@ -157,6 +157,7 @@ describe("lead-freeze.policy: the pending events", () => {
         expect(foldLines(pending, null)).toEqual(pending)
         expect(replayOf(folded, "retried").map((each) => each.wakeId)).toEqual(["w-pay", "w-other"])
         expect(replayOf(folded, "skipped").map((each) => each.wakeId)).toEqual(["wake-2", "w-pay", "w-other"])
+        expect(replayOf(folded, "stop_closed").map((each) => each.wakeId)).toEqual(["wake-2", "w-pay", "w-other"])
         expect(replayKeyOf(pendingLineOf(), "freeze-1", 2)).toBe("msg-2~after-freeze-freeze-1-2")
     })
 })
@@ -253,8 +254,10 @@ describe("lead-freeze.policy: what the owner reads", () => {
             pendingCount: 1,
             heldBy: null,
             frozenAt: "2026-11-04T10:00:00.000Z",
+            onStop: false,
         })
         expect(stateOf({ ...freeze, key: "lead:lead-1|wf:wf-consult" })?.workflowId).toBe("wf-consult")
+        expect(stateOf({ ...freeze, frozenReason: "run_stop", workItemId: null })?.onStop).toBe(true)
     })
 
     it("matches a transfer to an order by its transfer code, whatever the spacing and case", async () => {

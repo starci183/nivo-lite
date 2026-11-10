@@ -11,7 +11,6 @@ export const linkOf: (overrides?: Partial<AgentConnectionEntity>) => AgentConnec
         connectionId: "c1",
         workspaceId: "w1",
         purpose: "inbound_chat",
-        access: "auto",
         createdAt: new Date("2026-10-13T02:00:00.000Z"),
         updatedAt: new Date("2026-10-13T02:00:00.000Z"),
     })
@@ -23,10 +22,6 @@ export const inboundLinks = (): Array<AgentConnectionEntity> => ["a1", "a2", "a3
 export const outboundLinks = (): Array<AgentConnectionEntity> =>
     ["c1", "c2", "c3"].map((connectionId) => linkOf({ connectionId, purpose: "outbound_chat" }))
 
-/** The read-only outbound chat grant of connection c1 to agent a1. */
-export const readOnlyOutboundLink = (): AgentConnectionEntity =>
-    linkOf({ connectionId: "c1", purpose: "outbound_chat", access: "read" })
-
 /** The tool grant of connection c1 to agent a1. */
 export const toolLink = (): AgentConnectionEntity => linkOf({ purpose: "tool" })
 
@@ -36,5 +31,3 @@ export const twoAgentLinks = (): Array<AgentConnectionEntity> => [
     linkOf({ agentId: "agent-1" }),
 ]
 
-/** The ask-level grant of connection c1 to agent a1. */
-export const askLink = (): AgentConnectionEntity => linkOf({ access: "ask" })

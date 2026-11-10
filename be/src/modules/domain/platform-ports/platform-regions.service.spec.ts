@@ -4,8 +4,8 @@ import { AgentBindingsService } from "@modules/domain/agent-connections"
 import type { BoundConnection } from "@modules/domain/agent-connections"
 import { AgentKnowledgeLensService } from "@modules/domain/agent-knowledge"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { ConnectionGrantsService } from "@modules/domain/connection-grants"
-import type { ConnectionCandidate } from "@modules/domain/connection-grants"
+import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
+import type { ProviderBoard } from "@modules/domain/mcp-gateway"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import type { GapRecord } from "@modules/domain/knowledge-gaps"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
@@ -19,7 +19,6 @@ const connection = (overrides: Partial<BoundConnection>): BoundConnection => ({
     botUsername: null,
     accountMasked: null,
     status: "connected",
-    access: "auto",
     purpose: "inbound_chat",
     ...overrides,
 })
@@ -67,24 +66,61 @@ const OVERVIEW = {
     ownFacts: [],
 }
 
-const candidate = (overrides: Partial<ConnectionCandidate>): ConnectionCandidate => ({
-    id: "k9",
-    name: "VCB 1234",
-    provider: "sepay",
-    botUsername: null,
-    accountMasked: "1234",
-    status: "connected",
-    purpose: "bank_feed",
-    access: null,
-    ...overrides,
-})
+/**
+ * The rights board of a workspace: Zalo OA (one account), SePay with two accounts (MB, the default receiving one, and VCB) and payOS with
+ * no ability. Agent a1 is attached to both SePay accounts and to payOS; a2 to the Zalo OA.
+ */
+const BOARD = {
+    providers: [
+        {
+            provider: "zalo_oa",
+            label: { vi: "Zalo OA", en: "Zalo OA" },
+            kind: "messaging",
+            kindLabel: { vi: "Tin nhắn", en: "Messaging" },
+            connected: true,
+            abilities: [{ id: "customer.send", label: { vi: "Gửi tin cho khách", en: "Send to customers" }, scope: "write", tools: [] }],
+            accounts: [{ connectionId: "z1", provider: "zalo_oa", label: "Tiệm hoa NIVO", connected: true, isDefault: false }],
+        },
+        {
+            provider: "sepay",
+            label: { vi: "SePay", en: "SePay" },
+            kind: "payment",
+            kindLabel: { vi: "Thanh toán", en: "Payment" },
+            connected: true,
+            abilities: [
+                { id: "bank.read", label: { vi: "Đọc giao dịch", en: "Read transactions" }, scope: "read", tools: [] },
+                { id: "payment.rematch", label: { vi: "Dò lại tiền", en: "Rematch" }, scope: "write", tools: [] },
+                { id: "payment.qr", label: { vi: "Tạo QR", en: "Create QR" }, scope: "write", tools: [] },
+            ],
+            accounts: [
+                { connectionId: "k-mb", provider: "sepay", label: "MB •••• 5252", connected: true, isDefault: true },
+                { connectionId: "k-vcb", provider: "sepay", label: "VCB •••• 0071", connected: true, isDefault: false },
+            ],
+        },
+        {
+            provider: "payos",
+            label: { vi: "payOS", en: "payOS" },
+            kind: "payment",
+            kindLabel: { vi: "Thanh toán", en: "Payment" },
+            connected: true,
+            abilities: [],
+            accounts: [{ connectionId: "p1", provider: "payos", label: "payOS shop", connected: true, isDefault: false }],
+        },
+    ],
+    attachments: [
+        { agentId: "a1", connectionId: "k-mb", provider: "sepay", abilities: { "bank.read": "auto", "payment.rematch": "auto", "payment.qr": "ask" } },
+        { agentId: "a1", connectionId: "k-vcb", provider: "sepay", abilities: { "bank.read": "auto" } },
+        { agentId: "a1", connectionId: "p1", provider: "payos", abilities: {} },
+        { agentId: "a2", connectionId: "z1", provider: "zalo_oa", abilities: { "customer.send": "auto" } },
+    ],
+} as unknown as ProviderBoard
 
 const build = async () => {
     const bindings = mock<AgentBindingsService>()
     const directory = mock<AgentDirectoryService>()
     const gaps = mock<KnowledgeGapsService>()
     const lens = mock<AgentKnowledgeLensService>()
-    const grants = mock<ConnectionGrantsService>()
+    const abilities = mock<ProviderAbilitiesService>({ board: jest.fn().mockResolvedValue(BOARD) })
     lens.overviewFor.mockResolvedValue(OVERVIEW)
     lens.waitingFactLabel.mockResolvedValue(null)
     const catalog = mock<MessageCatalog>()
@@ -97,39 +133,61 @@ const build = async () => {
             { provide: AgentDirectoryService, useValue: directory },
             { provide: KnowledgeGapsService, useValue: gaps },
             { provide: AgentKnowledgeLensService, useValue: lens },
-            { provide: ConnectionGrantsService, useValue: grants },
+            { provide: ProviderAbilitiesService, useValue: abilities },
         ],
     }).compile()
-    return { service: moduleRef.get(PlatformRegionsService), bindings, directory, gaps, lens, grants }
+    return { service: moduleRef.get(PlatformRegionsService), bindings, directory, gaps, lens, abilities }
 }
 
-describe("PlatformRegionsService connections", () => {
-    it("lists the connections bound to the agent with their state and access in the viewer's words", async () => {
-        const { service, bindings } = await build()
+describe("PlatformRegionsService connections: the accounts attached to the agent, read only", () => {
+    it("lists one row per attached ACCOUNT: provider · account, abilities with the mode of each write, and the default receiving flag", async () => {
+        const { service, bindings, abilities } = await build()
         bindings.connectionsFor.mockResolvedValue([
-            connection({}),
-            connection({ id: "k2", name: "SePay", status: "error", access: "read", purpose: "bank_feed" }),
+            connection({ id: "k-mb", provider: "sepay", name: "MB", accountMasked: "5252", purpose: "bank_feed" }),
         ])
 
-        const region = await service.connectionsOf("a1", "en")
+        const region = await service.connectionsOf("w1", "a1", "vi")
 
-        expect(region.manageLabel).toBe("en:workbench.platform.connections.manage:{}")
-        expect(region.rows.map((row) => [row.id, row.name, row.statusTone])).toEqual([
-            ["k1", "Zalo OA", "success"],
-            ["k2", "SePay", "danger"],
-        ])
-        expect(region.rows[1]).toMatchObject({
-            description: "en:workbench.platform.purpose.bank_feed:{}",
-            statusLabel: "en:workbench.platform.status.error:{}",
-            accessLabel: "en:workbench.platform.access.read:{}",
+        expect(abilities.board).toHaveBeenCalledWith("w1")
+        expect(region).toEqual({
+            label: "vi:workbench.platform.connections.title:{}",
+            rightsLabel: "vi:workbench.platform.connections.rights:{}",
+            rightsHref: "",
+            rows: [
+                {
+                    id: "k-mb",
+                    name: "SePay · MB •••• 5252",
+                    description:
+                        "Đọc giao dịch · Dò lại tiền (vi:workbench.platform.connections.mode_auto:{}) · Tạo QR (vi:workbench.platform.connections.mode_ask:{})",
+                    provider: "sepay",
+                    account: "MB •••• 5252",
+                    isDefaultReceiving: true,
+                    access: "auto",
+                    accountMasked: "5252",
+                },
+                {
+                    id: "k-vcb",
+                    name: "SePay · VCB •••• 0071",
+                    description: "Đọc giao dịch",
+                    provider: "sepay",
+                    account: "VCB •••• 0071",
+                    access: "read",
+                },
+                {
+                    id: "p1",
+                    name: "payOS · payOS shop",
+                    description: "vi:workbench.platform.connections.none:{}",
+                    provider: "payos",
+                    account: "payOS shop",
+                },
+            ],
         })
-        expect(bindings.connectionsFor.mock.calls[0]?.[0]).toBe("a1")
     })
 
-    it("lists no row for an agent with no connection", async () => {
+    it("lists no row for an agent attached to nothing, and never another agent's attachment", async () => {
         const { service, bindings } = await build()
         bindings.connectionsFor.mockResolvedValue([])
-        await expect(service.connectionsOf("a1", "vi")).resolves.toMatchObject({ rows: [] })
+        await expect(service.connectionsOf("w1", "a9", "en")).resolves.toMatchObject({ rows: [] })
     })
 })
 
@@ -167,48 +225,6 @@ describe("PlatformRegionsService knowledge", () => {
 
         expect(region.gaps).toBeNull()
         expect(lens.countsFor).toHaveBeenCalledWith("w1", "", null)
-    })
-})
-
-describe("PlatformRegionsService connections with candidates", () => {
-    it("lists the bound connections with their provider and level, then the accounts not granted, each with the grant command", async () => {
-        const { service, bindings, directory, grants } = await build()
-        bindings.connectionsFor.mockResolvedValue([
-            connection({ id: "k2", provider: "sepay", name: "MB", accountMasked: "9999", purpose: "bank_feed" }),
-        ])
-        directory.find.mockResolvedValue({ id: "a1", name: "KT", module: "accounting", canTagAgentIds: [] })
-        grants.candidatesOf.mockResolvedValue([
-            candidate({ id: "k2", access: "auto" }),
-            candidate({}),
-            candidate({ id: "k8", access: "ask" }),
-        ])
-
-        const region = await service.connectionsWithCandidatesOf("w1", "a1", "en")
-
-        expect(grants.candidatesOf).toHaveBeenCalledWith("w1", "a1", "accounting")
-        expect(region.rows.map((row) => [row.id, row.isGranted])).toEqual([
-            ["k2", true],
-            ["k9", false],
-        ])
-        expect(region.rows[0]).toMatchObject({ provider: "sepay", access: "auto", accountMasked: "9999" })
-        expect(region.rows[1]).toMatchObject({
-            provider: "sepay",
-            accountMasked: "1234",
-            actionLabel: "en:workbench.platform.connections.grant:{}",
-            accessLabel: "",
-        })
-    })
-
-    it("offers the accounts of an agent the workspace does not hold by no module, and an account with no mask without one", async () => {
-        const { service, bindings, directory, grants } = await build()
-        bindings.connectionsFor.mockResolvedValue([])
-        directory.find.mockResolvedValue(null)
-        grants.candidatesOf.mockResolvedValue([candidate({ accountMasked: null })])
-
-        const region = await service.connectionsWithCandidatesOf("w1", "a1", "vi")
-
-        expect(grants.candidatesOf).toHaveBeenCalledWith("w1", "a1", "")
-        expect(region.rows[0]).not.toHaveProperty("accountMasked")
     })
 })
 

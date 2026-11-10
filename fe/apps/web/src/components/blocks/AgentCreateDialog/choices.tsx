@@ -1,7 +1,7 @@
 import { Section, Stack, SurfaceCard, Text, type SelectItemData } from "@starci/grammar/common"
 import { ProviderRightsCard, type ProviderRightsCardProps } from "@/components/composites/ProviderRightsCard"
 
-/** The providers field: one card per connected provider the template needs (with a chip "by template"), and a dimmed line for one not connected. */
+/** The providers field: one card per connected account of a provider the template needs (with a chip "by template"), and a dimmed line for one not connected. */
 export interface ProvidersFieldView {
     readonly label: string
     readonly chip: string
@@ -15,7 +15,7 @@ export interface ProvidersChoiceProps {
     readonly view: ProvidersFieldView
 }
 
-/** The provider cards of the create dialog: the template's rights, ticked, editable before the create button. */
+/** The account cards of the create dialog: the template's rights, ticked, editable before the create button. */
 export const ProvidersChoice = (props: ProvidersChoiceProps) => (
     <Section kind="region" title={props.view.label} fact={props.view.chip} headingLevel={3}>
         <Stack gap="inline">

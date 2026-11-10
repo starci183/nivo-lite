@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing"
-import { WakeSourcesPolicy, wakeSources } from "./agent-wake-source.policy"
+import { ENGINE_THREAD_SOURCE, WakeSourcesPolicy, wakeSources } from "./agent-wake-source.policy"
 import { AgentWorkError, AgentWorkErrorCode } from "./errors/agent-work.error"
 import type { AgentWakeTraits } from "@modules/domain/agent-wake-rules"
 
@@ -69,6 +69,33 @@ describe("WakeSourcesPolicy built-in sources", () => {
         })
         expect(table.builtIn()).toEqual(["customer", "tag", "internal", "schedule"])
         expect(table.registered()).toEqual(table.builtIn())
+    })
+})
+
+describe("WakeSourcesPolicy engine sources", () => {
+    it("knows the thread source: a person waits on it, it restores when work is switched back on, three tries, not background", async () => {
+        const table = await buildSubject()
+
+        expect(ENGINE_THREAD_SOURCE).toBe("thread")
+        expect(table.of(ENGINE_THREAD_SOURCE)).toEqual({
+            priority: 15,
+            maxAttempts: 3,
+            scopedToConversation: false,
+            background: false,
+            restoresHeld: true,
+            awaitsAnswer: false,
+        })
+    })
+
+    it("never offers the thread source to a trigger, and refuses other traits for it", async () => {
+        const table = await buildSubject()
+
+        expect(table.registered()).not.toContain(ENGINE_THREAD_SOURCE)
+        expect(table.builtIn()).not.toContain(ENGINE_THREAD_SOURCE)
+        expect(codeOf(() => table.add(ENGINE_THREAD_SOURCE, traits({ background: true })))).toBe(
+            AgentWorkErrorCode.SourceInvalid,
+        )
+        expect(wakeSources.lookup(ENGINE_THREAD_SOURCE)?.restoresHeld).toBe(true)
     })
 })
 

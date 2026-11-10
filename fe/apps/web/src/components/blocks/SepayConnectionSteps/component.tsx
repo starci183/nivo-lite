@@ -40,7 +40,7 @@ export interface SepayConnectionStepsBaseProps {
         SepayPasteBodyProps["on"] & {
             readonly toggle: (id: string, isOpen: boolean) => void
             readonly changeEnvironment: (environment: "test" | "live") => void
-            readonly pickGrant: (agentId: string, level: string) => void
+            readonly removeGrant: (agentId: string) => void
             readonly assignGrant: (agentId: string) => void
             readonly retryGrants: () => void
         }
@@ -48,7 +48,7 @@ export interface SepayConnectionStepsBaseProps {
 
 /**
  * Draws the five setup steps of a SePay connection as one joined list with its stepper: each step keeps its own body (environment,
- * bank account, what to create on SePay, the test checklist, the agents with their levels) and its mark says where it stands.
+ * bank account, what to create on SePay, the test checklist, the agents bound to it) and its mark says where it stands.
  */
 export const SepayConnectionStepsBase = (props: SepayConnectionStepsBaseProps) => {
     const { on } = props
@@ -83,7 +83,7 @@ export const SepayConnectionStepsBase = (props: SepayConnectionStepsBaseProps) =
                 <Text size="sm">{props.props.matching}</Text>
                 <ConnectionGrantsBand
                     props={props.props.grants}
-                    on={{ pick: on.pickGrant, assign: on.assignGrant, retry: on.retryGrants }}
+                    on={{ remove: on.removeGrant, assign: on.assignGrant, retry: on.retryGrants }}
                 />
             </>
         ),

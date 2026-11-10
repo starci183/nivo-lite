@@ -4,7 +4,6 @@ import { useTransition } from "react"
 import { connectionNameOf, type AccountForm, type FollowDraft, type MoneyFlags } from "./money-wizard.shared"
 import { type ProviderDef } from "@/hooks/connection-providers"
 import type { Settled } from "@/hooks/connection-wizard"
-import { type AgentWish } from "@/hooks/connections"
 import type { WizardConnection, WizardNote } from "@/modules/types"
 import { useTranslations } from "next-intl"
 import { type MoneyCommands } from "./useMoneyCommands"
@@ -98,7 +97,7 @@ interface MoneyWizardFinishInput {
     readonly def: ProviderDef
     readonly setNote: import("react").Dispatch<import("react").SetStateAction<WizardNote | null>>
     readonly tw: ReturnType<typeof useTranslations<"connectionWizard">>
-    readonly setAgentsOf: (connectionId: string, wanted: ReadonlyArray<AgentWish>) => Promise<Settled<true>>
+    readonly setAgentsOf: (connectionId: string, wanted: ReadonlyArray<string>) => Promise<Settled<true>>
     readonly agentIds: readonly string[]
 }
 

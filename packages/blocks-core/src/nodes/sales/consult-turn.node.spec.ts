@@ -1,4 +1,5 @@
 import { runNode } from "@nivo-lite/agent-sdk/node"
+import type { ZodType } from "zod"
 import type { NodeModelRequest } from "@nivo-lite/agent-sdk/node"
 import { EXAMPLE_TURN, fakeNodePorts } from "@nivo-lite/agent-sdk/testing"
 import { coreEffects, coreTools } from "../../vocabulary"
@@ -52,7 +53,7 @@ describe("sales.consult-turn: a previous delivery resolves from the customer's o
             ...fake.ports,
             model: {
                 ...fake.ports.model,
-                json: (schema: Parameters<typeof json>[0], request: NodeModelRequest) => {
+                json: <S extends ZodType>(schema: S, request: NodeModelRequest) => {
                     asked.push(request)
                     return json(schema, request)
                 },
@@ -122,7 +123,7 @@ describe("sales.consult-turn: a previous delivery resolves from the customer's o
             ...fake.ports,
             model: {
                 ...fake.ports.model,
-                json: (schema: Parameters<typeof json>[0], request: NodeModelRequest) => {
+                json: <S extends ZodType>(schema: S, request: NodeModelRequest) => {
                     asked.push(request)
                     return json(schema, request)
                 },

@@ -12,7 +12,9 @@ import {
 } from "@nivo-lite/blocks-core"
 import type { EffectFact, EffectFacts } from "@nivo-lite/blocks-core"
 import { WorkspacePaymentAccountService, bankDisplayNameOf } from "@modules/domain/channel-connections"
+import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
 import type { NodeEffectExecutor, NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
 import { PaymentInstructionRegistryService } from "@modules/domain/provider-registry"
 import { SalesEffectsError, SalesEffectsErrorCode } from "./errors/sales-effects.error"
@@ -67,6 +69,9 @@ export class PaymentQrEffectsService implements OnModuleInit {
         @Optional() private readonly registry?: GraphNodeRegistryService,
         @Optional() private readonly accounts?: WorkspacePaymentAccountService,
         @Optional() private readonly providers?: PaymentInstructionRegistryService,
+        @Optional() private readonly abilities?: ProviderAbilitiesService,
+        @Optional() private readonly engine?: EntityEngineService,
+        @Optional() private readonly ports?: EntityPortsService,
     ) {}
 
     /** Registers the executor when the app hosts graph nodes. */
@@ -88,11 +93,17 @@ export class PaymentQrEffectsService implements OnModuleInit {
         const order = payableOrderOf(row)
         if ("refused" in order) return refusalOf(order.refused, order.facts)
         if (turn.conversationId === null) return refusalOf("no_conversation", { orderNo: order.orderNo })
-        const account = (await this.accounts?.accountOf(turn.workspaceId)) ?? null
+        // The QR always goes to the shop's default receiving account, as the gateway judged it: never a silent pick among accounts.
+        const connectionId = (await this.abilities?.defaultAccountOf(turn.workspaceId, "payment")) ?? null
+        if (connectionId === null) {
+            return refusalOf("no_default_account", { orderNo: order.orderNo, amountVnd: order.amountVnd })
+        }
+        const account = (await this.accounts?.accountOfConnection(turn.workspaceId, connectionId)) ?? null
         const provider = account === null ? undefined : this.providers?.of(account.provider)
         if (account === null || provider === undefined) {
-            return refusalOf("no_payment_account", { orderNo: order.orderNo, amountVnd: order.amountVnd })
+            return refusalOf("no_payment_account", { orderNo: order.orderNo, amountVnd: order.amountVnd, connectionId })
         }
+        await this.drawnOn(turn, orderId, account.connectionId)
         const transferContent = transferContentOf(order.orderNo)
         const qrUrl = provider.qrUrl(account, { orderNo: order.orderNo, amountVnd: order.amountVnd, transferContent })
         const text = paymentQrTextOf(
@@ -142,8 +153,33 @@ export class PaymentQrEffectsService implements OnModuleInit {
         return {
             kind: sent.kind,
             id: sent.id,
-            facts: { orderNo: order.orderNo, amountVnd: order.amountVnd, transferContent, qrUrl },
+            facts: {
+                orderNo: order.orderNo,
+                amountVnd: order.amountVnd,
+                transferContent,
+                qrUrl,
+                // The account the QR was drawn on: kept with the effect, so the books can tell which account the money was asked into.
+                connectionId: account.connectionId,
+                bankName: bankDisplayNameOf(account.bankCode),
+                accountLast4: account.accountNumber.slice(-4),
+            },
         }
+    }
+
+    /**
+     * Keeps on the order which account its QR is drawn on (a fact for the books); nothing when it already says so. A write the engine
+     * refuses fails the effect, so no QR goes out on an account the order does not name.
+     */
+    private async drawnOn(turn: NodeTurn, orderId: string, connectionId: string): Promise<void> {
+        const { engine, ports } = this
+        if (engine === undefined || ports === undefined) return
+        await engine.scoped(turn.workspaceId, async (tx) => {
+            const api = ports.entitiesApi((use) => use(tx), "action")
+            const order = await api.get("sales.order", orderId)
+            if (order === null || order.data.qrConnectionId === connectionId) return
+            const written = await api.update("sales.order", order.id, order.version, { qrConnectionId: connectionId })
+            if (!written.ok) throw new SalesEffectsError({ code: SalesEffectsErrorCode.WriteRefused })
+        })
     }
 
     /**

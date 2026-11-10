@@ -1,4 +1,15 @@
-import { Alert, Button, Cluster, Grid, Input, Select, Stack, SurfaceCard, Switch, Textarea } from "@starci/grammar/common"
+import {
+    Alert,
+    Button,
+    Cluster,
+    Grid,
+    Input,
+    Select,
+    Stack,
+    SurfaceCard,
+    Switch,
+    Textarea,
+} from "@starci/grammar/common"
 import type { ReactElement } from "react"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { DataSlot, SlotLabels } from "@/modules/types"
@@ -105,7 +116,7 @@ const TemplateCard = (props: Props): ReactElement => {
                     isDisabled={view.isPending}
                     onValueChange={(value) => props.on.setCategory(value ?? view.category)}
                 />
-                {names.map(text)}
+                {names.map((field) => text(field))}
                 {view.summaries.map((field) => (
                     <Textarea
                         key={field.name}
@@ -180,7 +191,12 @@ const PreviewCard = (props: Props): ReactElement => {
                 {...(view.previewFailed
                     ? {
                           labelEnd: (
-                              <Button intent="neutral" size="sm" isPending={view.isPending} onPress={props.on.showPreview}>
+                              <Button
+                                  intent="neutral"
+                                  size="sm"
+                                  isPending={view.isPending}
+                                  onPress={props.on.showPreview}
+                              >
                                   {view.previewLabel}
                               </Button>
                           ),

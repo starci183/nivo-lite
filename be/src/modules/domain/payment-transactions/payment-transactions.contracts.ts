@@ -15,6 +15,8 @@ export interface PaymentMovement {
     readonly externalRef: string
     /** The bank account number the movement belongs to; null when the feed does not say. */
     readonly account: string | null
+    /** The connected account (bank feed connection) it arrived on; null when not known. */
+    readonly connectionId: string | null
     /** When the bank booked it, ISO text; null takes the moment of recording. */
     readonly occurredAt: string | null
 }

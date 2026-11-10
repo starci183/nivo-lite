@@ -17,7 +17,7 @@ import {
 } from "@/hooks/connections"
 import { webSiteOrigin } from "@/modules/config"
 import { slotOfReads } from "@/hooks/slot"
-import type { AgentOption, Connection } from "@/modules/types"
+import type { Connection } from "@/modules/types"
 import { ConnectorDetailOverlayBase, OverlayHost, detailRowsOf } from "./component"
 import type { DetailEntry } from "./component"
 
@@ -26,7 +26,6 @@ type ConnectorDetailOverlayProps = {
     readonly items?: ReadonlyArray<Connection>
     /** Agent id -> name, for the "used by" line of each row. */
     readonly agentNames?: Readonly<Record<string, string>>
-    readonly agents?: ReadonlyArray<AgentOption>
     readonly localOnly?: boolean
     readonly ownerEmail?: string
     /** The workspace owner adds, changes and removes connections; others read. */
@@ -98,7 +97,6 @@ export const ConnectorDetailOverlay = (props: ConnectorDetailOverlayProps) => {
                     ownerOnly: t("ownerOnly"),
                 },
                 rows: detailRowsOf(rows, agentNames),
-                agents: props.agents ?? data.activeAgents,
                 localOnly: props.localOnly ?? isLocalOnly(webSiteOrigin()),
                 ownerEmail: props.ownerEmail ?? user.data?.email ?? "",
                 canManage: props.canManage ?? role === "owner",

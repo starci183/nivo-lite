@@ -146,9 +146,18 @@ describe("a customer wake of an agent that runs on workflows", () => {
         })
     })
 
-    it("is left to its handler when the agent has no workflow at all, and when the wake is no customer's", async () => {
+    it("is the flow's when the agent has no workflow at all: the customer is told nothing, no run is opened, and the founder is told the agent has no workflow yet", async () => {
         const none = await flowsOf({ total: 0, running: [], sources: [] })
-        await expect(none.flows.takes(WAKE)).resolves.toBe(false)
+
+        await expect(none.flows.takes(WAKE)).resolves.toBe(true)
+        await expect(none.flows.run(WAKE)).resolves.toEqual({ status: "skipped", reason: "no_workflow", outcome: null })
+
+        expect(none.wakeNotices.untaken).toHaveBeenCalledTimes(1)
+        expect(none.wakeNotices.untaken).toHaveBeenCalledWith(WAKE, { reason: "no_workflow", running: [], sources: [] })
+        expect(none.runs.open).not.toHaveBeenCalled()
+    })
+
+    it("leaves a wake that is no customer's to the workflows that take it", async () => {
 
         const other = await flowsOf({ total: 2, running: ["front-desk"], sources: ["zalo"] })
         await expect(other.flows.takes({ ...WAKE, source: "schedule" })).resolves.toBe(false)

@@ -14,4 +14,6 @@ export enum McpGatewayLogEvent {
     BearerUnreadable = "mcp-gateway.bearer.unreadable",
     /** A health check of a connector got no answer; the connector is marked degraded. */
     HealthFailed = "mcp-gateway.health.failed",
+    /** A step was refused a second line to a customer for the same stop (the repeat guard of the node tool door). */
+    RepeatSendRefused = "mcp-gateway.node-tool.repeat-send-refused",
 }

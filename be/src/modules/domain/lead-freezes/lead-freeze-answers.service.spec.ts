@@ -1,6 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import { stuckKeyOf } from "@modules/domain/agent-graphs"
+import { StopAnswersService } from "@modules/domain/agent-threads/stops"
+import type { StopReplied } from "@modules/domain/agent-threads/stops"
 import { lineKeyOf, TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { AgentLineReplied } from "@modules/domain/team-chat"
 import { LOGGER } from "@modules/platform/logging"
@@ -19,11 +21,16 @@ const replyTo = (runId: string, stepKey: string, byUserId = "user-owner"): Agent
     lineKey: lineKeyOf(stuckKeyOf(runId, stepKey)),
 })
 
-const build = async (holding: ReadonlyArray<LeadFreeze> = [frozenFreezeOf()], withChat = true) => {
+const build = async (
+    holding: ReadonlyArray<LeadFreeze> = [frozenFreezeOf()],
+    withChat = true,
+    stopReplied: StopReplied | null | undefined = undefined,
+) => {
     const records = mock<LeadFreezeRecordsService>({ holding: jest.fn().mockResolvedValue(holding) })
     const door = mock<LeadFreezeDoorService>({ answer: jest.fn().mockResolvedValue({ outcome: "released" }) })
     const chat = mock<TeamChatRoomsService>()
     const logger = mock<Logger>()
+    const stops = mock<StopAnswersService>({ replied: jest.fn().mockResolvedValue(stopReplied ?? null) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             LeadFreezeAnswersService,
@@ -31,9 +38,10 @@ const build = async (holding: ReadonlyArray<LeadFreeze> = [frozenFreezeOf()], wi
             { provide: LeadFreezeDoorService, useValue: door },
             { provide: LOGGER, useValue: logger },
             ...(withChat ? [{ provide: TeamChatRoomsService, useValue: chat }] : []),
+            ...(stopReplied === undefined ? [] : [{ provide: StopAnswersService, useValue: stops }]),
         ],
     }).compile()
-    return { service: moduleRef.get(LeadFreezeAnswersService), records, door, chat, logger }
+    return { service: moduleRef.get(LeadFreezeAnswersService), records, door, chat, logger, stops }
 }
 
 describe("LeadFreezeAnswersService.replied: the founder answers a stuck step in the team chat", () => {
@@ -100,6 +108,37 @@ describe("LeadFreezeAnswersService.replied: the founder answers a stuck step in 
             freezeId: "freeze-1",
             outcome: "not_allowed",
         })
+    })
+})
+
+describe("LeadFreezeAnswersService.replied: routing between the stops of thread runs and the old freezes", () => {
+    it("hands a reply to the card of a thread run's stop to the stops, and never to the old freeze path", async () => {
+        const stopped: StopReplied = { runId: "run-1", stepKey: "claim-ack", outcome: "admitted" }
+        const { service, door, records, stops, logger } = await build([frozenFreezeOf()], true, stopped)
+
+        await expect(service.replied(replyTo("run-1", "claim-ack"))).resolves.toBe(true)
+
+        expect(stops.replied).toHaveBeenCalledWith(replyTo("run-1", "claim-ack"))
+        expect(records.holding).not.toHaveBeenCalled()
+        expect(door.answer).not.toHaveBeenCalled()
+        expect(logger.info).toHaveBeenCalledWith(LeadFreezesLogEvent.AnsweredInChat, { runId: "run-1", outcome: "admitted" })
+    })
+
+    it("answers false for a stop already resolved (nothing resumes) and for a person who may not decide", async () => {
+        for (const outcome of ["stop_closed", "not_allowed", "step_running"] as const) {
+            const { service, door } = await build([frozenFreezeOf()], true, { runId: "run-1", stepKey: "claim-ack", outcome })
+            await expect(service.replied(replyTo("run-1", "claim-ack"))).resolves.toBe(false)
+            expect(door.answer).not.toHaveBeenCalled()
+        }
+    })
+
+    it("takes the old path unchanged when the reply is to the card of no stop", async () => {
+        const { service, door, stops } = await build([frozenFreezeOf()], true, null)
+
+        await expect(service.replied(replyTo("run-1", "claim-ack"))).resolves.toBe(true)
+
+        expect(stops.replied).toHaveBeenCalledTimes(1)
+        expect(door.answer).toHaveBeenCalledWith("user-owner", expect.objectContaining({ freezeId: "freeze-1", action: "retry" }))
     })
 })
 

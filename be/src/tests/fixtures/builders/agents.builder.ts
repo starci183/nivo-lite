@@ -82,18 +82,6 @@ export const AGENT_OPEN_GAPS: AgentOpenGapsShape = {
     items: [{ id: "g1", question: "Opening hours?", count: 3, lastSeenAt: "2026-10-11T00:00:00.000Z" }],
 }
 
-/** One connection bound to that agent, as the agent bindings answer it. */
-export const AGENT_BOUND_CONNECTION = {
-    id: "c1",
-    provider: "telegram",
-    name: "Shop bot",
-    status: "connected",
-    access: "auto" as const,
-    purpose: "inbound_chat" as const,
-    botUsername: null,
-    accountMasked: null,
-}
-
 /** AI Sales, the agent the ownership scenarios start from: owned by Minh, Nam as the fallback, open to owners and managers. */
 export const ownedAgentOf: (overrides?: Partial<AgentEntity>) => AgentEntity = builder<AgentEntity>({
     ...agentEntityOf(),

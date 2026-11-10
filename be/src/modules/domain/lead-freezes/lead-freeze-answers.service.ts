@@ -1,6 +1,7 @@
 import { Injectable, Optional } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
 import { stuckKeyOf } from "@modules/domain/agent-graphs"
+import { StopAnswersService } from "@modules/domain/agent-threads/stops"
 import { lineKeyOf, TeamChatRoomsService } from "@modules/domain/team-chat"
 import type { AgentLineReplied } from "@modules/domain/team-chat"
 import { InjectLogger } from "@modules/platform/logging"
@@ -11,11 +12,13 @@ import { LeadFreezesLogEvent } from "./lead-freezes.log-events"
 
 @Injectable()
 /**
- * The founder's answer in the team chat: a reply to the report of a stuck step is the answer the workflow waits for. The reply is
- * matched to the freeze whose run and step the report names, and answered through the freeze's own door as "retry" by the person who
- * wrote it, so who may answer (an owner or a manager), the freeze's item, the decision log and the run all move as they do from the
- * buttons. The retry itself reads the replies from the chat and hands them to the step as facts; nothing is kept here. A reply by
- * someone who may not decide, or to a line that is no report of a stuck step, changes nothing.
+ * The founder's answer in the team chat: a reply to the report of a stuck step is the answer the workflow waits for. The team chat has
+ * one listener for such replies, and this is it, so it routes. A reply to the card of a STOP of a thread run (`engine = langgraph`) goes
+ * to the stops (`StopAnswersService`): the words resume that step, or a stop already resolved is told so and nothing moves. Any other
+ * reply takes the old engine's path unchanged: it is matched to the freeze whose run and step the report names, and answered through
+ * the freeze's own door as "retry" by the person who wrote it, so who may answer (an owner or a manager), the freeze's item, the decision
+ * log and the run all move as they do from the buttons. A reply by someone who may not decide, or to a line that is no report of a
+ * stuck step, changes nothing.
  */
 export class LeadFreezeAnswersService implements OnModuleInit {
     constructor(
@@ -23,6 +26,7 @@ export class LeadFreezeAnswersService implements OnModuleInit {
         private readonly door: LeadFreezeDoorService,
         @InjectLogger() private readonly logger: Logger,
         @Optional() private readonly chat?: TeamChatRoomsService,
+        @Optional() private readonly stops?: StopAnswersService,
     ) {}
 
     /** Registers with the team chat once the app has started; an app without the chat hears nothing. */
@@ -32,8 +36,13 @@ export class LeadFreezeAnswersService implements OnModuleInit {
         })
     }
 
-    /** Retries the freeze whose report the person replied to; true when a retry was asked. */
+    /** Hands the reply to the stop or the freeze whose report it answers; true when a resume or a retry was asked. */
     async replied(reply: AgentLineReplied): Promise<boolean> {
+        const stopped = await this.stops?.replied(reply)
+        if (stopped != null) {
+            this.logger.info(LeadFreezesLogEvent.AnsweredInChat, { runId: stopped.runId, outcome: stopped.outcome })
+            return stopped.outcome === "admitted" || stopped.outcome === "already_admitted"
+        }
         const holding = await this.records.holding(reply.workspaceId)
         const freeze = holding.find(
             (one) =>

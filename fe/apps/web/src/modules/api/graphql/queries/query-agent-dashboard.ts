@@ -1,5 +1,4 @@
-import { gql, type ApolloClient } from "@apollo/client"
-import type { TypedDocumentNode } from "@apollo/client"
+import { gql, type ApolloClient, type TypedDocumentNode } from "@apollo/client"
 import { createAuthApolloClient } from "../clients"
 import type { InputVariables, QueryParams, WireInput } from "../types"
 import type { AgentDashboardQuery, AgentDashboardQueryVariables } from "../__generated__/graphql"
@@ -19,17 +18,6 @@ const query1: Document = gql`
                 id
                 mode
                 name
-            }
-            connections {
-                data {
-                    access
-                    id
-                    name
-                    provider
-                    purpose
-                    status
-                }
-                ok
             }
             done {
                 data {

@@ -10,8 +10,8 @@ import { AgentGraphsLogEvent } from "./agent-graphs.log-events"
 /** The effect a notice reaches the team through. */
 const TEAM_POST: string = TOOL.teamMessagePost
 
-/** Why no workflow took a wake: none of the agent runs, or none of the running ones has a trigger for it. */
-export type UntakenReason = "no_workflow_running" | "no_trigger_takes_wake"
+/** Why no workflow took a wake: the agent has none yet, none of its workflows runs, or none of the running ones has a trigger for it. */
+export type UntakenReason = "no_workflow" | "no_workflow_running" | "no_trigger_takes_wake"
 
 /** The plain facts of a wake no workflow took. */
 export interface UntakenWake {
@@ -34,8 +34,8 @@ const memberOf = (wake: AgentWakeView, name: string): string => {
 
 @Injectable()
 /**
- * What the engine tells the founder, in the team chat, about a WAKE of an agent that runs on workflows and that no workflow could
- * serve: a customer line no workflow took (the channel is not among the triggers, no workflow runs), or a wake that failed before any
+ * What the engine tells the founder, in the agent's private chat with them, about a WAKE that no workflow could serve: a customer
+ * line no workflow took (the agent has no workflow yet, no workflow runs, the channel is not among the triggers), or a wake that failed before any
  * step of a workflow existed. There is no step here, so no AI core to ask and no workflow to freeze: the engine says its own static
  * words with the plain facts (the channel, the conversation, why), once per wake, to the founder. The customer is told nothing: no
  * line to a customer is ever written in code.

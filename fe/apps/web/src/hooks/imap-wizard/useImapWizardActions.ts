@@ -1,7 +1,6 @@
 "use client"
 
 import { IMAP_PRESETS, defaultPort, securityOf, type ImapSecurity } from "./imap-wizard.shared"
-import { type AgentWish } from "@/hooks/connections"
 import { useImapAccountForm } from "@/hooks/rhf"
 import { useTransition } from "react"
 import type { Settled } from "../connection-wizard"
@@ -28,7 +27,7 @@ interface ImapWizardActionsInput {
     readonly stamp: string
     readonly state: ImapWizardState
     readonly onClose: (changed: boolean) => void
-    readonly setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<AgentWish>) => Promise<Settled<true>>
+    readonly setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<string>) => Promise<Settled<true>>
     readonly startSync: (connectionId: string) => Promise<void>
 }
 

@@ -110,7 +110,12 @@ export const settleOnOrder = async (
     if (!matched.ok) return failureOf(matched, TRANSACTION_REFUSALS)
     const linked = await transactions.link(decision.transaction.id, "order", decision.order.id)
     if (!linked.ok) return failureOf(linked, ORDER_REFUSALS)
-    const paid = await orders.update(decision.order.id, decision.order.version, { status: "paid" })
+    // The account the money came into is kept on the order as a fact; matching stays by code and amount.
+    const intoAccount = decision.transaction.connectionId ?? null
+    const paid = await orders.update(decision.order.id, decision.order.version, {
+        status: "paid",
+        ...(intoAccount === null ? {} : { paidConnectionId: intoAccount }),
+    })
     if (!paid.ok) return failureOf(paid, ORDER_REFUSALS)
     if (decision.claim !== null && decision.claim.status !== "settled") {
         const answered = await claims.update(decision.claim.id, decision.claim.version, {

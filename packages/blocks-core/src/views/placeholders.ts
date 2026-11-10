@@ -25,16 +25,10 @@ export const ITEMS_REGION_PLACEHOLDER: ItemsRegionView = {
 
 /** The connections region with the geometry of a settled one. */
 export const CONNECTIONS_REGION_PLACEHOLDER: ConnectionsRegionView = {
-    manageLabel: BLANK,
-    manageHref: "#",
-    rows: rowIds.map((id) => ({
-        id,
-        name: BLANK,
-        description: BLANK,
-        statusLabel: BLANK,
-        statusTone: "neutral",
-        accessLabel: BLANK,
-    })),
+    label: "",
+    rightsLabel: BLANK,
+    rightsHref: "#",
+    rows: rowIds.map((id) => ({ id, name: BLANK, description: BLANK, provider: "" })),
 }
 
 /** The knowledge gaps card with the geometry of a settled one. */

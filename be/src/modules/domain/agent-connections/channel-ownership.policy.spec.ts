@@ -41,7 +41,6 @@ const holderOf = (overrides: Partial<ChannelHolder> = {}): ChannelHolder => ({
     agentName: "Sales Lan",
     module: "sales",
     purpose: "outbound_chat",
-    access: "ask",
     grantedAt: new Date("2026-11-01T00:00:00.000Z"),
     ...overrides,
 })
@@ -63,24 +62,23 @@ describe("channel ownership policy", () => {
         ])
     })
 
-    it("counts only a grant that may act as answering the channel", async () => {
+    it("counts every binding of a channel purpose as answering the channel (rights live in attachments)", async () => {
         const subject = await buildSubject()
 
-        expect(subject.answersChannel("inbound_chat", "ask")).toBe(true)
-        expect(subject.answersChannel("inbound_chat", "auto")).toBe(true)
-        expect(subject.answersChannel("inbound_chat", "read")).toBe(false)
-        expect(subject.answersChannel("bank_feed", "auto")).toBe(false)
+        expect(subject.answersChannel("inbound_chat")).toBe(true)
+        expect(subject.answersChannel("outbound_chat")).toBe(true)
+        expect(subject.answersChannel("lead_source")).toBe(true)
+        expect(subject.answersChannel("bank_feed")).toBe(false)
     })
 })
 
 describe("channel ownership policy > the owner", () => {
-    it("makes the agent of the role granted first the owner, and ignores other roles and read-only grants", async () => {
+    it("makes the agent of the role granted first the owner, and ignores other roles", async () => {
         const subject = await buildSubject()
 
         const owner = subject.channelOwnerOf(
             [
                 holderOf({ agentId: "c1", module: "chatbot", grantedAt: new Date("2026-10-01T00:00:00.000Z") }),
-                holderOf({ agentId: "s0", access: "read", grantedAt: new Date("2026-10-02T00:00:00.000Z") }),
                 holderOf({ agentId: "s2", grantedAt: new Date("2026-11-05T00:00:00.000Z") }),
                 holderOf({ agentId: "s1", grantedAt: new Date("2026-11-01T00:00:00.000Z") }),
             ],
@@ -107,7 +105,7 @@ describe("channel ownership policy > the owner", () => {
 })
 
 describe("channel ownership policy > conflicts and owners", () => {
-    it("finds the conflict a second agent of the role would make, and none for the owner itself or a read-only claim", async () => {
+    it("finds the conflict a second agent of the role would make, and none for the owner itself", async () => {
         const subject = await buildSubject()
         const holders = [holderOf()]
 
@@ -116,7 +114,6 @@ describe("channel ownership policy > conflicts and owners", () => {
                 agentId: "s2",
                 module: "sales",
                 purpose: "outbound_chat",
-                access: "ask",
             })?.agentName,
         ).toBe("Sales Lan")
         expect(
@@ -124,15 +121,6 @@ describe("channel ownership policy > conflicts and owners", () => {
                 agentId: "s1",
                 module: "sales",
                 purpose: "outbound_chat",
-                access: "auto",
-            }),
-        ).toBeNull()
-        expect(
-            subject.ownershipConflictOf(holders, {
-                agentId: "s2",
-                module: "sales",
-                purpose: "outbound_chat",
-                access: "read",
             }),
         ).toBeNull()
         expect(
@@ -140,7 +128,6 @@ describe("channel ownership policy > conflicts and owners", () => {
                 agentId: "b1",
                 module: "booking",
                 purpose: "inbound_chat",
-                access: "ask",
             }),
         ).toBeNull()
     })

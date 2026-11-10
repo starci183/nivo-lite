@@ -10,6 +10,7 @@ import type {
 import type { ChatRoomEntity, ChatRoomMemberEntity, ChatRoomMessageEntity } from "./persistence/entities"
 import { quoteBodyOf } from "./team-chat-reaction.policy"
 import type { ReactionView, ReplyView } from "./team-chat-reaction.contracts"
+import { stopCardViewOf, stopReplyUsersOf } from "./stop-card.policy"
 
 /** What a thread of messages is read against: the names, the pins, the file addresses and the decisions of its cards. */
 export interface MessageViewContext {
@@ -25,6 +26,8 @@ export interface MessageViewContext {
     readonly reactions: ReadonlyMap<string, ReadonlyArray<ReactionView>>
     /** The messages that were quoted, by message id. */
     readonly quoted: ReadonlyMap<string, ChatRoomMessageEntity>
+    /** The names of the people who replied to stop cards, by the id the stop keeps (a member seat or an account); none read when absent. */
+    readonly stopNames?: ReadonlyMap<string, string>
 }
 
 /** What a list of rooms is read against: the viewer, the names, what is unread and the newest message of each room. */
@@ -50,6 +53,11 @@ export const refsOfMessages = (messages: ReadonlyArray<ChatRoomMessageEntity>): 
             : [{ memberKind: message.authorKind, memberId: message.authorId }]),
         ...message.mentions.map((mention) => ({ memberKind: mention.kind, memberId: mention.id })),
     ])
+
+/** The ids of the people who replied to the stop cards among the messages (as the stops keep them), whose names a thread needs. */
+export const stopReplierIdsOf = (messages: ReadonlyArray<ChatRoomMessageEntity>): Array<string> => [
+    ...new Set(messages.flatMap((message) => stopReplyUsersOf(message.ref?.agent_message ?? null))),
+]
 
 /** The decisions the approval cards among the messages are about. */
 export const decisionIdsOf = (messages: ReadonlyArray<ChatRoomMessageEntity>): Array<string> =>
@@ -103,6 +111,7 @@ export const messageViewOf = (message: ChatRoomMessageEntity, context: MessageVi
         reactions: context.reactions.get(message.id) ?? [],
         replyTo: replyViewOf(message.replyTo, context),
         forwardedFrom: message.ref?.forwarded_from ?? null,
+        stop: stopCardViewOf(message.ref?.agent_message ?? null, (id) => context.stopNames?.get(id) ?? ""),
     }
 }
 

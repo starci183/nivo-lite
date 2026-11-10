@@ -152,8 +152,7 @@
                     "key": "col_customer"
                   },
                   "path": "customer",
-                  "width": 200,
-                  "truncate": true
+                  "width": "fit"
                 },
                 {
                   "term": {
@@ -392,8 +391,7 @@
                     "key": "col_customer"
                   },
                   "path": "customer",
-                  "width": 200,
-                  "truncate": true
+                  "width": "fit"
                 },
                 {
                   "term": {

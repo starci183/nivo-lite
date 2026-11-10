@@ -18,7 +18,7 @@ Luật: `red-budget-links-foreground.md` (informative alerts are neutral, never 
 Grammar: `Alert tone="informative" title description` (`composite/Alert/index.d.ts`). Code: `blocks/AgentTemplatePackage/component.tsx`.
 
 ## "Thông tin mẫu" form card (Mã của mẫu | Nhóm, Tên Việt | Tên Anh, Tóm tắt, Giọng của agent)
-Vì sao: one `Grid kind="form" columns={2}`: key and group on one row, the two names on one row, the two summaries and the voice at the full width (`span="full"`). "Nhóm" is a Grammar `Select` with localized labels (Bán hàng và khách, Tài chính, Vận hành, Tiếp thị, Nhân sự), never the raw key. The column uses `Stack measure="reading"` (the next width above `form`) so the grid can reach its two-column breakpoint (container 32rem), as in the approved drawing (about 520px); at 390 the grid stacks to one column. Grammar gap: the breakpoint is 32rem and the card interior at `reading` is about 1px under it, see the report.
+Vì sao: one `Grid kind="form" columns={2}`: key and group on one row, the two names on one row, the two summaries and the voice at the full width (`span="full"`). "Nhóm" is a Grammar `Select` with localized labels (Bán hàng và khách, Tài chính, Vận hành, Tiếp thị, Nhân sự), never the raw key. The column uses `Stack measure="reading"` (the next width above `form`) so the grid can reach its two-column breakpoint (Grammar 0.37.18: a 31rem container), as in the approved drawing (about 520px); at 390 the grid stacks to one column.
 Luật: `surfacecard-select-subtitle.md` (flat fields: label 14/500 + optional description), `table-heroui-native-section-head.md` (ONE CONTENT PER CARD: one form), `page-header-left-sublabel-xs.md` (column capped and centred).
 Grammar: `SurfaceCard label` + `Grid kind="form"` + `Input`, `Select`, `Textarea` (`frame/SurfaceCard`, `frame/Grid`, `branch/Input`, `branch/Select`, `branch/Textarea`); `Stack measure` (`frame/Stack`). Code: `blocks/AgentTemplatePackage/component.tsx` (`TemplateCard`).
 
@@ -33,9 +33,9 @@ Luật: `table-heroui-native-section-head.md` (ONE CONTENT PER CARD; lone senten
 Grammar: `SurfaceCard kind="details" items labelEnd note` (`frame/SurfaceCard/index.d.ts`), `Alert` (`composite/Alert/index.d.ts`). Code: `blocks/AgentTemplatePackage/component.tsx` (`PreviewCard`).
 
 ## Save button ("Đóng gói")
-Vì sao: the one primary red call to action of the page, at the foot of the column; disabled until the package can be saved and pending while it saves. No other red element and no standalone link on the page.
+Vì sao: the one primary red call to action of the page, at the foot and at the END of the column (`Cluster justify="end"`); disabled until the package can be saved and pending while it saves. No other red element and no standalone link on the page.
 Luật: `red-budget-links-foreground.md` (one red CTA per view), `surfacecard-zones-api.md` (form footer carries the action).
-Grammar: `Button intent="commit" isDisabled isPending` (`leaf/Button/index.d.ts`). Code: `blocks/AgentTemplatePackage/component.tsx`.
+Grammar: `Button intent="commit" isDisabled isPending` (`leaf/Button/index.d.ts`) in `Cluster gap="inline" justify="end"` (`frame/Cluster/index.d.ts`). Code: `blocks/AgentTemplatePackage/component.tsx`.
 
 ## Phone layout (390)
 Vì sao: the column fills the width with the 16px gutter; the form grid stacks to one column; the notice wraps; the switch row keeps its switch at the end.

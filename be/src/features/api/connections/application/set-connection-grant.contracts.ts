@@ -1,5 +1,3 @@
-import type { Access } from "@modules/domain/agent-connections"
-
 /** What setConnectionGrant takes. */
 export interface SetConnectionGrantRequest {
     /** The workspace the request is made in. */
@@ -8,6 +6,6 @@ export interface SetConnectionGrantRequest {
     readonly connectionId: string
     /** The agent. */
     readonly agentId: string
-    /** The level, or nothing to remove the access. */
-    readonly access: Access | null
+    /** True binds the agent to the connection, false removes the binding. */
+    readonly bound: boolean
 }

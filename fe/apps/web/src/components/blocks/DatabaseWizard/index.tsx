@@ -24,7 +24,7 @@ import type { DatabaseWizardBaseProps } from "./component"
 interface DatabaseWizardProps {
     /** The actual workspace reads shared with this selected wizard. */
     readonly dependencyReads: ReadonlyArray<SlotRead<unknown>>
-    /** Workspace agents (any module): every agent may be given read access to the data. */
+    /** Workspace agents (any module): every agent may be bound to the data. */
     readonly agents: ReadonlyArray<AgentOption>
     /** Continue or edit this existing connection instead of creating a new one. */
     readonly resumeId?: string

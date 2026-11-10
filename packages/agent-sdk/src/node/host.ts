@@ -3,7 +3,14 @@ import { rightsGaps } from "../rights/rights"
 import type { DataAccess, DataRight, RightScope, RightsGrant } from "../rights/rights.types"
 import { isRecord } from "../schema/is-record"
 import type { Namespaced } from "../schema/schema.types"
-import type { NodeHostPorts, NodeRun, NodeRunEffect, NodeRunRequest } from "./host.types"
+import type {
+    NodeAgentCallAnswer,
+    NodeAgentRefusal,
+    NodeHostPorts,
+    NodeRun,
+    NodeRunEffect,
+    NodeRunRequest,
+} from "./host.types"
 import { NodeRunError } from "./node-run-error"
 import { isRefused } from "./node.types"
 import type {
@@ -189,6 +196,12 @@ const AGENT_TURNS_MAX = 12
 /** The longest text of a refusal handed back to the agent. */
 const REFUSAL_MAX = 500
 
+/** A confusion as the model may say it: a reason, and what a person must answer or null. */
+const confusionSchema: z.ZodType<NodeConfusion> = z.object({
+    reason: z.string().min(1).max(CONFUSION_MAX),
+    question: z.string().max(CONFUSION_MAX).nullable(),
+})
+
 /** One turn of the agent, as the model answers it: a call, the output, or its confusion. */
 type AgentTurn =
     | { readonly call: { readonly tool: string; readonly args: Readonly<Record<string, unknown>> } }
@@ -217,6 +230,18 @@ const AGENT_RULE =
     'To call one tool the step allows: {"call": {"tool": "<name>", "args": {<arguments fitting that tool\'s schema>}}}. You then see its result, or why it was refused, in `calls`: a refusal is a fact, never retry the same call unchanged, never work around it. ' +
     'When the goal is reached: {"done": <the output, fitting the step\'s `outputSchema`>}. Every tool the step lists as `required` must have succeeded before that. ' +
     'When you cannot reach the goal without guessing: {"confused": {"reason": "<why, plainly>", "question": "<what a person must answer, or null>"}}. ' +
+    "Never type an amount, a total, a name or any fact that is not in what you are given or in a tool's result: tools take ids and work the rest out themselves."
+
+/**
+ * How an agent acts when the host takes its turns (`NodeHostPorts.agent`): the part of `AGENT_RULE` that is about acting, without the
+ * JSON shapes of a turn, which are then the host's own. Part of the agent's craft, the same words for every step of every agent.
+ */
+const AGENT_ACT_RULE =
+    "You act by calling tools; you never claim an action you did not call a tool for. A step may call only the tools it names; any other is refused there. " +
+    "Call one tool per turn: a second call in the same turn is refused and costs a turn. " +
+    "You see the result of each call, or why it was refused: a refusal is a fact, never retry the same call unchanged, never work around it. " +
+    "Every tool the step lists as `required` must have succeeded before you give the step's output, which must fit its `outputSchema`. " +
+    "When you cannot reach the goal without guessing, say so with the reason and what a person must answer. " +
     "Never type an amount, a total, a name or any fact that is not in what you are given or in a tool's result: tools take ids and work the rest out themselves."
 
 /** What goes before the agent's tool set: the whole set is always shown, and a step may call only the ones it names. */
@@ -358,6 +383,15 @@ const shopOf = (turn: NodeRunRequest["turn"]): ReadonlyArray<string> => {
     return Object.keys(values).length === 0 ? [] : [`${POLICY_RULE}\n${stableJson(values)}`]
 }
 
+/**
+ * L1 + L2 of an agent whose turns the host takes itself: the guidance, how an agent acts, and the shop's policy values. The tool set
+ * is not in the words: the host shows it to the model its own way, from the list the runner hands over.
+ */
+const hostLoopCraftOf = (frame: ModelCallFrame): string => {
+    const guidance = (frame.turn.guidance ?? "").trim()
+    return [...(guidance === "" ? [] : [guidance]), AGENT_ACT_RULE, ...shopOf(frame.turn)].join("\n\n")
+}
+
 /** The stable part of a call: L1, L2, then the step's own words (L3). */
 const stableOf = (
     frame: ModelCallFrame,
@@ -397,6 +431,13 @@ const volatileFactsOf = (turn: NodeRunRequest["turn"]): Readonly<Record<string, 
         ...(sent.length === 0 ? {} : { alreadySent: sent }),
     }
 }
+
+/**
+ * The one refusal of a tool that satisfies a required call: the host answers it when the step, in an earlier attempt of the same stop,
+ * already did what the call asks (told the customer) and must not do it a second time. The call still reads as refused to the agent;
+ * only the `requires` check takes it as done, so the step can end. Every other refusal leaves a required call unmet.
+ */
+const ALREADY_DONE_FOR_STOP = "already_told_for_this_stop"
 
 /** A tool's own refusal on its way back to the agent: the reason and the true values the tool gave with it. */
 class ToolRefused extends Error {
@@ -443,16 +484,12 @@ const agentRun = async <S extends z.ZodType>(
     const required = node.requires ?? []
     // The stable part of every turn of this step: the same text from the first turn to the last.
     const frame = { tools: own, required, outputSchema: withoutDialect(jsonSchemaOf(asked.output)) }
-    const instructions = stableOf(request, own, true, `${asked.goal}\n\n${STEP_RULE}\n${stableJson(frame)}`)
-    const volatile = volatileWordsOf(request.turn)
-    const facts = volatileFactsOf(request.turn)
     const succeeded = new Set<string>()
-    const calls: Array<unknown> = []
     const turns = Math.max(1, Math.min(Math.trunc(asked.maxTurns ?? AGENT_TURNS), AGENT_TURNS_MAX))
     const dispatch = async (
         name: string,
         args: Readonly<Record<string, unknown>>,
-    ): Promise<Readonly<Record<string, unknown>>> => {
+    ): Promise<{ readonly subject: SubjectRef } | { readonly result: unknown }> => {
         const effect = node.effects.find((id) => id === name)
         if (effect !== undefined) {
             const subject = await hands.effect(effect, args)
@@ -463,12 +500,90 @@ const agentRun = async <S extends z.ZodType>(
         if (tool !== undefined) return { result: await hands.tools.call(tool, args) }
         throw new NodeRunError("TOOL_NOT_OFFERED", name)
     }
-    const take = async (left: number): Promise<NodeModelDecision<z.output<S>>> => {
-        if (left === 0) {
-            return { kind: "confused", confusion: { reason: `AGENT_TURNS_EXHAUSTED after ${turns} turns`, question: null } }
+    // One call of the agent, as the fact the model reads next: what it came to, or why it was refused. It throws nothing.
+    const call = async (tool: string, args: Readonly<Record<string, unknown>>): Promise<NodeAgentCallAnswer> => {
+        try {
+            const got = await dispatch(tool, args)
+            succeeded.add(tool)
+            return { ok: true, ...got }
+        } catch (cause) {
+            // The step did this for the same stop in an earlier attempt and may not do it twice: what it requires is done.
+            if (cause instanceof ToolRefused && cause.code === ALREADY_DONE_FOR_STOP) succeeded.add(tool)
+            return { ok: false, refused: refusalOf(cause) }
         }
+    }
+    // The output the agent offers: taken once every required call succeeded and it fits the step's schema, else refused with why.
+    const done = (
+        offered: unknown,
+    ): { readonly ok: true; readonly value: z.output<S> } | { readonly ok: false; readonly refused: NodeAgentRefusal } => {
+        const missing = required.filter((id) => !succeeded.has(id))
+        if (missing.length > 0) return { ok: false, refused: { code: "REQUIRED_CALL_MISSING", message: missing.join(", ") } }
+        const output = asked.output.safeParse(offered)
+        if (!output.success) {
+            return { ok: false, refused: { code: "OUTPUT_INVALID", message: output.error.message.slice(0, REFUSAL_MAX) } }
+        }
+        return { ok: true, value: output.data }
+    }
+    const exhausted: NodeModelDecision<z.output<S>> = {
+        kind: "confused",
+        confusion: { reason: `AGENT_TURNS_EXHAUSTED after ${turns} turns`, question: null },
+    }
+    const purpose = `${node.id}:${asked.purpose ?? "agent"}`
+    const step = `${asked.goal}\n\n${STEP_RULE}\n${stableJson(frame)}`
+    const volatile = volatileWordsOf(request.turn)
+    const facts = volatileFactsOf(request.turn)
+    if (ports.agent !== undefined) {
+        // The host takes the turns (a native tool-calling loop); the closures above stay the only way a call acts or an output stands.
+        const ended: { decision: NodeModelDecision<z.output<S>> | null } = { decision: null }
+        const over: NodeAgentRefusal = { code: "STEP_ENDED", message: "The step's agent has already ended." }
+        await ports.agent({
+            purpose,
+            instructions: hostLoopCraftOf(request),
+            step,
+            ...(volatile === undefined ? {} : { volatile }),
+            input: { input: asked.input, ...facts },
+            tools: agentToolsOf(request, own),
+            ...(asked.images === undefined ? {} : { images: asked.images }),
+            ...(asked.reasoning === undefined ? {} : { reasoning: asked.reasoning }),
+            maxTurns: turns,
+            call: (name, args) => {
+                if (ended.decision !== null) return Promise.resolve({ ok: false, refused: over })
+                if (!isRecord(args)) {
+                    return Promise.resolve({
+                        ok: false,
+                        refused: { code: "TOOL_ARGS_INVALID", message: "The arguments of a call are one JSON object." },
+                    })
+                }
+                return call(name, args)
+            },
+            done: (offered) => {
+                if (ended.decision !== null) return { ok: false, refused: over }
+                const judged = done(offered)
+                if (!judged.ok) return judged
+                ended.decision = { kind: "answer", value: judged.value }
+                return { ok: true }
+            },
+            confused: (confusion) => {
+                if (ended.decision !== null) return { ok: false, refused: over }
+                const said = confusionSchema.safeParse(confusion)
+                if (!said.success) {
+                    return {
+                        ok: false,
+                        refused: { code: "CONFUSION_INVALID", message: said.error.message.slice(0, REFUSAL_MAX) },
+                    }
+                }
+                ended.decision = { kind: "confused", confusion: said.data }
+                return { ok: true }
+            },
+        })
+        return ended.decision ?? exhausted
+    }
+    const instructions = stableOf(request, own, true, step)
+    const calls: Array<unknown> = []
+    const take = async (left: number): Promise<NodeModelDecision<z.output<S>>> => {
+        if (left === 0) return exhausted
         const turn = await ports.model.json(agentTurnSchema, {
-            purpose: `${node.id}:${asked.purpose ?? "agent"}`,
+            purpose,
             instructions,
             ...(volatile === undefined ? {} : { volatile }),
             // The calls so far come last and only grow, so the text of one turn is the opening of the next turn's.
@@ -479,26 +594,15 @@ const agentRun = async <S extends z.ZodType>(
         if ("confused" in turn) return { kind: "confused", confusion: turn.confused }
         if ("call" in turn) {
             const { tool, args } = turn.call
-            try {
-                calls.push({ tool, args, ok: true, ...(await dispatch(tool, args)) })
-                succeeded.add(tool)
-            } catch (cause) {
-                calls.push({ tool, args, ok: false, refused: refusalOf(cause) })
-            }
+            calls.push({ tool, args, ...(await call(tool, args)) })
             return take(left - 1)
         }
-        const missing = required.filter((id) => !succeeded.has(id))
-        if (missing.length > 0) {
-            calls.push({ done: "refused", refused: { code: "REQUIRED_CALL_MISSING", message: missing.join(", ") } })
+        const judged = done(turn.done)
+        if (!judged.ok) {
+            calls.push({ done: "refused", refused: judged.refused })
             return take(left - 1)
         }
-        const output = asked.output.safeParse(turn.done)
-        if (!output.success) {
-            const message = output.error.message.slice(0, REFUSAL_MAX)
-            calls.push({ done: "refused", refused: { code: "OUTPUT_INVALID", message } })
-            return take(left - 1)
-        }
-        return { kind: "answer", value: output.data }
+        return { kind: "answer", value: judged.value }
     }
     return take(turns)
 }

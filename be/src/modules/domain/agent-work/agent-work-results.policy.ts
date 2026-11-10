@@ -138,13 +138,24 @@ const endedOf = (agentId: string, scopeKey: string, value: unknown): ReadonlyArr
     return ended
 }
 
+/**
+ * The wait an `idle` answer tells, or nothing: both fields must be there and of their kind. An answer of a database that has not
+ * the function which tells the wait carries neither, and reads as a plain `idle`.
+ */
+const waitOf = (answer: Record<string, unknown>): Pick<Extract<AgentBegin, { result: "idle" }>, "wait"> => {
+    const { waitMs, waitFor } = answer
+    if (typeof waitMs !== "number" || !Number.isFinite(waitMs) || waitMs <= 0 || typeof waitFor !== "string") return {}
+    return { wait: { ms: Math.ceil(waitMs), wakeId: waitFor } }
+}
+
 /** Reads the answer of `agent_turn_begin` for the agent and scope it was asked about; null when it is not one of the four shapes. */
 export const parseBegin = (value: unknown, agentId: string, scopeKey: string): AgentBegin | null => {
     if (!isRecord(value)) return null
     const ended = endedOf(agentId, scopeKey, value.ended)
     if (ended === null) return null
     const result = value.result
-    if (result === "killed" || result === "busy" || result === "idle") return { result, ended }
+    if (result === "killed" || result === "busy") return { result, ended }
+    if (result === "idle") return { result, ended, ...waitOf(value) }
     if (result !== "begun") return null
     const turn = turnOf(agentId, scopeKey, value)
     return turn === null ? null : { result: "begun", turn, ended }

@@ -23,7 +23,7 @@ export {
     AGENT_WAKE_INTERRUPTIONS,
 } from "./agent-work.decorators"
 export { AgentWorkAccessService } from "./agent-work-access.service"
-export { wakeSources } from "./agent-wake-source.policy"
+export { ENGINE_THREAD_SOURCE, wakeSources } from "./agent-wake-source.policy"
 export type {
     AgentGoalRecord,
     AgentGoalStatus,

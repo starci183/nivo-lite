@@ -17,6 +17,7 @@ const MOVEMENT: PaymentMovement = {
     payer: "NGUYEN VAN DINH",
     externalRef: "sepay:95958515",
     account: "0123456789",
+    connectionId: "77777777-7777-4777-8777-777777777777",
     occurredAt: "2026-11-05T07:02:37.000Z",
 }
 
@@ -72,6 +73,7 @@ describe("PaymentTransactionsService record", () => {
             payer: "NGUYEN VAN DINH",
             externalRef: "sepay:95958515",
             account: "0123456789",
+            connectionId: "77777777-7777-4777-8777-777777777777",
             occurredAt: "2026-11-05T07:02:37.000Z",
             status: "unmatched",
         })

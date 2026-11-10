@@ -67,15 +67,29 @@ export interface WorkflowDiffStepView {
     readonly mark: WorkflowMark
     readonly markLabel: string
     readonly description: string
+    /** A changed step's settings before and after, as one line each; absent when no setting changed. */
+    readonly change?: { readonly from: string; readonly to: string }
 }
 
-/** A diff as the drawer draws it. */
+/** One right, tool or action a version gained or lost, in the owner's words. */
+export interface WorkflowDiffGrantView {
+    readonly key: string
+    readonly title: string
+    /** What kind of grant it is (a right, a tool, an action, or what starts the workflow). */
+    readonly kindLabel: string
+    readonly mark: WorkflowMark
+    readonly markLabel: string
+}
+
+/** A version against the one before it, as its page draws it. */
 export interface WorkflowDiffView {
+    /** The words of a first version, which has no version before it to differ from; empty otherwise. When set, nothing is marked. */
+    readonly first: string
+    /** "+2 steps · -1 steps · 3 changed"; empty for a first version. */
+    readonly summary: string
     readonly steps: ReadonlyArray<WorkflowDiffStepView>
-    /** The other changes: what wakes the graph, the rights, the tools and the effects. */
-    readonly lines: ReadonlyArray<string>
-    /** The steps both sides changed, where the owner's side stays; empty when none. */
-    readonly kept: string
+    /** The rights, tools and actions gained or lost, and what wakes the graph when that changed. */
+    readonly grants: ReadonlyArray<WorkflowDiffGrantView>
     readonly flow: StepsMapView
 }
 
@@ -118,14 +132,11 @@ export interface WorkflowTemplatesView {
     readonly templates: ReadonlyArray<WorkflowTemplateRowView>
 }
 
-/** A diff with the title the drawer carries. */
+/** A diff with the title the page carries. */
 export interface WorkflowDiffReadView {
     readonly title: string
     readonly view: WorkflowDiffView
 }
-
-/** What the diff drawer is open for: a version against the one before it, or the newer template against the workflow. */
-export type WorkflowDrawerView = { readonly kind: "version"; readonly number: number } | { readonly kind: "template" } | null
 
 /** The drawer that makes a workflow from a template: whether it is open, the one chosen and whether the command is under way. */
 export interface WorkflowCreateView {

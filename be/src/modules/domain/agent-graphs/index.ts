@@ -45,3 +45,25 @@ export type {
     WorkflowWire,
 } from "./policies/workflow-wire.policy"
 export { FOUNDER_ANSWERS_MEMBER, stuckKeyOf } from "./policies/step-trouble.policy"
+// What the thread engine (`agent-threads`) reuses of the graph runs: the services and policies of a step, and the seam of the flow.
+export { THREAD_SCOPE_MEMBER } from "./agent-graph-flow-runs.service"
+export type { FlowRunEngine, FlowThreadRun, FlowThreads, OptionalFlowRunEngine } from "./agent-graph-flow-runs.service"
+export { AgentGraphAiCoreService } from "./agent-graph-ai-core.service"
+export { AgentGraphTurnPolicyService } from "./agent-graph-turn-policy.service"
+export { AgentGraphStepMemoryService, jsonOf } from "./agent-graph-step-memory.service"
+export { AgentGraphConversationHoldsService } from "./agent-graph-conversation-holds.service"
+export { AgentWorkflowRunsService } from "./agent-workflow-runs.service"
+export { GRAPH_NODE_STEP_KIND, localeOf, namespaceOf, nodeBlocks } from "./policies/graph-flow.policy"
+export type { GraphNodeStepInput } from "./policies/graph-flow.policy"
+export {
+    isAiFailure,
+    stuckFactsOf,
+    troubleOfConfusion,
+    troubleOfFailure,
+    troubleOfRefusal,
+    troubleOfThrow,
+    typedEndOf,
+} from "./policies/step-trouble.policy"
+export type { StepTrouble } from "./policies/step-trouble.policy"
+export { effectsBeyond } from "./policies/workflow-grant.policy"
+export { WAITING_MEMBER } from "./policies/workflow-trigger.policy"

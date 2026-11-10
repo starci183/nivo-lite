@@ -3,7 +3,7 @@ title: Agent / Đang chạy / Menu ⋯ của card đang mở
 route: /workspaces/<ws>/agents
 area: agents-catalog
 ---
-Route: `/workspaces/<ws>/agents`, the same page as `dang-chay`, with the ⋯ menu of the first card (Sales) open. A different state of the same screen, so its own folder (gallery README state rule). The round "N" button is the Next dev overlay; the guide bubble is hidden by default and does not appear.
+Route: `/workspaces/<ws>/agents`, the same page as `dang-chay`, with the ⋯ menu of the first card (Kế toán) open (no hover or focus ring). A different state of the same screen, so its own folder (gallery README state rule). The round "N" button is the Next dev overlay; the guide bubble is hidden by default and does not appear.
 
 ## Menu ⋯ của card (đang mở)
 Vì sao: a small popover under the ⋯ button of the card, right-aligned to it, with the commands of that agent: "Mở", "Thêm agent cùng vai trò" (only for a role that runs several agents, for managers), "Tạm dừng" (or "Tiếp tục" while the agent is paused) and "Gỡ". Plain text rows, no icons. Opening it never follows the card link. "Gỡ" asks first in an `AlertDialog` (what stops, what stays); "Tạm dừng" runs at once and toasts "Đã lưu"; "Mở" goes to the agent; "Thêm agent cùng vai trò" opens the create dialog with the role chosen.

@@ -32,7 +32,6 @@ const build = async (agents: ReadonlyArray<AgentSummary>) => {
                         botUsername: "shop_bot",
                         accountMasked: null,
                         status: "connected",
-                        access: "auto" as const,
                         purpose: "inbound_chat" as const,
                     },
                 },
@@ -73,7 +72,7 @@ describe("AgentCatalogService", () => {
         expect(entries).toHaveLength(2)
         expect(entries[0]).toMatchObject({
             agentId: "a1",
-            grants: [{ connectionId: "c1", provider: "telegram", access: "auto", purpose: "inbound_chat" }],
+            grants: [{ connectionId: "c1", provider: "telegram", purpose: "inbound_chat" }],
             knowledge: { audience: "customer", documents: 1, factsApproved: 2, factsTotal: 6, factsWaiting: 4 },
         })
     })

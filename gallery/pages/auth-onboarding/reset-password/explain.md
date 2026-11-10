@@ -23,9 +23,9 @@ Luật: `owner-colors-exact.md`, `page-header-left-sublabel-xs.md` (icons only o
 Grammar: `Button endArrow intent="commit" width="fill"`, `node_modules/@starci/grammar/dist/core/leaf/Button/index.d.ts`.
 
 ## Liên kết "Quay lại đăng nhập"
-Vì sao: inline link under the commit; exact primary, hover underline, anchor icon.
-Luật: `page-header-left-sublabel-xs.md`, `owner-colors-exact.md`.
-Grammar: `Link`, `node_modules/@starci/grammar/dist/core/leaf/Link/index.d.ts`.
+Vì sao: standalone back link under the commit in the foreground colour (red stays for the one CTA "Gửi link mới").
+Luật: `red-budget-links-foreground`, `owner-colors-exact.md`.
+Grammar: `Link variant="plain"`, `node_modules/@starci/grammar/dist/core/leaf/Link/index.d.ts`.
 
 ## Dòng giải thích dưới thẻ ("Link đặt lại mật khẩu đã hết hạn hoặc đã được dùng...")
 Vì sao: SAI — the reason the link failed is the key text of the screen, yet it is a 12px muted caption under the card (AuthPanel `note`); it belongs as the subtitle or an Alert inside the card under the heading.
@@ -37,7 +37,7 @@ Vì sao: CHƯA RÕ — the valid-token state (two password fields + commit) has 
 Luật: `verify-against-visualize.md`.
 Grammar: `Input kind="password"`, composite `PasswordPair`, `node_modules/@starci/grammar/dist/core/branch/Input/index.d.ts`.
 
-## Chân trang pháp lý
-Vì sao: SAI — legal bar wraps badly on 390 (arrows detach), as in login.
-Luật: `page-header-left-sublabel-xs.md`.
+## Chân trang pháp lý ("Chính sách quyền riêng tư", "Điều khoản sử dụng")
+Vì sao: one centred bar of two standalone secondary links in the foreground colour (red is kept for the one CTA); since Grammar 0.37.14 internal links carry no arrow, so each link stays on one line at 390.
+Luật: `red-budget-links-foreground`, `page-header-left-sublabel-xs.md`.
 Grammar: `NavLandmark layout="bar"`, `node_modules/@starci/grammar/dist/core/frame/NavLandmark/index.d.ts`.

@@ -1,6 +1,6 @@
 import { AGENT_IDENTITY_RULES } from "@modules/domain/agents"
 import { isChannelPurpose } from "@modules/domain/agent-connections"
-import type { Access, Purpose } from "@modules/domain/agent-connections"
+import type { Purpose } from "@modules/domain/agent-connections"
 import { AgentInstancesErrorCode } from "./errors/agent-instances.error"
 import type {
     AvatarChoice,
@@ -131,17 +131,14 @@ export interface SiblingGrant {
     readonly id: string
     /** What the role uses it for. */
     readonly purpose: string
-    /** The level the sibling has, or null when it has none. */
-    readonly access: Access | null
+    /** Whether the sibling is bound to it. */
+    readonly bound: boolean
 }
 
 /**
- * The connections a copy grants the new agent like its sibling: the shared ones (data sources, tools, bank feeds) at the sibling's
- * level. A channel never comes over: it is owned by the sibling, and each channel has one agent per role.
+ * The connections a copy binds the new agent to like its sibling: the shared ones (data sources, tools, bank feeds). A channel never comes over: it is owned by the sibling, and each channel has one agent per role.
  */
 export const copiedGrantsOf = (sibling: ReadonlyArray<SiblingGrant>): ReadonlyArray<CopiedGrant> =>
     sibling.flatMap((grant): ReadonlyArray<CopiedGrant> =>
-        grant.access === null || isChannelPurpose(grant.purpose)
-            ? []
-            : [{ connectionId: grant.id, access: grant.access }],
+        !grant.bound || isChannelPurpose(grant.purpose) ? [] : [{ connectionId: grant.id }],
     )

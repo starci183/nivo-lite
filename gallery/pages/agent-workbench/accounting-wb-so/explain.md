@@ -30,9 +30,15 @@ Grammar: `SurfaceCard kind="figures"`; `node_modules/@starci/grammar/dist/core/f
 ## Card "Sổ quỹ"
 Bảng nhóm theo ngày (hàng nhóm có số dư cuối ngày), công tắc Tháng này / Tháng trước.
 
-Vì sao: Một card bảng; công tắc kỳ là primary tab; dưới 768 cột Thu/Chi gập vào dòng.
+Vì sao: Một card bảng; công tắc kỳ là primary tab; dưới 768 cột Thu/Chi gập vào dòng. Cột ngắn (Thu, Chi, Số dư, Ngày, Số tiền, Trạng thái) là fit + một dòng, không xuống dòng; chỉ cột fill (Diễn giải / Nội dung) cắt bằng dấu ba chấm, đã thấy ở các dòng mã chuyển khoản dài. Bảng là thẻ trắng kiểu danh sách (Grammar 0.37.8+, không khung xám). Đã soi 1440/1920/390 với Grammar 0.37.17.
 
 Luật: `surfacecard-zones-api`, `table-heroui-native-section-head`.
 
 Grammar: `SurfaceCard kind="table"` `groups`, `headers=[{kind:"switch"}]`; `node_modules/@starci/grammar/dist/core/surfaceCardData.d.ts` (TableGroupData).
 
+## Aside "Tài khoản đã gắn" (chỉ đọc)
+Vì sao: Một dòng cho mỗi TÀI KHOẢN đã gắn vào agent ("SePay · •••• 9999"), logo nhà cung cấp, dòng 12 mờ liệt kê khả năng đang bật kèm chế độ ("(Tự động)", "(Hỏi)"); đầu khung có tên và đúng một liên kết "Quyền →"; không có nút, không "Tự làm", không "Cấp quyền" vì việc cấp quyền nằm ở tab Quyền. Khung viền 1px, bo góc, không bóng. Chỉ đọc theo bản vẽ quyen-tai-khoan-2 (khung 3). Khác bản vẽ (dữ liệu blocks-core, đã ghi ở LG-REQUESTS "UX/UI"): tên dòng còn lặp tên nhà cung cấp và dòng mô tả bị cắt trước phần chế độ.
+
+Luật: `pink-page-surface-rule` (aside trắng), `surfacecard-select-subtitle` (dòng phụ 12 mờ), `table-heroui-native-section-head` (đầu nhóm: nhãn trái, một liên kết "→" phải).
+
+Grammar: `SurfaceCard kind="list"` (viền 1px, không bóng, 0.37.24) trong `Pane surface`, `Link variant="head"`; node_modules/@starci/grammar/dist/core/frame/SurfaceCard/index.d.ts. Khối do blocks-core vẽ (`ConnectionsRegion`), không phải fe.

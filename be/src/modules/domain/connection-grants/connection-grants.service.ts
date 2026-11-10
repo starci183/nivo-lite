@@ -2,15 +2,14 @@ import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentAccessLogService } from "@modules/domain/agent-access-log"
 import { AgentBindingsService } from "@modules/domain/agent-connections"
-import type { Access } from "@modules/domain/agent-connections"
 import { ConnectionsError, ConnectionsErrorCode, ConnectionsService } from "@modules/domain/connections"
 import type { ConnectionActor, ConnectionMember } from "@modules/domain/connections"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { eachInOrder } from "@modules/platform/primitives"
-import { isAccess, normaliseAccess, planExactly, purposeFor } from "./connection-access.policy"
-import type { GrantChange, RequestedGrant } from "./connection-access.policy"
+import { planExactly, purposeFor } from "./connection-access.policy"
+import type { GrantChange } from "./connection-access.policy"
 import type {
     AgentGrantWish,
     ConnectionBoardEntry,
@@ -26,8 +25,8 @@ const RECORD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 
 const pairKey = (agentId: string, connectionId: string): string => `${agentId}:${connectionId}`
 
-/** A stored access word, or auto when the row holds something else. */
-const storedLevel = (value: string): Access => (isAccess(value) ? value : "auto")
+/** What the access log keeps for a bound pair (its before/after); null when the pair is not bound. */
+const BOUND = "bound"
 
 /** A non-secret fact, or null when the connection does not carry it. */
 const publicFact = (meta: Readonly<Record<string, string>>, key: string): string | null => {
@@ -37,7 +36,7 @@ const publicFact = (meta: Readonly<Record<string, string>>, key: string): string
 }
 
 @Injectable()
-/** Which agent uses which connection, and how far (owner only, both directions), reached through the primary EntityManager. */
+/** Which agent is bound to which connection (owner only, both directions), through the primary EntityManager; rights live in attachments. */
 export class ConnectionGrantsService {
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
@@ -49,7 +48,7 @@ export class ConnectionGrantsService {
     ) {}
 
     /**
-     * Every connection this agent is allowed to use, with the access it already has (null when it has none).
+     * Every connection this agent is allowed to use, and whether it is bound to it already.
      * A disconnected connection cannot be granted, so it is left out. Any member may look.
      */
     async candidates(
@@ -81,7 +80,7 @@ export class ConnectionGrantsService {
             this.connections.list(workspaceId),
             this.bindings.grantsOfAgent(workspaceId, agentId),
         ])
-        const accessOf = new Map(grants.map((row) => [row.connectionId, storedLevel(row.access)]))
+        const boundTo = new Set(grants.map((row) => row.connectionId))
         return listed.flatMap((connection) => {
             const purpose = purposeFor(module, connection.provider)
             if (purpose === null || connection.status === "disconnected") return []
@@ -94,13 +93,13 @@ export class ConnectionGrantsService {
                     accountMasked: publicFact(connection.meta, "account_masked"),
                     status: connection.status,
                     purpose,
-                    access: accessOf.get(connection.id) ?? null,
+                    bound: boundTo.has(connection.id),
                 },
             ]
         })
     }
 
-    /** Every connection of the workspace with the agents that use it and how far (owner or manager). */
+    /** Every connection of the workspace with the agents bound to it (owner or manager). */
     async board(actor: ConnectionActor): Promise<ReadonlyArray<ConnectionBoardEntry>> {
         await this.connections.authorize(actor, MANAGER)
         const [connections, rows] = await Promise.all([
@@ -109,11 +108,7 @@ export class ConnectionGrantsService {
         ])
         const byConnection = new Map<string, Array<ConnectionGrantEntry>>()
         for (const row of rows) {
-            const access = isAccess(row.access) ? row.access : "auto"
-            byConnection.set(row.connectionId, [
-                ...(byConnection.get(row.connectionId) ?? []),
-                { agentId: row.agentId, access },
-            ])
+            byConnection.set(row.connectionId, [...(byConnection.get(row.connectionId) ?? []), { agentId: row.agentId }])
         }
         return connections.map((connection) => ({
             connection,
@@ -123,20 +118,13 @@ export class ConnectionGrantsService {
         }))
     }
 
-    /** One agent access to one connection (null removes it). Saved at once from either picker. */
-    async setGrant(
-        actor: ConnectionActor,
-        connectionId: string,
-        agentId: string,
-        access: RequestedGrant,
-    ): Promise<void> {
+    /** Binds one agent to one connection, or removes the binding. Saved at once from either picker. */
+    async setGrant(actor: ConnectionActor, connectionId: string, agentId: string, bound: boolean): Promise<void> {
         const member = await this.connections.authorize(actor, OWNER_ONLY)
-        await this.entityManager.transaction((tx) =>
-            this.apply(actor, member, [{ agentId, connectionId, access: normaliseAccess(access) }], tx),
-        )
+        await this.entityManager.transaction((tx) => this.apply(actor, member, [{ agentId, connectionId, bound }], tx))
     }
 
-    /** Exactly these agents use this connection: a bare agent keeps its level, an agent left out loses its access to it. */
+    /** Exactly these agents are bound to this connection: an agent left out loses its binding. */
     async setConnectionAgents(
         actor: ConnectionActor,
         connectionId: string,
@@ -146,12 +134,11 @@ export class ConnectionGrantsService {
         await this.entityManager.transaction(async (tx) => {
             await this.connections.get(actor.workspaceId, connectionId, tx)
             const rows = await this.bindings.grantsOfConnection(actor.workspaceId, connectionId, tx)
-            const have = new Map(rows.map((row) => [row.agentId, storedLevel(row.access)]))
             const plan = planExactly(
-                have,
-                wanted.map((w) => ({ id: w.agentId, access: w.access })),
+                new Set(rows.map((row) => row.agentId)),
+                wanted.map((w) => w.agentId),
             )
-            const changes = plan.map((p) => ({ agentId: p.id, connectionId, access: p.access }))
+            const changes = plan.map((p) => ({ agentId: p.id, connectionId, bound: p.bound }))
             await this.apply(actor, member, changes, tx)
         })
     }
@@ -165,18 +152,17 @@ export class ConnectionGrantsService {
         const member = await this.connections.authorize(actor, OWNER_ONLY)
         await this.entityManager.transaction(async (tx) => {
             const rows = await this.bindings.grantsOfAgent(actor.workspaceId, agentId, tx)
-            const have = new Map(rows.map((row) => [row.connectionId, storedLevel(row.access)]))
             const plan = planExactly(
-                have,
-                wanted.map((w) => ({ id: w.connectionId, access: w.access })),
+                new Set(rows.map((row) => row.connectionId)),
+                wanted.map((w) => w.connectionId),
             )
-            const changes = plan.map((p) => ({ agentId, connectionId: p.id, access: p.access }))
+            const changes = plan.map((p) => ({ agentId, connectionId: p.id, bound: p.bound }))
             await this.apply(actor, member, changes, tx)
         })
     }
 
     /**
-     * The one writer of agent access. Every pair is checked against the workspace and the module rules; a pair that cannot be
+     * The one writer of bindings. Every pair is checked against the workspace and the module rules; a pair that cannot be
      * granted is refused with a reason. Each real change is written to agent_access_log (who, when, before, after) in the
      * same transaction.
      */
@@ -196,7 +182,7 @@ export class ConnectionGrantsService {
         ])
         const agentOf = new Map(agents.map((agent) => [agent.id, agent]))
         const connectionOf = new Map(connections.map((connection) => [connection.id, connection]))
-        const before = new Map(current.map((row) => [pairKey(row.agentId, row.connectionId), row.access]))
+        const before = new Set(current.map((row) => pairKey(row.agentId, row.connectionId)))
         await eachInOrder(changes, async (change) => {
             const agent = agentOf.get(change.agentId)
             const connection = connectionOf.get(change.connectionId)
@@ -206,9 +192,9 @@ export class ConnectionGrantsService {
                     params: { id: agent === undefined ? change.agentId : change.connectionId },
                 })
             }
-            const was = before.get(pairKey(agent.id, connection.id)) ?? null
-            if (was === change.access) return
-            if (change.access === null) {
+            const was = before.has(pairKey(agent.id, connection.id))
+            if (was === change.bound) return
+            if (!change.bound) {
                 await this.bindings.removeGrant(
                     { workspaceId: actor.workspaceId, agentId: agent.id, connectionId: connection.id },
                     tx,
@@ -221,7 +207,7 @@ export class ConnectionGrantsService {
                         params: { agent: agent.name, connection: connection.name },
                     })
                 }
-                if (connection.status === "disconnected" && was === null) {
+                if (connection.status === "disconnected" && !was) {
                     throw new ConnectionGrantsError({
                         code: ConnectionGrantsErrorCode.ConnectionDisconnected,
                         params: { connection: connection.name },
@@ -233,7 +219,6 @@ export class ConnectionGrantsService {
                         agentId: agent.id,
                         connectionId: connection.id,
                         purpose,
-                        access: change.access,
                     },
                     tx,
                 )
@@ -245,8 +230,8 @@ export class ConnectionGrantsService {
                     agentId: agent.id,
                     connectionName: connection.name,
                     agentName: agent.name,
-                    before: was,
-                    after: change.access,
+                    before: was ? BOUND : null,
+                    after: change.bound ? BOUND : null,
                     changedBy: actor.principalId,
                     changedByName: member.displayName,
                 },

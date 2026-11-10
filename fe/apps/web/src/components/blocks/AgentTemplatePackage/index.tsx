@@ -4,7 +4,9 @@ import { useTranslations } from "next-intl"
 import type { ReactElement } from "react"
 import { mapSlot, useSlotLabels } from "@/hooks/slot"
 import { usePackageTemplate } from "@/hooks/templates"
-import { AgentTemplatePackageBase } from "./component"
+import { AgentTemplatePackageBase, type AgentTemplatePackageBaseProps } from "./component"
+
+type PreviewViewProps = AgentTemplatePackageBaseProps["props"]["preview"]
 
 /** What the page hands the packaging form: the installation whose agent is packaged. */
 interface AgentTemplatePackageProps {
@@ -18,6 +20,50 @@ const SUMMARY_FIELDS = ["summaryVi", "summaryEn"] as const
 /** The groups a template can be filed under (the keys the modules carry). */
 const CATEGORIES = ["sales_customer", "finance", "operations", "marketing", "hr"] as const
 
+type Translate = ReturnType<typeof useTranslations<"agentTemplates">>
+type PackagePreview = NonNullable<ReturnType<typeof usePackageTemplate>["preview"]>
+
+/** The rows of what the package keeps, leaves out and needs, with the problems and suggestions, as the preview card draws them. */
+const previewViewOf = (t: Translate, preview: PackagePreview | undefined): PreviewViewProps => {
+    const report = preview?.report
+    if (preview === undefined || report === undefined) return undefined
+    const pkg = preview.package
+    return {
+        rows: [
+            {
+                id: "kept",
+                term: t("keptTerm"),
+                description: t("kept", { nodes: report.nodes, branches: report.branches }),
+            },
+            {
+                id: "leftOut",
+                term: t("leftOutTerm"),
+                description: t("leftOut", {
+                    brain: report.brainRefs,
+                    sources: report.privateSources,
+                    people: report.people,
+                    rights: report.rights,
+                }),
+            },
+            {
+                id: "needs",
+                term: t("needsTerm"),
+                description:
+                    pkg === null
+                        ? "-"
+                        : t("needs", {
+                              providers: pkg.requiredProviders.join(", ") || "-",
+                              actions: pkg.requiredAuthorityActions.join(", ") || "-",
+                          }),
+            },
+        ],
+        problems: preview.problems,
+        suggestions: preview.suggestions.map((suggestion) =>
+            t(`suggest_${suggestion.target}`, { node: suggestion.nodeKey, branch: suggestion.branchKey }),
+        ),
+    }
+}
+
 /** The connected packaging form of one installed agent. */
 export const AgentTemplatePackage = (props: AgentTemplatePackageProps): ReactElement => {
     const t = useTranslations("agentTemplates")
@@ -25,7 +71,6 @@ export const AgentTemplatePackage = (props: AgentTemplatePackageProps): ReactEle
     const packaging = usePackageTemplate(props.installationId)
     const fields = packaging.fields
     const preview = packaging.preview
-    const report = preview?.report
     const pkg = preview?.package
     return (
         <AgentTemplatePackageBase
@@ -60,46 +105,7 @@ export const AgentTemplatePackage = (props: AgentTemplatePackageProps): ReactEle
                 problemsTitle: t("problemsTitle"),
                 suggestionsTitle: t("suggestionsTitle"),
                 emptyRows: ["kept", "leftOut", "needs"].map((id) => ({ id, term: t(`${id}Term`), description: "-" })),
-                preview:
-                    preview === undefined || report === undefined
-                        ? undefined
-                        : {
-                              rows: [
-                                  {
-                                      id: "kept",
-                                      term: t("keptTerm"),
-                                      description: t("kept", { nodes: report.nodes, branches: report.branches }),
-                                  },
-                                  {
-                                      id: "leftOut",
-                                      term: t("leftOutTerm"),
-                                      description: t("leftOut", {
-                                          brain: report.brainRefs,
-                                          sources: report.privateSources,
-                                          people: report.people,
-                                          rights: report.rights,
-                                      }),
-                                  },
-                                  {
-                                      id: "needs",
-                                      term: t("needsTerm"),
-                                      description:
-                                          pkg === undefined || pkg === null
-                                              ? "-"
-                                              : t("needs", {
-                                                    providers: pkg.requiredProviders.join(", ") || "-",
-                                                    actions: pkg.requiredAuthorityActions.join(", ") || "-",
-                                                }),
-                                  },
-                              ],
-                              problems: preview.problems,
-                              suggestions: preview.suggestions.map((suggestion) =>
-                                  t(`suggest_${suggestion.target}`, {
-                                      node: suggestion.nodeKey,
-                                      branch: suggestion.branchKey,
-                                  }),
-                              ),
-                          },
+                preview: previewViewOf(t, preview),
                 canPackage: pkg !== undefined && pkg !== null,
                 isPending: packaging.isPending,
                 previewFailed: packaging.previewFailed,

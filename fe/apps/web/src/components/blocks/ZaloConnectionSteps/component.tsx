@@ -44,7 +44,7 @@ export interface ZaloConnectionStepsBaseProps {
         readonly changeSecret: (value: string) => void
         readonly saveSecret: () => void
         readonly authorize: () => void
-        readonly pickGrant: (agentId: string, level: string) => void
+        readonly removeGrant: (agentId: string) => void
         readonly assignGrant: (agentId: string) => void
         readonly retryGrants: () => void
     }
@@ -52,8 +52,8 @@ export interface ZaloConnectionStepsBaseProps {
 
 /**
  * Draws the five setup steps of a Zalo OA connection as one joined list with its stepper: each step keeps its own body (the saved app
- * keys, the addresses to paste into Zalo and the key to paste back, the authorization, the checks with the test send, the agents with
- * their levels) and its mark says where it stands.
+ * keys, the addresses to paste into Zalo and the key to paste back, the authorization, the checks with the test send, the agents bound
+ * to it) and its mark says where it stands.
  */
 export const ZaloConnectionStepsBase = (props: ZaloConnectionStepsBaseProps) => {
     const { on } = props
@@ -78,7 +78,7 @@ export const ZaloConnectionStepsBase = (props: ZaloConnectionStepsBaseProps) => 
         agents: (
             <ConnectionGrantsBand
                 props={props.props.grants}
-                on={{ pick: on.pickGrant, assign: on.assignGrant, retry: on.retryGrants }}
+                on={{ remove: on.removeGrant, assign: on.assignGrant, retry: on.retryGrants }}
             />
         ),
     }

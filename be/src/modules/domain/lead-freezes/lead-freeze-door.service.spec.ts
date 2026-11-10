@@ -95,4 +95,17 @@ describe("LeadFreezeDoorService.answer", () => {
         await expect(door.answer("user-1", answerOf("delete"))).resolves.toHaveProperty("outcome", "not_frozen")
         expect(work.decide).not.toHaveBeenCalled()
     })
+
+    it("sends the founder to the stop for a customer held by a thread run's stop: no retry, skip or take-over of the hold", async () => {
+        const { door, freezes, work } = await build()
+        const onStop = stateOf(frozenFreezeOf({ frozenReason: "run_stop", workItemId: null, frozenRunId: "run-7" }))
+        freezes.stateOf.mockResolvedValue(onStop)
+
+        await expect(door.answer("user-1", answerOf("retry"))).resolves.toEqual({ outcome: "on_stop" })
+        await expect(door.answer("user-1", answerOf("skip"))).resolves.toEqual({ outcome: "on_stop" })
+        await expect(door.answer("user-1", answerOf("take_over"))).resolves.toEqual({ outcome: "on_stop" })
+
+        expect(work.decide).not.toHaveBeenCalled()
+        expect(freezes.takeOver).not.toHaveBeenCalled()
+    })
 })

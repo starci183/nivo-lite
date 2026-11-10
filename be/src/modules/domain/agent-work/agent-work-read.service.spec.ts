@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing"
 import { mock, mockEntityManager } from "@starci/jest-preset"
 import type { MockEntityManager } from "@starci/jest-preset"
 import { In } from "typeorm"
+import { queueQueryBuilders } from "@tests/fixtures/builders/entity-query-builder-fake.builder"
 import { agentTurnRowOf, agentWakeRowOf, runningWakeRowOf } from "@tests/fixtures/builders/agent-work.builder"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { AgentGoalsService } from "./agent-goals.service"
@@ -205,5 +206,35 @@ describe("AgentWorkReadService.wakeOriginOf", () => {
 
         await expect((await build(found)).service.wakeOriginOf("ws-1", "wake-1")).resolves.toBe("person")
         await expect((await build(gone)).service.wakeOriginOf("ws-1", "wake-1")).resolves.toBeNull()
+    })
+})
+
+describe("AgentWorkReadService.hasLiveWake", () => {
+    it("answers true while the subject's own wake or a wake naming it is pending, running or held", async () => {
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [{ getCount: 1 }])
+        const { service } = await build(em)
+
+        await expect(service.hasLiveWake("ws-1", "agent-1", { wakeId: "wake-1", subjectId: "run-1" })).resolves.toBe(true)
+
+        expect(fake?.callsOf("where")).toEqual([
+            [
+                "w.workspace_id = :workspaceId AND w.agent_id = :agentId AND w.status IN (:...live)",
+                { workspaceId: "ws-1", agentId: "agent-1", live: ["pending", "running", "held"] },
+            ],
+        ])
+        expect(fake?.callsOf("andWhere")).toEqual([
+            ["(w.id = :wakeId OR w.context ->> 'subjectId' = :subjectId)", { subjectId: "run-1", wakeId: "wake-1" }],
+        ])
+    })
+
+    it("answers false when no live wake names the subject, and asks by the subject alone when there is no wake id", async () => {
+        const em = mockEntityManager()
+        const [fake] = queueQueryBuilders(em, [{ getCount: 0 }])
+        const { service } = await build(em)
+
+        await expect(service.hasLiveWake("ws-1", "agent-1", { wakeId: null, subjectId: "run-1" })).resolves.toBe(false)
+
+        expect(fake?.callsOf("andWhere")).toEqual([["w.context ->> 'subjectId' = :subjectId", { subjectId: "run-1" }]])
     })
 })

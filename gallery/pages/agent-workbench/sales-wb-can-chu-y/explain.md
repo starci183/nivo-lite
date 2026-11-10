@@ -28,7 +28,7 @@ Luật: `surfacecard-zones-api`, `ui-laws` (Cần chú ý items are cards).
 Grammar: `SurfaceCard` + `EmptyNotice frame="frameless"`; `node_modules/@starci/grammar/dist/core/frame/SurfaceCard/index.d.ts`.
 
 ## Card bảng "Đơn gần đây"
-Một SurfaceCard: tiêu đề + chip đếm ngay sau nhãn, ô tìm, tab lọc có chip đếm, bảng, phân trang. Năm dòng mỗi trang; ô Tổng trống hiện "—".
+Một SurfaceCard: tiêu đề + chip đếm ngay sau nhãn, ô tìm, tab lọc có chip đếm, bảng, phân trang. Năm dòng mỗi trang; ô Tổng trống hiện "—". Mã đơn, Tổng, Trạng thái là fit; Món là cột fill, cắt bằng dấu ba chấm; Khách là cột cố định 200px có cắt (xem Grammar/blocks-core: nên là fit hoặc fill). Cột ngắn là fit + một dòng, không xuống dòng; chỉ cột fill cắt bằng dấu ba chấm. Bảng là thẻ trắng kiểu danh sách (Grammar 0.37.8+: không khung xám). Đã soi 1440/1920/390 với Grammar 0.37.17.
 
 Vì sao: Cùng một tập dữ liệu (tìm + lọc + bảng + phân trang) là MỘT card; mỗi vùng header là một hàng riêng ngăn bằng divider do shell vẽ. Dưới 768 cột phụ gập vào dòng.
 

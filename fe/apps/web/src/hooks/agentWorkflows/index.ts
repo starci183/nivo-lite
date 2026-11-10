@@ -1,6 +1,5 @@
 export { useAgentWorkflows } from "./useAgentWorkflows"
 export { useWorkflowCreate } from "./useWorkflowCreate"
-export { useWorkflowDiff } from "./useWorkflowDiff"
 export { useWorkflowTemplates } from "./useWorkflowTemplates"
 export { useWorkflowWrites } from "./useWorkflowWrites"
 export { useWorkflowContext } from "./useWorkflowContext"

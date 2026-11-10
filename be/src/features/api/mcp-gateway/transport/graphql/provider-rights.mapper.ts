@@ -22,9 +22,18 @@ export const toProviderRightsType = (board: ProviderBoard): ProviderRightsType =
             label: { ...ability.label },
             tools: [...ability.tools],
         })),
+        accounts: provider.accounts.map((account) => ({
+            connectionId: account.connectionId,
+            provider: account.provider,
+            kind: provider.kind,
+            accountLabel: account.label,
+            connected: account.connected,
+            isDefaultReceiving: account.isDefault,
+        })),
     })),
     attachments: board.attachments.map((attachment) => ({
         agentId: attachment.agentId,
+        connectionId: attachment.connectionId,
         provider: attachment.provider,
         abilities: toTicks(attachment.abilities),
     })),

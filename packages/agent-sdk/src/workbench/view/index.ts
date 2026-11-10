@@ -3,7 +3,6 @@ export type {
     WorkbenchBadgeView,
     WorkbenchCommandData,
     WorkbenchCommandView,
-    WorkbenchConnectionsRegionView,
     WorkbenchDashboardRegions,
     WorkbenchDashboardRow,
     WorkbenchDoneRegionView,

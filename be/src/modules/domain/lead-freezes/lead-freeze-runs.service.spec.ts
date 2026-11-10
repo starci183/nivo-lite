@@ -105,6 +105,14 @@ describe("LeadFreezeRunsService reads", () => {
         await expect(service.statusOf("ws-1", "run-x")).resolves.toBeNull()
     })
 
+    it("reads the run a wake already opened, and none for a wake that opened none", async () => {
+        const { service, runs } = await build()
+        runs.runIdOfWake.mockResolvedValueOnce("run-7").mockResolvedValueOnce(null)
+        await expect(service.runOfWake("ws-1", "wake-1")).resolves.toBe("run-7")
+        await expect(service.runOfWake("ws-1", "wake-2")).resolves.toBeNull()
+        expect(runs.runIdOfWake).toHaveBeenCalledWith("ws-1", "wake-1")
+    })
+
     it("answers no failed step for a run that has none", async () => {
         const { service, recovery } = await build()
         recovery.failedStepOf.mockResolvedValue(null)

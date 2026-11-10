@@ -23,7 +23,7 @@ Luật: `surfacecard-select-subtitle.md` (row title noun + subtitle), `table-her
 Grammar: `SurfaceCard` + `ListRow`, `node_modules/@starci/grammar/dist/core/composite/ListRow/index.d.ts`.
 
 ## Khối "Kết nối của bạn" (số lượng, thẻ kết nối)
-Vì sao: SAI/OK split. OK: label + grey count chip on the left, as the head law says. The body is a card "SePay" with "Mở trang →", "Agent (2)" and ⋯, the chip "Đã kết nối" and "MBBANK · •••• 9999 · CONG TY TNHH CONG NGHE NIVO · Đang dùng bởi: Kế toán, Sales"; that card packs four controls in a row (a neutral pill, a red link, a count pill, ⋯) with mixed shapes, and raw ids in the subtitle which belong in "Chi tiết kỹ thuật".
+Vì sao: SAI/OK split. OK: label + grey count chip on the left, as the head law says. The body is a card "SePay" with "Mở trang →" and ⋯ (the "Agent (n)" level picker is gone: the per-connection level was retired, K-BLK 2026-11-10; binding lives on the connection's Agent tab and rights on the agent's Quyền tab), the chip "Đã kết nối" and "MBBANK · •••• 9999 · CONG TY TNHH CONG NGHE NIVO · Đang dùng bởi: Kế toán, Sales"; that card still mixes control shapes in one row (a red link beside ⋯), and raw ids in the subtitle which belong in "Chi tiết kỹ thuật".
 Luật: `table-heroui-native-section-head.md` (raw ids; section head label + count chip), `suggestion-button-sm.md` (one pill pattern), `page-header-left-sublabel-xs.md` (sm buttons no icon: "Mở trang →" has an arrow).
 Grammar: `SurfaceCard`, `Button size="sm"`, `DropdownMenu`, `node_modules/@starci/grammar/dist/core/frame/SurfaceCard/index.d.ts`; composite `ConnectionRowBody`.
 

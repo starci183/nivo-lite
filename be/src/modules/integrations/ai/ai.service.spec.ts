@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
-import { builder, mock } from "@starci/jest-preset"
+import { builder, FakeClock, mock } from "@starci/jest-preset"
+import { CLOCK } from "@modules/platform/clock"
 import { Secret } from "@modules/platform/config"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -20,6 +21,7 @@ const build = async (keyed: boolean, overrides: Partial<AiOptions> = {}) => {
     const options = builder<AiOptions>(defaults)(overrides)
     const runner = mock<AiRunner>()
     const logger = mock<Logger>()
+    const clock = new FakeClock("2026-11-10T12:00:00.000Z")
     const moduleRef = keyed
         ? await Test.createTestingModule({
               providers: [
@@ -27,6 +29,7 @@ const build = async (keyed: boolean, overrides: Partial<AiOptions> = {}) => {
                   { provide: AI_OPTIONS, useValue: options },
                   { provide: AI_RUNNER, useValue: runner },
                   { provide: LOGGER, useValue: logger },
+                  { provide: CLOCK, useValue: clock },
               ],
           }).compile()
         : await Test.createTestingModule({
@@ -35,9 +38,10 @@ const build = async (keyed: boolean, overrides: Partial<AiOptions> = {}) => {
                   { provide: AI_OPTIONS, useValue: options },
                   { provide: AI_RUNNER, useValue: null },
                   { provide: LOGGER, useValue: logger },
+                  { provide: CLOCK, useValue: clock },
               ],
           }).compile()
-    return { client: moduleRef.get(AiService), runner, logger }
+    return { client: moduleRef.get(AiService), runner, logger, clock }
 }
 
 const MODEL = "deepseek/deepseek-v4.1-flash"
@@ -105,8 +109,9 @@ describe("AiService chat", () => {
             text: "hello",
             parsed: null,
             model: MODEL,
-            usage: { promptTokens: 12, completionTokens: 5, totalTokens: 17, costUsd: 0.0002, cachedTokens: 8 },
+            usage: { promptTokens: 12, completionTokens: 5, totalTokens: 17, costUsd: 0.0002, cachedTokens: 8, reasoningTokens: null },
             retrieved: 2,
+            served: { upstream: null, finishReason: null, durationMs: 0 },
         })
         expect(runner.chat.mock.calls[0]?.[0]).toMatchObject({ messages: ASK.messages, json: false, timeoutMs: 1000 })
     })
@@ -157,7 +162,7 @@ describe("AiService chat", () => {
             expect.objectContaining({
                 text: "ab",
                 model: "work",
-                usage: { promptTokens: 3, completionTokens: 1, totalTokens: 4, costUsd: null, cachedTokens: null },
+                usage: { promptTokens: 3, completionTokens: 1, totalTokens: 4, costUsd: null, cachedTokens: null, reasoningTokens: null },
             }),
         )
     })
@@ -175,6 +180,131 @@ describe("AiService chat", () => {
         )
 
         await expect(client.chat(ASK)).resolves.toMatchObject({ usage: { promptTokens: 50, cachedTokens: 40 } })
+    })
+
+    it("reads the hidden reasoning of an answer from the usage, by either name, and logs it beside the answer's size", async () => {
+        const { client, runner, logger } = await build(true)
+        runner.chat
+            .mockResolvedValueOnce(
+                reply("ok", {
+                    usageMetadata: { input_tokens: 50, output_tokens: 900, total_tokens: 950, output_token_details: { reasoning: 870 } },
+                }),
+            )
+            .mockResolvedValueOnce(
+                reply("ok", {
+                    usageMetadata: { input_tokens: 50, output_tokens: 900, total_tokens: 950 },
+                    responseMetadata: { usage: { completion_tokens_details: { reasoning_tokens: 860 } } },
+                }),
+            )
+
+        await expect(client.chat({ ...ASK, budget: { effort: "low", maxTokens: 4000 } })).resolves.toMatchObject({
+            usage: { completionTokens: 900, reasoningTokens: 870 },
+        })
+        await expect(client.chat(ASK)).resolves.toMatchObject({ usage: { reasoningTokens: 860 } })
+        expect(logger.info).toHaveBeenCalledWith(
+            "ai.chat.answered",
+            expect.objectContaining({ completion: 900, reasoning: 870, answerChars: 2, effort: "low", cap: 4000 }),
+        )
+    })
+
+    it("reads the message of an agent turn: what it used and how many tools it called, or the failure it is", async () => {
+        const { client, logger } = await build(true)
+        const request = { timeoutMs: 90_000, budget: { effort: "low" as const, maxTokens: 4000 } }
+        const turn = {
+            content: "",
+            tool_calls: [{ name: "payment.order.settle", args: { orderId: "o-1" }, id: "call_1" }],
+            usage_metadata: {
+                input_tokens: 8000,
+                output_tokens: 60,
+                total_tokens: 8060,
+                input_token_details: { cache_read: 7424 },
+                output_token_details: { reasoning: 18 },
+            },
+            response_metadata: { model_name: MODEL, finish_reason: "tool_calls" },
+            additional_kwargs: { __raw_response: { provider: "Relace" } },
+        }
+
+        expect(client.readTurn(turn, request)).toEqual({
+            ok: true,
+            model: MODEL,
+            usage: {
+                promptTokens: 8000,
+                completionTokens: 60,
+                totalTokens: 8060,
+                costUsd: null,
+                cachedTokens: 7424,
+                reasoningTokens: 18,
+            },
+            textChars: 0,
+            toolCalls: 1,
+            served: { upstream: "Relace", finishReason: "tool_calls", durationMs: null },
+        })
+        expect(logger.info).toHaveBeenCalledWith(
+            "ai.chat.answered",
+            expect.objectContaining({ provider: "Relace", prompt: 8000, cached: 7424, reasoning: 18, toolCalls: 1, agentTurn: true }),
+        )
+        expect(JSON.stringify(logger.info.mock.calls)).not.toContain("o-1")
+        // The routing the try asked for is logged beside the upstream that served it; null when it asked for none.
+        expect(logger.info.mock.calls.at(-1)?.[1]).toMatchObject({ routing: null })
+        client.readTurn(turn, { ...request, routing: { order: ["relace", "wafer"], allowFallbacks: true } })
+        expect(logger.info.mock.calls.at(-1)?.[1]).toMatchObject({
+            provider: "Relace",
+            routing: { order: ["relace", "wafer"], allow_fallbacks: true },
+        })
+        // A turn cut at the token limit, and a turn with neither words nor a tool call, are failures of the AI.
+        expect(client.readTurn({ ...turn, response_metadata: { finish_reason: "length" } }, request)).toEqual({
+            ok: false,
+            failure: "length",
+        })
+        expect(client.readTurn({ content: "  ", tool_calls: [] }, request)).toEqual({ ok: false, failure: "empty" })
+        expect(client.readTurn({ content: "Dạ", tool_calls: [] }, request)).toMatchObject({ ok: true, textChars: 2, toolCalls: 0 })
+    })
+
+    it("metering: says which upstream served a call, why the model stopped and how long the try took", async () => {
+        const { client, runner, logger, clock } = await build(true)
+        runner.chat.mockImplementation(() => {
+            clock.advance(4_250)
+            return Promise.resolve(
+                reply("{}", { provider: "Parasail", responseMetadata: { model_name: MODEL, finish_reason: "stop" } }),
+            )
+        })
+
+        await expect(client.attempt({ ...ASK, json: true })).resolves.toMatchObject({
+            ok: true,
+            answer: { served: { upstream: "Parasail", finishReason: "stop", durationMs: 4_250 } },
+        })
+        expect(logger.info).toHaveBeenCalledWith(
+            "ai.chat.answered",
+            expect.objectContaining({ provider: "Parasail", finish: "stop", ms: 4_250 }),
+        )
+    })
+
+    it("metering: a stopwatch reads the whole milliseconds since it started, and a timed agent turn carries its time", async () => {
+        const { client, clock } = await build(true)
+        const elapsed = client.stopwatch()
+        clock.advance(1_500)
+        const took = elapsed()
+        const turn = { content: "ok", response_metadata: { finish_reason: "stop" } }
+
+        expect(took).toBe(1_500)
+        expect(client.readTurn(turn, { timeoutMs: 90_000 }, took)).toMatchObject({
+            ok: true,
+            served: { upstream: null, finishReason: "stop", durationMs: 1_500 },
+        })
+    })
+
+    it("gives the loop a client per try only when the endpoint is configured, and names what a call that threw failed as", async () => {
+        const { client, runner } = await build(true)
+        const model = { made: true }
+        runner.turnModel.mockReturnValue(model as never)
+        const request = { timeoutMs: 45_000, affinity: "ws-1" }
+
+        expect(client.turnModel(request)).toBe(model)
+        expect(runner.turnModel).toHaveBeenCalledWith(request)
+        expect((await build(false)).client.turnModel(request)).toBeNull()
+        expect(client.failureOfThrow(Object.assign(new Error("x"), { name: "TimeoutError" }))).toBe("timeout")
+        expect(client.failureOfThrow(Object.assign(new Error("x"), { name: "AbortError" }))).toBe("timeout")
+        expect(client.failureOfThrow(Object.assign(new Error("x"), { status: 502 }))).toBe("provider")
     })
 
     it("says why a try gave no answer: the deadline, a cut answer, an empty one, the provider, no endpoint", async () => {

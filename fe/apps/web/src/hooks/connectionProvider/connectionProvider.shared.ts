@@ -47,14 +47,13 @@ const stepOf = (connection: Connection, t: ProviderTranslate): string => {
         : ""
 }
 
-/** One grant as the wire answers it: the agent, what it uses the connection for and its level. */
+/** One binding as the wire answers it: the agent and what it uses the connection for. */
 export interface ConnectionAgentGrantWire {
     readonly connectionId: string
     readonly agentId: string
     readonly agentName: string
     readonly module: string
     readonly purpose: string
-    readonly access: string
 }
 
 /** A reader of the `agentConnections` namespace, the words of the agent's own Connections tab. */
@@ -67,14 +66,6 @@ const PURPOSE_KEYS: Readonly<Record<string, string>> = {
     data_source: "purposeDataSource",
     tool: "purposeTool",
     lead_source: "purposeLeadSource",
-}
-
-const LEVEL_KEYS: Readonly<Record<string, string>> = { read: "levelRead", ask: "levelAsk", auto: "levelAuto" }
-
-const LEVEL_TONES: Readonly<Record<string, ConnectionAgentUse["tone"]>> = {
-    read: "neutral",
-    ask: "accent",
-    auto: "warning",
 }
 
 /** The agents that use one connection, one entry per grant, in the words of the agent's Connections tab. */
@@ -90,8 +81,6 @@ export const agentUsesOf = (
             name: grant.agentName,
             module: grant.module,
             purpose: t(PURPOSE_KEYS[grant.purpose] ?? "purposeTool"),
-            level: t(LEVEL_KEYS[grant.access] ?? "levelRead"),
-            tone: LEVEL_TONES[grant.access] ?? "neutral",
         }))
 
 /** One row of a provider's list: the shared row, its description narrowed to what identifies the connection and its step, and its agents. */

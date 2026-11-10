@@ -8,9 +8,21 @@ export interface AgentEndedWake {
     readonly wake: AgentWakeView
 }
 
-/** What `begin` answered. */
+/**
+ * The wait `begin` told a drain that came while the burst window of its conversation was still open: how long is left by the
+ * database's own clock, and the wake the wait is for (the newest of the conversation).
+ */
+export interface AgentBeginWait {
+    /** Milliseconds until the window ends, as the database counts them; at least one. */
+    readonly ms: number
+    /** The newest pending wake of the scope, the one the window is counted from. */
+    readonly wakeId: string
+}
+
+/** What `begin` answered. An `idle` scope with a `wait` has a wake that is not due yet: the drain is to come back after the wait. */
 export type AgentBegin =
-    | { readonly result: "killed" | "busy" | "idle"; readonly ended: ReadonlyArray<AgentEndedWake> }
+    | { readonly result: "killed" | "busy"; readonly ended: ReadonlyArray<AgentEndedWake> }
+    | { readonly result: "idle"; readonly ended: ReadonlyArray<AgentEndedWake>; readonly wait?: AgentBeginWait }
     | { readonly result: "begun"; readonly turn: AgentTurnView; readonly ended: ReadonlyArray<AgentEndedWake> }
 
 /** What `propose` answered. */

@@ -77,35 +77,3 @@ export const WAITING_EXPECTED: WaitingExpectedShape = {
     },
 }
 
-type ConnectionsExpectedDataShape = {
-    id: string
-    name: string
-    provider: string
-    botUsername: null
-    accountMasked: null
-    status: string
-    access: string
-    purpose: string
-}
-
-type ConnectionsExpectedShape = {
-    ok: boolean
-    data: Array<ConnectionsExpectedDataShape>
-}
-
-/** The connections region the dashboard shows for that scenario. */
-export const CONNECTIONS_EXPECTED: ConnectionsExpectedShape = {
-    ok: true,
-    data: [
-        {
-            id: "c1",
-            name: "Shop bot",
-            provider: "telegram",
-            botUsername: null,
-            accountMasked: null,
-            status: "connected",
-            access: "auto",
-            purpose: "inbound_chat",
-        },
-    ],
-}

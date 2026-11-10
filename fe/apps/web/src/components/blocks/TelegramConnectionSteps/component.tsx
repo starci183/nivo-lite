@@ -41,14 +41,14 @@ export interface TelegramConnectionStepsBaseProps {
             readonly lines: DataSlot<ReadonlyArray<ConnectionLineView>>
             readonly slotLabels: SlotLabels
         }
-        /** The agents step: every agent that works through the bot, with its level. */
+        /** The agents step: every agent bound to the bot. */
         readonly grants: ConnectionGrantsBandProps["props"]
     }
     readonly on: {
         readonly toggle: (id: string, isOpen: boolean) => void
         readonly retryWebhook: () => void
         readonly retryChecks: () => void
-        readonly pickGrant: (agentId: string, level: string) => void
+        readonly removeGrant: (agentId: string) => void
         readonly assignGrant: (agentId: string) => void
         readonly retryGrants: () => void
     }
@@ -90,11 +90,11 @@ const ChecksBody = (props: StepBodyProps) => (
     />
 )
 
-/** Draws the body of the last step: every agent that works through a Telegram bot with its level, and the control that gives it to another. */
+/** Draws the body of the last step: every agent bound to a Telegram bot, and the control that binds another. */
 const AgentsBody = (props: StepBodyProps) => (
     <ConnectionGrantsBand
         props={props.props.grants}
-        on={{ pick: props.on.pickGrant, assign: props.on.assignGrant, retry: props.on.retryGrants }}
+        on={{ remove: props.on.removeGrant, assign: props.on.assignGrant, retry: props.on.retryGrants }}
     />
 )
 

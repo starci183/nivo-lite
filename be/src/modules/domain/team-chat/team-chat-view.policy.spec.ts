@@ -8,6 +8,7 @@ import {
     nameKeyOf,
     refsOfMessages,
     roomViewOf,
+    stopReplierIdsOf,
 } from "./team-chat-view.policy"
 import type { MessageViewContext } from "./team-chat-view.policy"
 import type { ChatRoomView } from "./team-chat.contracts"
@@ -125,6 +126,7 @@ describe("message views", () => {
             reactions: [],
             replyTo: null,
             forwardedFrom: null,
+            stop: null,
         })
     })
 })
@@ -242,5 +244,70 @@ describe("room views", () => {
         })
         const sorted = [view(2, null), view(9, AT), view(1, null), view(5, LATER)].toSorted(subject.compareRooms)
         expect(sorted.map((room) => room.position)).toEqual([5, 9, 1, 2])
+    })
+})
+
+describe("message views of a stop card", () => {
+    const CARD = {
+        workflow: { moduleKey: "accounting", key: "reconcile", title: "Đối soát tiền về" },
+        step: { key: "match", nodeId: "accounting.match-payment", title: "Khớp giao dịch" },
+        runId: RUN,
+        leadId: null,
+        conversationId: null,
+        by: "ai",
+        reason: "Còn thiếu 500 ₫.",
+        question: "Giữ đơn mở?",
+        facts: [],
+        suggestions: [],
+        decisions: [],
+        repeats: 1,
+        firstAt: "2026-11-10T10:00:00.000Z",
+        lastAt: "2026-11-10T10:00:00.000Z",
+        stop: {
+            version: 1,
+            stopId: "stop-1",
+            runId: RUN,
+            stepKey: "match",
+            kind: "ai_report",
+            state: "answered",
+            headline: "Đã nhận trả lời",
+            needs: { answer: false, decisions: [], verdicts: [] },
+            replies: [
+                { kind: "answer", text: "Giữ đơn mở nhé", by: "seat-ana", at: "2026-11-10T10:05:00.000Z" },
+                { kind: "timeout", text: null, by: "deadline", at: "2026-11-11T10:05:00.000Z" },
+            ],
+            repeats: 1,
+            stoppedAt: "2026-11-10T10:00:00.000Z",
+            resolvedAt: null,
+            revision: 2,
+        },
+    }
+    const line = messageOf({
+        authorKind: "agent",
+        authorId: BOT,
+        ref: { agent_message: JSON.stringify({ kind: "workflow.stopped", title: "Đã nhận trả lời", payload: CARD }) },
+    })
+
+    it("reads the repliers of the stop cards, a deadline being no person", () => {
+        expect(stopReplierIdsOf([line, messageOf()])).toEqual(["seat-ana"])
+    })
+
+    it("shows the typed stop with the name of each replier, and none for a plain line", async () => {
+        const subject = await buildSubject()
+        const view = subject.messageViewOf(line, { ...CONTEXT, stopNames: new Map([["seat-ana", "Ana"]]) })
+        expect(view.stop).toMatchObject({
+            stopId: "stop-1",
+            state: "answered",
+            workflowTitle: "Đối soát tiền về",
+            stepTitle: "Khớp giao dịch",
+            message: "Còn thiếu 500 ₫.",
+            replies: [
+                { kind: "answer", text: "Giữ đơn mở nhé", byName: "Ana" },
+                { kind: "timeout", byName: "" },
+            ],
+            revision: 2,
+        })
+        expect(subject.messageViewOf(line, CONTEXT).stop?.replies[0]?.byName).toBe("")
+        expect(subject.messageViewOf(messageOf(), CONTEXT).stop).toBeNull()
     })
 })

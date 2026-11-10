@@ -18,8 +18,8 @@ Luật: `table-heroui-native-section-head` (one content per card; owner work fla
 Grammar: `SurfaceCard kind="list"` `fact` row `action` with `isPrimary` (`frame/SurfaceCard/index.d.ts`, `surfaceCardData.d.ts`).
 
 ## Bảng nguồn tri thức (Nguồn, Loại, Cập nhật, Trạng thái, phân trang, "Thêm nguồn →")
-Vì sao: a native table in the HeroUI grey frame with the 0.37.3 column API: the source column fills (minimum width, one-line ellipsis), kind, updated and status fit their content, kind and updated leave below tablet, so no column collapses to one character. The head has the label with a count chip and one link "Thêm nguồn →"; the footer is the pagination with its "1–6 trên 7 nguồn" summary; on a phone each row is a list item.
-Luật: `table-heroui-native-section-head` (table is the HeroUI native look with the footer in the grey; section head with one link), memory "Table columns" (width fill / fit / px, hideBelow, phone list).
+Vì sao: a table drawn as a white list card (Grammar 0.37.8+, no grey frame, muted 12 column labels on white, full-width row dividers) with the 0.37.9 column rule: short columns are fit + one line and never wrap, only the fill column truncates: the source column fills (minimum width, one-line ellipsis), kind, updated and status fit their content, kind and updated leave below tablet, so no column collapses to one character. The head has the label with a count chip and one link "Thêm nguồn →"; the footer is the pagination with its "1–6 trên 7 nguồn" summary; on a phone each row is a list item.
+Luật: `table-heroui-native-section-head` (SUPERSEDED block: the table is a white list card, not the grey frame; section head with one link stays), memory "Table columns" (width fill / fit / px, hideBelow, phone list).
 Grammar: `DataTable` `columns` `width` `minWidth` `truncate` `hideBelow` `footer` `phone="list"` (`branch/DataTable/index.d.ts`), `Pagination summary` (`composite/Pagination/index.d.ts`), `Link variant="head"`.
 
 ## Danh sách "Câu trả lời mẫu" (câu hỏi, câu trả lời, "Thêm câu trả lời →")

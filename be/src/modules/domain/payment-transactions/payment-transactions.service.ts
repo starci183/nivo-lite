@@ -58,6 +58,7 @@ export class PaymentTransactionsService {
                 payer: movement.payer,
                 externalRef: movement.externalRef,
                 account: movement.account,
+                connectionId: movement.connectionId,
                 occurredAt: movement.occurredAt ?? this.clock.now().toISOString(),
                 status: "unmatched",
             })

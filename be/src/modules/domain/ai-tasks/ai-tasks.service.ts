@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import { InjectAi } from "@modules/integrations/ai"
-import type { AiChatAnswer, AiService } from "@modules/integrations/ai"
+import type { AiAgentTurns, AiChatAnswer, AiChatModel, AiService } from "@modules/integrations/ai"
 import { InjectLogger } from "@modules/platform/logging"
 import { InjectTimer } from "@modules/platform/retry"
 import type { Timer } from "@modules/platform/retry"
@@ -39,7 +39,11 @@ import {
     RESPONSIBILITY_SCHEMA,
 } from "./ai-tasks.schema"
 import type { TaskSchema } from "./ai-tasks.schema"
+import { agentReasoningOf, agentToolChoiceOf, agentTurnMetaOf } from "./agent-turn.policy"
+import type { AgentTurnsAsk } from "./agent-turn.policy"
+import type { NodeReasoning } from "./ai-tasks.options"
 import { callLimitsOf } from "./call-limits.policy"
+import { meteredCallOf } from "./metered-call.policy"
 import type { CallKind } from "./call-limits.policy"
 import { NOT_JSON, failedTries, newTries, pauseBeforeRetryMs, triesRemain } from "./model-tries.policy"
 import type { Tries } from "./model-tries.policy"
@@ -77,6 +81,8 @@ interface CallOptions {
     readonly call: CallKind
     /** The reasoning a node named for its own call, when it named one. */
     readonly reasoning?: NodeAsk["reasoning"]
+    /** The call kind booked with the usage: a graph node's `purpose`; absent for a fixed task. */
+    readonly purpose?: string
 }
 
 /** A task with neither a schema nor retrieval. */
@@ -351,6 +357,7 @@ Current rules: ${currentRules}`,
         return this.complete(scope, nodeMessagesOf(await this.inlined(ask)), false, nodeMetaOf(ask), {
             ...NODE_TEXT,
             reasoning: ask.reasoning,
+            purpose: ask.purpose,
         })
     }
 
@@ -364,7 +371,115 @@ Current rules: ${currentRules}`,
             "node",
             newTries(),
             ask.reasoning,
+            ask.purpose,
         )
+    }
+
+    /**
+     * The model side of ONE run of a node's agent loop (the loop on LangChain's prebuilt agent). The loop asks for one agent turn
+     * at a time; each turn runs under the same policy as every model call of a node: three tries in all, the first with the node
+     * call's deadline and each retry with the shorter one, a pause before retrying a provider error, a turn cut at the token limit
+     * or empty counted as the AI's failure, the workspace's allowance checked before the first call and each answered try metered
+     * as engine work of the node's namespace. When the last try fails too the turn throws unavailable, with the tries and the
+     * failure of each: the loop lets it out, and the step stops as "the AI failed".
+     */
+    nodeAgentTurns(scope: AiTaskScope, ask: AgentTurnsAsk): AiAgentTurns {
+        const reasoning = agentReasoningOf(this.options, ask)
+        const meta = agentTurnMetaOf(ask)
+        const request: TextRequest = {
+            workspaceId: scope.workspaceId,
+            messages: [],
+            json: false,
+            kind: scope.kind ?? meta.kind,
+            module: scope.module ?? meta.module,
+            purpose: ask.purpose,
+        }
+        const asked = reasoning === "default" ? undefined : reasoning
+        let built: AiChatModel | null | undefined
+        // Built when first read, once: the client a first try gets, for the loop to construct its agent over. Never asked.
+        const firstClient = (): AiChatModel | undefined => {
+            built ??= this.ai.turnModel({ ...callLimitsOf(this.options, "node", asked, 1), affinity: request.workspaceId })
+            return built ?? undefined
+        }
+        return {
+            toolChoice: agentToolChoiceOf(reasoning),
+            turn: (attempt) => this.agentTurn(scope, request, asked, attempt),
+            get model(): AiChatModel | undefined {
+                return firstClient()
+            },
+        }
+    }
+
+    /**
+     * The pictures of a node's agent as the data addresses a model request carries, in order, the unreadable ones left out: the
+     * same inlining, with the same limits, as a node's JSON call does for its own pictures. For a loop that builds its messages
+     * itself (the agent loop): a provider outside the deployment cannot fetch the store's own addresses. No pictures, no read.
+     */
+    async nodeImages(_scope: AiTaskScope, images: ReadonlyArray<string>): Promise<ReadonlyArray<string>> {
+        if (images.length === 0) return []
+        return (await this.images.inline(images)).images
+    }
+
+    /** One agent turn: the allowance, then the tries. */
+    private async agentTurn<M>(
+        scope: AiTaskScope,
+        request: TextRequest,
+        reasoning: Exclude<NodeReasoning, "default"> | undefined,
+        attempt: (model: AiChatModel, tryNumber: number) => Promise<M>,
+    ): Promise<M> {
+        if (!this.ai.available()) throw new AiTasksError({ code: AiTasksErrorCode.Unavailable })
+        const notice = await this.meter.blockedBy(request.workspaceId, request.kind, scope.locale)
+        if (notice !== null) {
+            throw new AiTasksError({ code: AiTasksErrorCode.QuotaBlocked, params: { message: notice.message } })
+        }
+        return this.triedTurn(request, reasoning, attempt, newTries())
+    }
+
+    /** The message of the first try of the turn that is an answer, metered; or the unavailable error once no try is left. */
+    private async triedTurn<M>(
+        request: TextRequest,
+        reasoning: Exclude<NodeReasoning, "default"> | undefined,
+        attempt: (model: AiChatModel, tryNumber: number) => Promise<M>,
+        tries: Tries,
+    ): Promise<M> {
+        if (!triesRemain(tries)) throw failedTries(AiTasksErrorCode.Unavailable, tries)
+        tries.made += 1
+        const limits = { ...callLimitsOf(this.options, "node", reasoning, tries.made), affinity: request.workspaceId }
+        const model = this.ai.turnModel(limits)
+        if (model === null) throw new AiTasksError({ code: AiTasksErrorCode.Unavailable })
+        const elapsed = this.ai.stopwatch()
+        const tried = await attempt(model, tries.made).then(
+            (message) => ({ message, read: this.ai.readTurn(message, limits, elapsed()) }),
+            (cause: unknown) => ({ message: undefined, read: { ok: false as const, failure: this.ai.failureOfThrow(cause) } }),
+        )
+        if (tried.read.ok && tried.message !== undefined) {
+            await this.meter.record({
+                workspaceId: request.workspaceId,
+                kind: request.kind,
+                module: request.module,
+                usage: {
+                    prompt_tokens: tried.read.usage.promptTokens ?? 0,
+                    completion_tokens: tried.read.usage.completionTokens ?? 0,
+                    cached_tokens: tried.read.usage.cachedTokens ?? 0,
+                    cost: tried.read.usage.costUsd ?? 0,
+                    model: tried.read.model,
+                },
+                completionChars: tried.read.textChars,
+                call: meteredCallOf(request.purpose, tried.read.usage, tries.made, tried.read.served),
+            })
+            return tried.message
+        }
+        const failure = tried.read.ok ? "empty" : tried.read.failure
+        tries.failures.push(failure)
+        this.logger.warn(AiTasksLogEvent.Retried, {
+            workspaceId: request.workspaceId,
+            module: request.module,
+            tried: tries.made,
+            failure,
+            again: triesRemain(tries),
+        })
+        if (triesRemain(tries)) await this.paused(pauseBeforeRetryMs(failure))
+        return this.triedTurn(request, reasoning, attempt, tries)
     }
 
     /** The node's call with its pictures carried as bytes: a provider outside the deployment cannot fetch the store's own addresses. */
@@ -408,6 +523,7 @@ Current rules: ${currentRules}`,
             json,
             kind: scope.kind ?? meta.kind,
             module: scope.module ?? meta.module,
+            ...(options.purpose === undefined ? {} : { purpose: options.purpose }),
         }
         return this.metered(scope, request, options, tries)
     }
@@ -432,6 +548,8 @@ Current rules: ${currentRules}`,
             affinity: request.workspaceId,
         }
         const answer = await this.answered(request, call, options, tries)
+        // Read after the answer: `answered` counted the try that gave it.
+        const answeredOnTry = tries.made
         await this.meter.record({
             workspaceId: request.workspaceId,
             kind: request.kind,
@@ -444,6 +562,7 @@ Current rules: ${currentRules}`,
                 model: answer.model,
             },
             completionChars: answer.text.length,
+            call: meteredCallOf(request.purpose, answer.usage, answeredOnTry, answer.served),
         })
         return { text: answer.text, parsed: answer.parsed }
     }
@@ -493,14 +612,22 @@ Current rules: ${currentRules}`,
         call: CallKind = "task",
         tries: Tries = newTries(),
         reasoning?: NodeAsk["reasoning"],
+        purpose?: string,
     ): Promise<JsonRecord> {
-        const ran = await this.run(scope, messages, true, meta, { schema, question: null, call, reasoning }, tries)
+        const options: CallOptions = {
+            schema,
+            question: null,
+            call,
+            reasoning,
+            ...(purpose === undefined ? {} : { purpose }),
+        }
+        const ran = await this.run(scope, messages, true, meta, options, tries)
         const parsed = ran.parsed ?? this.parseObject(ran.text)
         if (parsed !== null) return parsed
         tries.failures.push(NOT_JSON)
         if (!triesRemain(tries)) throw failedTries(AiTasksErrorCode.JsonNotReturned, tries)
         const again: ChatMessage = { role: "system", content: JSON_AGAIN }
-        return this.completeJson(scope, [...messages, again], meta, schema, call, tries, reasoning)
+        return this.completeJson(scope, [...messages, again], meta, schema, call, tries, reasoning, purpose)
     }
 
     /** The JSON object of an answer: bare, fenced, or the first {...} block inside prose. */

@@ -46,6 +46,55 @@ export interface UsageInput {
     readonly completionChars: number
     /** The agent run the call was made for; absent, the run in scope (a step being executed) is used, else the call belongs to no run. */
     readonly runId?: string | undefined
+    /** What the call was and how it went (its kind, hidden reasoning, time, try, upstream); absent books none of it. */
+    readonly call?: UsageCallFacts | undefined
+}
+
+/** What one model call was and how it went, beside what it cost: what the run page shows per call kind. */
+export interface UsageCallFacts {
+    /** The call kind: `<node id>:<tag>` of a graph node's call (e.g. `accounting.match-payment:agent`); null for a fixed task. */
+    readonly purpose: string | null
+    /** The answer's tokens spent on hidden reasoning (a part of the completion tokens); null when the endpoint did not say. */
+    readonly reasoningTokens: number | null
+    /** The wall time of the try that answered, milliseconds; null when not measured. */
+    readonly durationMs: number | null
+    /** Which try of the call answered, from one: a 3 means two tries failed before it (failed tries are never booked). */
+    readonly tryNumber: number | null
+    /** The upstream of the endpoint that served the call (OpenRouter's `provider`); null when it did not say. */
+    readonly upstream: string | null
+    /** Why the model stopped (`stop`, `tool_calls`); null when it did not say. */
+    readonly finishReason: string | null
+}
+
+/**
+ * The model calls of one agent run, grouped by call kind, for the run page: where the run's time, prompt cache and hidden reasoning
+ * went. Ordered by the first call of each kind.
+ */
+export interface RunCallKindUsage {
+    /** The call kind (`<node id>:<tag>`), or the usage kind for a fixed task of the app. */
+    readonly purpose: string
+    /** The calls of this kind that answered (failed tries are never booked). */
+    readonly calls: number
+    /** The highest try number among them: above 1, some try of this kind failed before one answered. */
+    readonly maxTry: number | null
+    /** Prompt tokens of all the calls, cached ones included. */
+    readonly promptTokens: number
+    /** Prompt tokens served from the provider's prompt cache. */
+    readonly cachedTokens: number
+    /** Completion tokens, reasoning included. */
+    readonly completionTokens: number
+    /** The part of the completion tokens that was hidden reasoning. */
+    readonly reasoningTokens: number
+    /** The wall time of all the calls together, milliseconds (calls not measured count zero). */
+    readonly durationMs: number
+    /** The slowest call, milliseconds; null when none was measured. */
+    readonly slowestMs: number | null
+    /** The cost of the calls in USD. */
+    readonly costUsd: number
+    /** The upstreams that served them, sorted, without repeats. */
+    readonly upstreams: ReadonlyArray<string>
+    /** Why the model stopped, sorted, without repeats. */
+    readonly finishReasons: ReadonlyArray<string>
 }
 
 /** The tokens and cost one call is booked with. */

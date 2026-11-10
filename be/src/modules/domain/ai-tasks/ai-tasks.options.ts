@@ -1,8 +1,8 @@
 import type { InjectionToken } from "@nestjs/common"
-import type { AiOptions } from "@modules/integrations/ai"
+import type { AiOptions, AiRouting } from "@modules/integrations/ai"
 
 /** The reasoning a node call asks for: none, an effort, or the model's own default. */
-export type NodeReasoning = "off" | "low" | "medium" | "high" | "default"
+export type NodeReasoning = "off" | "minimal" | "low" | "medium" | "high" | "default"
 
 /** The prompt library tunables, parsed once at boot. */
 export interface AiTasksOptions {
@@ -20,6 +20,19 @@ export interface AiTasksOptions {
     readonly nodeRetryTimeoutMs?: number
     /** The reasoning a graph node's call asks a reasoning model for; `default` (or absent) leaves the model's own. */
     readonly nodeReasoning?: NodeReasoning
+    /**
+     * The most completion tokens a graph node's call may produce, reasoning included (`max_tokens`). An effort is a share of this
+     * limit at the endpoint, so without it "low" bounds nothing. Absent: no limit is sent. An answer cut at it is an AI failure
+     * and is tried again, so it must leave room for the largest answer a step gives.
+     */
+    readonly nodeMaxTokens?: number
+    /** The most tokens a graph node's call may spend on reasoning, as a direct cap, for a model that takes one. Absent: none is sent. */
+    readonly nodeReasoningMaxTokens?: number
+    /**
+     * Which upstreams of the endpoint serve a graph node's call, and in what order (OpenRouter's `provider` object). Absent: nothing
+     * is sent and the endpoint routes the call as it likes. A task never carries it.
+     */
+    readonly nodeRouting?: AiRouting
     /** The AI endpoint the app root registers the LangChain client with: the gateway of this deployment, or a provider. */
     readonly endpoint: AiOptions
 }

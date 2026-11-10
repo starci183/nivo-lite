@@ -22,7 +22,10 @@ export class ListProviderTemplateCandidatesResolver {
         @Args("input") input: ProviderTemplateCandidatesInput,
     ): Promise<Array<ProviderTemplateCandidateType>> {
         const result = await this.queryBus.execute(
-            new ListProviderTemplateCandidatesQuery({ request: { workspaceId, provider: input.provider }, principal }),
+            new ListProviderTemplateCandidatesQuery({
+                request: { workspaceId, connectionId: input.connectionId },
+                principal,
+            }),
         )
         return toProviderTemplateCandidateTypes(result)
     }

@@ -64,7 +64,10 @@ const build = async ({ handler = true }: Options = {}) => {
     })
     const outbox = jobRecordingOutbox()
     const real = new AgentTurnQueue(outbox)
-    const queue = mock<AgentTurnQueue>({ enqueueNextDrain: jest.fn(real.enqueueNextDrain.bind(real)) })
+    const queue = mock<AgentTurnQueue>({
+        enqueueNextDrain: jest.fn(real.enqueueNextDrain.bind(real)),
+        enqueueDrain: jest.fn(real.enqueueDrain.bind(real)),
+    })
     const endedWakes = mock<AgentEndedWakesService>({ tell: jest.fn().mockResolvedValue(undefined) })
     const logger = mock<Logger>()
     const tx = fakeTransaction(mockEntityManager())
@@ -273,6 +276,210 @@ describe("AgentDrainService.drain, a scope that has nothing to run", () => {
             turn(),
             expect.objectContaining({ status: "held", reason: "no_handler" }),
         )
+    })
+})
+
+describe("AgentDrainService.drain, a drain that came before the burst window ended", () => {
+    const WAIT = { ms: 1100, wakeId: "wake-9" }
+
+    it("schedules one follow-up drain for the time the database says is left, in a transaction, and runs nothing", async () => {
+        const { service, turns, handler, outbox, logger } = await build()
+        turns.begin.mockResolvedValue({ result: "idle", ended: [], wait: WAIT })
+
+        await service.drain(PAYLOAD)
+
+        expect(outbox.written).toEqual([
+            {
+                queue: "agent_turn",
+                payload: { ...PAYLOAD, rearm: 1 },
+                job: "agent-turn.drain",
+                dedupeKey: "agent-turn:agent-1:rearm:conversation:conv-1:wake-9:1",
+                delayMs: 1100,
+            },
+        ])
+        expect(outbox.inTransaction).toBe(true)
+        expect(handler.prepare).not.toHaveBeenCalled()
+        expect(turns.finish).not.toHaveBeenCalled()
+        expect(logger.info).toHaveBeenCalledWith(AgentWorkLogEvent.DrainRearmed, {
+            agentId: "agent-1",
+            scopeKey: "conversation:conv-1",
+            wakeId: "wake-9",
+            hop: 1,
+            waitMs: 1100,
+        })
+    })
+
+    it("asks for the same follow-up from every drain that waits for the same message, and for the next hop from a follow-up that came early", async () => {
+        const { service, turns, outbox } = await build()
+        turns.begin.mockResolvedValue({ result: "idle", ended: [], wait: WAIT })
+
+        await service.drain(PAYLOAD)
+        await service.drain(PAYLOAD)
+        await service.drain({ ...PAYLOAD, rearm: 1 } as typeof PAYLOAD)
+
+        expect(outbox.written.map((job) => job.dedupeKey)).toEqual([
+            "agent-turn:agent-1:rearm:conversation:conv-1:wake-9:1",
+            "agent-turn:agent-1:rearm:conversation:conv-1:wake-9:1",
+            "agent-turn:agent-1:rearm:conversation:conv-1:wake-9:2",
+        ])
+        expect(outbox.written[2]?.payload).toEqual({ ...PAYLOAD, rearm: 2 })
+    })
+
+    it("never schedules a follow-up that comes back at once: a wait of a few milliseconds waits the floor", async () => {
+        const { service, turns, outbox } = await build()
+        turns.begin.mockResolvedValue({ result: "idle", ended: [], wait: { ms: 3, wakeId: "wake-9" } })
+
+        await service.drain(PAYLOAD)
+
+        expect(outbox.written[0]?.delayMs).toBe(250)
+    })
+
+    it("stops after the last hop and leaves the wake to the minute sweep, so no chain of jobs lives on a clock that never settles", async () => {
+        const { service, turns, outbox, logger } = await build()
+        turns.begin.mockResolvedValue({ result: "idle", ended: [], wait: WAIT })
+
+        await service.drain({ ...PAYLOAD, rearm: 5 } as typeof PAYLOAD)
+
+        expect(outbox.written).toEqual([])
+        expect(logger.warn).toHaveBeenCalledWith(AgentWorkLogEvent.DrainRearmSpent, expect.objectContaining({ hop: 6 }))
+    })
+
+    it("schedules nothing for an idle scope that tells no wait", async () => {
+        const { service, turns, outbox } = await build()
+        turns.begin.mockResolvedValue({ result: "idle", ended: [] })
+
+        await service.drain(PAYLOAD)
+
+        expect(outbox.written).toEqual([])
+    })
+})
+
+/**
+ * A conversation under two clocks. The host's clock times the broker: a job comes `delayMs` host milliseconds after it was written.
+ * The database's clock stamps the wakes and judges the window, and reads the host's clock plus an offset that may change while a
+ * drain waits. The gate is the rule of `agent_turn_begin`: wait while the newest pending wake is inside the window (less half a
+ * second) and the oldest inside the longest wait, telling how long is left; else take the oldest wake and merge the others.
+ */
+const WINDOW_MS = 6000
+const MAX_MS = 20_000
+
+interface Wake {
+    readonly id: string
+    readonly createdAt: number
+    status: "pending" | "running" | "skipped"
+}
+
+const underTwoClocks = async (messagesAt: ReadonlyArray<number>, offsetAt: (hostMs: number) => number) => {
+    const fixture = await build()
+    let host = 0
+    const database = () => host + offsetAt(host)
+    const wakes: Array<Wake> = []
+    const begun: Array<{ readonly hostMs: number; readonly wakeId: string; readonly merged: ReadonlyArray<string> }> = []
+    const jobs: Array<{ readonly at: number; readonly payload: typeof PAYLOAD }> = []
+    const keys = new Set<string>()
+    let read = 0
+    fixture.turns.begin.mockImplementation(() => {
+        const pending = wakes.filter((wake) => wake.status === "pending")
+        const [oldest] = pending
+        const newest = pending.at(-1)
+        if (oldest === undefined || newest === undefined) return Promise.resolve({ result: "idle", ended: [] })
+        const open = Math.min(newest.createdAt + WINDOW_MS - 500, oldest.createdAt + MAX_MS)
+        if (open > database()) {
+            return Promise.resolve({ result: "idle", ended: [], wait: { ms: Math.ceil(open - database()), wakeId: newest.id } })
+        }
+        for (const wake of pending) wake.status = wake === oldest ? "running" : "skipped"
+        begun.push({ hostMs: host, wakeId: oldest.id, merged: pending.slice(1).map((wake) => wake.id) })
+        return Promise.resolve({ result: "begun", turn: turn({ wakeId: oldest.id }), ended: [] })
+    })
+    /** The jobs the drain wrote since the last look, each once per dedupe key, due `delayMs` host milliseconds from now. */
+    const collect = () => {
+        for (const job of fixture.outbox.written.slice(read)) {
+            const key = job.dedupeKey ?? ""
+            if (keys.has(key)) continue
+            keys.add(key)
+            jobs.push({ at: host + (job.delayMs ?? 0), payload: job.payload as typeof PAYLOAD })
+        }
+        read = fixture.outbox.written.length
+    }
+    // Each message writes its wake (stamped by the database) and its own drain, one window ahead.
+    const arrivals = messagesAt.map((at, index) => ({ at, id: `wake-${String(index + 1)}` }))
+    const next = (): { readonly at: number; readonly run: () => Promise<void> } | undefined => {
+        const arrival = arrivals[0]
+        const job = jobs.toSorted((a, b) => a.at - b.at)[0]
+        if (arrival !== undefined && (job === undefined || arrival.at <= job.at)) {
+            return {
+                at: arrival.at,
+                run: () => {
+                    arrivals.shift()
+                    wakes.push({ id: arrival.id, createdAt: database(), status: "pending" })
+                    jobs.push({ at: host + WINDOW_MS, payload: PAYLOAD })
+                    return Promise.resolve()
+                },
+            }
+        }
+        if (job === undefined) return undefined
+        return {
+            at: job.at,
+            run: async () => {
+                jobs.splice(jobs.indexOf(job), 1)
+                await fixture.service.drain(job.payload)
+                collect()
+            },
+        }
+    }
+    let drains = 0
+    for (let event = next(); event !== undefined; event = next()) {
+        host = event.at
+        await event.run()
+        drains += 1
+    }
+    return { begun, wakes, followUps: keys.size, events: drains, endedAt: host }
+}
+
+/** The database clock falls `ms` behind the host's one second after the first message (the host is then that far ahead). */
+const fallsBehind = (ms: number) => (hostMs: number) => (hostMs >= 1000 ? -ms : 0)
+
+describe("AgentDrainService.drain, a conversation whose database and host clocks disagree", () => {
+    it.each([
+        { ahead: 1500, startsBy: 7000 },
+        { ahead: 5000, startsBy: 10_500 },
+    ])("starts a lone message after the window and one follow-up when the host runs $ahead ms ahead", async ({ ahead, startsBy }) => {
+        const { begun, followUps, endedAt } = await underTwoClocks([0], fallsBehind(ahead))
+
+        expect(begun).toEqual([{ hostMs: startsBy, wakeId: "wake-1", merged: [] }])
+        expect(followUps).toBe(1)
+        // Nothing is left for the minute sweep, and no job outlives the turn.
+        expect(endedAt).toBe(startsBy)
+    })
+
+    it("starts a lone message at its own drain, with no follow-up, when the host runs 1500 ms behind or the clocks only differ by a constant", async () => {
+        const behind = await underTwoClocks([0], (hostMs) => (hostMs >= 1000 ? 1500 : 0))
+        const constant = await underTwoClocks([0], () => -1500)
+
+        for (const run of [behind, constant]) {
+            expect(run.begun).toEqual([{ hostMs: WINDOW_MS, wakeId: "wake-1", merged: [] }])
+            expect(run.followUps).toBe(0)
+        }
+    })
+
+    it.each([
+        { name: "the host 1500 ms ahead", offset: (hostMs: number) => (hostMs >= 5000 ? -1500 : 0), startsAt: 11_000, followUps: 1 },
+        { name: "the host 5000 ms ahead", offset: (hostMs: number) => (hostMs >= 5000 ? -5000 : 0), startsAt: 14_500, followUps: 1 },
+        { name: "the host 1500 ms behind", offset: (hostMs: number) => (hostMs >= 5000 ? 1500 : 0), startsAt: 8000, followUps: 1 },
+    ])("still makes one turn of a burst of three messages with $name, and runs no wake twice", async ({ offset, startsAt, followUps }) => {
+        const run = await underTwoClocks([0, 2000, 4000], offset)
+
+        expect(run.begun).toEqual([{ hostMs: startsAt, wakeId: "wake-1", merged: ["wake-2", "wake-3"] }])
+        expect(run.wakes.map((wake) => wake.status)).toEqual(["running", "skipped", "skipped"])
+        // The three drains that waited for the last message asked for one follow-up between them.
+        expect(run.followUps).toBe(followUps)
+    })
+
+    it("follows a clock that is stepped back twice with two follow-ups, one after the other, and still one turn", async () => {
+        const { begun, followUps } = await underTwoClocks([0], (hostMs) => (hostMs >= 6500 ? -3000 : hostMs >= 1000 ? -1500 : 0))
+
+        expect(begun).toEqual([{ hostMs: 8500, wakeId: "wake-1", merged: [] }])
+        expect(followUps).toBe(2)
     })
 })
 

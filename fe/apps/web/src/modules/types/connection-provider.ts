@@ -35,8 +35,6 @@ export interface ConnectionAgentUse {
     /** The module key of the agent, which picks its kind mark. */
     readonly module: string
     readonly purpose: string
-    readonly level: string
-    readonly tone: "neutral" | "accent" | "warning"
 }
 
 /** One connection of a provider page with the agents that use it. */

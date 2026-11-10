@@ -3,8 +3,11 @@ import { EntityEngineService } from "@modules/domain/entity-engine"
 import { isRecord } from "@modules/platform/primitives"
 import type { AggregateRow, RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { AgentRunRecordsService } from "./agent-run-records.service"
-import { stepRecordOf } from "./agent-runs.mapper"
+import { runEngineOf, runRecordOf, stepRecordOf } from "./agent-runs.mapper"
 import type { OptionalRunDetail, RunListEntry, RunStepCall, RunStepDetail } from "./agent-runs-view.contracts"
+
+/** The entity of a run, read whole for one run's page. */
+const RUN = "agent.run"
 
 /** The most runs the list of an agent holds. */
 export const RUNS_LISTED = 50
@@ -93,13 +96,15 @@ export class AgentRunsViewService {
         })
     }
 
-    /** One run of the agent with its steps in order, or null when the agent has no such run. */
+    /** One run of the agent with its steps in order and the engine it is on, or null when the agent has no such run. */
     detail(workspaceId: string, agentId: string, runId: string): Promise<OptionalRunDetail> {
         return this.engine.scoped(workspaceId, async (tx) => {
-            const run = await this.records.run(tx, runId)
-            if (run === null || run.agentId !== agentId) return null
+            const row = await this.engine.get(tx, RUN, runId)
+            if (row === null) return null
+            const run = runRecordOf(row)
+            if (run.agentId !== agentId) return null
             const rows = await this.records.stepRowsOf(tx, runId)
-            return { run, steps: rows.map(stepDetailOf) }
+            return { run, engine: runEngineOf(row), steps: rows.map((step) => stepDetailOf(step)) }
         })
     }
 }

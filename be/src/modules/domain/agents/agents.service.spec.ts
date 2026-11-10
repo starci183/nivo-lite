@@ -1,7 +1,6 @@
 import { Not } from "typeorm"
 import { Test } from "@nestjs/testing"
 import {
-    AGENT_BOUND_CONNECTION,
     AGENT_LENS_COUNTS,
     AGENT_OPEN_GAPS,
     agentEntityOf,
@@ -9,7 +8,6 @@ import {
     agentMemberOf as memberOf,
 } from "@tests/fixtures/builders/agents.builder"
 import {
-    CONNECTIONS_EXPECTED,
     DASHBOARD_LISTS,
     WAITING_EXPECTED,
 } from "@tests/fixtures/builders/agents-dashboard.builder"
@@ -53,9 +51,6 @@ const build = async (entityManager: MockEntityManager, member: WorkspaceMember =
         countsFor: jest.fn(() => Promise.resolve(AGENT_LENS_COUNTS)),
         openGapsOf: jest.fn(() => Promise.resolve(AGENT_OPEN_GAPS)),
     })
-    const bindings = mock<AgentConnectionsDirectory>({
-        connectionsFor: jest.fn(() => Promise.resolve([AGENT_BOUND_CONNECTION])),
-    })
     const logger = mock<Logger>()
     const ownership = mock<AgentOwnershipService>()
     const creation = mock<AgentCreationService>({ create: jest.fn(() => Promise.resolve(summaryOf(AGENT))) })
@@ -67,7 +62,6 @@ const build = async (entityManager: MockEntityManager, member: WorkspaceMember =
             { provide: LOGGER, useValue: logger },
             { provide: AGENTS_INSTALLATIONS, useValue: installations },
             { provide: WorkspaceMembersService, useValue: members },
-            { provide: AGENTS_CONNECTIONS, useValue: bindings },
             { provide: AgentOwnershipService, useValue: ownership },
             { provide: AgentCreationService, useValue: creation },
             { provide: AGENTS_WORK, useValue: work },
@@ -79,7 +73,6 @@ const build = async (entityManager: MockEntityManager, member: WorkspaceMember =
         members,
         installations,
         knowledge,
-        bindings,
         logger,
         ownership,
         creation,
@@ -287,7 +280,7 @@ describe("AgentsService", () => {
     describe("dashboard", () => {
         const stubs = mockEntityManager()
 
-        it("loads the four regions of one instance for a manager", async () => {
+        it("loads the three regions of one instance for a manager", async () => {
             const { service, installations } = await build(stubs, memberOf(), DASHBOARD_LISTS)
 
             const data = await service.dashboard("u1", { workspaceId: "w1", module: "chatbot", installationId: "i1" })
@@ -295,13 +288,12 @@ describe("AgentsService", () => {
             expect(data.agent).toEqual({ id: "a1", name: "Chatbot Q1", mode: "assist" })
             expect(data.waiting).toEqual(WAITING_EXPECTED)
             expect(data.done).toMatchObject({ ok: true, data: { count: 2 } })
-            expect(data.connections).toEqual(CONNECTIONS_EXPECTED)
             expect(data.knowledge).toMatchObject({ ok: true, data: { audience: "customer", gaps: { openCount: 2 } } })
             expect(installations.byId).toHaveBeenCalledWith("w1", "i1")
         })
 
-        it("asks the work item reads, the lenses and the bindings with the instance scope", async () => {
-            const { service, knowledge, bindings, work } = await build(stubs, memberOf(), DASHBOARD_LISTS)
+        it("asks the work item reads and the lenses with the instance scope", async () => {
+            const { service, knowledge, work } = await build(stubs, memberOf(), DASHBOARD_LISTS)
 
             await service.dashboard("u1", { workspaceId: "w1", module: "chatbot", installationId: "i1" })
 
@@ -325,13 +317,6 @@ describe("AgentsService", () => {
             })
             expect(knowledge.countsFor).toHaveBeenCalledWith("w1", "chatbot", "i1")
             expect(knowledge.openGapsOf).toHaveBeenCalledWith("w1", "chatbot", 3)
-            expect(bindings.connectionsFor).toHaveBeenCalledWith("a1", [
-                "inbound_chat",
-                "outbound_chat",
-                "bank_feed",
-                "data_source",
-                "tool",
-            ])
         })
     })
 })
@@ -352,16 +337,14 @@ describe("AgentsService", () => {
             expect(knowledge.openGapsOf).not.toHaveBeenCalled()
         })
 
-        it("has no agent and no connections for a module nobody installed", async () => {
+        it("has no agent for a module nobody installed", async () => {
             const em = mockEntityManager()
-            const { service, installations, bindings } = await build(em)
+            const { service, installations } = await build(em)
             installations.firstOfModule.mockResolvedValue(null)
 
             const data = await service.dashboard("u1", { workspaceId: "w1", module: "chatbot", installationId: null })
 
             expect(data.agent).toBeNull()
-            expect(data.connections).toEqual({ ok: true, data: [] })
-            expect(bindings.connectionsFor).not.toHaveBeenCalled()
         })
 
         it("fails a region in place without taking the page down", async () => {

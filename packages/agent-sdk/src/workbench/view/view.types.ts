@@ -142,24 +142,6 @@ export interface WorkbenchDoneRegionView {
     readonly emptyDescription: string
 }
 
-/** What the connections region shows once read. */
-export interface WorkbenchConnectionsRegionView {
-    /** The one short chip at the end of the region's row: how many connections work. */
-    readonly summary: string
-    readonly manageLabel: string
-    readonly manageHref: string
-    readonly rows: ReadonlyArray<{
-        readonly id: string
-        readonly name: string
-        readonly description: string
-        readonly statusLabel: string
-        readonly statusTone: BadgeTone
-        readonly accessLabel: string
-    }>
-    readonly emptyMessage: string
-    readonly emptyDescription: string
-}
-
 /** The open knowledge gaps of the agent. */
 export interface WorkbenchKnowledgeGapsView {
     readonly label: string
@@ -208,11 +190,10 @@ export interface WorkbenchRegionSlot<T> extends SlotPanelProps<T> {
     readonly label: string
 }
 
-/** Four independently drawn dashboard regions; each keeps its real status and placeholder. */
+/** Three independently drawn dashboard regions; each keeps its real status and placeholder. */
 export interface WorkbenchDashboardRegions {
     readonly waiting: WorkbenchRegionSlot<WorkbenchWaitingRegionView>
     readonly done: WorkbenchRegionSlot<WorkbenchDoneRegionView>
-    readonly connections: WorkbenchRegionSlot<WorkbenchConnectionsRegionView>
     readonly knowledge: WorkbenchRegionSlot<WorkbenchKnowledgeRegionView>
 }
 

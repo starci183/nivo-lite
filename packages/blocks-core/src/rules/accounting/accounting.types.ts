@@ -26,6 +26,8 @@ export interface TransactionRecord {
     readonly status: TransactionStatus
     /** The order the transaction paid; null while it paid none. */
     readonly orderId: string | null
+    /** The connected account the money arrived on; absent or null in records from before accounts were kept. */
+    readonly connectionId?: string | null | undefined
     /** The bank's own reference of the movement (the provider transaction id): the one key of a ledger line; absent in older records. */
     readonly externalRef?: string | null | undefined
 }

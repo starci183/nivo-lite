@@ -4,6 +4,8 @@ import {
     Cluster,
     DataTable,
     EmptyNotice,
+    Icon,
+    Link,
     Section,
     Text,
     TextAction,
@@ -25,7 +27,7 @@ export interface AgentWorkflowVersionTableCopy {
     readonly running: string
     readonly old: string
     readonly rollback: string
-    readonly diff: string
+    readonly open: string
     readonly confirmTitle: (number: number) => string
     readonly confirmBody: (number: number) => string
     readonly confirm: string
@@ -33,10 +35,9 @@ export interface AgentWorkflowVersionTableCopy {
     readonly empty: string
 }
 
-/** What a person does with a version: go back to it, or see what it changed. */
+/** What a person does with a version: go back to it. Seeing what it changed is the link of its row. */
 interface VersionActions {
     readonly rollback: (number: number) => void
-    readonly diff: (number: number) => void
 }
 
 /** What the table of versions draws and what it does. */
@@ -44,6 +45,8 @@ interface AgentWorkflowVersionTableProps {
     readonly props: {
         readonly copy: AgentWorkflowVersionTableCopy
         readonly versions: ReadonlyArray<WorkflowVersionRowView>
+        /** The address of the page of one version. */
+        readonly hrefOf: (number: number) => string
         readonly isLoading: boolean
     }
     readonly on: VersionActions
@@ -59,10 +62,9 @@ interface StateCellProps {
     readonly version: WorkflowVersionRowView
     readonly copy: AgentWorkflowVersionTableCopy
     readonly onAsk: (number: number) => void
-    readonly onDiff: (number: number) => void
 }
 
-/** "Running" on the current version, "Old" with the way back on the others, and the way to see what it changed. */
+/** "Running" on the current version, "Old" with the way back on the others. */
 const StateCell = (props: StateCellProps) => (
     <Cluster gap="row" wrap={false}>
         {props.version.isActive ? (
@@ -75,7 +77,6 @@ const StateCell = (props: StateCellProps) => (
                 <TextAction onPress={() => props.onAsk(props.version.number)}>{props.copy.rollback}</TextAction>
             </>
         )}
-        <TextAction onPress={() => props.onDiff(props.version.number)}>{props.copy.diff}</TextAction>
     </Cluster>
 )
 
@@ -89,14 +90,20 @@ export const AgentWorkflowVersionTable = (props: AgentWorkflowVersionTableProps)
         { id: "author", label: copy.author, width: "fit", hideBelow: "tablet" },
         { id: "note", label: copy.note },
         { id: "status", label: copy.status, width: "fit" },
+        { id: "open", label: copy.open, width: "fit", isLabelHidden: true },
     ]
-    const rows: ReadonlyArray<VersionRow> = versions.map((version) => ({ id: String(version.number), version }))
+    const rows: ReadonlyArray<VersionRow> = versions.map((version) => ({
+        id: String(version.number),
+        href: props.props.hrefOf(version.number),
+        version,
+    }))
     const renderCell = (row: VersionRow, columnId: string) => {
-        if (columnId === "number") return <Text>{row.version.title}</Text>
+        if (columnId === "number") return <Link href={props.props.hrefOf(row.version.number)}>{row.version.title}</Link>
         if (columnId === "date") return <Text tone="muted">{row.version.date ?? ""}</Text>
         if (columnId === "author") return <Text tone="muted">{row.version.author ?? ""}</Text>
         if (columnId === "note") return <Text tone="muted">{row.version.note ?? row.version.description}</Text>
-        return <StateCell version={row.version} copy={copy} onAsk={setAsked} onDiff={props.on.diff} />
+        if (columnId === "open") return <Icon source={nivoIconSource("disclosure", "leading")} />
+        return <StateCell version={row.version} copy={copy} onAsk={setAsked} />
     }
     return (
         <>

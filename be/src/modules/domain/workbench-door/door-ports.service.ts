@@ -99,7 +99,7 @@ export class DoorPortsService {
         if (regions === undefined) return unprovided(port)
         return {
             of: (agentId, locale = run.locale) =>
-                regions.connectionsWithCandidatesOf(run.workspaceId, agentId, locale),
+                regions.connectionsOf(run.workspaceId, agentId, locale),
         }
     }
 

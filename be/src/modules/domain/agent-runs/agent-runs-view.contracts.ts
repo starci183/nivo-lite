@@ -1,6 +1,9 @@
 import type { AgentStepStatus, StepJson } from "./agent-runs.contracts"
 import type { RunRecord } from "./agent-runs-records.contracts"
 
+/** The engine a run started on and finishes on: the old step engine, or a LangGraph thread whose progress is projected into the rows. */
+export type RunEngine = "legacy" | "langgraph"
+
 /** One run of the list of an agent with how far its steps have come. */
 export interface RunListEntry {
     /** The run. */
@@ -67,6 +70,11 @@ export interface RunStepDetail {
 export interface RunDetail {
     /** The run. */
     readonly run: RunRecord
+    /**
+     * The engine the run is on. A `langgraph` run moves only through its thread (a stop is answered on its card, never by the old
+     * resume), so a door that acts on a run reads this first. Optional only while callers outside this capability build details by hand.
+     */
+    readonly engine?: RunEngine
     /** The steps in order. */
     readonly steps: ReadonlyArray<RunStepDetail>
 }

@@ -29,7 +29,6 @@ const connection = (provider: string): BoundConnection => ({
     botUsername: null,
     accountMasked: null,
     status: "connected",
-    access: "auto",
     purpose: "outbound_chat",
 })
 
@@ -318,7 +317,6 @@ describe("ShiftsNotifyService hasChannel", () => {
                 "agent-1",
                 "outbound_chat",
                 {
-                    acting: true,
                     connectedOnly: true,
                     providers: ["telegram"],
                 },
@@ -334,8 +332,8 @@ describe("ShiftsNotifyService hasChannel", () => {
         await expect(service.hasChannel("ws-1")).resolves.toBe(true)
 
         expect(bindings.connectionsFor.mock.calls).toEqual([
-            ["agent-1", "outbound_chat", { acting: true, connectedOnly: true, providers: ["telegram"] }],
-            ["agent-1", "outbound_chat", { acting: true, connectedOnly: true, providers: ["zalo_oa"] }],
+            ["agent-1", "outbound_chat", { connectedOnly: true, providers: ["telegram"] }],
+            ["agent-1", "outbound_chat", { connectedOnly: true, providers: ["zalo_oa"] }],
         ])
     })
 })

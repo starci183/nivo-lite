@@ -15,6 +15,8 @@ export enum WorkPerformersErrorCode {
     ApprovalInvalid = "WORK_PERFORMERS_APPROVAL_INVALID",
     /** The connector refused or did not answer the approved call. */
     ConnectorRefused = "WORK_PERFORMERS_CONNECTOR_REFUSED",
+    /** A call of an ability ticked `ask` was approved by someone other than the workspace owner. */
+    ApprovalNotOwner = "WORK_PERFORMERS_APPROVAL_NOT_OWNER",
 }
 
 /** How each work-performers code travels. */
@@ -25,6 +27,7 @@ export const WORK_PERFORMERS_ERROR_KINDS: Record<WorkPerformersErrorCode, ErrorK
     [WorkPerformersErrorCode.ReminderEmpty]: "invalid",
     [WorkPerformersErrorCode.ApprovalInvalid]: "invalid",
     [WorkPerformersErrorCode.ConnectorRefused]: "unavailable",
+    [WorkPerformersErrorCode.ApprovalNotOwner]: "forbidden",
 }
 
 /** The one error class of the work-performers capability. */

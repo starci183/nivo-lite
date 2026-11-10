@@ -87,7 +87,6 @@ const ANSWERS: Readonly<Record<string, FixtureAnswer>> = {
             lastEventAt: null,
             firstEvent: null,
             agentIds: MODULE_KEYS.map((key) => `agent-${key}`),
-            grants: [],
         })),
     }),
     BrainTodo: () => ({

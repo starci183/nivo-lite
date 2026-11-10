@@ -8,7 +8,7 @@ const catalog = new Map<string, AnyEntityDefinition>(FLOW_F_ENTITIES.map((entity
 const entityNamed = (name: string): AnyEntityDefinition | undefined => catalog.get(name)
 
 describe("flow F entity declarations", () => {
-    it("declares the thirty-two entities once each", () => {
+    it("declares the thirty-three entities once each", () => {
         expect(FLOW_F_ENTITIES.map((entity) => entity.name)).toEqual([
             "sales.lead",
             "sales.order",
@@ -43,6 +43,7 @@ describe("flow F entity declarations", () => {
             "agent.run-workflow",
             "agent.lead-freeze",
             "agent.conversation-hold",
+            "agent.run-stop",
             "agent.lead-memory",
             "workspace.settings",
         ])

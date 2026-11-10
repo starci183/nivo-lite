@@ -18,9 +18,9 @@ Luật: `pink-page-surface-rule.md`, `surfacecard-select-subtitle.md`.
 Grammar: `SurfaceCard`, `Input`, `node_modules/@starci/grammar/dist/core/frame/SurfaceCard/index.d.ts`; composite `EmailField`.
 
 ## Nút "Gửi link đặt lại" và liên kết "Quay lại đăng nhập"
-Vì sao: one commit pill and one inline link beneath it; the link leaves the flow without competing with the commit.
-Luật: `owner-colors-exact.md`, `page-header-left-sublabel-xs.md` (link look).
-Grammar: `Button intent="commit"`, `Link`, `node_modules/@starci/grammar/dist/core/leaf/Button/index.d.ts`.
+Vì sao: one commit pill and one standalone back link beneath it in the foreground colour: the link leaves the flow without competing with the single red CTA.
+Luật: `red-budget-links-foreground`, `owner-colors-exact.md` (red = the one CTA).
+Grammar: `Button intent="commit"`, `Link variant="plain"`, `node_modules/@starci/grammar/dist/core/leaf/Button/index.d.ts`.
 
 ## Dòng "Nhập email, chúng tôi sẽ gửi link..." dưới thẻ
 Vì sao: SAI — the instruction is a loose caption under the card (AuthPanel `note`), not a subtitle under the title; should sit under the heading.
@@ -32,7 +32,7 @@ Vì sao: CHƯA RÕ — the sent state (`composites/CheckEmail`) has no screensho
 Luật: `verify-against-visualize.md`.
 Grammar: `Alert`, `TextAction`, `node_modules/@starci/grammar/dist/core/composite/Alert/index.d.ts`.
 
-## Chân trang pháp lý
-Vì sao: SAI — same bar as login; the 390 shot wraps the links and detaches the arrows.
-Luật: `page-header-left-sublabel-xs.md`.
+## Chân trang pháp lý ("Chính sách quyền riêng tư", "Điều khoản sử dụng")
+Vì sao: one centred bar of two standalone secondary links in the foreground colour (red is kept for the one CTA); since Grammar 0.37.14 internal links carry no arrow, so each link stays on one line at 390.
+Luật: `red-budget-links-foreground`, `page-header-left-sublabel-xs.md`.
 Grammar: `NavLandmark layout="bar"`, `node_modules/@starci/grammar/dist/core/frame/NavLandmark/index.d.ts`.

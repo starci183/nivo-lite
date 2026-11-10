@@ -4,6 +4,7 @@ import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
 import type { AgentRunStatus, AgentStepStatus, StepEffect, StepJson, StepView } from "./agent-runs.contracts"
 import type { RunStepView, RunView } from "./agent-runs-engine.contracts"
 import type { RunRecord, StepRecord } from "./agent-runs-records.contracts"
+import type { RunEngine } from "./agent-runs-view.contracts"
 import type { RouteStep } from "./policies/failure-route.policy"
 
 const RUN_STATUSES: ReadonlyArray<AgentRunStatus> = [
@@ -17,6 +18,8 @@ const RUN_STATUSES: ReadonlyArray<AgentRunStatus> = [
     "compensated",
     "cancelled",
 ]
+
+const RUN_ENGINES: ReadonlyArray<RunEngine> = ["legacy", "langgraph"]
 
 const STEP_STATUSES: ReadonlyArray<AgentStepStatus> = [
     "pending",
@@ -116,6 +119,10 @@ export const runRecordOf = (row: RecordRow): RunRecord => ({
     cancelledAt: dateOrNull(row.data, "cancelledAt"),
     cancelledBy: textOrNull(row.data, "cancelledBy"),
 })
+
+/** The engine a run is on: `legacy` for a row that names none (every run opened before the field existed), else the one it names. */
+export const runEngineOf = (row: RecordRow): RunEngine =>
+    row.data.engine === null || row.data.engine === undefined ? "legacy" : enumOf(row.data, "engine", RUN_ENGINES)
 
 /** A step record read from the engine's row. */
 export const stepRecordOf = (row: RecordRow): StepRecord => ({

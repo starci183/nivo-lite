@@ -1,6 +1,5 @@
 import { Alert, AlertDialog, Stack, Text } from "@starci/grammar/common"
 import type { DropdownMenuEntry } from "@starci/grammar/common"
-import { ConnectionAccessMenu } from "@/components/composites/ConnectionAccessMenu"
 import { ConnectionCopyInput } from "@/components/composites/ConnectionCopyInput"
 import { ConnectionSmtpPanel } from "@/components/composites/ConnectionSmtpPanel"
 import type { RowDialog, RowPrimary, RowView } from "@/modules/types"
@@ -9,7 +8,6 @@ import type { RowDialog, RowPrimary, RowView } from "@/modules/types"
 export interface RowCommandSet {
     readonly primary: (id: RowPrimary["id"]) => void
     readonly menu: (id: string) => void
-    readonly pick: (agentId: string, value: string) => void
     readonly dialog: (kind: "disconnect" | "remove", action: "confirm" | "cancel") => void
     readonly smtpToggle: (panel: "test" | "password") => void
     readonly smtpTo: (value: string) => void
@@ -68,20 +66,23 @@ export const ConnectionRowQuestions = (props: ConnectionRowQuestionsProps) => (
 interface ConnectionRowBodyProps {
     readonly view: RowView
     readonly on: RowCommandSet
-    /** The access picker is part of the detail pane; a row inside a drawer keeps it beside its buttons. */
-    readonly withAccess?: boolean
     /** The page's band draws the two questions (its menu opens them); a row inside a drawer keeps them here. */
     readonly withoutQuestions?: boolean
 }
 
-/** What a connection says beyond its name: alerts, notes, the SMTP panel, the keys, the last note, and the two destructive questions. */
+/** Whether the connection says anything beyond its name (the two questions aside). */
+const hasContent = (view: RowView): boolean =>
+    view.alerts.length > 0 || view.notes.length > 0 || view.smtp !== null || view.keys !== null || view.note !== null
+
+/**
+ * What a connection says beyond its name: alerts, notes, the SMTP panel, the keys, the last note, and the two destructive questions.
+ * Nothing at all when there is nothing to say and the questions live elsewhere, so the page keeps no empty slot.
+ */
 export const ConnectionRowBody = (props: ConnectionRowBodyProps) => {
     const { view, on } = props
+    if (props.withoutQuestions === true && !hasContent(view)) return null
     return (
         <Stack gap="row">
-            {props.withAccess !== true || view.access === null ? null : (
-                <ConnectionAccessMenu {...view.access} onPick={on.pick} />
-            )}
             {view.alerts.map((alert) => (
                 <Alert key={alert.id} tone={alert.tone} title={alert.title} description={alert.description} />
             ))}

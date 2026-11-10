@@ -31,4 +31,3 @@ export { useConnectionsData } from "./useConnectionsData"
 export { useConnectionsRole } from "./useConnectionsRole"
 export { useConnectionRefusal } from "./useConnectionRefusal"
 
-export type { AgentWish } from "./useSetConnectionAgents"

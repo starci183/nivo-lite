@@ -8,7 +8,12 @@ export type { AgentGraphOnTimeout, AgentGraphOp, AgentGraphThen } from "./agentG
 export type { AgentGraphLayoutView, AgentGraphPaint, AgentGraphPhoneView, AgentGraphSideTab } from "./agentGraph"
 export type { AgentGraphRunData, AgentGraphWaitData, AgentGraphWords } from "./agentGraph"
 export type { AgentGraphAction, AgentGraphCommands } from "./agentGraphView"
-export type { AgentGraphCanvasView, AgentGraphLegendItem, AgentGraphModeView, AgentGraphPanelView } from "./agentGraphView"
+export type {
+    AgentGraphCanvasView,
+    AgentGraphLegendItem,
+    AgentGraphModeView,
+    AgentGraphPanelView,
+} from "./agentGraphView"
 export type { AgentGraphAdderView, AgentGraphBranchesView } from "./agentGraphView"
 export type { AgentGraphAnswerView, AgentGraphDecideEditorView, AgentGraphOptionView } from "./agentGraphView"
 export type { AgentGraphDetailView, AgentGraphHeadView, AgentGraphProblemsView } from "./agentGraphView"
@@ -26,7 +31,7 @@ export type {
 } from "./booking"
 export type { ConsoleIconName, ConsoleNavItem, ConsoleSessionView, ConsoleWorkspace } from "./console"
 export { ACCOUNT_ITEM, PROFILE_ITEM, SIGN_OUT_ITEM } from "./console"
-export type { Access, Environment, Provider, ProviderKind, Purpose, AgentOption, Connection } from "./connections"
+export type { Environment, Provider, ProviderKind, Purpose, AgentOption, Connection } from "./connections"
 export type { ConnectionStatus, ConnectionTone, ConnectionCheck } from "./connections"
 export type { ConnectionFactView, ConnectionHeadView } from "./connections"
 export type { ConnectionLineView, ConnectionRailLinesView } from "./connections"
@@ -48,8 +53,6 @@ export type {
 } from "./connections-panes"
 export type { ConnectionNextStep, ConnectionsFigures, ConnectionsListView } from "./connections-panes"
 export type {
-    AccessAgentView,
-    AccessView,
     RowAlert,
     RowCopyLabels,
     RowDialog,
@@ -262,7 +265,12 @@ export type {
 } from "./connection-provider"
 export type { WorkspaceMenuView, WorkspaceRenameView } from "./workspaces-menu"
 export type { PendingInviteView, WorkspaceReasonView } from "./workspaces-invites"
-export type { WorkspaceDeleteImpactRow, WorkspaceDeleteView, WorkspaceLeaveOwnerView, WorkspaceLeaveView } from "./workspaces-dialogs"
+export type {
+    WorkspaceDeleteImpactRow,
+    WorkspaceDeleteView,
+    WorkspaceLeaveOwnerView,
+    WorkspaceLeaveView,
+} from "./workspaces-dialogs"
 export type {
     WorkspaceMenuCommand,
     WorkspaceTableRowView,
@@ -312,9 +320,9 @@ export type {
     WorkflowCreateView,
     WorkflowDetailView,
     WorkflowDiffReadView,
+    WorkflowDiffGrantView,
     WorkflowDiffStepView,
     WorkflowDiffView,
-    WorkflowDrawerView,
     WorkflowHeadView,
     WorkflowListView,
     WorkflowMark,

@@ -1,10 +1,19 @@
 import type { ReactNode } from "react"
-import { Badge, Disclosure, EmptyNotice, Link, Section, Stack, Text } from "@starci/grammar/common"
-import type { BadgeTone, ListRowData } from "@starci/grammar/common"
+import {
+    Badge,
+    Disclosure,
+    EmptyNotice,
+    Link,
+    Section,
+    Stack,
+    Text,
+    type BadgeTone,
+    type ListRowData,
+} from "@starci/grammar/common"
 import { SlotView } from "@nivo-lite/agent-sdk/client"
 import type { WorkbenchDashboardRegions } from "@/modules/types"
 
-/** What the three collapsed rows under the decisions read: the regions of the dashboard and the command that asks for them again. */
+/** What the collapsed rows under the decisions read: the regions of the dashboard and the command that asks for them again. */
 interface WorkbenchRegionsProps {
     readonly regions: WorkbenchDashboardRegions
     readonly onRetry: () => void
@@ -31,7 +40,7 @@ const RegionRow = (props: RegionRowProps) => (
             </Badge>
         }
         body={
-            <Stack gap="row">
+            <Stack gap="section">
                 <Section
                     kind="list"
                     title={props.label}
@@ -52,7 +61,7 @@ const RegionRow = (props: RegionRowProps) => (
 )
 
 /**
- * The agent's finished work, its connections and its knowledge as three collapsed rows under the decisions: a title and one
+ * The agent's finished work and its knowledge as two collapsed rows under the decisions: a title and one
  * chip each, the list opens under it. Each row reads and fails on its own: its title stays real while the chip and the lines
  * wait, and a failed read shows the band with its retry in the row's place.
  */
@@ -75,29 +84,6 @@ export const WorkbenchRegions = (props: WorkbenchRegionsProps) => (
                     emptyMessage={view.emptyMessage}
                     emptyDescription={view.emptyDescription}
                     after={<Link href={view.logHref}>{view.logLabel}</Link>}
-                />
-            )}
-        />
-        <SlotView
-            {...props.regions.connections}
-            onRetry={props.onRetry}
-            render={(view, isLoading) => (
-                <RegionRow
-                    label={props.regions.connections.label}
-                    chip={{ text: view.summary, tone: "neutral" }}
-                    isLoading={isLoading}
-                    items={view.rows.map((row) => ({
-                        id: row.id,
-                        title: row.name,
-                        description: row.description,
-                        badges: [
-                            { label: row.statusLabel, tone: row.statusTone, isDot: true },
-                            { label: row.accessLabel, tone: "neutral" as const },
-                        ],
-                    }))}
-                    emptyMessage={view.emptyMessage}
-                    emptyDescription={view.emptyDescription}
-                    after={<Link href={view.manageHref}>{view.manageLabel}</Link>}
                 />
             )}
         />

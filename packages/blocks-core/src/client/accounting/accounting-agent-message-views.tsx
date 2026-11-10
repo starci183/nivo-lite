@@ -45,8 +45,9 @@ const reportPreview = (payload: unknown): ReactNode => {
             {report.differences.length === 0 ? null : (
                 <DescriptionList layout="columns" isDivided={false} items={differenceItemsOf(report)} />
             )}
-            {report.notes.map((note) => (
-                <Text key={note} size="sm" tone="muted">
+            {report.notes.map((note, index) => (
+                // A note has no id of its own and two notes may read the same: the place keeps each key unique and stable.
+                <Text key={`note-${String(index)}`} size="sm" tone="muted">
                     {note}
                 </Text>
             ))}

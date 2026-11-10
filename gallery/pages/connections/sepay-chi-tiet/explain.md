@@ -22,12 +22,12 @@ Vì sao: SAI — a nine-row details card; the useful facts (bank, account, owner
 Luật: `table-heroui-native-section-head.md` (raw ids in "Chi tiết kỹ thuật"), `type-scale-14-12.md`.
 Grammar: `DescriptionList`, `CopyField`, `Disclosure`, `node_modules/@starci/grammar/dist/core/composite/DescriptionList/index.d.ts`, `node_modules/@starci/grammar/dist/core/branch/CopyField/index.d.ts`.
 
-## Cột phải: thẻ "Chưa có sự kiện nào. Khi SePay gửi webhook, chúng hiện ở đây."
-Vì sao: SAI — an empty state in a floating white card with no label above it (the other detail pages label this column "Kiểm tra từng phần" or "Sự kiện"); a lone sentence in a card; an empty state on a pane is frameless.
-Luật: `table-heroui-native-section-head.md` (a lone sentence is never a card), ui-laws "EmptyNotice on a pane is frameless".
-Grammar: `EmptyNotice frame="frameless"`, `node_modules/@starci/grammar/dist/core/composite/EmptyNotice/index.d.ts`.
+## Cột phải "Sự kiện webhook" + chip "Trực tiếp" (danh sách tiền vào, mỗi dòng chip 200)
+Vì sao: this capture (2026-11-10, after the K-BLK re-shoot) has events, so the rail is a labelled list card: "+2.000 ₫ · Tiền vào" over "20:05 · xác thực OK" with a 200 status chip at the row end; the earlier empty-card flag belonged to the old capture with no events. The green left bar on the rows is the same state encoding flagged on the Telegram and Zalo checks columns; the verdict lives there, not repeated here.
+Luật: `table-heroui-native-section-head.md` (head = label left, one chip), `nivo-surface-layering.md`.
+Grammar: `SurfaceCard kind="list"`, `Badge`, `node_modules/@starci/grammar/dist/core/composite/ListRow/index.d.ts`; block `SepayRail`.
 
-## Khối "Agent dùng kết nối này" (Kế toán "Tự làm trong giới hạn ▾", Sales "Chỉ đọc ▾")
-Vì sao: SAI — (partly right, see the flagged part) the head is label + a grey count chip "2" at the far RIGHT (SAI, the chip belongs next to the label); the card is one list: avatar with a gear badge, name and a grey Select-style button for the permission level, no assign control in this state. Correct list anatomy.
-Luật: `table-heroui-native-section-head.md`.
-Grammar: `SurfaceCard` + `ListRow`, `Select`, `node_modules/@starci/grammar/dist/core/composite/ListRow/index.d.ts`.
+## Khối "Agent dùng kết nối này 2" (Kế toán, Sales, mỗi dòng nút "Gỡ")
+Vì sao: the agents bound to this connection, one list card: agent avatar + name, and at the row end one neutral sm "Gỡ" (owner only) that unbinds the agent; the card's header zone holds the "Giao cho agent" Select that binds another agent (owner only, when one is left). There is no per-connection level any more (K-BLK 2026-11-10, "one rights model"): what each agent may do through the account is ticked on the agent's Quyền tab, so the row carries no "Tự làm / Hỏi trước / Chỉ đọc" picker. Still open from the old audit: the head's count chip placement and the three forms of the bind command (header Select here, none on payOS overview while no agent is bound).
+Luật: `provider-rights-abilities.md` (one rights model, rights per connected account on the Quyền tab), `verify-against-visualize.md` (sm button, no icon), `row-control-clearance.md` (control keeps p-3/p-4), `table-heroui-native-section-head.md`.
+Grammar: `SurfaceCard kind="list" headers`, `Select`, `Button intent="neutral" size="sm"`, `node_modules/@starci/grammar/dist/core/composite/SurfaceCard/index.d.ts`, `node_modules/@starci/grammar/dist/core/leaf/Button/index.d.ts`; composite `ConnectionGrantRows`, frame `ConnectionGrantsBand`.

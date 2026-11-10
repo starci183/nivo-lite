@@ -49,7 +49,6 @@ export const ConnectionProvider = (props: ConnectionProviderProps) => {
                         action: t("providerColAction"),
                     },
                     open: t("providerOpen"),
-                    agentsNote: t("providerAgentsNote"),
                     agentsNone: t("providerAgentsNone"),
                     agentsGrant: t("providerAgentsGrant"),
                     agentsHref: workspaceHref(workspaceId, AGENTS_ROUTE),

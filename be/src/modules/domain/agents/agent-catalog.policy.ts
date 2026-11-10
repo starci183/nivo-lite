@@ -14,7 +14,6 @@ export const grantsOfAgent = (agentId: string, grants: ReadonlyArray<AgentGrantV
                 botUsername: connection.botUsername,
                 accountMasked: connection.accountMasked,
                 status: connection.status,
-                access: connection.access,
                 purpose: connection.purpose,
             }),
         )

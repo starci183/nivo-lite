@@ -55,6 +55,7 @@ const ARG = /^[a-zA-Z]\w{0,60}$/u
 const LOG_MAX = 200
 const LOG_DEFAULT = 50
 const MANAGER = ["owner", "manager"] as const
+const OWNER = ["owner"] as const
 
 /** The refusal of a console input, naming the field. */
 const invalid = (field: string): McpGatewayError =>
@@ -146,9 +147,9 @@ export class McpGatewayAdminService {
     }
 
     /** Detaches an agent from a provider: every ability it held there goes. */
-    async detachProvider(actor: ConnectionActor, agentId: string, provider: string): Promise<void> {
+    async detachProvider(actor: ConnectionActor, agentId: string, connectionId: string): Promise<void> {
         await this.connections.authorize(actor, MANAGER)
-        attachmentDone(await this.abilities.detach(actor.workspaceId, agentId, provider))
+        attachmentDone(await this.abilities.detach(actor.workspaceId, agentId, connectionId))
     }
 
     /** Ticks one ability of an attachment (`auto` or `ask`) or unticks it (`off`). */
@@ -156,7 +157,7 @@ export class McpGatewayAdminService {
         const giver = giverOf(await this.connections.authorize(actor, MANAGER))
         attachmentDone(
             await this.abilities.setAbility(
-                { workspaceId: actor.workspaceId, agentId: input.agentId, provider: input.provider },
+                { workspaceId: actor.workspaceId, agentId: input.agentId, connectionId: input.connectionId },
                 input.ability,
                 input.mode,
                 actor.principalId,
@@ -165,22 +166,31 @@ export class McpGatewayAdminService {
         )
     }
 
+    /**
+     * Names the payment account the shop receives money on by default: the account a payment QR is drawn on. The owner's choice alone;
+     * with one working payment account the shop needs none.
+     */
+    async setDefaultReceivingAccount(actor: ConnectionActor, connectionId: string): Promise<void> {
+        await this.connections.authorize(actor, OWNER)
+        attachmentDone(await this.abilities.setDefaultAccount(actor.workspaceId, connectionId, actor.principalId))
+    }
+
     /** The agents a template would attach to a provider connected after they were created, each with the ticks proposed. */
-    async templateCandidates(actor: ConnectionActor, provider: string): Promise<ReadonlyArray<TemplateCandidate>> {
+    async templateCandidates(actor: ConnectionActor, connectionId: string): Promise<ReadonlyArray<TemplateCandidate>> {
         await this.connections.authorize(actor, MANAGER)
-        return this.abilities.templateCandidates(actor.workspaceId, provider)
+        return this.abilities.templateCandidates(actor.workspaceId, connectionId)
     }
 
     /** Attaches the listed agents to a provider by their template; answers the agents attached. */
     async attachByTemplate(
         actor: ConnectionActor,
-        provider: string,
+        connectionId: string,
         agentIds: ReadonlyArray<string>,
     ): Promise<ReadonlyArray<string>> {
         const giver = giverOf(await this.connections.authorize(actor, MANAGER))
         const made = await this.abilities.attachByTemplate(
             actor.workspaceId,
-            provider,
+            connectionId,
             agentIds,
             actor.principalId,
             giver,

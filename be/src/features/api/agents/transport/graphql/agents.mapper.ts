@@ -41,6 +41,10 @@ import type { RevokeAgentConnectionInput } from "./dto/revoke-agent-connection.i
 import type { SetAgentStatusInput } from "./dto/set-agent-status.input"
 import type { SetAgentTextsInput } from "./dto/set-agent-texts.input"
 
+
+/** What the deprecated `access` of a bound pair reads now: a binding has no level (rights live in the agent's attachments). */
+const BOUND_LEVEL = "auto"
+
 /** Maps the workspace of the request to the engine status request. */
 export const toWorkspaceRequest = (workspaceId: string): GetEngineStatusRequest => ({ workspaceId })
 
@@ -74,11 +78,11 @@ export const toListAgentConnectionsRequest = (
 
 /** Maps the connections granted to an agent to the GraphQL type. */
 export const toAgentConnectionsType = (connections: ReadonlyArray<BoundConnection>): Array<AgentConnectionType> =>
-    connections.map((connection) => ({ ...connection }))
+    connections.map((connection) => ({ ...connection, access: BOUND_LEVEL }))
 
 /** Maps the agents granted each connection to the GraphQL type. */
 export const toConnectionGrantsType = (grants: ReadonlyArray<ConnectionGrant>): Array<ConnectionAgentGrantType> =>
-    grants.map((grant) => ({ ...grant }))
+    grants.map((grant) => ({ ...grant, access: BOUND_LEVEL }))
 
 /** Maps the new agent of the GraphQL input, with the workspace it names, to the command request. */
 export const toCreateAgentRequest = (workspaceId: string, input: CreateAgentInput): CreateAgentRequest => ({
@@ -128,7 +132,12 @@ export const toRequestAgentSyncRequest = (
 export const toGrantAgentConnectionRequest = (
     workspaceId: string,
     input: GrantAgentConnectionInput,
-): GrantAgentConnectionRequest => ({ workspaceId, ...input })
+): GrantAgentConnectionRequest => ({
+    workspaceId,
+    agentId: input.agentId,
+    connectionId: input.connectionId,
+    purpose: input.purpose,
+})
 
 /** Maps the revocation of the GraphQL input, with the workspace it names, to the command request. */
 export const toRevokeAgentConnectionRequest = (

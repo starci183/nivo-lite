@@ -8,5 +8,5 @@ export const toSetAgentConnectionsRequest = (
 ): SetAgentConnectionsRequest => ({
     workspaceId,
     agentId: input.agentId,
-    connections: input.connections.map((wish) => ({ connectionId: wish.connectionId, access: wish.access })),
+    connections: input.connections.map((wish) => ({ connectionId: wish.connectionId })),
 })

@@ -26,7 +26,7 @@ export const toCreateAgentInstallationRequest = (
         input.providerRights === null
             ? null
             : input.providerRights.map((right) => ({
-                  provider: right.provider,
+                  connectionId: right.connectionId,
                   abilities: Object.fromEntries(right.abilities.map((ability) => [ability.id, ability.mode])),
               })),
 })

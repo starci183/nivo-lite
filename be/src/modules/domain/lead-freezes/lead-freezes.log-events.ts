@@ -4,6 +4,8 @@ export enum LeadFreezesLogEvent {
     Frozen = "lead_freezes.frozen",
     /** A wake of a frozen customer started no run; it waits as a pending event. */
     EventHeld = "lead_freezes.event_held",
+    /** A wake of a customer whose thread run waits at an open stop started no run; it waits as a pending event of the stop's hold. */
+    HeldForStop = "lead_freezes.held_for_stop",
     /** The owner asked to retry the failed run. */
     RetryStarted = "lead_freezes.retry_started",
     /** The customer was released and the pending events written again as wakes. */

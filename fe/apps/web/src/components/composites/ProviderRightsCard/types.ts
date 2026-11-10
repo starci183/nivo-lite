@@ -14,7 +14,7 @@ export interface CapabilityModeView {
     readonly onChange: (value: string) => void
 }
 
-/** One capability row of a provider card. */
+/** One capability row of an account card. */
 export interface CapabilityRowView {
     readonly id: string
     readonly title: string
@@ -25,23 +25,25 @@ export interface CapabilityRowView {
     readonly mode: CapabilityModeView | undefined
 }
 
-/** The more-menu of a provider card (remove from agent). */
+/** The more-menu of an account card (remove from agent). */
 export interface ProviderMenuView {
     readonly label: string
     readonly entries: ReadonlyArray<DropdownMenuEntry>
 }
 
-/** The head of a provider card: logo, name, the kind line, and the menu or the link to connect it. */
+/** The head of an account card: logo, "<provider> · <account>", the kind line, a chip, and the menu or the link to connect it. */
 export interface ProviderHeadView {
     readonly name: string
+    /** One chip beside the name, e.g. "default receiving" on the shop's default receiving account. */
+    readonly badge: string | undefined
     readonly logo: string | undefined
     readonly line: string
     readonly menu: ProviderMenuView | undefined
-    /** Set when the provider is attached but not connected: the card shows only this link. */
+    /** Set when the account is attached but no longer connected: the card shows only this link. */
     readonly connectLink: { readonly label: string; readonly href: string } | undefined
 }
 
-/** One provider card: its head, then its capabilities, or a link to connect it. */
+/** One account card: its head, then the capabilities of its provider, or a link to connect it. */
 export interface ProviderRightsCardProps {
     readonly props: ProviderHeadView & {
         readonly rows: ReadonlyArray<CapabilityRowView>

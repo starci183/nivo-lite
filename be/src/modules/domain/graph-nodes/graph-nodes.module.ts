@@ -6,6 +6,7 @@ import { GraphNodeRegistryService } from "./graph-node-registry.service"
 import { GraphNodeRunTokensService } from "./graph-node-run-tokens.service"
 import {
     GRAPH_EFFECT_ONCE,
+    GRAPH_NODE_AGENT_LOOPS,
     GRAPH_NODES_OPTIONS,
     GRAPH_NODE_MODEL,
     GRAPH_NODE_TOOL_DOOR,
@@ -28,7 +29,12 @@ export class GraphNodesModule extends ConfigurableModuleClass {
                 ...(base.providers ?? []),
                 {
                     provide: GRAPH_NODES_OPTIONS,
-                    useValue: { install: options.install, model: options.model, tools: options.tools },
+                    useValue: {
+                        install: options.install,
+                        model: options.model,
+                        tools: options.tools,
+                        agentLoop: options.agentLoop,
+                    },
                 },
                 { provide: GRAPH_NODE_MODEL, useExisting: options.model },
                 GraphNodeRegistryService,
@@ -37,6 +43,9 @@ export class GraphNodesModule extends ConfigurableModuleClass {
                 GraphNodeRunTokensService,
                 { provide: GRAPH_NODE_TOOL_DOOR, useClass: options.tools },
                 { provide: GRAPH_EFFECT_ONCE, useExisting: GraphNodeEffectsService },
+                ...(options.agentLoop?.loops === undefined
+                    ? []
+                    : [{ provide: GRAPH_NODE_AGENT_LOOPS, useExisting: options.agentLoop.loops }]),
             ],
             exports: [GraphNodeRegistryService, GraphNodeHostService, GraphNodeRunTokensService, GRAPH_EFFECT_ONCE],
         }

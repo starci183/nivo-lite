@@ -1,3 +1,7 @@
+import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import type { NodeDataPort, NodeTurn } from "@modules/domain/graph-nodes"
+import { ChatConversationsService } from "@modules/domain/chat-records"
+import type { ChatHumanConversation } from "@modules/domain/chat-records"
 import { ProviderAbilitiesService } from "./provider-abilities.service"
 import { TOOL } from "@nivo-lite/blocks-core"
 import { Test } from "@nestjs/testing"
@@ -345,7 +349,7 @@ const QR = { token: "token-1", effect: TOOL.paymentQrCreate, payload: { orderId:
 
 describe("NodeToolDoorService effect rights: the context.effect road", () => {
     it("judges payment.qr.create and payment.credit.rematch by the run agent's abilities, as the gateway road does", async () => {
-        const { door, abilities } = await buildWithAbilities({ kind: "allow", provider: "sepay", ability: "qr.create" })
+        const { door, abilities } = await buildWithAbilities({ kind: "allow", provider: "sepay", ability: "qr.create", connectionId: "conn-mb" })
 
         await expect(door.effectRight(QR)).resolves.toBeNull()
         await expect(door.effectRight({ ...QR, effect: TOOL.paymentRematch })).resolves.toBeNull()
@@ -368,7 +372,7 @@ describe("NodeToolDoorService effect rights: the context.effect road", () => {
     })
 
     it("ticked ask: waits for a person with the fingerprint of the effect and its payload, and runs the call that replays it", async () => {
-        const { door, abilities } = await buildWithAbilities({ kind: "approval", provider: "sepay", ability: "qr.create" })
+        const { door, abilities } = await buildWithAbilities({ kind: "approval", provider: "sepay", ability: "qr.create", connectionId: "conn-mb" })
         const fingerprint = toolFingerprintOf(TOOL.paymentQrCreate, QR.payload)
 
         await expect(door.effectRight(QR)).rejects.toMatchObject({
@@ -376,7 +380,7 @@ describe("NodeToolDoorService effect rights: the context.effect road", () => {
             params: { tool: TOOL.paymentQrCreate, fingerprint, reason: "ask_mode" },
         })
 
-        abilities.judge.mockResolvedValue({ kind: "allow", provider: "sepay", ability: "qr.create" })
+        abilities.judge.mockResolvedValue({ kind: "allow", provider: "sepay", ability: "qr.create", connectionId: "conn-mb" })
         await expect(door.effectRight({ ...QR, approval: { by: "member-1", fingerprint } })).resolves.toBeNull()
         expect(abilities.judge).toHaveBeenLastCalledWith(CLAIMS.workspaceId, CLAIMS.agentId, TOOL.paymentQrCreate, true)
     })
@@ -395,5 +399,122 @@ describe("NodeToolDoorService effect rights: the context.effect road", () => {
         tokens.verify.mockReturnValue(null)
 
         await expect(door.effectRight(QR)).rejects.toMatchObject({ code: GraphNodesErrorCode.ToolTokenInvalid })
+    })
+})
+
+const STEP = "run-1:match"
+const BEGAN = "2026-11-10T10:00:00.000Z"
+const GUARD_TURN: NodeTurn = {
+    turnId: "run-1",
+    workspaceId: "ws-1",
+    agentId: "agent-1",
+    subject: null,
+    conversationId: null,
+    locale: "vi",
+}
+const TOLD = { channelRef: "line:run-1:match:aaaa", sentAt: "2026-11-10T09:30:00.000Z", text: "Em đã nhận, đang kiểm tra ạ." }
+
+/** The door with the conversation lines and the customers' conversations bound; `rows` are the agent lines of the conversation read. */
+const buildWithLines = async (rows: ReadonlyArray<Readonly<Record<string, unknown>>>) => {
+    const lines = mock<NodeDataPort>({ kind: "message" })
+    lines.read.mockResolvedValue([...rows])
+    const registry = mock<GraphNodeRegistryService>()
+    registry.optionalPortOf.mockImplementation((kind) => (kind === "message" ? lines : undefined))
+    const conversations = mock<ChatConversationsService>()
+    conversations.ofLeads.mockResolvedValue([
+        mock<ChatHumanConversation>({ id: "c-web", channel: "website" }),
+        mock<ChatHumanConversation>({ id: "c-zalo", channel: "zalo" }),
+    ])
+    const logger = mock<Logger>()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            NodeToolDoorService,
+            { provide: McpGatewayService, useValue: mock<McpGatewayService>() },
+            { provide: GraphNodeRunTokensService, useValue: mock<GraphNodeRunTokensService>() },
+            { provide: LOGGER, useValue: logger },
+            { provide: GraphNodeRegistryService, useValue: registry },
+            { provide: ChatConversationsService, useValue: conversations },
+        ],
+    }).compile()
+    return { door: moduleRef.get(NodeToolDoorService), lines, conversations, logger }
+}
+
+const sendOf = (payload: Readonly<Record<string, unknown>>, turn: NodeTurn = GUARD_TURN) => ({
+    effect: TOOL.customerMessageSend,
+    payload,
+    turn,
+    step: STEP,
+    startedAt: BEGAN,
+})
+
+describe("NodeToolDoorService repeat guard: one customer line per stop", () => {
+    it("refuses a second line to the same conversation when the step already told it in an earlier attempt and nobody answered since", async () => {
+        const { door, lines, logger } = await buildWithLines([TOLD])
+
+        await expect(door.repeatGuard(sendOf({ conversationId: "c-1", text: "Em đang kiểm tra ạ." }))).resolves.toEqual({
+            kind: "refused",
+            id: "already_told_for_this_stop",
+            facts: { conversationId: "c-1", line: TOLD.text, at: TOLD.sentAt },
+        })
+        expect(lines.read).toHaveBeenCalledWith(
+            GUARD_TURN,
+            { where: { conversationId: "c-1", role: "agent" }, fields: ["text", "sentAt", "channelRef"], limit: 20 },
+            "workspace",
+        )
+        expect(logger.info).toHaveBeenCalled()
+    })
+
+    it("holds on every re-run of the stop: a park-resume, a manual retry with no words, a re-drive (the turn carries no newer answer)", async () => {
+        const { door } = await buildWithLines([TOLD])
+        const older = { ...GUARD_TURN, founderAnswers: [{ text: "ok", at: "2026-11-10T09:00:00.000Z" }] }
+
+        for (const turn of [GUARD_TURN, older]) {
+            await expect(door.repeatGuard(sendOf({ conversationId: "c-1", text: "x" }, turn))).resolves.toMatchObject({
+                id: "already_told_for_this_stop",
+            })
+        }
+    })
+
+    it("lifts when the founder answered after the line: the step may tell the customer how it ended", async () => {
+        const { door } = await buildWithLines([TOLD])
+        const answered = { ...GUARD_TURN, founderAnswers: [{ text: "Cứ ghi nhận đủ", at: "2026-11-10T09:45:00.000Z" }] }
+
+        await expect(door.repeatGuard(sendOf({ conversationId: "c-1", text: "Dạ em đã ghi nhận ạ." }, answered))).resolves.toBeNull()
+    })
+
+    it("never stops the lines of one attempt, nor a first line: a line sent since this attempt began does not count", async () => {
+        const fresh = { ...TOLD, sentAt: "2026-11-10T10:00:03.000Z" }
+
+        await expect((await buildWithLines([fresh])).door.repeatGuard(sendOf({ conversationId: "c-1", text: "x" }))).resolves.toBeNull()
+        await expect((await buildWithLines([])).door.repeatGuard(sendOf({ conversationId: "c-1", text: "x" }))).resolves.toBeNull()
+    })
+
+    it("judges a message addressed by the customer on the conversation the send would pick (the bank-fed run with no conversation)", async () => {
+        const { door, lines, conversations } = await buildWithLines([TOLD])
+
+        await expect(door.repeatGuard(sendOf({ leadId: "lead-1", text: "x" }))).resolves.toMatchObject({
+            id: "already_told_for_this_stop",
+            facts: { conversationId: "c-web" },
+        })
+        await door.repeatGuard(sendOf({ leadId: "lead-1", channel: "zalo", text: "x" }))
+
+        expect(conversations.ofLeads).toHaveBeenCalledWith("ws-1", ["lead-1"])
+        expect(lines.read.mock.calls.map((call) => call[1].where?.conversationId)).toEqual(["c-web", "c-zalo"])
+    })
+
+    it("does not judge another effect, a send that addresses nobody, or a customer with no conversation", async () => {
+        const { door, lines, conversations } = await buildWithLines([TOLD])
+
+        await expect(door.repeatGuard({ ...sendOf({ conversationId: "c-1" }), effect: TOOL.teamMessagePost })).resolves.toBeNull()
+        await expect(door.repeatGuard(sendOf({ text: "x" }))).resolves.toBeNull()
+        conversations.ofLeads.mockResolvedValue([])
+        await expect(door.repeatGuard(sendOf({ leadId: "lead-9", text: "x" }))).resolves.toBeNull()
+        expect(lines.read).not.toHaveBeenCalled()
+    })
+
+    it("guards nothing in an app that serves no conversation lines", async () => {
+        const { door } = await build()
+
+        await expect(door.repeatGuard(sendOf({ conversationId: "c-1", text: "x" }))).resolves.toBeNull()
     })
 })

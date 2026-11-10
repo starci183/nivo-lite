@@ -49,12 +49,17 @@ describe("the installation regions", () => {
         expect(agentTabPath("accounting", "i1", "connections")).toBe("/agents/accounting/i1/connections")
     })
 
-    it("gives the connections of the agent of the installation with the link to its tab", async () => {
+    it("gives the providers attached to the agent of the installation with the link to its rights tab", async () => {
         const asked: Array<string> = []
         const result = await installationConnectionsRead.execute?.(providerOf(true, asked), GIVEN, CONTEXT)
         expect(result).toMatchObject({
             ok: true,
-            data: { rows: CONNECTIONS_VIEW.rows, manageHref: `/agents/accounting/${INSTALLATION}/connections` },
+            data: {
+                label: CONNECTIONS_VIEW.label,
+                rightsLabel: CONNECTIONS_VIEW.rightsLabel,
+                rows: CONNECTIONS_VIEW.rows,
+                rightsHref: `/agents/accounting/${INSTALLATION}/connections`,
+            },
         })
         expect(asked).toEqual([AGENT])
     })

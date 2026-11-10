@@ -79,6 +79,7 @@ describe("BankFeedFlowService record", () => {
             payer: "BUI NGUYEN DINH",
             externalRef: "sepay:95958515",
             account: "0123456789",
+            connectionId: "c-1",
             occurredAt: "2026-10-28T02:15:00.000Z",
         })
     })
@@ -91,7 +92,7 @@ describe("BankFeedFlowService record", () => {
         expect(transactions.record).toHaveBeenCalledWith(
             tx.em,
             "ws-1",
-            expect.objectContaining({ reference: null, payer: null, account: null, occurredAt: null }),
+            expect.objectContaining({ reference: null, payer: null, account: null, connectionId: "c-1", occurredAt: null }),
         )
     })
 })
@@ -131,6 +132,7 @@ describe("BankFeedFlowService debit", () => {
             payer: null,
             externalRef: "sepay:95958515",
             account: null,
+            connectionId: "c-1",
             occurredAt: null,
         })
         expect(tags.tagAgent).not.toHaveBeenCalled()

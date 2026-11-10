@@ -14,9 +14,13 @@ import {
     nameKeyOf,
     refsOfMessages,
     repliedIdsOf,
+    stopReplierIdsOf,
     roomViewOf,
 } from "./team-chat-view.policy"
 import type { MessageViewContext, RoomViewContext } from "./team-chat-view.policy"
+
+/** The most members of a workspace read to name the people who replied to stop cards. */
+const STOP_NAMES_LOOKED = 200
 
 @Injectable()
 /** Turns the rows of the chat into what a screen shows: names of people and agents, unread counts, pins, file addresses and decision states. */
@@ -125,6 +129,32 @@ export class TeamChatViewsService {
             memberKind: "user",
             memberId: viewerId,
         })
-        return { names, pinned, urls, approvals, reactions, quoted: new Map(quotedRows.map((row) => [row.id, row])) }
+        const stopNames = await this.stopNamesOf(workspaceId, stopReplierIdsOf(messages))
+        return {
+            names,
+            pinned,
+            urls,
+            approvals,
+            reactions,
+            quoted: new Map(quotedRows.map((row) => [row.id, row])),
+            stopNames,
+        }
+    }
+
+    /**
+     * The names of the people who replied to stop cards, by the id the stop keeps: a member seat (the stop door keeps the seat) or an
+     * account. Read only when a card on the page has replies; the deciders (owners, managers) come first in the directory read.
+     */
+    private async stopNamesOf(workspaceId: string, ids: ReadonlyArray<string>): Promise<Map<string, string>> {
+        if (ids.length === 0) return new Map()
+        const wanted = new Set(ids)
+        const [seats, accounts] = await Promise.all([
+            this.people.directory(workspaceId, STOP_NAMES_LOOKED),
+            this.people.namesOf(workspaceId, ids),
+        ])
+        return new Map([
+            ...accounts.map((person) => [person.userId, person.displayName] as const),
+            ...seats.filter((seat) => wanted.has(seat.id)).map((seat) => [seat.id, seat.display_name] as const),
+        ])
     }
 }

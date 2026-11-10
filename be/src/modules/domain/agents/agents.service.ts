@@ -24,12 +24,10 @@ import type {
 import { AgentCreationService } from "./agent-creation.service"
 import type { NewNamedAgent } from "./agent-name.contracts"
 import { AgentOwnershipService } from "./agent-ownership.service"
-import { InjectAgentConnections, InjectInstallations, InjectKnowledge, InjectWorkDashboard } from "./agents.decorators"
+import { InjectInstallations, InjectKnowledge, InjectWorkDashboard } from "./agents.decorators"
 import { AgentsLogEvent } from "./agents.log-events"
 import { firstProfileOf, refOf, summaryOf } from "./agents.mapper"
 import type {
-    AgentConnectionsDirectory,
-    BoundConnectionView,
     InstallationDirectory,
     KnowledgeLens,
     OptionalInstallation,
@@ -41,7 +39,6 @@ import {
     TEST_RUN_PATTERN,
     agentIdOf,
     agentOf,
-    connectionItemsOf,
     decisionHrefOf,
     itemOf,
     knowledgeOf,
@@ -53,7 +50,6 @@ import { AgentEntity } from "./persistence/entities"
 
 const DAY_MS = 86_400_000
 const DONE_WINDOW_DAYS = 7
-const DASHBOARD_PURPOSES = ["inbound_chat", "outbound_chat", "bank_feed", "data_source", "tool"] as const
 const GOVERNORS = ["owner", "manager"] as const
 
 /** The most agents a workspace lists. */
@@ -77,7 +73,6 @@ export class AgentsService {
         @InjectLogger() private readonly logger: Logger,
         @InjectInstallations() private readonly installations: InstallationDirectory,
         private readonly members: WorkspaceMembersService,
-        @InjectAgentConnections() private readonly bindings: AgentConnectionsDirectory,
         private readonly ownership: AgentOwnershipService,
         private readonly creation: AgentCreationService,
         @InjectWorkDashboard() private readonly work: WorkDashboardDirectory,
@@ -153,19 +148,15 @@ export class AgentsService {
         // A multi-instance type shows only its own instance's work; a single-instance type keeps reading the whole department.
         const scopeId = installation?.isMulti === true ? installation.id : null
         const installationId = installation?.id ?? null
-        const [waiting, done, connections, knowledge] = await Promise.all([
+        const [waiting, done, knowledge] = await Promise.all([
             this.settle("waiting", () => this.waiting(query, scopeId, installationId)),
             this.settle("done", () => this.done(query, scopeId, installationId)),
-            this.settle("connections", async () =>
-                connectionItemsOf(await this.connectionsOf(agentIdOf(installation))),
-            ),
             this.settle("knowledge", () => this.knowledgeOf(query, installation, isManagerRole(viewer.role))),
         ])
         return {
             agent: agentOf(installation),
             waiting,
             done,
-            connections,
             knowledge,
         }
     }
@@ -282,10 +273,6 @@ export class AgentsService {
             count: totalOf(rows),
             items: rows.map((row) => itemOf(row, decisionHrefOf(query.module, installationId, row.id))),
         }
-    }
-
-    private connectionsOf(agentId: OptionalId): Promise<ReadonlyArray<BoundConnectionView>> {
-        return agentId === null ? Promise.resolve([]) : this.bindings.connectionsFor(agentId, DASHBOARD_PURPOSES)
     }
 
     private async knowledgeOf(

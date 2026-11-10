@@ -17,6 +17,7 @@ import { AttachAgentProviderResolver } from "./attach-agent-provider.resolver"
 import { DetachAgentProviderResolver } from "./detach-agent-provider.resolver"
 import { SetAgentAbilityResolver } from "./set-agent-ability.resolver"
 import { AttachProviderByTemplateResolver } from "./attach-provider-by-template.resolver"
+import { SetDefaultReceivingAccountResolver } from "./set-default-receiving-account.resolver"
 
 @Module({
     imports: [McpGatewayApiModule.register({})],
@@ -30,6 +31,7 @@ import { AttachProviderByTemplateResolver } from "./attach-provider-by-template.
         ApproveMcpConnectorResolver,
         CheckMcpConnectorResolver,
         SetMcpConnectorCredentialResolver,
+        SetDefaultReceivingAccountResolver,
         ListProviderRightsResolver,
         GetAgentAbilityProposalResolver,
         ListProviderTemplateCandidatesResolver,

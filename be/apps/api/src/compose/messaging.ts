@@ -1,11 +1,4 @@
-import {
-    CUSTOMER_TURNS_ERROR_KINDS,
-    CUSTOMER_TURNS_MESSAGES,
-    CustomerOutcomesService,
-    CustomerTurnsModule,
-    customerTurnsOptionsOf,
-    GATEWAY_TURNS_MESSAGES,
-} from "@modules/domain/customer-turns"
+import { AgentKnowledgeModule } from "@modules/domain/agent-knowledge"
 import type { DynamicModule } from "@nestjs/common"
 import { MCP_GATEWAY_ERROR_KINDS, MCP_GATEWAY_MESSAGES, McpGatewayModule } from "@modules/domain/mcp-gateway"
 import {
@@ -83,10 +76,7 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
         storage: STORAGE_ASSETS,
         publicApiUrl: options.connections.publicApiUrl,
     }),
-    ConversationsModule.register({
-        isGlobal: true,
-        outcomes: CustomerOutcomesService,
-    }),
+    ConversationsModule.register({ isGlobal: true }),
     NativeToolsModule.register({ isGlobal: true }),
     McpGatewayModule.register({
         isGlobal: true,
@@ -96,7 +86,8 @@ export const messagingModules = (options: ApiOptions): Array<DynamicModule> => [
         natives: [...NATIVE_TOOL_ADAPTERS, AgentNativeService, ChatSendNativeService, TeamChatNativeService],
     }),
     EntityEngineDoorModule.register({ isGlobal: true }),
-    CustomerTurnsModule.register({ isGlobal: true, ...customerTurnsOptionsOf(options.connections.publicApiUrl) }),
+    // What an agent knows (the lens, the recall, the knowledge search): one registration, reachable from every capability.
+    AgentKnowledgeModule.register({ isGlobal: true }),
     TelegramInboxModule.register({ isGlobal: true }),
     ZaloInboxModule.register({ isGlobal: true }),
     ZaloProviderModule.register({ isGlobal: true, ...options.zaloProvider }),
@@ -120,7 +111,6 @@ export const messagingErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKin
     TEAM_CHAT_ERROR_KINDS,
     MCP_GATEWAY_ERROR_KINDS,
     ENTITY_ENGINE_DOOR_ERROR_KINDS,
-    CUSTOMER_TURNS_ERROR_KINDS,
 ]
 
 /** The message bundles of the capabilities this group registers, in registration order. */
@@ -131,7 +121,6 @@ export const messagingMessages: ReadonlyArray<MessageBundle> = [
     CHANNELS_MESSAGES,
     CONNECTION_SECRETS_MESSAGES,
     CONVERSATIONS_MESSAGES,
-    CUSTOMER_TURNS_MESSAGES,
     MAIL_MESSAGES,
     TELEGRAM_MESSAGES,
     SEPAY_MESSAGES,
@@ -141,5 +130,4 @@ export const messagingMessages: ReadonlyArray<MessageBundle> = [
     TEAM_CHAT_MESSAGES,
     MCP_GATEWAY_MESSAGES,
     ENTITY_ENGINE_DOOR_MESSAGES,
-    GATEWAY_TURNS_MESSAGES,
 ]

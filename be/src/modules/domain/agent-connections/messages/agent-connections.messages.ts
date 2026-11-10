@@ -10,8 +10,6 @@ export const AGENT_CONNECTIONS_MESSAGES: MessageBundle = {
             "{{agent}} đang tạm dừng, còn {{channels}} giờ do {{owners}} nhận. Chọn giữ {{agent}} hoặc giữ agent đang nhận rồi bật lại.",
         "errors.AGENT_CONNECTIONS_OUT_OF_SCOPE":
             "Agent này nằm ngoài phòng và vai trò bạn quản lý. Chỉ chủ sở hữu gán kênh cho agent này.",
-        "errors.AGENT_CONNECTIONS_ACCESS_ABOVE_CEILING":
-            "Quản lý chỉ cấp tối đa quyền \"hỏi trước\". Quyền \"tự làm\" do chủ sở hữu cấp.",
     },
     en: {
         "errors.AGENT_CONNECTIONS_TARGET_NOT_FOUND": "The agent or the connection is not in this workspace.",
@@ -21,7 +19,5 @@ export const AGENT_CONNECTIONS_MESSAGES: MessageBundle = {
             "{{agent}} is paused, and {{channels}} is now answered by {{owners}}. Choose to keep {{agent}} or the agent answering now, then resume.",
         "errors.AGENT_CONNECTIONS_OUT_OF_SCOPE":
             "This agent is outside the rooms and roles you manage. Only the owner assigns channels to it.",
-        "errors.AGENT_CONNECTIONS_ACCESS_ABOVE_CEILING":
-            "Managers grant \"ask first\" at most. \"Act alone\" is the owner's to give.",
     },
 }

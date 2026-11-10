@@ -2,6 +2,8 @@ import { Test } from "@nestjs/testing"
 import { builder } from "@starci/jest-preset"
 import { McpError, McpErrorCode } from "@modules/integrations/mcp"
 import {
+    abilityDecisionOf,
+    callWordsOf,
     domainNameIn,
     failureCodeOf,
     isTimeout,
@@ -22,6 +24,8 @@ interface Subject {
     readonly isTimeout: typeof isTimeout
     readonly refusalOf: typeof refusalOf
     readonly failureCodeOf: typeof failureCodeOf
+    readonly abilityDecisionOf: typeof abilityDecisionOf
+    readonly callWordsOf: typeof callWordsOf
 }
 
 const SUBJECT = Symbol("connector-call.policy")
@@ -32,7 +36,17 @@ const build = async (): Promise<Subject> => {
         providers: [
             {
                 provide: SUBJECT,
-                useValue: { usable, toolVisibleTo, roleIn, domainNameIn, isTimeout, refusalOf, failureCodeOf },
+                useValue: {
+                    usable,
+                    toolVisibleTo,
+                    roleIn,
+                    domainNameIn,
+                    isTimeout,
+                    refusalOf,
+                    failureCodeOf,
+                    abilityDecisionOf,
+                    callWordsOf,
+                },
             },
         ],
     }).compile()
@@ -195,5 +209,61 @@ describe("domainNameIn", () => {
             ),
         ).toBeNull()
         expect(policy.domainNameIn([connectorOf()], "chat.send")).toBeNull()
+    })
+})
+
+describe("abilityDecisionOf", () => {
+    it("reads a refusal as off, an approval as ask, an allowed call as auto, and no provider right as null", async () => {
+        const policy = await build()
+        const account = { provider: "sepay", ability: "qr.create", connectionId: "conn-1" }
+
+        expect(policy.abilityDecisionOf({ kind: "allow", ...account })).toBe("auto")
+        expect(policy.abilityDecisionOf({ kind: "approval", ...account })).toBe("ask")
+        expect(
+            policy.abilityDecisionOf({ kind: "refuse", reason: "ability_off", ability: "qr.create", providers: ["sepay"] }),
+        ).toBe("off")
+        expect(
+            policy.abilityDecisionOf({ kind: "refuse", reason: "no_default_account", ability: "qr.create", providers: ["sepay"] }),
+        ).toBe("off")
+        expect(policy.abilityDecisionOf(null)).toBeNull()
+    })
+})
+
+describe("callWordsOf", () => {
+    it("lists each argument in plain words, in the order the call gave them", async () => {
+        const policy = await build()
+
+        expect(
+            policy.callWordsOf({ orderId: " DH-1 ", amountVnd: 25000, paid: false, note: null, items: [{ sku: "A" }] }),
+        ).toEqual([
+            { name: "orderId", value: "DH-1" },
+            { name: "amountVnd", value: "25000" },
+            { name: "paid", value: "false" },
+            { name: "note", value: "-" },
+            { name: "items", value: '[{"sku":"A"}]' },
+        ])
+    })
+
+    it("shows nothing for arguments that are no object, skips absent members and keeps at most the bound", async () => {
+        const policy = await build()
+        const many = Object.fromEntries(Array.from({ length: 20 }, (_, index) => [`a${String(index)}`, index]))
+
+        expect(policy.callWordsOf(null)).toEqual([])
+        expect(policy.callWordsOf(["x"])).toEqual([])
+        expect(policy.callWordsOf("text")).toEqual([])
+        expect(policy.callWordsOf({ kept: 1, gone: undefined })).toEqual([{ name: "kept", value: "1" }])
+        expect(policy.callWordsOf(many)).toHaveLength(12)
+        expect(policy.callWordsOf(many, 2)).toEqual([
+            { name: "a0", value: "0" },
+            { name: "a1", value: "1" },
+        ])
+    })
+
+    it("cuts a long value and marks the cut", async () => {
+        const policy = await build()
+        const [word] = policy.callWordsOf({ text: "x".repeat(1000) })
+
+        expect(word?.value).toHaveLength(300)
+        expect(word?.value.endsWith("…")).toBe(true)
     })
 })

@@ -45,6 +45,8 @@ const build = async (_unused = 1, available = true, limits: Partial<AiTasksOptio
     const generator = { generate: jest.fn<Promise<string>, [Sent]>() }
     const ai = mock<AiService>()
     ai.available.mockReturnValue(available)
+    // The loop's try is timed: the stopwatch of a spec reads 1.2 s.
+    ai.stopwatch.mockReturnValue(() => 1_200)
     ai.attempt.mockImplementation(async (request) => {
         const answer = await ai.chat(request)
         return answer === null ? { ok: false, failure: "timeout" } : { ok: true, answer }
@@ -416,6 +418,7 @@ describe("AiTasksService on the AI endpoint", () => {
             module: "sales",
             usage: { prompt_tokens: 12, completion_tokens: 5, cached_tokens: 0, cost: 0.0002, model: "work" },
             completionChars: 5,
+            call: { purpose: null, reasoningTokens: null, durationMs: null, tryNumber: 1, upstream: null, finishReason: null },
         })
     })
 })
@@ -496,6 +499,25 @@ describe("AiTasksService on the AI endpoint, JSON and refusals", () => {
         expect(deadlines.slice(0, 3).reduce((sum, ms) => sum + ms, 0)).toBe(180_000)
         // Every try of the node call keeps its bounded reasoning.
         expect(ai.attempt.mock.calls.slice(0, 3).every(([call]) => call.budget?.effort === "low")).toBe(true)
+    })
+
+    it("metering: books a node call under its purpose, with the try that answered, its hidden reasoning, upstream, finish and time", async () => {
+        const { client, ai, meter } = await build(1, true)
+        const served = { upstream: "Together", finishReason: "stop", durationMs: 6_500 }
+        ai.attempt.mockResolvedValueOnce({ ok: false, failure: "timeout" }).mockResolvedValueOnce({
+            ok: true,
+            answer: { ...ANSWER, text: JSON.stringify(COMBO_ORDER), model: "work", usage: { ...USAGE, reasoningTokens: 2_475 }, served },
+        })
+        const ask = { purpose: "accounting.match-payment:agent", instructions: "i", input: {} }
+
+        await client.nodeJson(scope, ask, ORDER_SCHEMA)
+
+        expect(meter.record).toHaveBeenCalledTimes(1)
+        expect(meter.record.mock.calls[0]?.[0]).toMatchObject({
+            kind: "engine",
+            module: "accounting",
+            call: { purpose: "accounting.match-payment:agent", reasoningTokens: 2_475, tryNumber: 2, ...served },
+        })
     })
 
     it("waits two seconds before it retries a provider error, and not at all after a timeout or once no try is left", async () => {
@@ -582,5 +604,162 @@ describe("AiTasksService structured output and notes", () => {
 
         expect(ai.chat.mock.calls[0]?.[0]).toMatchObject({ schema: null, context: null })
         expect(notes.contextOf).toHaveBeenCalledWith(scope, null)
+    })
+})
+
+describe("AiTasksService the turns of a node's agent loop", () => {
+    const ASK = { purpose: "accounting.match-payment:agent" }
+    const LIMITS = { nodeTimeoutMs: 90_000, nodeRetryTimeoutMs: 45_000, nodeReasoning: "low" as const, nodeMaxTokens: 4000 }
+    const READ = {
+        ok: true as const,
+        model: "work",
+        usage: { ...USAGE, cachedTokens: 8, reasoningTokens: 3 },
+        textChars: 0,
+        toolCalls: 1,
+        served: { upstream: "Wafer", finishReason: "tool_calls", durationMs: 1_200 },
+    }
+
+    /** The loop's side of a turn: it makes the model call with the client it is given and answers the message. */
+    const loopOf = (outcomes: ReadonlyArray<unknown>) => {
+        const left = [...outcomes]
+        return jest.fn((_model: unknown, _tryNumber: number): Promise<unknown> => {
+            const next = left.shift()
+            return next instanceof Error ? Promise.reject(next) : Promise.resolve(next)
+        })
+    }
+
+    it("hands the loop a fresh client per try and answers the message of the first try that is an answer: one metered answer", async () => {
+        const { client, ai, meter } = await build(1, true, LIMITS)
+        const clients = [{ n: 1 }, { n: 2 }, { n: 3 }]
+        ai.turnModel.mockReturnValueOnce(clients[0] as never).mockReturnValueOnce(clients[1] as never).mockReturnValueOnce(clients[2] as never)
+        ai.failureOfThrow.mockReturnValue("timeout")
+        ai.readTurn.mockReturnValueOnce({ ok: false, failure: "length" }).mockReturnValueOnce(READ)
+        const attempt = loopOf([new Error("deadline"), { cut: true }, { message: "third" }])
+
+        const turns = client.nodeAgentTurns(scope, ASK)
+        await expect(turns.turn(attempt)).resolves.toEqual({ message: "third" })
+
+        expect(turns.toolChoice).toBe("auto")
+        expect(attempt.mock.calls).toEqual([
+            [clients[0], 1],
+            [clients[1], 2],
+            [clients[2], 3],
+        ])
+        // The first try has the node call's deadline, each retry the shorter one; every try the same reasoning, cap and affinity.
+        expect(ai.turnModel.mock.calls.map(([request]) => request)).toEqual([
+            { timeoutMs: 90_000, budget: { effort: "low", maxTokens: 4000 }, affinity: "ws-1" },
+            { timeoutMs: 45_000, budget: { effort: "low", maxTokens: 4000 }, affinity: "ws-1" },
+            { timeoutMs: 45_000, budget: { effort: "low", maxTokens: 4000 }, affinity: "ws-1" },
+        ])
+        expect(meter.blockedBy).toHaveBeenCalledTimes(1)
+        expect(meter.blockedBy).toHaveBeenCalledWith("ws-1", "engine", "vi")
+        expect(meter.record).toHaveBeenCalledTimes(1)
+        expect(meter.record).toHaveBeenCalledWith({
+            workspaceId: "ws-1",
+            kind: "engine",
+            module: "accounting",
+            usage: { prompt_tokens: 12, completion_tokens: 5, cached_tokens: 8, cost: 0.0002, model: "work" },
+            completionChars: 0,
+            // Metering per call kind: the node's purpose, the hidden reasoning, which try answered, the upstream and the time.
+            call: {
+                purpose: "accounting.match-payment:agent",
+                reasoningTokens: 3,
+                durationMs: 1_200,
+                tryNumber: 3,
+                upstream: "Wafer",
+                finishReason: "tool_calls",
+            },
+        })
+        // Each try that made a call was timed, and its time handed to the read of its answer.
+        expect(ai.readTurn.mock.calls.map(([, , ms]) => ms)).toEqual([1_200, 1_200])
+    })
+
+    it("stops after three tries in all and throws unavailable with the failure of each; nothing is metered", async () => {
+        const { client, ai, meter, timer } = await build(1, true, LIMITS)
+        ai.turnModel.mockReturnValue({} as never)
+        ai.failureOfThrow.mockReturnValueOnce("provider").mockReturnValueOnce("timeout")
+        ai.readTurn.mockReturnValue({ ok: false, failure: "empty" })
+        const attempt = loopOf([new Error("502"), new Error("deadline"), { empty: true }, { never: true }])
+
+        await expect(client.nodeAgentTurns(scope, ASK).turn(attempt)).rejects.toMatchObject({
+            code: AiTasksErrorCode.Unavailable,
+            params: { tries: 3, failures: "provider, timeout, empty" },
+        })
+
+        expect(attempt).toHaveBeenCalledTimes(3)
+        expect(meter.record).not.toHaveBeenCalled()
+        // Two seconds before the retry of the provider error only.
+        expect(timer.schedule.mock.calls.map(([, ms]) => ms)).toEqual([2000])
+    })
+
+    it("refuses a workspace over its allowance before any model call, and fails as unavailable without the endpoint", async () => {
+        const over = await build(1, true, LIMITS)
+        over.meter.blockedBy.mockResolvedValue({ message: "Over the plan" })
+        const attempt = loopOf([{ message: "x" }])
+
+        await expect(over.client.nodeAgentTurns(scope, ASK).turn(attempt)).rejects.toMatchObject({
+            code: AiTasksErrorCode.QuotaBlocked,
+        })
+        const off = await build(1, false, LIMITS)
+        await expect(off.client.nodeAgentTurns(scope, ASK).turn(attempt)).rejects.toMatchObject({
+            code: AiTasksErrorCode.Unavailable,
+        })
+        expect(attempt).not.toHaveBeenCalled()
+        expect(over.ai.turnModel).not.toHaveBeenCalled()
+    })
+
+    it("inlines the pictures of a node's agent as the JSON call does, in order, and reads nothing for no pictures", async () => {
+        const { client, images } = await build(1, true)
+
+        await expect(client.nodeImages(scope, ["u1", "u2"])).resolves.toEqual(["data:image/png;base64,u1", "data:image/png;base64,u2"])
+        expect(images.inline).toHaveBeenCalledWith(["u1", "u2"])
+        // What the inliner leaves out (unreadable, too large) is left out here too.
+        images.inline.mockResolvedValueOnce({ images: ["data:image/png;base64,u2"], dropped: 1 })
+        await expect(client.nodeImages(scope, ["bad", "u2"])).resolves.toEqual(["data:image/png;base64,u2"])
+        images.inline.mockClear()
+        await expect(client.nodeImages(scope, [])).resolves.toEqual([])
+        expect(images.inline).not.toHaveBeenCalled()
+    })
+
+    it("hands the loop the client of a first try to build its agent over, built once and only when read, with the routing of node calls", async () => {
+        const routed = { ...LIMITS, nodeRouting: { order: ["together", "wafer"], allowFallbacks: true } }
+        const { client, ai } = await build(1, true, routed)
+        const first = { first: true }
+        ai.turnModel.mockReturnValue(first as never)
+
+        const turns = client.nodeAgentTurns(scope, ASK)
+        expect(ai.turnModel).not.toHaveBeenCalled()
+
+        expect(turns.model).toBe(first)
+        expect(turns.model).toBe(first)
+        expect(ai.turnModel).toHaveBeenCalledTimes(1)
+        expect(ai.turnModel.mock.calls[0]?.[0]).toEqual({
+            timeoutMs: 90_000,
+            budget: { effort: "low", maxTokens: 4000 },
+            affinity: "ws-1",
+            routing: { order: ["together", "wafer"], allowFallbacks: true },
+        })
+        // No routing set: the client carries none, so no `provider` field is sent.
+        const plain = await build(1, true, LIMITS)
+        plain.ai.turnModel.mockReturnValue(first as never)
+        void plain.client.nodeAgentTurns(scope, ASK).model
+        expect(plain.ai.turnModel.mock.calls[0]?.[0]).not.toHaveProperty("routing")
+        // No endpoint configured: no client to build over.
+        const off = await build(1, false, LIMITS)
+        off.ai.turnModel.mockReturnValue(null)
+        expect(off.client.nodeAgentTurns(scope, ASK).model).toBeUndefined()
+    })
+
+    it("forces a tool call only on a step whose node asked for no reasoning, and sends that step's own reasoning", async () => {
+        const { client, ai } = await build(1, true, LIMITS)
+        ai.turnModel.mockReturnValue({} as never)
+        ai.readTurn.mockReturnValue(READ)
+
+        const off = client.nodeAgentTurns(scope, { ...ASK, reasoning: "off" })
+        await off.turn(loopOf([{ message: "x" }]))
+
+        expect(off.toolChoice).toBe("required")
+        expect(ai.turnModel.mock.calls[0]?.[0]).toMatchObject({ budget: { effort: "off", maxTokens: 4000 } })
+        expect(client.nodeAgentTurns(scope, { ...ASK, reasoning: "medium" }).toolChoice).toBe("auto")
     })
 })

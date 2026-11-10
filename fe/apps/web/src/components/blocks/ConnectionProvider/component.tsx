@@ -23,7 +23,6 @@ interface ConnectionProviderCopy {
         readonly action: string
     }
     readonly open: string
-    readonly agentsNote: string
     readonly agentsNone: string
     readonly agentsGrant: string
     /** Where an agent is granted a connection: the agents catalogue. */
@@ -109,7 +108,6 @@ const Body = (props: BodyProps) => {
                     agentsNone: copy.agentsNone,
                     agentsGrant: copy.agentsGrant,
                     agentsHref: copy.agentsHref,
-                    note: copy.agentsNote,
                 }}
             />
             {view.about.length === 0 ? null : (

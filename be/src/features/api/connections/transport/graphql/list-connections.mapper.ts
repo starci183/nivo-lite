@@ -14,5 +14,5 @@ export const toListConnectionsType = (result: ReadonlyArray<ConnectionBoardEntry
         botUsername: entry.botUsername,
         accountMasked: entry.accountMasked,
         agentIds: entry.grants.map((grant) => grant.agentId),
-        grants: entry.grants,
+        grants: entry.grants.map((grant) => ({ ...grant, access: "auto" })),
     }))

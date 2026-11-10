@@ -218,15 +218,31 @@ describe("detailOf", () => {
         expect(failed.row.stepNumber).toBe(2)
     })
 
-    it("offers to cancel a run that is running or waiting, and to no other", () => {
+    it("offers to cancel a run that is running, waiting or parked, and to no other", () => {
         const step = stepOf({ status: "running" })
         const credits = new Map([["run-1", 7]])
         const running = detailOf(detail("running", [step]), new Map(), null, NOW, credits)
         expect(running.canCancel).toBe(true)
         expect(running.row.creditsUsed).toBe(7)
         expect(detailOf(detail("waiting", [step]), new Map(), null, NOW).canCancel).toBe(true)
-        for (const status of ["failed", "dead", "parked", "done", "cancelled"])
+        expect(detailOf(detail("parked", [step]), new Map(), null, NOW).canCancel).toBe(true)
+        for (const status of ["failed", "dead", "done", "cancelled"])
             expect(detailOf(detail(status, [step]), new Map(), null, NOW).canCancel).toBe(false)
+    })
+
+    it("never offers the old Resume on a thread run; its Cancel (the stop's skip) only while it waits at a stop", () => {
+        const failed = [stepOf({ stepKey: "match", status: "failed", errorCode: "ai_report" })]
+        const thread = (status: string): RunDetail => ({ ...detail(status, failed), engine: "langgraph" })
+        const waiting = detailOf(thread("waiting"), new Map(), null, NOW)
+        expect(waiting.canResume).toBe(false)
+        expect(waiting.canCancel).toBe(true)
+        for (const status of ["running", "failed", "dead", "parked", "done", "cancelled"]) {
+            const other = detailOf(thread(status), new Map(), null, NOW)
+            expect(other.canResume).toBe(false)
+            expect(other.canCancel).toBe(false)
+        }
+        const legacy = detailOf({ ...detail("failed", failed), engine: "legacy" }, new Map(), null, NOW)
+        expect(legacy.canResume).toBe(true)
     })
 
     it("offers nothing to a run that undid a step and carries the work item it waits on", () => {

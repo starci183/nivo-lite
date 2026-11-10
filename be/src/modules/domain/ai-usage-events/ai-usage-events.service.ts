@@ -10,11 +10,15 @@ import type {
     QuotaLookup,
     QuotaRecord,
     QuotaStatus,
+    RunCallKindUsage,
     UsageInput,
     UsageKind,
     UsageSummary,
 } from "./ai-usage-events.contracts"
 import { AiUsageEventsLogEvent } from "./ai-usage-events.log-events"
+import { callColumnsOf } from "./call-facts.policy"
+import { toRunCallKind } from "./run-calls.mapper"
+import type { RunCallKindAggregate } from "./run-calls.mapper"
 import { CREDIT_USD_VALUE, figuresOf } from "./usage-cost.policy"
 import { toDailyModuleUsage, toUsageSummary } from "./usage-summary.mapper"
 import type { MonthlyUsageAggregate } from "./usage-summary.mapper"
@@ -24,6 +28,9 @@ const MONTHLY_ROW_LIMIT = 2000
 
 /** The most module rollups one period read returns. */
 const MODULE_ROW_LIMIT = 200
+
+/** The most call kinds one run's read returns: a run calls a handful of nodes. */
+const RUN_KIND_LIMIT = 100
 
 @Injectable()
 /** Meters every model call of a workspace and answers where the month stands against the allowance; the only writer of ai_usage_events. */
@@ -51,6 +58,7 @@ export class AiUsageEventsService {
                 costUsd: String(figures.costUsd),
                 estimated: figures.estimated,
                 runId: input.runId ?? runInScope(),
+                ...callColumnsOf(input.call, figures),
             })
             const status = await this.quotaStatus(input.workspaceId)
             if (status !== null) await this.notifyOwner(input.workspaceId, status)
@@ -153,6 +161,34 @@ export class AiUsageEventsService {
             .limit(runIds.length)
             .getRawMany<{ run_id: string; credits: number }>()
         return new Map(rows.map((row) => [row.run_id, row.credits]))
+    }
+
+    /**
+     * The model calls of one run grouped by call kind (the guide never counts), for the run page: how many, the highest try, the
+     * prompt and cached tokens, the completion and its hidden reasoning, the time, the cost, the upstreams and the finish reasons.
+     * A call booked without a kind is grouped under its usage kind. Ordered by the first call of each kind.
+     */
+    async callKindsByRun(workspaceId: string, runId: string): Promise<ReadonlyArray<RunCallKindUsage>> {
+        const rows = await this.entityManager
+            .createQueryBuilder(AiUsageEventEntity, "u")
+            .select("COALESCE(u.purpose, u.kind)", "purpose")
+            .addSelect("COUNT(*)::int", "calls")
+            .addSelect("MAX(u.try_number)::int", "max_try")
+            .addSelect("COALESCE(SUM(u.prompt_tokens), 0)::float8", "prompt_tokens")
+            .addSelect("COALESCE(SUM(u.cached_tokens), 0)::float8", "cached_tokens")
+            .addSelect("COALESCE(SUM(u.completion_tokens), 0)::float8", "completion_tokens")
+            .addSelect("COALESCE(SUM(u.reasoning_tokens), 0)::float8", "reasoning_tokens")
+            .addSelect("COALESCE(SUM(u.duration_ms), 0)::float8", "duration_ms")
+            .addSelect("MAX(u.duration_ms)::float8", "slowest_ms")
+            .addSelect("COALESCE(SUM(u.cost_usd), 0)::float8", "cost_usd")
+            .addSelect("array_agg(DISTINCT u.upstream)", "upstreams")
+            .addSelect("array_agg(DISTINCT u.finish_reason)", "finish_reasons")
+            .where("u.workspace_id = :workspaceId AND u.run_id = :runId AND u.kind <> 'guide'", { workspaceId, runId })
+            .groupBy("1")
+            .orderBy("MIN(u.created_at)", "ASC")
+            .limit(RUN_KIND_LIMIT)
+            .getRawMany<RunCallKindAggregate>()
+        return rows.map(toRunCallKind)
     }
 
     /**

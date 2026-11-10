@@ -1,4 +1,4 @@
-import type { NodeHostPorts } from "../../node/host.types"
+import type { NodeAgentLoop, NodeAgentLoopEnd, NodeHostPorts } from "../../node/host.types"
 import type { EffectPayload, NodeStore, SubjectRef } from "../../node/node.types"
 import { SdkError } from "../../sdk-error"
 
@@ -14,6 +14,22 @@ export interface FakeNodePortsOptions {
     readonly answers?: Readonly<Record<string, ReadonlyArray<SubjectRef>>> | undefined
     /** The time the fake clock reports; the epoch when absent. */
     readonly now?: Date | undefined
+    /**
+     * True to take the turns of an agent the way a host with its own loop does (`NodeHostPorts.agent`), from the very same `model`
+     * script (`{ call }`, `{ done }`, `{ confused }`, one entry per turn). Absent, the runner takes the turns itself over `model.json`.
+     */
+    readonly agentLoop?: boolean | undefined
+}
+
+/** One hand-over of a step's agent to the fake's own loop, as the runner made it (without its closures). */
+export type FakeAgentLoop = Omit<NodeAgentLoop, "call" | "done" | "confused">
+
+/** One fact the fake's own loop showed the model: what a call, an output or a confusion was answered. */
+export interface FakeAgentFact {
+    /** The scripted turn it answers. */
+    readonly turn: unknown
+    /** What the runner's closure answered. */
+    readonly answer: unknown
 }
 
 /** One tool call the fake host answered. */
@@ -56,6 +72,10 @@ export interface FakeNodePorts {
     readonly writes: ReadonlyArray<FakeWrite>
     /** The tool calls answered so far, in order. */
     readonly toolCalls: ReadonlyArray<FakeToolCall>
+    /** The agents handed to the fake's own loop so far (`agentLoop`), in order. */
+    readonly agentLoops: ReadonlyArray<FakeAgentLoop>
+    /** What the fake's own loop showed the model after each scripted turn, in order. */
+    readonly agentFacts: ReadonlyArray<FakeAgentFact>
 }
 
 /** Whether a stored row matches every `where` entry. */
@@ -85,6 +105,43 @@ const scriptOf = (answers: ReadonlyArray<unknown> | undefined, code: Unscripted)
     }
 }
 
+/** A plain object. */
+const isObject = (value: unknown): value is Readonly<Record<string, unknown>> =>
+    typeof value === "object" && value !== null && !Array.isArray(value)
+
+/**
+ * The loop of a host that takes an agent's turns itself, driven by the script: each entry is one model turn, answered through the
+ * runner's own closures, until an output or a confusion is taken or the turns run out. It decides nothing: every check is the runner's.
+ */
+const scriptedAgentLoop =
+    (next: () => unknown, loops: Array<FakeAgentLoop>, facts: Array<FakeAgentFact>) =>
+    async (loop: NodeAgentLoop): Promise<NodeAgentLoopEnd> => {
+        const { call, done, confused, ...shown } = loop
+        loops.push(shown)
+        const take = async (taken: number): Promise<NodeAgentLoopEnd> => {
+            if (taken === loop.maxTurns) return { turns: taken }
+            const turn = next()
+            if (!isObject(turn)) throw unscripted("MODEL_UNSCRIPTED")
+            if (isObject(turn.call)) {
+                facts.push({ turn, answer: await call(String(turn.call.tool), turn.call.args) })
+                return take(taken + 1)
+            }
+            const answer = "confused" in turn ? confused(trustedConfusion(turn.confused)) : done(turn.done)
+            facts.push({ turn, answer })
+            return answer.ok ? { turns: taken + 1 } : take(taken + 1)
+        }
+        return take(0)
+    }
+
+/** A scripted confusion handed on as it is: the runner's closure judges its shape. */
+const trustedConfusion = (value: unknown): Parameters<NodeAgentLoop["confused"]>[0] =>
+    isObject(value)
+        ? {
+              reason: typeof value.reason === "string" ? value.reason : "",
+              question: typeof value.question === "string" ? value.question : null,
+          }
+        : { reason: "", question: null }
+
 /**
  * Ports for `runNode` in a test: reads from the store (scope is the host's business, so every row of the kind is in reach), writes and
  * effects recorded and answered with a made-up subject, the model answering from the script. The runner still enforces every right.
@@ -93,12 +150,16 @@ export const scriptedNodePorts = (options: FakeNodePortsOptions = {}): FakeNodeP
     const executed: Array<FakeExecuted> = []
     const writes: Array<FakeWrite> = []
     const toolCalls: Array<FakeToolCall> = []
+    const agentLoops: Array<FakeAgentLoop> = []
+    const agentFacts: Array<FakeAgentFact> = []
     const next = scriptOf(options.model, "MODEL_UNSCRIPTED")
     const nextTool = scriptOf(options.tools, "TOOL_UNSCRIPTED")
     return {
         executed,
         writes,
         toolCalls,
+        agentLoops,
+        agentFacts,
         ports: {
             read: (kind, query) => {
                 const rows = (options.store?.[kind] ?? []).filter((row) => matches(row, query.where ?? {}))
@@ -128,6 +189,7 @@ export const scriptedNodePorts = (options: FakeNodePortsOptions = {}): FakeNodeP
                 return Promise.resolve(nextTool())
             },
             now: () => options.now ?? new Date(0),
+            ...(options.agentLoop === true ? { agent: scriptedAgentLoop(next, agentLoops, agentFacts) } : {}),
         },
     }
 }

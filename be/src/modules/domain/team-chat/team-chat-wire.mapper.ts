@@ -103,6 +103,7 @@ export const messageWireOf = (view: MessageView): MessageWire => ({
     reactions: view.reactions,
     replyTo: view.replyTo,
     forwardedFrom: view.forwardedFrom,
+    stop: view.stop,
 })
 
 /** A room of the domain as the wire shows it. */

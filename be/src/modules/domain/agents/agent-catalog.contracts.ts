@@ -1,7 +1,7 @@
-import type { AgentAccess, AgentPurpose } from "./agents-connections.contracts"
+import type { AgentPurpose } from "./agents-connections.contracts"
 import type { AgentAudience } from "./agents.contracts"
 
-/** One connection granted to an agent, with the purpose and access of the grant. */
+/** One connection bound to an agent, with the purpose of the binding. */
 export interface CatalogGrant {
     /** The connection. */
     readonly connectionId: string
@@ -15,8 +15,6 @@ export interface CatalogGrant {
     readonly accountMasked: string | null
     /** connected, error, pending or disconnected. */
     readonly status: string
-    /** What the agent may do through it. */
-    readonly access: AgentAccess
     /** What the agent uses it for. */
     readonly purpose: AgentPurpose
 }

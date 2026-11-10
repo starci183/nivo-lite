@@ -95,7 +95,6 @@ export type {
 export { INPUT_BOUNDS, inputBoundsIssues } from "./graphql/__generated__/input-bounds"
 export type { AcceptInviteMutation, AcceptTemplateUpdateMutation } from "./graphql/__generated__/graphql"
 export type { AddBookingMutation } from "./graphql/__generated__/graphql"
-export type { AgentConnectionCandidatesQuery, AgentConnectionsQuery } from "./graphql/__generated__/graphql"
 export type { AgentDashboardQuery } from "./graphql/__generated__/graphql"
 export type { DecideLeadFreezeMutation, LeadFreezeQuery } from "./graphql/__generated__/graphql"
 export type { AgentGenerationStatusQuery, AgentGraphCoverageQuery } from "./graphql/__generated__/graphql"
@@ -111,7 +110,6 @@ export type {
     AgentTemplatePreviewQuery,
     AgentRunQuery,
     AgentRunsQuery,
-    AgentWorkLogQuery,
     AgentWorkQuery,
     AgentsQuery,
 } from "./graphql/__generated__/graphql"
@@ -172,11 +170,10 @@ export type { DraftPublicDocumentMutation } from "./graphql/__generated__/graphq
 export type { DriveGrantQuery, DriveLinkedFolderQuery, DrivePickedFolderQuery } from "./graphql/__generated__/graphql"
 export type { DuplicateVideoProjectMutation, EnqueueKnowledgeSourceMutation } from "./graphql/__generated__/graphql"
 export type { FinishWebhookConnectionMutation } from "./graphql/__generated__/graphql"
-export type { GenerateHiringAdMutation, GrantAgentConnectionMutation } from "./graphql/__generated__/graphql"
+export type { GenerateHiringAdMutation } from "./graphql/__generated__/graphql"
 export type { HiringCandidateDetailQuery } from "./graphql/__generated__/graphql"
 export type { HiringWorkbenchQuery, ImportAgentTemplateMutation } from "./graphql/__generated__/graphql"
 export type { ImportBrainDossiersMutation } from "./graphql/__generated__/graphql"
-export type { InboundEventsQuery } from "./graphql/__generated__/graphql"
 export type { InboxLeadQuery, InboxLeadsQuery, WebsiteSiteQuery } from "./graphql/__generated__/graphql"
 export type { AssignInboxLeadMutation, SaveWebsiteSiteMutation } from "./graphql/__generated__/graphql"
 export type { SubmitWebsiteLeadMutation } from "./graphql/__generated__/graphql"
@@ -208,7 +205,6 @@ export type {
     LeaveWorkspaceMutation,
     MyPendingInvitesQuery,
     RenameWorkspaceMutation,
-    RestoreWorkspaceMutation,
     WorkspaceDeclinedInvitesQuery,
 } from "./graphql/__generated__/graphql"
 export type { OpenPlanPaymentOrderQuery, OrderTemplateListingMutation } from "./graphql/__generated__/graphql"
@@ -247,7 +243,7 @@ export type { ResolveDossierFindingMutation, RespondHiringInterviewMutation } fr
 export type { RespondHiringOfferMutation } from "./graphql/__generated__/graphql"
 export type { RestoreAgentGraphVersionMutation } from "./graphql/__generated__/graphql"
 export type { RetryKnowledgeSourceMutation, ReturnZaloAuthorizationMutation } from "./graphql/__generated__/graphql"
-export type { RevealSepayKeyMutation, RevokeAgentConnectionMutation } from "./graphql/__generated__/graphql"
+export type { RevealSepayKeyMutation } from "./graphql/__generated__/graphql"
 export type { RevokeApiKeyMutation, RevokeInviteMutation, RevokeSessionMutation } from "./graphql/__generated__/graphql"
 export type { RotateSepayKeyMutation } from "./graphql/__generated__/graphql"
 export type { RunCsvImportMutation, RunDocumentImportMutation } from "./graphql/__generated__/graphql"
@@ -341,7 +337,6 @@ export type {
     SaveAgentGraphLayoutMutation,
     RollbackAgentWorkflowMutation,
     SetAgentWorkflowStatusMutation,
-    WorkflowTemplateQuery,
     WorkflowTemplatesQuery,
 } from "./graphql/__generated__/graphql"
 export type { AgentAbilityProposalQuery, ProviderRightsQuery, ProviderTemplateCandidatesQuery } from "./graphql/__generated__/graphql"

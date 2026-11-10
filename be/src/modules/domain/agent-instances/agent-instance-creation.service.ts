@@ -7,7 +7,7 @@ import { ConnectionsService } from "@modules/domain/connections"
 import { McpGatewayError, McpGatewayErrorCode, ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import type { InstallationRecord } from "@modules/domain/module-installations"
-import { ModuleInstallService, ModulesService } from "@modules/domain/modules"
+import { AgentRemovalService, ModuleInstallService, ModulesService } from "@modules/domain/modules"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { InjectLogger } from "@modules/platform/logging"
@@ -34,7 +34,8 @@ const GOVERNORS = ["owner", "manager"] as const
  * exactly one agent of a role, so a channel another agent of the role answers is refused before anything is written. Managers create
  * agents; only the owner gives an agent connections. The new agent is attached to the connected providers its module names, with the
  * abilities of the module's proposal or of the owner's edit of it (checked before anything is written); these rights are then the
- * workspace's. Only the owner lets an agent act on a provider by itself: a manager's proposal ticks its write abilities `ask`, and a
+ * workspace's. A creation is all or nothing as far as anyone can see: when a step after the installation fails (the copy, a channel,
+ * the rights), the installation is removed again through the removal door and the failure is thrown. Only the owner lets an agent act on a provider by itself: a manager's proposal ticks its write abilities `ask`, and a
  * manager's edit that asks for `auto` is refused.
  */
 export class AgentInstanceCreationService {
@@ -50,6 +51,7 @@ export class AgentInstanceCreationService {
         private readonly owners: ChannelOwnersService,
         private readonly setupCopy: AgentSetupCopyService,
         private readonly abilities: ProviderAbilitiesService,
+        private readonly removal: AgentRemovalService,
         @InjectLogger() private readonly logger: Logger,
     ) {}
 
@@ -91,19 +93,20 @@ export class AgentInstanceCreationService {
             agent: { name: judged.value.name, handle: judged.value.handle },
         })
         const agentId = made.agentId
-        if (agentId === null) throw new AgentInstancesError({ code: AgentInstancesErrorCode.CopySourceInvalid })
-        await this.dress(principalId, request.workspaceId, agentId, judged.value.avatar)
-        const target = { installationId: made.installationId, agentId }
-        const outcome = await this.copyOf(principalId, member, request, source, target)
-        const shared = member.role === "owner" ? (outcome?.grants ?? []) : []
-        await this.grantAll(principalId, request.workspaceId, agentId, wanted, shared)
-        // The rights of the new agent on the connected providers: the owner's edit of the proposal, else the module's proposal as it is.
-        await this.abilities.attachDefaults(
-            { workspaceId: request.workspaceId, agentId, moduleKey: module.key },
+        // Everything after the installation exists either all holds or the installation is taken back: a creation that fails half way
+        // leaves no agent in any list and its name free.
+        const outcome = await this.furnished(principalId, member, request, source, made, {
+            avatar: judged.value.avatar,
+            channels: wanted,
             rights,
-            principalId,
             giver,
-        )
+            moduleKey: module.key,
+        }).catch(async (cause: unknown) => {
+            await this.undone(principalId, request.workspaceId, made)
+            throw cause
+        })
+        if (agentId === null) throw new AgentInstancesError({ code: AgentInstancesErrorCode.CopySourceInvalid })
+        const shared = member.role === "owner" ? (outcome?.grants ?? []) : []
         this.logger.info(AgentInstancesLogEvent.Created, {
             workspaceId: request.workspaceId,
             moduleKey: module.key,
@@ -116,6 +119,64 @@ export class AgentInstanceCreationService {
             agentId,
             copied: outcome === null ? null : { ...outcome.copied, connections: shared.length },
             channels: wanted.length,
+        }
+    }
+
+    /**
+     * Gives the installation just made everything the request asks for: the picture, the sibling's setup, the channels and shared
+     * connections, and the rights on the connected providers. Any failure is thrown for `create` to take the installation back.
+     */
+    private async furnished(
+        principalId: string,
+        member: WorkspaceMember,
+        request: CreateAgentInstanceRequest,
+        source: InstallationRecord | null,
+        made: { readonly installationId: string; readonly agentId: string | null },
+        asked: {
+            readonly avatar: AvatarChoice
+            readonly channels: ReadonlyArray<string>
+            readonly rights: CreateAgentInstanceRequest["providerRights"] | null
+            readonly giver: "owner" | "manager"
+            readonly moduleKey: string
+        },
+    ): Promise<CopyOutcome | null> {
+        const { agentId } = made
+        if (agentId === null) throw new AgentInstancesError({ code: AgentInstancesErrorCode.CopySourceInvalid })
+        await this.dress(principalId, request.workspaceId, agentId, asked.avatar)
+        const target = { installationId: made.installationId, agentId }
+        const outcome = await this.copyOf(principalId, member, request, source, target)
+        const shared = member.role === "owner" ? (outcome?.grants ?? []) : []
+        await this.grantAll(principalId, request.workspaceId, agentId, asked.channels, shared)
+        // The rights of the new agent on the connected providers: the owner's edit of the proposal, else the module's proposal as it is.
+        await this.abilities.attachDefaults(
+            { workspaceId: request.workspaceId, agentId, moduleKey: asked.moduleKey },
+            asked.rights ?? null,
+            principalId,
+            asked.giver,
+        )
+        return outcome
+    }
+
+    /**
+     * Takes back an installation this creation made and could not finish, through the same door a person removes an agent with: the
+     * installation is removed, its agent paused and its rights switched off, so it is in no list, serves nobody and its name is free
+     * again. An installation the creation did not make itself (another tab made it first) is left alone. A removal that fails is
+     * logged with the installation, never thrown over the failure that caused it.
+     */
+    private async undone(
+        principalId: string,
+        workspaceId: string,
+        made: { readonly installationId: string; readonly created: boolean },
+    ): Promise<void> {
+        if (!made.created) return
+        try {
+            await this.removal.remove(principalId, workspaceId, made.installationId)
+            this.logger.warn(AgentInstancesLogEvent.CreationUndone, { workspaceId, installationId: made.installationId })
+        } catch (cause) {
+            this.logger.error(AgentInstancesLogEvent.CreationUndoFailed, cause, {
+                workspaceId,
+                installationId: made.installationId,
+            })
         }
     }
 

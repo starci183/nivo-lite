@@ -1,10 +1,6 @@
 import { Test } from "@nestjs/testing"
 import {
-    ACCESS_LEVELS,
-    DEFAULT_ACCESS,
-    isAccess as realIsAccess,
     isDataProvider as realIsDataProvider,
-    normaliseAccess as realNormaliseAccess,
     planExactly as realPlanExactly,
     purposeFor as realPurposeFor,
 } from "./connection-access.policy"
@@ -16,9 +12,7 @@ const buildSubject = async () => {
             {
                 provide: SUBJECT,
                 useValue: {
-                    isAccess: realIsAccess,
                     isDataProvider: realIsDataProvider,
-                    normaliseAccess: realNormaliseAccess,
                     planExactly: realPlanExactly,
                     purposeFor: realPurposeFor,
                 },
@@ -26,9 +20,7 @@ const buildSubject = async () => {
         ],
     }).compile()
     const subject = moduleRef.get<{
-        isAccess: typeof realIsAccess
         isDataProvider: typeof realIsDataProvider
-        normaliseAccess: typeof realNormaliseAccess
         planExactly: typeof realPlanExactly
         purposeFor: typeof realPurposeFor
     }>(SUBJECT)
@@ -36,17 +28,6 @@ const buildSubject = async () => {
 }
 
 describe("connection access policy", () => {
-    it("knows the three levels and starts a grant at ask", async () => {
-        const subject = await buildSubject()
-
-        expect(ACCESS_LEVELS).toEqual(["read", "ask", "auto"])
-        expect(DEFAULT_ACCESS).toBe("ask")
-        expect(subject.isAccess("auto")).toBe(true)
-        expect(subject.isAccess("read")).toBe(true)
-        expect(subject.isAccess("ask")).toBe(true)
-        expect(subject.isAccess("root")).toBe(false)
-    })
-
     describe("purposeFor", () => {
         it.each([
             ["chatbot", "telegram", "inbound_chat"],
@@ -78,37 +59,21 @@ describe("connection access policy", () => {
         expect(subject.isDataProvider("telegram")).toBe(false)
     })
 
-    it("normalises null to remove, a level to itself and anything else to the default", async () => {
-        const subject = await buildSubject()
-
-        expect(subject.normaliseAccess(null)).toBeNull()
-        expect(subject.normaliseAccess("auto")).toBe("auto")
-        expect(subject.normaliseAccess("nonsense")).toBe("ask")
-        expect(subject.normaliseAccess(undefined)).toBe("ask")
-    })
-
     describe("planExactly", () => {
-        it("keeps a current level, starts new ones at the default, honours a given level and removes the rest", async () => {
+        it("binds every wanted id and removes every current id that is not wanted", async () => {
             const subject = await buildSubject()
 
-            const current = new Map<string, "read" | "ask" | "auto">([
-                ["a", "auto"],
-                ["b", "read"],
-                ["gone", "ask"],
-            ])
-
-            expect(subject.planExactly(current, [{ id: "a" }, { id: "b", access: "ask" }, { id: "new" }])).toEqual([
-                { id: "a", access: "auto" },
-                { id: "b", access: "ask" },
-                { id: "new", access: "ask" },
-                { id: "gone", access: null },
+            expect(subject.planExactly(new Set(["a", "gone"]), ["a", "new"])).toEqual([
+                { id: "a", bound: true },
+                { id: "new", bound: true },
+                { id: "gone", bound: false },
             ])
         })
 
         it("removes everything when nothing is wanted", async () => {
             const subject = await buildSubject()
 
-            expect(subject.planExactly(new Map([["a", "read"]]), [])).toEqual([{ id: "a", access: null }])
+            expect(subject.planExactly(new Set(["a"]), [])).toEqual([{ id: "a", bound: false }])
         })
     })
 })

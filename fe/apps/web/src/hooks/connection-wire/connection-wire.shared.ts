@@ -14,7 +14,6 @@ import type {
     ZaloWizardConnectionType,
 } from "@/hooks/swr"
 import type {
-    Access,
     AgentOption,
     Connection,
     ConnectionCheck,
@@ -34,7 +33,6 @@ import type {
 const statusOf = (value: string): ConnectionStatus =>
     value === "pending" || value === "error" || value === "disconnected" ? value : "connected"
 const environmentOf = (value: string): Environment => (value === "test" ? "test" : "live")
-const accessOf = (value: string): Access => (value === "read" || value === "ask" ? value : "auto")
 
 const metaOf = (value: unknown): Readonly<Record<string, string>> => {
     if (typeof value !== "object" || value === null || Array.isArray(value)) return {}
@@ -63,7 +61,6 @@ export const connectionOf = (value: ConnectionType): Connection | null => {
         lastEventAt: value.lastEventAt ?? null,
         firstEvent: firstEventOf(value.firstEvent),
         agentIds: value.agentIds,
-        grants: value.grants.map((grant) => ({ agentId: grant.agentId, access: accessOf(grant.access) })),
     }
 }
 

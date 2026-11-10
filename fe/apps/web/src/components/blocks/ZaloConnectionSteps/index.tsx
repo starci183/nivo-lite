@@ -30,7 +30,7 @@ export const ZaloConnectionSteps = (props: ZaloConnectionStepsProps) => {
             }}
             on={{
                 ...views.on,
-                pickGrant: views.grants.on.pick,
+                removeGrant: views.grants.on.remove,
                 assignGrant: views.grants.on.assign,
                 retryGrants: views.grants.on.retry,
             }}

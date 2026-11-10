@@ -3,10 +3,16 @@ export { parseAiConfig } from "./ai.config"
 export type {
     AiBudget,
     AiChatAnswer,
+    AiAgentTurns,
     AiChatAttempt,
+    AiChatModel,
     AiContext,
     AiFailure,
     AiMessage,
+    AiRouting,
+    AiServed,
+    AiTurnRead,
+    AiTurnRequest,
     AiUsage,
 } from "./ai.contracts"
 export { InjectAi, AI } from "./ai.decorators"

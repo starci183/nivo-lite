@@ -10,17 +10,13 @@ import {
     notesOf,
     primaryOf,
     showsBankLogo,
-    usesAgents,
 } from "@/hooks/connection-rows"
-import type { AgentOption, Connection, RowPrimary, RowView } from "@/modules/types"
+import type { Connection, RowPrimary, RowView } from "@/modules/types"
 import { useTranslations } from "next-intl"
 import { connectionPageHref, rowState, statusKey, statusTone } from "./connections.shared"
-import { useAgentAccess } from "./useAgentAccess"
-import type { AgentAccess } from "./useAgentAccess"
 import { useConnectionOverlays } from "./useConnectionOverlays"
 import { useConnectionsRole } from "./useConnectionsRole"
 import { useConnectionRowActions } from "./useConnectionRowActions"
-import { useSetConnectionGrant } from "./useSetConnectionGrant"
 import { useSmtpRowPanel } from "./useSmtpRowPanel"
 import type { SmtpRowPanel } from "./useSmtpRowPanel"
 import { useWorkspaceId } from "@/hooks/workspaces"
@@ -31,7 +27,6 @@ export interface ConnectionRowViewInput {
     readonly agentNames: ReadonlyArray<string>
     readonly localOnly: boolean
     readonly ownerEmail: string
-    readonly agents: ReadonlyArray<AgentOption>
     readonly canManage: boolean
 }
 
@@ -39,7 +34,6 @@ export interface ConnectionRowViewInput {
 export interface ConnectionRowHandlers {
     readonly primary: (id: RowPrimary["id"]) => void
     readonly menu: (id: string) => void
-    readonly pick: (agentId: string, value: string) => void
     readonly dialog: (kind: "disconnect" | "remove", action: "confirm" | "cancel") => void
     readonly smtpToggle: (panel: "test" | "password") => void
     readonly smtpTo: (value: string) => void
@@ -64,15 +58,7 @@ export const useConnectionRowView = (
     const { role } = useConnectionsRole()
     const overlays = useConnectionOverlays()
     const actions = useConnectionRowActions(c)
-    const setGrant = useSetConnectionGrant()
     const smtp: SmtpRowPanel = useSmtpRowPanel(c, input.ownerEmail)
-    const access: AgentAccess = useAgentAccess(
-        c,
-        input.agents,
-        input.canManage,
-        (agentId, level) => setGrant(c.id, agentId, level),
-        (text) => actions.setNote({ tone: "negative", text }),
-    )
 
     const live = c.status !== "disconnected"
     const usedBy = input.agentNames.length > 0 ? t("usedBy", { names: input.agentNames.join(", ") }) : ""
@@ -92,7 +78,6 @@ export const useConnectionRowView = (
         usedBy,
         state: rowState(c.status),
         primary: primaryOf(c, input.canManage, actions.busy, t),
-        access: usesAgents(c.provider) && live ? access.view : null,
         page: pageOf(workspaceId, c, t("openPage")),
         menuLabel: t("more", { name: c.name }),
         menuIsDisabled: actions.busy === "keys",
@@ -115,7 +100,7 @@ export const useConnectionRowView = (
         remove: dialogOf("remove", c, actions.confirm, actions.busy, t),
     }
 
-    const on: ConnectionRowHandlers = actionsOf(overlays, c, actions, access, smtp)
+    const on: ConnectionRowHandlers = actionsOf(overlays, c, actions, smtp)
     return { view, on }
 }
 
@@ -137,7 +122,6 @@ const actionsOf = (
     overlays: ReturnType<typeof useConnectionOverlays>,
     c: Connection,
     actions: ReturnType<typeof useConnectionRowActions>,
-    access: ReturnType<typeof useAgentAccess>,
     smtp: ReturnType<typeof useSmtpRowPanel>,
 ): ConnectionRowHandlers => {
     return {
@@ -153,7 +137,6 @@ const actionsOf = (
             else if (id === "keys") actions.showKeys()
             else actions.setConfirm(id === "remove" ? "remove" : "disconnect")
         },
-        pick: access.pick,
         dialog: (kind, action) => {
             if (action === "cancel") actions.setConfirm(null)
             else if (kind === "disconnect") actions.disconnect()

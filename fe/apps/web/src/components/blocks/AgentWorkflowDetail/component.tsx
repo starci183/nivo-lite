@@ -11,10 +11,9 @@ import type {
     StepDrawerView,
     StepsMapView,
     WorkflowDetailView,
-    WorkflowDiffReadView,
     WorkflowOverviewView,
 } from "@/modules/types"
-import { DetailHead, DetailPanel, DiffPart, type AgentWorkflowDetailCopy, type DetailTab } from "./parts"
+import { DetailHead, DetailPanel, type AgentWorkflowDetailCopy, type DetailTab } from "./parts"
 
 /** The step a new step goes after: the selected one, else the last of the map. */
 const afterKeyOf = (page: AgentWorkflowDetailBaseProps["props"]): string =>
@@ -35,9 +34,8 @@ export interface AgentWorkflowDetailBaseProps {
         readonly runsFilter: RunsFilter
         /** The part of the page the route names. */
         readonly part: DetailTab
-        readonly diff: DataSlot<WorkflowDiffReadView>
-        readonly diffPlaceholder: WorkflowDiffReadView
-        readonly isDiffOpen: boolean
+        /** The address of the versions of this workflow: a version is its number after it. */
+        readonly versionBase: string
         readonly grid: PaneGridLayout
         readonly slotLabels: SlotLabels
     }
@@ -46,8 +44,6 @@ export interface AgentWorkflowDetailBaseProps {
         readonly openMap: () => void
         readonly step: (action: StepAction) => void
         readonly rollback: (number: number) => void
-        readonly diffOpen: (number: number) => void
-        readonly diffClose: () => void
         readonly runsFilter: (next: Partial<RunsFilter>) => void
         readonly runsTab: (key: string) => void
         readonly runsRetry: () => void
@@ -56,7 +52,7 @@ export interface AgentWorkflowDetailBaseProps {
 
 /**
  * The page of one workflow: its head, then four parts in the band: "In and Out" (what starts it and what it ends with), the map (the
- * graph canvas, with its two commands in the head), the versions and the runs of this workflow only. The drawer of a step opens above.
+ * graph canvas, with its two commands in the head), the versions and the runs of this workflow only. The drawer of a step opens above; a version opens its own page.
  */
 export const AgentWorkflowDetailBase = (props: AgentWorkflowDetailBaseProps) => {
     const { copy, grid } = props.props
@@ -92,11 +88,11 @@ export const AgentWorkflowDetailBase = (props: AgentWorkflowDetailBaseProps) => 
                                         runsPlaceholder={props.props.runsPlaceholder}
                                         runsFilter={props.props.runsFilter}
                                         slotLabels={props.props.slotLabels}
+                                        versionBase={props.props.versionBase}
                                         isLoading={isLoading}
                                         on={{
                                             pressStep: (nodeKey) => props.on.step({ kind: "open", nodeKey }),
                                             rollback: props.on.rollback,
-                                            diff: props.on.diffOpen,
                                             runsFilter: props.on.runsFilter,
                                             runsTab: props.on.runsTab,
                                             runsRetry: props.on.runsRetry,
@@ -108,14 +104,6 @@ export const AgentWorkflowDetailBase = (props: AgentWorkflowDetailBaseProps) => 
                     />
                 </Pane>
             </PaneGrid>
-            <DiffPart
-                copy={copy}
-                slot={props.props.diff}
-                placeholder={props.props.diffPlaceholder}
-                isOpen={props.props.isDiffOpen}
-                slotLabels={props.props.slotLabels}
-                on={{ close: props.on.diffClose, retry: props.on.retry }}
-            />
             <WorkflowStepDrawer view={props.props.drawer} onAction={props.on.step} />
         </>
     )

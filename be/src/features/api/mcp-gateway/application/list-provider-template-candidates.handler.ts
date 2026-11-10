@@ -22,7 +22,7 @@ export class ListProviderTemplateCandidatesHandler extends ICQRSHandler<
     protected override process(query: ListProviderTemplateCandidatesQuery): Promise<ReadonlyArray<TemplateCandidate>> {
         return this.admin.templateCandidates(
             { principalId: query.params.principal.id, workspaceId: query.params.request.workspaceId },
-            query.params.request.provider,
+            query.params.request.connectionId,
         )
     }
 }

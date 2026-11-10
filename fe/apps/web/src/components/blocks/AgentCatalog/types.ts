@@ -8,7 +8,6 @@ export interface GrantChipView {
     /** The provider as people know it ("SePay", "Telegram", "Zalo OA"). */
     readonly brand: string
     readonly label: string
-    readonly level: string
 }
 
 /** What one installed agent shows as a row of the list. */

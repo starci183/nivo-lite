@@ -3,10 +3,8 @@ import { builder } from "@starci/jest-preset"
 import type { BoundAgent, BoundAgentFacts, BoundConnectionFacts } from "./agent-connections.contracts"
 import {
     boundAgentsOf as boundAgentsOfImplementation,
-    exceedsManagerCeiling,
     boundConnectionsOf as boundConnectionsOfImplementation,
     handoversFrom as handoversFromImplementation,
-    isAccess as isAccessImplementation,
     isPurpose as isPurposeImplementation,
     purposesOf as purposesOfImplementation,
     splitRoute as splitRouteImplementation,
@@ -17,7 +15,6 @@ type Subject = {
     boundAgentsOf: typeof boundAgentsOfImplementation
     boundConnectionsOf: typeof boundConnectionsOfImplementation
     handoversFrom: typeof handoversFromImplementation
-    isAccess: typeof isAccessImplementation
     isPurpose: typeof isPurposeImplementation
     purposesOf: typeof purposesOfImplementation
     splitRoute: typeof splitRouteImplementation
@@ -32,7 +29,6 @@ const buildSubject = async () => {
                     boundAgentsOf: boundAgentsOfImplementation,
                     boundConnectionsOf: boundConnectionsOfImplementation,
                     handoversFrom: handoversFromImplementation,
-                    isAccess: isAccessImplementation,
                     isPurpose: isPurposeImplementation,
                     purposesOf: purposesOfImplementation,
                     splitRoute: splitRouteImplementation,
@@ -48,7 +44,6 @@ const agentRow = builder<BoundAgentFacts>({
     module: "chatbot",
     name: "Bot",
     created_at: "2026-10-01T00:00:00.000Z",
-    access: "auto",
     purpose: "inbound_chat",
 })
 
@@ -58,7 +53,6 @@ const connectionRow = builder<BoundConnectionFacts>({
     name: "Shop bot",
     status: "connected",
     created_at: "2026-10-01T00:00:00.000Z",
-    access: "ask",
     purpose: "outbound_chat",
     bot_username: null,
     account_masked: null,
@@ -68,7 +62,6 @@ const agentOf = builder<BoundAgent>({
     id: "a1",
     module: "chatbot",
     name: "Bot",
-    access: "auto",
     purpose: "inbound_chat",
 })
 
@@ -78,8 +71,6 @@ describe("agent bindings policy", () => {
 
         expect(subject.isPurpose("tool")).toBe(true)
         expect(subject.isPurpose("spam")).toBe(false)
-        expect(subject.isAccess("ask")).toBe(true)
-        expect(subject.isAccess("admin")).toBe(false)
     })
 
     it("takes one purpose or several", async () => {
@@ -101,23 +92,16 @@ describe("agent bindings policy", () => {
             expect(subject.boundAgentsOf(rows, {}).map((agent) => agent.id)).toEqual(["a1", "a2"])
         })
 
-        it("leaves out read-only bindings when acting and agents of other modules when asked", async () => {
+        it("counts every binding (a binding routes; rights live in attachments) and leaves out agents of other modules when asked", async () => {
             const subject = await buildSubject()
 
             const rows = [
-                agentRow({ id: "a1", access: "read" }),
+                agentRow({ id: "a1" }),
                 agentRow({ id: "a2", module: "booking" }),
-                agentRow({ id: "a3", access: "weird" }),
+                agentRow({ id: "a3" }),
             ]
 
-            expect(
-                subject.boundAgentsOf(rows, { acting: true, modules: ["booking", "chatbot"] }).map((a) => a.id),
-            ).toEqual(["a2"])
-            expect(subject.boundAgentsOf(rows, { acting: false }).map((a) => `${a.id}:${a.access}`)).toEqual([
-                "a1:read",
-                "a2:auto",
-                "a3:read",
-            ])
+            expect(subject.boundAgentsOf(rows, {}).map((a) => a.id)).toEqual(["a1", "a2", "a3"])
             expect(subject.boundAgentsOf(rows, { modules: ["booking"] }).map((a) => a.id)).toEqual(["a2"])
         })
 
@@ -148,13 +132,12 @@ describe("agent bindings policy", () => {
 
             const rows = [
                 connectionRow({ id: "c1", status: "error" }),
-                connectionRow({ id: "c2", access: "read" }),
+                connectionRow({ id: "c2" }),
                 connectionRow({ id: "c3", provider: "zalo_oa" }),
                 connectionRow({ id: "c4", purpose: "unknown" }),
             ]
 
             expect(subject.boundConnectionsOf(rows, { connectedOnly: true }).map((c) => c.id)).toEqual(["c2", "c3"])
-            expect(subject.boundConnectionsOf(rows, { acting: true }).map((c) => c.id)).toEqual(["c1", "c3"])
             expect(subject.boundConnectionsOf(rows, { providers: ["zalo_oa"] }).map((c) => c.id)).toEqual(["c3"])
             expect(subject.boundConnectionsOf([connectionRow()], {})).toEqual([
                 {
@@ -164,7 +147,6 @@ describe("agent bindings policy", () => {
                     botUsername: null,
                     accountMasked: null,
                     status: "connected",
-                    access: "ask",
                     purpose: "outbound_chat",
                 },
             ])
@@ -231,25 +213,5 @@ describe("agent bindings policy", () => {
         const bound = [agentOf({ id: "a1" }), agentOf({ id: "a2", module: "booking" })]
 
         expect(subject.handoversFrom(bound, "chatbot").map((agent) => agent.id)).toEqual(["a2"])
-    })
-})
-
-describe("exceedsManagerCeiling", () => {
-    it.each([
-        ["read", null, false],
-        ["ask", null, false],
-        ["auto", null, true],
-        ["auto", "read", true],
-        ["auto", "ask", true],
-        ["auto", "auto", false],
-        ["ask", "auto", false],
-        ["read", "auto", false],
-    ] as const)("asking %s over %s: widens past the owner's ceiling is %s", (requested, existing, widens) => {
-        expect(exceedsManagerCeiling(requested, existing)).toBe(widens)
-    })
-
-    it("counts a stored level it does not know as the least one", () => {
-        expect(exceedsManagerCeiling("auto", "bogus")).toBe(true)
-        expect(exceedsManagerCeiling("ask", "bogus")).toBe(false)
     })
 })

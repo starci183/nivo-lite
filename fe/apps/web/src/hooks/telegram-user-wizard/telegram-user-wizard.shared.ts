@@ -1,5 +1,4 @@
 import type { Dispatch, SetStateAction, TransitionStartFunction } from "react"
-import type { AgentWish } from "@/hooks/connections"
 import type { useTelegramUserForm } from "@/hooks/rhf"
 import type { SlotRead } from "@/modules/types"
 import type { Settled } from "../connection-wizard"
@@ -18,7 +17,7 @@ type TelegramUserWizardActionsInput = {
     readonly editing: boolean
     readonly onClose: (changed: boolean) => void
     readonly go: (to: number) => void
-    readonly setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<AgentWish>) => Promise<Settled<true>>
+    readonly setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<string>) => Promise<Settled<true>>
     readonly agentIds: readonly string[]
     readonly forms: ReturnType<typeof useTelegramUserForm>
 }

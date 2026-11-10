@@ -1,5 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common"
 import {
+    GraphNodeRegistryService,
     GraphNodeRunTokensService,
     GraphNodesError,
     GraphNodesErrorCode,
@@ -7,7 +8,9 @@ import {
 } from "@modules/domain/graph-nodes"
 import type { NodeEffectRightCall, NodeRunClaims, NodeToolCall, NodeToolDoor } from "@modules/domain/graph-nodes"
 import type { SubjectRef } from "@nivo-lite/agent-sdk/node"
+import { TOOL } from "@nivo-lite/blocks-core"
 import { AgentViewScopeService } from "@modules/domain/agents"
+import { ChatConversationsService } from "@modules/domain/chat-records"
 import { WorkspaceMembersReadService } from "@modules/domain/workspace-members"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
@@ -20,6 +23,10 @@ import { McpGatewayLogEvent } from "./mcp-gateway.log-events"
 import { McpGatewayService } from "./mcp-gateway.service"
 import { isAbilityTool, isChannelBound } from "./provider-abilities.policy"
 import { ProviderAbilitiesService } from "./provider-abilities.service"
+import { ALREADY_TOLD, LINE_KIND, LINES_LOOKED_AT, answeredSince, toldBefore } from "./repeat-send.policy"
+
+/** One effect the door is asked about before it acts for real (the host's repeat-guard call). */
+type RepeatGuardCall = Parameters<NonNullable<NodeToolDoor["repeatGuard"]>>[0]
 
 /** The reason a native tool gives when the workspace has no connected provider for it. */
 const NOT_CONNECTED = "not_connected"
@@ -75,7 +82,57 @@ export class NodeToolDoorService implements NodeToolDoor {
         @Optional() private readonly members?: WorkspaceMembersReadService,
         @Optional() private readonly scopes?: AgentViewScopeService,
         @Optional() private readonly abilities?: ProviderAbilitiesService,
+        @Optional() private readonly registry?: GraphNodeRegistryService,
+        @Optional() private readonly conversations?: ChatConversationsService,
     ) {}
+
+    /**
+     * One customer line per stop, ever: refuses a `customer.message.send` that would tell a customer again for the same stop. The
+     * step (the same run and step key, on any engine) already sent a line to the conversation the call addresses in an EARLIER attempt
+     * (so it ran, told the customer and did not complete: it stopped, was parked, re-driven or resumed), and no person has answered
+     * its report since that line. The refusal is an ordinary fact the step reads (`already_told_for_this_stop`, with the line and its
+     * time) and moves on from. It lifts when the founder answers (the turn then carries an answer newer than the line: the step may
+     * say how it ended) and never applies to the lines of one attempt. It reads no business: the same step, the same conversation, no
+     * newer answer. A message addressed by the customer (`leadId`) is judged on the conversation the send would pick.
+     */
+    async repeatGuard(call: RepeatGuardCall): Promise<SubjectRef | null> {
+        if (call.effect !== TOOL.customerMessageSend) return null
+        const lines = this.registry?.optionalPortOf(LINE_KIND)
+        if (lines === undefined) return null
+        const conversationId = await this.addressedOf(call.turn.workspaceId, call.payload)
+        if (conversationId === null) return null
+        const rows = await lines.read(
+            call.turn,
+            {
+                where: { conversationId, role: "agent" },
+                fields: ["text", "sentAt", "channelRef"],
+                limit: LINES_LOOKED_AT,
+            },
+            "workspace",
+        )
+        const told = toldBefore(rows, call.step, call.startedAt)
+        if (told === null || answeredSince(call.turn.founderAnswers, told)) return null
+        this.logger.info(McpGatewayLogEvent.RepeatSendRefused, {
+            workspaceId: call.turn.workspaceId,
+            agentId: call.turn.agentId,
+            step: call.step,
+            conversationId,
+        })
+        return { kind: "refused", id: ALREADY_TOLD, facts: { conversationId, line: told.text, at: told.at } }
+    }
+
+    /**
+     * The conversation a send addresses: the one it names, or for a message addressed by the customer the one the send would pick (the
+     * customer's most recently active conversation, on the channel asked for when it asks for one); null when it names neither or the
+     * customer has none (the send itself then answers its own refusal).
+     */
+    private async addressedOf(workspaceId: string, payload: RepeatGuardCall["payload"]): Promise<string | null> {
+        if (typeof payload.conversationId === "string") return payload.conversationId
+        if (typeof payload.leadId !== "string" || this.conversations === undefined) return null
+        const channel = typeof payload.channel === "string" ? payload.channel : undefined
+        const all = await this.conversations.ofLeads(workspaceId, [payload.leadId])
+        return all.find((conversation) => channel === undefined || conversation.channel === channel)?.id ?? null
+    }
 
     /**
      * The right of the run's agent to perform an effect through `context.effect`, judged as the gateway judges the same tool, so the

@@ -64,6 +64,8 @@ export interface TextRequest {
     readonly kind: string
     /** The usage module. */
     readonly module: string
+    /** The call kind booked with the usage: the `purpose` of a graph node's call; absent for a fixed task of the app. */
+    readonly purpose?: string | undefined
 }
 
 /** The lead a prompt talks about. */
@@ -393,6 +395,24 @@ export interface MeterEntry {
     readonly usage: MeteredRun | null
     /** The length of the generated text. */
     readonly completionChars: number
+    /** What the call was and how it went: its kind, hidden reasoning, time, try, upstream and finish reason. */
+    readonly call?: MeteredCall | undefined
+}
+
+/** What one metered model call was and how it went, beside what it cost: the run page shows it per call kind. */
+export interface MeteredCall {
+    /** The call kind: the `purpose` of a graph node's call (`<node id>:<tag>`); null for a fixed task of the app. */
+    readonly purpose: string | null
+    /** The answer's tokens spent on hidden reasoning (a part of the completion tokens); null when the endpoint did not say. */
+    readonly reasoningTokens: number | null
+    /** The wall time of the try that answered, milliseconds; null when not timed. */
+    readonly durationMs: number | null
+    /** Which try of the call answered, from one. */
+    readonly tryNumber: number
+    /** The upstream of the endpoint that served it; null when it did not say. */
+    readonly upstream: string | null
+    /** Why the model stopped; null when it did not say. */
+    readonly finishReason: string | null
 }
 
 /** The sentence a workspace over its allowance is shown. */

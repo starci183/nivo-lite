@@ -19,7 +19,7 @@ export class DetachAgentProviderHandler extends ICQRSHandler<DetachAgentProvider
         return this.admin.detachProvider(
             { principalId: command.params.principal.id, workspaceId: command.params.request.workspaceId },
             command.params.request.agentId,
-            command.params.request.provider,
+            command.params.request.connectionId,
         )
     }
 }

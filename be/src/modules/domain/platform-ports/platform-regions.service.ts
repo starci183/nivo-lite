@@ -2,16 +2,16 @@ import { Injectable } from "@nestjs/common"
 import { AgentBindingsService, PURPOSES } from "@modules/domain/agent-connections"
 import { AgentKnowledgeLensService } from "@modules/domain/agent-knowledge"
 import { AgentDirectoryService } from "@modules/domain/agents"
-import { ConnectionGrantsService } from "@modules/domain/connection-grants"
+import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
 import { KnowledgeGapsService } from "@modules/domain/knowledge-gaps"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
-import { GAPS_SHOWN, regionKey, toneOfStatus } from "./platform-regions.policy"
+import { ABILITY_SEPARATOR, GAPS_SHOWN, accessOf, abilitiesHeld, pick, regionKey } from "./platform-regions.policy"
 import type { ConnectionsRegion, KnowledgeRegion } from "./platform-regions.policy"
 
 @Injectable()
 /**
- * The data behind the connections and knowledge regions of an agent page: the connections bound to the agent, and what the agent knows with
+ * The data behind the connections and knowledge regions of an agent page: the providers attached to the agent, and what the agent knows with
  * its open gaps. It only reads the capabilities that own the data and says the result in the viewer's language; the words come from the
  * message catalog.
  */
@@ -22,61 +22,59 @@ export class PlatformRegionsService {
         private readonly directory: AgentDirectoryService,
         private readonly gaps: KnowledgeGapsService,
         private readonly lens: AgentKnowledgeLensService,
-        private readonly grants: ConnectionGrantsService,
+        private readonly abilities: ProviderAbilitiesService,
     ) {}
 
-    /** The connections bound to the agent, one row each, with the state and the access in words. */
-    async connectionsOf(agentId: string, locale: Locale): Promise<ConnectionsRegion> {
-        const say = (key: string): string => this.catalog.get(key, {}, locale)
-        const connections = await this.bindings.connectionsFor(agentId, PURPOSES)
-        return {
-            manageLabel: say(regionKey("connections", "manage")),
-            manageHref: "",
-            rows: connections.map((connection) => ({
-                id: connection.id,
-                name: connection.name,
-                description: say(regionKey("purpose", connection.purpose)),
-                statusLabel: say(regionKey("status", connection.status)),
-                statusTone: toneOfStatus(connection.status),
-                accessLabel: say(regionKey("access", connection.access)),
-                provider: connection.provider,
-                access: connection.access,
-                ...(connection.accountMasked === null ? {} : { accountMasked: connection.accountMasked }),
-                isGranted: true,
-            })),
-        }
-    }
-
     /**
-     * The connections bound to the agent, then the accounts of the same kinds the agent is not granted yet, each with the command that
-     * grants it. A connection the agent already uses for any purpose is not offered again.
+     * The accounts attached to the agent, read only, one row per attachment: "provider · account", and the abilities the agent holds on
+     * it from the provider rights (the abilities' own labels; a write ability says its mode, auto or ask). An account attached with no
+     * ability says it holds none. The default receiving account is flagged in the data only; the aside draws no marker. The masked account of a
+     * bank feed rides along for the readers that match a bank payment to it. The link goes to the agent's rights, where all of it changes.
      */
-    async connectionsWithCandidatesOf(workspaceId: string, agentId: string, locale: Locale): Promise<ConnectionsRegion> {
+    async connectionsOf(workspaceId: string, agentId: string, locale: Locale): Promise<ConnectionsRegion> {
         const say = (key: string): string => this.catalog.get(key, {}, locale)
-        const [bound, directory] = await Promise.all([
-            this.connectionsOf(agentId, locale),
-            this.directory.find(workspaceId, agentId),
+        const [board, bound] = await Promise.all([
+            this.abilities.board(workspaceId),
+            this.bindings.connectionsFor(agentId, PURPOSES),
         ])
-        const granted = new Set(bound.rows.map((row) => row.id))
-        const candidates = await this.grants.candidatesOf(workspaceId, agentId, directory?.module ?? "")
-        const open = candidates.filter((candidate) => candidate.access === null && !granted.has(candidate.id))
+        const maskedOf = new Map(
+            bound.flatMap((connection) =>
+                connection.accountMasked === null ? [] : [[connection.id, connection.accountMasked] as const],
+            ),
+        )
+        const modeWord = { auto: say(regionKey("connections", "mode_auto")), ask: say(regionKey("connections", "mode_ask")) }
+        const rows = board.attachments
+            .filter((attachment) => attachment.agentId === agentId)
+            .flatMap((attachment) => {
+                const provider = board.providers.find((one) => one.provider === attachment.provider)
+                const account = provider?.accounts.find((one) => one.connectionId === attachment.connectionId)
+                if (provider === undefined || account === undefined) return []
+                const held = abilitiesHeld(provider.abilities, attachment.abilities)
+                const words = held.map((ability) =>
+                    ability.scope === "write"
+                        ? `${pick(ability.label, locale)} (${modeWord[ability.mode]})`
+                        : pick(ability.label, locale),
+                )
+                const access = accessOf(held)
+                const masked = maskedOf.get(account.connectionId)
+                return [
+                    {
+                        id: account.connectionId,
+                        name: `${pick(provider.label, locale)}${ABILITY_SEPARATOR}${account.label}`,
+                        description: words.length === 0 ? say(regionKey("connections", "none")) : words.join(ABILITY_SEPARATOR),
+                        provider: provider.provider,
+                        account: account.label,
+                        ...(account.isDefault ? { isDefaultReceiving: true } : {}),
+                        ...(access === null ? {} : { access }),
+                        ...(masked === undefined ? {} : { accountMasked: masked }),
+                    },
+                ]
+            })
         return {
-            ...bound,
-            rows: [
-                ...bound.rows,
-                ...open.map((candidate) => ({
-                    id: candidate.id,
-                    name: candidate.name,
-                    description: say(regionKey("purpose", candidate.purpose)),
-                    statusLabel: say(regionKey("status", candidate.status)),
-                    statusTone: toneOfStatus(candidate.status),
-                    accessLabel: "",
-                    provider: candidate.provider,
-                    ...(candidate.accountMasked === null ? {} : { accountMasked: candidate.accountMasked }),
-                    isGranted: false,
-                    actionLabel: say(regionKey("connections", "grant")),
-                })),
-            ],
+            label: say(regionKey("connections", "title")),
+            rightsLabel: say(regionKey("connections", "rights")),
+            rightsHref: "",
+            rows,
         }
     }
 

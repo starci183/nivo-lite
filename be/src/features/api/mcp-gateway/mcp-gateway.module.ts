@@ -15,6 +15,7 @@ import { AttachAgentProviderHandler } from "./application/attach-agent-provider.
 import { DetachAgentProviderHandler } from "./application/detach-agent-provider.handler"
 import { SetAgentAbilityHandler } from "./application/set-agent-ability.handler"
 import { AttachProviderByTemplateHandler } from "./application/attach-provider-by-template.handler"
+import { SetDefaultReceivingAccountHandler } from "./application/set-default-receiving-account.handler"
 import { ConfigurableModuleClass } from "./mcp-gateway.module-definition"
 
 @Module({
@@ -28,6 +29,7 @@ import { ConfigurableModuleClass } from "./mcp-gateway.module-definition"
         ApproveMcpConnectorHandler,
         CheckMcpConnectorHandler,
         SetMcpConnectorCredentialHandler,
+        SetDefaultReceivingAccountHandler,
         ListProviderRightsHandler,
         GetAgentAbilityProposalHandler,
         ListProviderTemplateCandidatesHandler,

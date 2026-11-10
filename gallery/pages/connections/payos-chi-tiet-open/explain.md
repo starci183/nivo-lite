@@ -17,10 +17,10 @@ Vì sao: SAI/OK split. OK: flush-left breadcrumb, brand tile, title, status chip
 Luật: `page-header-left-sublabel-xs.md`, `table-heroui-native-section-head.md` (tab counts grey; raw ids in a collapsed list).
 Grammar: `PageHeader tabs`, `Button`, `DropdownMenu`, `node_modules/@starci/grammar/dist/core/frame/PageHeader/index.d.ts`.
 
-## Nút "Giao cho agent" nổi trên nền hồng
-Vì sao: SAI — a neutral pill floats at the top of the left column with no head and no card; it is the assignment command of the "Agent dùng kết nối này" block that does not exist here, so a control appears without a block; should live in that block's head or card header zone.
-Luật: `table-heroui-native-section-head.md` (section head), `pink-page-surface-rule.md` (a block's own controls live in its header).
-Grammar: `Select`, `Button size="sm"`, `node_modules/@starci/grammar/dist/core/branch/Select/index.d.ts`.
+## Cột trái (chỉ khối "Thông tin kết nối", không còn nút nổi)
+Vì sao: the floating "Giao cho agent" pill was the old per-connection level picker (`ConnectionAccessMenu`) and is gone with the level (K-BLK 2026-11-10); with no agent bound the overview shows no agents block (`ConnectionAgents isHiddenWhenEmpty`), binding lives on the Agent tab and rights on the agent's Quyền tab. The left column now starts with the facts card level with the rail head.
+Luật: `provider-rights-abilities.md`, `pink-page-surface-rule.md` (no loose control on the well).
+Grammar: `Grid kind="main-rail"`, `Stack gap="region"`, `node_modules/@starci/grammar/dist/core/frame/Grid/index.d.ts`; block `ConnectionOpenContent` (draws nothing when the row has nothing to say).
 
 ## Khối "Thông tin kết nối" (Loại kết nối, Tên)
 Vì sao: SAI — a details card with only two rows ("Loại kết nối: Thanh toán qua payOS", "Tên: payOS") where the name repeats the title and the type repeats the breadcrumb: no information; the SePay detail shows nine rows.

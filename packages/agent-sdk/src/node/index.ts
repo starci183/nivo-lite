@@ -29,7 +29,19 @@ export type {
     ToolConfig,
     ToolDefinition,
 } from "./effect.types"
-export type { EffectCall, NodeHostPorts, NodeRun, NodeRunEffect, NodeRunRequest } from "./host.types"
+export type {
+    EffectCall,
+    NodeAgentCallAnswer,
+    NodeAgentEndAnswer,
+    NodeAgentLoop,
+    NodeAgentLoopEnd,
+    NodeAgentLoopTool,
+    NodeAgentRefusal,
+    NodeHostPorts,
+    NodeRun,
+    NodeRunEffect,
+    NodeRunRequest,
+} from "./host.types"
 export type { NodeInputBinding, NodeInputBindings, NodeInputRef, NodeInputScope } from "./binding"
 export type { GraphNodeRef, NodeIndex, NodeInstall, NodeProblem, NodeProblemCode } from "./problems"
 export type { NodeRunErrorCode } from "./node-run-error"

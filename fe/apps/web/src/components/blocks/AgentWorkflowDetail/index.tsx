@@ -6,7 +6,7 @@ import { useWorkflowDetail } from "@/hooks/agentWorkflowPages"
 import { useSlotLabels } from "@/hooks/slot"
 import { navigation } from "@/modules/i18n"
 import { EMPTY_STEPS_MAP } from "@/hooks/workflowSteps"
-import type { PaneGridLayout, RunsTableCopy, RunsView, WorkflowDetailView, WorkflowDiffReadView } from "@/modules/types"
+import type { PaneGridLayout, RunsTableCopy, RunsView, WorkflowDetailView } from "@/modules/types"
 import { AgentWorkflowDetailBase } from "./component"
 import type { AgentWorkflowDetailCopy, DetailTab } from "./parts"
 
@@ -43,11 +43,6 @@ const DETAIL_PLACEHOLDER: WorkflowDetailView = {
     graphTitle: "-",
     flow: EMPTY_STEPS_MAP,
     versions: [{ number: 1, title: "-", description: "-", isActive: false }],
-}
-
-const DIFF_PLACEHOLDER: WorkflowDiffReadView = {
-    title: "",
-    view: { steps: [], lines: [], kept: "", flow: EMPTY_STEPS_MAP },
 }
 
 const RUNS_PLACEHOLDER: RunsView = {
@@ -104,7 +99,7 @@ const copyOf = (t: PageWords, td: WorkflowWords, runs: RunsTableCopy): AgentWork
         running: t("verRunning"),
         old: t("verOld"),
         rollback: t("verRollback"),
-        diff: td("viewDiff"),
+        open: td("versionOpen"),
         confirmTitle: (number) => t("verConfirmTitle", { number }),
         confirmBody: (number) => t("verConfirmBody", { number }),
         confirm: t("verConfirm"),
@@ -112,17 +107,6 @@ const copyOf = (t: PageWords, td: WorkflowWords, runs: RunsTableCopy): AgentWork
         empty: t("versionsEmpty"),
     },
     runs,
-    close: td("diffClose"),
-    diff: {
-        stepsTitle: td("diffStepsTitle"),
-        stepsEmpty: td("diffStepsEmpty"),
-        otherTitle: td("diffOtherTitle"),
-        mapTitle: td("diffMapTitle"),
-        mapLabel: td("graphLabel"),
-        mapCaption: td("diffMapCaption"),
-        keepCaption: td("diffKeepCaption"),
-        keptTitle: td("diffKeptTitle"),
-    },
 })
 
 /** The connected page of one workflow: reads it, its overview, its map and its runs, and draws them in four parts. */
@@ -148,9 +132,7 @@ export const AgentWorkflowDetail = (props: AgentWorkflowDetailProps) => {
                 runs: runs.slot,
                 runsPlaceholder: RUNS_PLACEHOLDER,
                 runsFilter: runs.filter,
-                diff: page.diff.slot,
-                diffPlaceholder: DIFF_PLACEHOLDER,
-                isDiffOpen: page.diff.isOpen,
+                versionBase: `${base}/versions`,
                 part: props.part,
                 grid: GRID,
                 slotLabels: slotLabels(t("notFound")),
@@ -160,8 +142,6 @@ export const AgentWorkflowDetail = (props: AgentWorkflowDetailProps) => {
                 openMap: () => router.push(`${base}/map`),
                 step: page.steps.act,
                 rollback: page.rollback,
-                diffOpen: page.diff.open,
-                diffClose: page.diff.close,
                 runsFilter: runs.setFilter,
                 runsTab: (key) => runs.setFilter({ tab: tabOf(key) }),
                 runsRetry: runs.reload,

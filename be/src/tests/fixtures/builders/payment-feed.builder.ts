@@ -60,6 +60,5 @@ export const persistPaymentFeed = async (
         connectionId: world.connectionId,
         workspaceId: world.workspaceId,
         purpose: "bank_feed",
-        access: "auto",
     })
 }

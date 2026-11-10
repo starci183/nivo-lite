@@ -12,7 +12,7 @@ export const QUERY_AGENT_ABILITY_PROPOSAL_SWR_KEY = "QUERY_AGENT_ABILITY_PROPOSA
 /** The connected providers a template names, pre-ticked. Pass `null` to wait for the template. */
 export const useQueryAgentAbilityProposalSwr = (moduleKey: string | null): ReadResponse<AgentAbilityProposalQuery["agentAbilityProposal"]> =>
     useSWR(
-        useWorkspaceKey(QUERY_AGENT_ABILITY_PROPOSAL_SWR_KEY, [moduleKey]),
+        useWorkspaceKey(QUERY_AGENT_ABILITY_PROPOSAL_SWR_KEY, [moduleKey], moduleKey !== null && moduleKey !== ""),
         async ({ signal }: { signal?: AbortSignal } = {}) =>
             answeredData(
                 await queryAgentAbilityProposal({ request: { moduleKey: moduleKey ?? "" }, signal }),

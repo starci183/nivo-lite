@@ -26,7 +26,6 @@ const BLANK: Connection = {
     lastEventAt: null,
     firstEvent: null,
     agentIds: [],
-    grants: [],
 }
 
 /** What the page of a connection without a page of its own reads. */
@@ -71,7 +70,6 @@ export const useConnectionOpen = (connectionId: string): ConnectionOpenRead => {
             .filter((name): name is string => name !== undefined),
         localOnly: isLocalOnly(webSiteOrigin()),
         ownerEmail: user.data?.email ?? "",
-        agents: data.activeAgents,
         canManage: access.role === "owner",
     })
     const { facts, event } = useConnectionOpenFacts(found, view)

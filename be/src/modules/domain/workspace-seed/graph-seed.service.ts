@@ -157,7 +157,6 @@ export class GraphSeedService {
                     agentId,
                     connectionId: MANAGEMENT_CONNECTION_IDS[binding.connection],
                     purpose: binding.purpose,
-                    access: binding.access,
                 })
                 assigned += 1
             } catch (cause) {

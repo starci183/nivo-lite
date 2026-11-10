@@ -28,7 +28,27 @@ export { loyaltyCampaignEntity } from "./loyalty/campaign.entity"
 export { loyaltyDecisionEntity } from "./loyalty/decision.entity"
 export { agentNodeEffectEntity } from "./agent/node-effect.entity"
 export { agentRunStepEntity, RUN_STEP_STATUSES } from "./agent/run-step.entity"
-export { agentRunEntity, RUN_STATUSES } from "./agent/run.entity"
+export { agentRunEntity, RUN_ENGINES, RUN_STATUSES } from "./agent/run.entity"
+export {
+    agentRunStopEntity,
+    RUN_STOP_ANSWERS_SHAPE,
+    RUN_STOP_DECISION_SHAPE,
+    RUN_STOP_DECISIONS,
+    RUN_STOP_DETAIL_SHAPE,
+    RUN_STOP_KINDS,
+    RUN_STOP_LINES_SHAPE,
+    RUN_STOP_STATES,
+} from "./agent/run-stop.entity"
+export type {
+    RunStopAnswer,
+    RunStopAnswers,
+    RunStopCustomerLine,
+    RunStopCustomerLines,
+    RunStopDecision,
+    RunStopDetail,
+    RunStopFact,
+    RunStopSuggestion,
+} from "./agent/run-stop.entity"
 export { agentRunWorkflowEntity } from "./agent/run-workflow.entity"
 export { agentLeadFreezeEntity, LEAD_FREEZE_STATUSES } from "./agent/lead-freeze.entity"
 export { agentConversationHoldEntity } from "./agent/conversation-hold.entity"

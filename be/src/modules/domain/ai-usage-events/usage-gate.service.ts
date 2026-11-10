@@ -2,8 +2,15 @@ import { Injectable } from "@nestjs/common"
 import type { OptionalQuotaBlock, UsageGate, GenerationUsageRecord } from "@modules/domain/ai-generations"
 import { InjectMessageCatalog } from "@modules/platform/i18n"
 import type { Locale, MessageCatalog } from "@modules/platform/i18n"
+import type { UsageCallFacts } from "./ai-usage-events.contracts"
 import { AiUsageEventsService } from "./ai-usage-events.service"
 import { usageKindOf } from "./usage-kind.policy"
+
+/**
+ * One finished generation as the gate books it: the generations port's record, and, from the prompt library (`AiTaskMeter`), what
+ * the call was and how it went. A record without it books none of that.
+ */
+export type MeteredGeneration = GenerationUsageRecord & { readonly call?: UsageCallFacts | undefined }
 
 /** The model name booked when a run reports none. */
 const DEFAULT_MODEL = "openclaw"
@@ -22,8 +29,8 @@ export class UsageGateService implements UsageGate {
         return status === null ? null : { message: this.catalog.get("usage.exceeded", {}, locale) }
     }
 
-    /** Meters one finished generation. */
-    record(entry: GenerationUsageRecord): Promise<void> {
+    /** Meters one finished generation, with what the call was and how it went when the caller told it. */
+    record(entry: MeteredGeneration): Promise<void> {
         const run = entry.usage
         return this.usage.record({
             workspaceId: entry.workspaceId,
@@ -43,6 +50,7 @@ export class UsageGateService implements UsageGate {
             promptChars: entry.promptChars ?? 0,
             completionChars: entry.completionChars,
             runId: entry.runId,
+            ...(entry.call === undefined ? {} : { call: entry.call }),
         })
     }
 }

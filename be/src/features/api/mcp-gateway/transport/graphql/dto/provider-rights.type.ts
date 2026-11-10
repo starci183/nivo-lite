@@ -33,7 +33,35 @@ export class ProviderAbilityType {
 }
 
 @ObjectType()
-/** One provider with its abilities and whether the workspace connected it. */
+/** One connected account of a provider: one connection (one Zalo OA, one bank account, one sheet). */
+export class ProviderAccountType {
+    /** The connection id: the key of every attachment and tick. */
+    @Field(() => ID)
+    connectionId!: string
+
+    /** The provider it is an account of. */
+    @Field(() => String)
+    provider!: string
+
+    /** Its kind: messaging, payment or books. */
+    @Field(() => String)
+    kind!: string
+
+    /** The name of the account (the connection's name, with the masked account number when the provider reported one). */
+    @Field(() => String)
+    accountLabel!: string
+
+    /** True when the connection works: only then can an agent be attached to it. */
+    @Field(() => Boolean)
+    connected!: boolean
+
+    /** True when it is the shop's default account of its kind: the receiving account a payment QR is drawn on. */
+    @Field(() => Boolean)
+    isDefaultReceiving!: boolean
+}
+
+@ObjectType()
+/** One provider with its abilities (once) and the workspace's accounts of it. */
 export class ProviderRightType {
     /** The provider key. */
     @Field(() => String)
@@ -55,9 +83,9 @@ export class ProviderRightType {
     @Field(() => Boolean)
     connected!: boolean
 
-    /** The name of the workspace's working connection of it (the account it reaches), or null when it is not connected. */
-    @Field(() => String, { nullable: true })
-    accountLabel!: string | null
+    /** The workspace's accounts of it (one per connection), oldest first: what an agent is attached to. */
+    @Field(() => [ProviderAccountType])
+    accounts!: Array<ProviderAccountType>
 
     /** Its abilities; none means no agent can be attached to it. */
     @Field(() => [ProviderAbilityType])
@@ -83,7 +111,11 @@ export class AgentAttachmentType {
     @Field(() => ID)
     agentId!: string
 
-    /** The provider. */
+    /** The connected account the agent is attached to. */
+    @Field(() => ID)
+    connectionId!: string
+
+    /** The provider of that account. */
     @Field(() => String)
     provider!: string
 
@@ -105,17 +137,25 @@ export class ProviderRightsType {
 }
 
 @ObjectType()
-/** One provider a template names for a fresh agent, with the ticks it proposes. */
+/** One line of a template's proposal for a fresh agent: a connected account with its ticks, or a provider that is not connected. */
 export class ProposedAttachmentType {
     /** The provider. */
     @Field(() => String)
     provider!: string
 
-    /** The abilities the template ticks. */
+    /** The connected account, or null on the line of a provider the workspace has not connected. */
+    @Field(() => ID, { nullable: true })
+    connectionId!: string | null
+
+    /** The name of the account, or null. */
+    @Field(() => String, { nullable: true })
+    accountLabel!: string | null
+
+    /** The abilities the template ticks on the account; none on a provider that is not connected. */
     @Field(() => [AbilityTickType])
     abilities!: Array<AbilityTickType>
 
-    /** True when the workspace connected the provider: only then is a fresh agent attached to it. */
+    /** True for a working account: only then is a fresh agent attached. */
     @Field(() => Boolean)
     connected!: boolean
 }

@@ -135,6 +135,10 @@ export interface BankMovement {
     readonly occurredAt: string
     /** The name of the bank. */
     readonly bankName: string
+    /** The connected account the movement arrived on (its connection id), so a step can tell the shop's accounts apart. */
+    readonly connectionId?: string | undefined
+    /** That account's name, as the shop named the connection. */
+    readonly account?: string | undefined
 }
 
 /** The bank's own answer: the provider and the movements, newest first. */
@@ -152,6 +156,8 @@ const bankMovement: z.ZodType<BankMovement> = z.object({
     content: z.string().max(MAX_BODY),
     occurredAt: z.string().max(MAX_ID),
     bankName: z.string().max(MAX_LINE),
+    connectionId: z.string().max(MAX_ID).optional(),
+    account: z.string().max(MAX_LINE).optional(),
 })
 
 /**

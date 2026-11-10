@@ -3,7 +3,9 @@ import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
 import type { EffectCall, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { WorkspacePaymentAccountService } from "@modules/domain/channel-connections"
+import { EntityEngineService, EntityPortsService } from "@modules/domain/entity-engine"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
+import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
 import type { NodeDataPort, NodeEffectExecutor, NodeRow, NodeTurn } from "@modules/domain/graph-nodes"
 import { PaymentInstructionRegistryService } from "@modules/domain/provider-registry"
 import type { PaymentInstructionPort } from "@modules/domain/provider-registry"
@@ -35,7 +37,25 @@ interface Sender extends NodeEffectExecutor {
     composed: jest.Mock<Promise<SubjectRef>, [NodeTurn, Record<string, unknown>, EffectCall]>
 }
 
-const build = async (options: { order?: NodeRow | null; account?: boolean; composing?: boolean } = {}) => {
+/** The two payment accounts of the shop: MB (k1) and VCB (k2). */
+const ACCOUNTS = {
+    k1: { accountNumber: "525209999", bankCode: "MBBank", holder: "NGUYEN VAN A", provider: "sepay", connectionId: "k1" },
+    k2: { accountNumber: "007100123", bankCode: "VCB", holder: "NGUYEN VAN A", provider: "sepay", connectionId: "k2" },
+} as const
+
+const build = async (
+    options: { order?: NodeRow | null; account?: boolean; composing?: boolean; defaultAccount?: "k1" | "k2" | null } = {},
+) => {
+    const api = {
+        get: jest.fn().mockResolvedValue({ id: "o1", version: "1", data: { orderNo: "DH-20261110-0001" } }),
+        update: jest.fn().mockResolvedValue({ ok: true }),
+    }
+    const engine = mock<EntityEngineService>()
+    engine.scoped.mockImplementation(((_workspaceId: string, work: (tx: unknown) => unknown) => work({})) as never)
+    const ports = mock<EntityPortsService>()
+    ports.entitiesApi.mockReturnValue(api as never)
+    const abilities = mock<ProviderAbilitiesService>()
+    abilities.defaultAccountOf.mockResolvedValue(options.defaultAccount === undefined ? "k1" : options.defaultAccount)
     const registry = mock<GraphNodeRegistryService>()
     const accounts = mock<WorkspacePaymentAccountService>()
     const providers = mock<PaymentInstructionRegistryService>()
@@ -58,16 +78,8 @@ const build = async (options: { order?: NodeRow | null; account?: boolean; compo
         effect === "payment.credit.rematch" ? rematch : options.composing === false ? plain : sender,
     )
     registry.optionalExecutorOf.mockReturnValue(schedule)
-    accounts.accountOf.mockResolvedValue(
-        options.account === false
-            ? null
-            : {
-                  accountNumber: "525209999",
-                  bankCode: "MBBank",
-                  holder: "NGUYEN VAN A",
-                  provider: "sepay",
-                  connectionId: "k1",
-              },
+    accounts.accountOfConnection.mockImplementation((_workspaceId, connectionId) =>
+        Promise.resolve(options.account === false ? null : (ACCOUNTS[connectionId as keyof typeof ACCOUNTS] ?? null)),
     )
     providers.of.mockReturnValue(
         mock<PaymentInstructionPort>({ provider: "sepay", qrUrl: jest.fn().mockReturnValue(QR) }),
@@ -78,13 +90,44 @@ const build = async (options: { order?: NodeRow | null; account?: boolean; compo
             { provide: GraphNodeRegistryService, useValue: registry },
             { provide: WorkspacePaymentAccountService, useValue: accounts },
             { provide: PaymentInstructionRegistryService, useValue: providers },
+            { provide: ProviderAbilitiesService, useValue: abilities },
+            { provide: EntityEngineService, useValue: engine },
+            { provide: EntityPortsService, useValue: ports },
         ],
     }).compile()
     moduleRef.get(PaymentQrEffectsService).onModuleInit()
     const executor = registry.addExecutor.mock.calls[0]?.[0]
     assert(executor !== undefined, "no executor was registered")
-    return { executor, registry, sender, rematch, schedule, providers }
+    return { executor, registry, sender, rematch, schedule, providers, abilities, accounts, api }
 }
+
+describe("PaymentQrEffectsService on a shop with two payment accounts", () => {
+    it("draws the QR on the default receiving account the gateway names, never the first feed, and records which one", async () => {
+        const { executor, providers, abilities, accounts, api } = await build({ defaultAccount: "k2" })
+
+        const fact = await executor.execute(TURN, { orderId: "o1" }, CALL)
+
+        expect(abilities.defaultAccountOf).toHaveBeenCalledWith("ws-1", "payment")
+        expect(accounts.accountOfConnection).toHaveBeenCalledWith("ws-1", "k2")
+        expect(providers.of("sepay")?.qrUrl).toHaveBeenCalledWith(
+            expect.objectContaining({ accountNumber: "007100123" }),
+            expect.anything(),
+        )
+        expect(fact.facts).toMatchObject({ connectionId: "k2", accountLast4: "0123" })
+        expect(api.update).toHaveBeenCalledWith("sales.order", "o1", "1", { qrConnectionId: "k2" })
+    })
+
+    it("refuses with no_default_account and sends nothing when the shop named no default receiving account", async () => {
+        const { executor, sender, accounts } = await build({ defaultAccount: null })
+
+        await expect(executor.execute(TURN, { orderId: "o1" }, CALL)).resolves.toMatchObject({
+            id: "no_default_account",
+            facts: { orderNo: "DH-20261110-0001", amountVnd: 300_000 },
+        })
+        expect(accounts.accountOfConnection).not.toHaveBeenCalled()
+        expect(sender.composed).not.toHaveBeenCalled()
+    })
+})
 
 describe("PaymentQrEffectsService", () => {
     it("registers the payment.qr-create executor", async () => {
@@ -103,6 +146,9 @@ describe("PaymentQrEffectsService", () => {
                 amountVnd: 300_000,
                 transferContent: "DH202611100001",
                 qrUrl: QR,
+                connectionId: "k1",
+                bankName: "MBBANK",
+                accountLast4: "9999",
             },
         })
 
@@ -167,7 +213,7 @@ describe("PaymentQrEffectsService", () => {
             { order: { ...ORDER, amountVnd: null } },
             { orderNo: "DH-20261110-0001", status: "confirmed" },
         ],
-        ["no_payment_account", { account: false }, { orderNo: "DH-20261110-0001", amountVnd: 300_000 }],
+        ["no_payment_account", { account: false }, { orderNo: "DH-20261110-0001", amountVnd: 300_000, connectionId: "k1" }],
     ])("answers %s as a refusal fact and sends nothing", async (reason, options, facts) => {
         const { executor, sender, rematch, schedule } = await build(options)
         await expect(executor.execute(TURN, { orderId: "o1" }, CALL)).resolves.toEqual({

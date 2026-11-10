@@ -1,9 +1,6 @@
-import type { Access, Purpose } from "@/modules/types"
+import type { Purpose } from "@/modules/types"
 
-/** Lowest to highest. A new grant starts at `ask`; `auto` is never a default. */
-export const ACCESS_LEVELS: ReadonlyArray<Access> = ["read", "ask", "auto"]
-
-/** module:provider -> purpose. A pair that is not listed cannot be granted (the picker shows it disabled with the reason). */
+/** module:provider -> purpose. A pair that is not listed cannot be bound (the agent is not offered). */
 const PURPOSE: Readonly<Record<string, Purpose>> = {
     "chatbot:telegram": "inbound_chat",
     "chatbot:zalo_oa": "inbound_chat",

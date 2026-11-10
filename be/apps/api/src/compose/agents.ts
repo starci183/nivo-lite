@@ -8,13 +8,7 @@ import {
     AgentBindingsService,
     AgentConnectionsModule,
 } from "@modules/domain/agent-connections"
-import { AGENT_TOOLS_ERROR_KINDS, AGENT_TOOLS_MESSAGES, AgentToolsModule } from "@modules/domain/agent-tools"
-import {
-    AGENT_TURNS_MESSAGES,
-    AgentTurnAccessService,
-    AgentTurnsModule,
-    InternalGatewayToolsService,
-} from "@modules/domain/agent-turns"
+import { AGENT_TOOLS_ERROR_KINDS, AGENT_TOOLS_MESSAGES } from "@modules/domain/agent-tools"
 import { AGENT_PROFILE_ERROR_KINDS, AGENT_PROFILE_MESSAGES, AgentProfileModule } from "@modules/domain/agent-profile"
 import {
     AGENT_INSTANCES_ERROR_KINDS,
@@ -44,7 +38,7 @@ import {
 import { AiTasksModule } from "@modules/domain/ai-tasks"
 import { OPENCLAW_ERROR_KINDS, OPENCLAW_MESSAGES, OpenclawModule } from "@modules/integrations/openclaw"
 import { REMOTE_FILES_ERROR_KINDS, REMOTE_FILES_MESSAGES, RemoteFilesModule } from "@modules/integrations/remote-files"
-import { AGENT_TOOLS_PORTS, DECISIONS_PORTS } from "../api.options"
+import { DECISIONS_PORTS } from "../api.options"
 import type { ApiOptions } from "../api.options"
 import type { ErrorKind } from "@modules/platform/errors"
 import type { MessageBundle } from "@modules/platform/i18n"
@@ -85,15 +79,6 @@ export const agentsModules = (options: ApiOptions): Array<DynamicModule> => [
     }),
     OpenclawAgentSyncModule.register({ isGlobal: true, reloadSettleMs: OPENCLAW_RELOAD_SETTLE_MS }),
     McpCallLogModule.register({ isGlobal: true }),
-    AgentToolsModule.register({
-        isGlobal: true,
-        ports: {
-            ...AGENT_TOOLS_PORTS,
-            bridgeTurns: AgentTurnAccessService,
-            internalTools: InternalGatewayToolsService,
-        },
-    }),
-    AgentTurnsModule.register({ isGlobal: true, ...options.agentTurns }),
     DecisionsModule.register({ isGlobal: true, ports: DECISIONS_PORTS }),
     ApprovalRequestsModule.register({
         isGlobal: true,
@@ -120,7 +105,6 @@ export const agentsMessages: ReadonlyArray<MessageBundle> = [
     DECISIONS_MESSAGES,
     AGENT_CONNECTIONS_MESSAGES,
     AGENT_TOOLS_MESSAGES,
-    AGENT_TURNS_MESSAGES,
     AI_GENERATIONS_MESSAGES,
     AI_USAGE_EVENTS_MESSAGES,
     OPENCLAW_AGENT_SYNC_MESSAGES,

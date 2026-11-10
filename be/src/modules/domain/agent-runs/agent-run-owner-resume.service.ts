@@ -3,6 +3,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 import { AgentRunResumeService } from "./agent-run-resume.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
+import { AgentRunsViewService } from "./agent-runs-view.service"
 import type { OwnerResumeAnswer, OwnerResumeRequest, ResumeResult } from "./agent-runs-engine.contracts"
 
 /** The seats that may run a stopped run again: the people who govern the workspace's agents. */
@@ -10,6 +11,9 @@ const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 
 /** The answer for a run the caller's workspace does not hold: the same as for a run that does not exist, so no id is confirmed. */
 const NOT_FOUND: OwnerResumeAnswer = { kind: "not_found", stepKey: null }
+
+/** The answer for a run on a LangGraph thread: it moves only through its stop, never by the old engine's resume. */
+const THREAD_RUN: OwnerResumeAnswer = { kind: "thread_run", stepKey: null }
 
 /** The answer of a resume, flat: the step only when the run goes on. */
 const answerOf = (result: ResumeResult): OwnerResumeAnswer =>
@@ -19,12 +23,15 @@ const answerOf = (result: ResumeResult): OwnerResumeAnswer =>
 /**
  * The owner's door to a parked run: an owner or manager of the workspace runs it again from the step it stopped on, the way the sweep
  * and a new build do, with their seat and their reason kept on the run. A run of another workspace answers as one that does not exist.
+ * A run on a LangGraph thread is refused with `thread_run`: its stop is answered on its card, and the old resume would write a step
+ * the thread does not have.
  */
 export class AgentRunOwnerResumeService {
     constructor(
         private readonly members: WorkspaceMembersService,
         private readonly runs: AgentRunStoreService,
         private readonly resumes: AgentRunResumeService,
+        private readonly view: AgentRunsViewService,
     ) {}
 
     /** Runs the parked run again from its failed step for an owner or manager of its workspace; refused for any other seat. */
@@ -33,6 +40,7 @@ export class AgentRunOwnerResumeService {
         const actor = await this.members.idOf(request.principalId, request.workspaceId)
         const run = await this.runs.runById(request.workspaceId, request.runId)
         if (run?.workspaceId !== request.workspaceId) return NOT_FOUND
+        if ((await this.view.detail(run.workspaceId, run.agentId, run.id))?.engine === "langgraph") return THREAD_RUN
         return answerOf(
             await this.resumes.resume({ workspaceId: run.workspaceId, runId: run.id, actor, reason: request.reason }),
         )

@@ -1,12 +1,20 @@
 import { createHash } from "node:crypto"
 import { Injectable } from "@nestjs/common"
 import type { OnModuleInit } from "@nestjs/common"
+import { InjectClock } from "@modules/platform/clock"
+import type { Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { isRecord } from "@modules/platform/primitives"
 import type {
     ContextPassage,
     AiChatAttempt,
+    AiChatModel,
+    AiFailure,
+    AiServed,
+    AiStopwatch,
+    AiTurnRead,
+    AiTurnRequest,
     AiChatRequest,
     AiChatResult,
     AiEmbedRequest,
@@ -18,6 +26,7 @@ import type { OptionalAiRunner } from "./ai.decorators"
 import { AiLogEvent } from "./ai.log-events"
 import type { AiOptions } from "./ai.options"
 import { fieldOf, modelOf, textOf, usageOf, vectorsOf } from "./reply.policy"
+import { providerOf } from "./routing.policy"
 
 /** The most characters sent per embedded text; a passage is about 800 characters, this only guards a runaway input. */
 const MAX_EMBED_CHARS = 8000
@@ -48,6 +57,16 @@ const headOf = (messages: AiChatRequest["messages"]): Readonly<Record<string, un
     }
 }
 
+/** The upstream that served a call, why the model stopped, and the try's time, from what the endpoint sent back. */
+const servedOf = (provider: unknown, responseMetadata: unknown, durationMs: number | null): AiServed => {
+    const finish = fieldOf(responseMetadata, "finish_reason")
+    return {
+        upstream: typeof provider === "string" && provider !== "" ? provider : null,
+        finishReason: typeof finish === "string" && finish !== "" ? finish : null,
+        durationMs,
+    }
+}
+
 @Injectable()
 /**
  * The one door to the language-model endpoint: LangChain (`@langchain/openai`) pointed at the AI router gateway with a virtual key, or
@@ -58,6 +77,7 @@ export class AiService implements OnModuleInit {
         @InjectAiOptions() private readonly options: AiOptions,
         @InjectAiRunner() private readonly runner: OptionalAiRunner,
         @InjectLogger() private readonly logger: Logger,
+        @InjectClock() private readonly clock: Clock,
     ) {}
 
     /** Boot never fails for a missing virtual key: it is logged once and every call answers unavailable. */
@@ -98,8 +118,10 @@ export class AiService implements OnModuleInit {
      */
     async attempt(request: AiChatRequest): Promise<AiChatAttempt> {
         if (this.runner === null) return { ok: false, failure: "unconfigured" }
+        const elapsed = this.stopwatch()
         try {
             const reply = await this.runner.chat({ ...request, context: this.guarded(request.context) })
+            const durationMs = elapsed()
             const text = textOf(reply.content)
             const model = modelOf(reply.responseMetadata, this.options.chatModel)
             if (fieldOf(reply.responseMetadata, "finish_reason") === "length") {
@@ -111,17 +133,24 @@ export class AiService implements OnModuleInit {
                 return { ok: false, failure: "empty" }
             }
             const usage = usageOf(reply.usageMetadata, reply.responseMetadata)
+            const served = servedOf(reply.provider, reply.responseMetadata, durationMs)
             this.logger.info(AiLogEvent.ChatAnswered, {
                 model,
-                provider: typeof reply.provider === "string" ? reply.provider : null,
+                provider: served.upstream,
+                finish: served.finishReason,
+                ms: durationMs,
                 // Named `prompt` and `cached`: the log scrubs any field whose name says "token".
                 prompt: usage.promptTokens,
                 cached: usage.cachedTokens ?? null,
                 // What the model wrote, reasoning included, beside what the caller got: a large gap is thinking nobody reads.
                 completion: usage.completionTokens,
+                reasoning: usage.reasoningTokens ?? null,
                 answerChars: text.length,
+                cap: request.budget?.maxTokens ?? null,
                 effort: request.budget?.effort ?? null,
                 json: request.json,
+                // What the call asked of the endpoint's routing (the `provider` object it sent), beside the upstream that served it.
+                routing: providerOf(request.routing),
                 ...headOf(request.messages),
             })
             return {
@@ -132,14 +161,78 @@ export class AiService implements OnModuleInit {
                     model,
                     usage,
                     retrieved: reply.retrieved,
+                    served,
                 },
             }
         } catch (cause) {
-            const failure = failureOf(cause)
-            this.logger.warn(AiLogEvent.ChatFailed, failure)
-            const timedOut = failure.errorClass === "TimeoutError" || failure.errorClass === "AbortError"
-            return { ok: false, failure: timedOut ? "timeout" : "provider" }
+            return { ok: false, failure: this.failureOfThrow(cause) }
         }
+    }
+
+    /**
+     * The chat client of one try of an agent turn, or null when no endpoint is configured. The agent loop makes the call with it;
+     * `readTurn` then says what the try came to, and `failureOfThrow` what a call that threw failed as.
+     */
+    turnModel(request: AiTurnRequest): AiChatModel | null {
+        return this.runner === null ? null : this.runner.turnModel(request)
+    }
+
+    /**
+     * What the message of one try of an agent turn is: an answer with what it used, or the kind of failure. A turn cut at the
+     * token limit is `length`; a turn with no text and no tool call is `empty`. An answered turn is logged like every chat answer
+     * (the upstream, the prompt and cached sizes, the completion and its hidden reasoning, the tool calls), never its words.
+     * `durationMs` is the wall time of the try, when the caller timed it (with `stopwatch`).
+     */
+    readTurn(message: unknown, request: AiTurnRequest, durationMs?: number): AiTurnRead {
+        const responseMetadata = fieldOf(message, "response_metadata")
+        const model = modelOf(responseMetadata, this.options.chatModel)
+        const text = textOf(fieldOf(message, "content"))
+        const calls: unknown = fieldOf(message, "tool_calls")
+        const toolCalls = Array.isArray(calls) ? calls.length : 0
+        if (fieldOf(responseMetadata, "finish_reason") === "length") {
+            this.logger.warn(AiLogEvent.ChatCut, { model, answerChars: text.length })
+            return { ok: false, failure: "length" }
+        }
+        if (text === "" && toolCalls === 0) {
+            this.logger.warn(AiLogEvent.ChatEmpty, { model })
+            return { ok: false, failure: "empty" }
+        }
+        const usage = usageOf(fieldOf(message, "usage_metadata"), responseMetadata)
+        const provider: unknown = fieldOf(fieldOf(fieldOf(message, "additional_kwargs"), "__raw_response"), "provider")
+        const served = servedOf(provider, responseMetadata, durationMs ?? null)
+        this.logger.info(AiLogEvent.ChatAnswered, {
+            model,
+            provider: served.upstream,
+            finish: served.finishReason,
+            ms: served.durationMs,
+            prompt: usage.promptTokens,
+            cached: usage.cachedTokens ?? null,
+            completion: usage.completionTokens,
+            reasoning: usage.reasoningTokens ?? null,
+            answerChars: text.length,
+            toolCalls,
+            cap: request.budget?.maxTokens ?? null,
+            effort: request.budget?.effort ?? null,
+            routing: providerOf(request.routing),
+            agentTurn: true,
+        })
+        return { ok: true, model, usage, textChars: text.length, toolCalls, served }
+    }
+
+    /**
+     * A stopwatch started now: it reads the whole milliseconds since. For a caller that makes the model call itself (the agent
+     * loop) and wants its time booked beside its usage; a chat call through `attempt` is timed here.
+     */
+    stopwatch(): AiStopwatch {
+        const started = this.clock.now().getTime()
+        return () => Math.max(0, this.clock.now().getTime() - started)
+    }
+
+    /** What a model call that threw failed as: the deadline, or the endpoint or provider. Logged by class and status, never by message. */
+    failureOfThrow(cause: unknown): AiFailure {
+        const failure = failureOf(cause)
+        this.logger.warn(AiLogEvent.ChatFailed, failure)
+        return failure.errorClass === "TimeoutError" || failure.errorClass === "AbortError" ? "timeout" : "provider"
     }
 
     /** Embeds texts in one call: the vectors in the order of the texts; null when no key is set or the call failed. */

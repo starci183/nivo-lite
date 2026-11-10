@@ -21,7 +21,7 @@ export class AttachProviderByTemplateHandler extends ICQRSHandler<
     protected override process(command: AttachProviderByTemplateCommand): Promise<ReadonlyArray<string>> {
         return this.admin.attachByTemplate(
             { principalId: command.params.principal.id, workspaceId: command.params.request.workspaceId },
-            command.params.request.provider,
+            command.params.request.connectionId,
             command.params.request.agentIds,
         )
     }

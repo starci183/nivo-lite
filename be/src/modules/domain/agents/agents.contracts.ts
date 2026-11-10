@@ -1,4 +1,3 @@
-import type { AgentAccess, AgentPurpose } from "./agents-connections.contracts"
 import type { SyncFile } from "@modules/integrations/openclaw"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
 
@@ -116,26 +115,6 @@ export interface DoneData {
     readonly count: number
     /** The latest few. */
     readonly items: ReadonlyArray<DashboardItem>
-}
-
-/** One connection bound to the agent. */
-export interface ConnectionItem {
-    /** The connection. */
-    readonly id: string
-    /** The display name. */
-    readonly name: string
-    /** The provider key; the page labels it. */
-    readonly provider: string
-    /** The bot username, when the provider has one. */
-    readonly botUsername: string | null
-    /** The masked bank account, when the connection is a bank feed. */
-    readonly accountMasked: string | null
-    /** connected, error or pending. */
-    readonly status: "connected" | "error" | "pending"
-    /** What the agent may do through it. */
-    readonly access: AgentAccess
-    /** What the agent uses it for. */
-    readonly purpose: AgentPurpose
 }
 
 /** Who the agent talks to: customers or the team. */
@@ -263,8 +242,6 @@ export interface AgentDashboardData {
     readonly waiting: Region<WaitingData>
     /** The work finished by policy in seven days. */
     readonly done: Region<DoneData>
-    /** The connections bound to the agent. */
-    readonly connections: Region<ReadonlyArray<ConnectionItem>>
     /** What the agent can read. */
     readonly knowledge: Region<KnowledgeData>
 }

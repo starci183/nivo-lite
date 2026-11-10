@@ -4,8 +4,9 @@ import type { ListRowData } from "@starci/grammar/common"
 import { logoOf } from "../../rows/provider-logos"
 import type { ConnectionRow, ConnectionsRegionView } from "../../views/views.types"
 
-/** Copy and view of the connections region; first-load geometry is the same card as its settled view. */
+/** Copy and view of the providers region; first-load geometry is the same card as its settled view. */
 interface ConnectionsRegionProps {
+    /** The block's own heading, used while the view has none (the first load). */
     readonly label: string
     readonly emptyMessage: string
     readonly view: ConnectionsRegionView
@@ -20,36 +21,32 @@ const leadingOf = (row: ConnectionRow): NonNullable<ListRowData["leading"]> => {
     return { avatar: { name: row.name, ...(src === undefined ? {} : { src }) } }
 }
 
-/** The row of one connection: a granted one with its state and level, an account not granted yet with the command that grants it. */
-const rowOf = (row: ConnectionRow, grantHref: string): ListRowData => ({
+/** The row of one attached account, read only: provider and account, and what the agent may do through it. No badge, no command. */
+const rowOf = (row: ConnectionRow): ListRowData => ({
     id: row.id,
     title: row.name,
     description: row.description,
     leading: leadingOf(row),
-    ...(row.isGranted === false
-        ? { action: { label: row.actionLabel ?? "", href: grantHref } }
-        : {
-              badges: [
-                  { label: row.statusLabel, tone: row.statusTone, isDot: true },
-                  { label: row.accessLabel, tone: "neutral" },
-              ],
-          }),
 })
 
-/** The connections bound to an agent, their status and what the agent may do through each, then the accounts it could be given. */
+/**
+ * The accounts attached to an agent, read only: one row each with the abilities the agent holds on it and their mode, and one link
+ * to the agent's rights, where they are changed. The words are the back end's.
+ */
 export const ConnectionsRegion = (props: ConnectionsRegionProps): ReactNode => {
-    const items = props.view.rows.map((row) => rowOf(row, props.view.manageHref))
+    const items = props.view.rows.map(rowOf)
     const empty = <EmptyNotice message={props.emptyMessage} />
+    const label = props.view.label === "" ? props.label : props.view.label
     const link = (
-        <Link variant="head" href={props.view.manageHref} isDisabled={props.isLoading}>
-            {props.view.manageLabel}
+        <Link variant="head" href={props.view.rightsHref} isDisabled={props.isLoading}>
+            {props.view.rightsLabel}
         </Link>
     )
     if (props.isSection === true)
         return (
             <Section
                 kind="list"
-                title={props.label}
+                title={label}
                 headingLevel={3}
                 action={link}
                 isLoading={props.isLoading}
@@ -58,13 +55,6 @@ export const ConnectionsRegion = (props: ConnectionsRegionProps): ReactNode => {
             />
         )
     return (
-        <SurfaceCard
-            kind="list"
-            label={props.label}
-            isLoading={props.isLoading}
-            empty={empty}
-            items={items}
-            labelEnd={link}
-        />
+        <SurfaceCard kind="list" label={label} isLoading={props.isLoading} empty={empty} items={items} labelEnd={link} />
     )
 }

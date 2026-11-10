@@ -20,7 +20,7 @@ export class SetConnectionGrantHandler extends ICQRSHandler<SetConnectionGrantCo
             { principalId: command.params.principal.id, workspaceId: command.params.request.workspaceId },
             command.params.request.connectionId,
             command.params.request.agentId,
-            command.params.request.access,
+            command.params.request.bound,
         )
     }
 }

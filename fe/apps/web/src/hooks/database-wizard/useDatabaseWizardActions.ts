@@ -1,7 +1,6 @@
 "use client"
 
 import { dbEngineOf, dbPortOf } from "./database-wizard.shared"
-import { type AgentWish } from "@/hooks/connections"
 import { useDatabaseTargetForm, type DatabaseTargetValues } from "@/hooks/rhf"
 import type { DbEngine, DbTableInfo, DbTableMapping, DbTarget } from "@/modules/types"
 import { DB_DEFAULT_PORT } from "@/modules/utils"
@@ -21,7 +20,7 @@ interface DatabaseWizardActionsInput {
     readonly state: DatabaseWizardState
     readonly typed: () => DbTarget
     readonly input: DatabaseWizardInput
-    readonly setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<AgentWish>) => Promise<Settled<true>>
+    readonly setConnectionAgents: (connectionId: string, wanted: ReadonlyArray<string>) => Promise<Settled<true>>
 }
 
 /** The view `useDatabaseWizardActions` returns. */

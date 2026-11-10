@@ -43,4 +43,28 @@ export class AiUsageEventEntity extends UuidAbstractEntity {
     /** The agent run the call was made for, or null when it belongs to none. */
     @Column({ name: "run_id", type: "uuid", nullable: true })
     runId!: string | null
+
+    /** The call kind: `<node id>:<tag>` of a graph node's call; null for a fixed task of the app. */
+    @Column({ name: "purpose", type: "text", nullable: true })
+    purpose!: string | null
+
+    /** The part of `completionTokens` the model spent on hidden reasoning (billed, never read); zero when it did not say. */
+    @Column({ name: "reasoning_tokens", type: "integer", default: () => "0" })
+    reasoningTokens!: number
+
+    /** The wall time of the try that answered, milliseconds; null when not measured. */
+    @Column({ name: "duration_ms", type: "integer", nullable: true })
+    durationMs!: number | null
+
+    /** Which try of the call answered, from one (failed tries are never booked); null when not told. */
+    @Column({ name: "try_number", type: "smallint", nullable: true })
+    tryNumber!: number | null
+
+    /** The upstream of the endpoint that served the call (OpenRouter's `provider`); null when it did not say. */
+    @Column({ name: "upstream", type: "text", nullable: true })
+    upstream!: string | null
+
+    /** Why the model stopped (`stop`, `tool_calls`); null when it did not say. */
+    @Column({ name: "finish_reason", type: "text", nullable: true })
+    finishReason!: string | null
 }

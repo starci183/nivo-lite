@@ -7,7 +7,14 @@ import type { ScopedTx } from "@modules/domain/entity-engine"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { GraphNodesErrorCode } from "./errors/graph-nodes.error"
-import { GraphNodeEffectsService, ledgerKeyOf } from "./graph-node-effects.service"
+import {
+    GraphNodeEffectsService,
+    OUTCOME_UNKNOWN_CODES,
+    OUTCOME_UNKNOWN_KIND,
+    ledgerJsonOf,
+    ledgerKeyOf,
+    placeOf,
+} from "./graph-node-effects.service"
 
 const WS = "11111111-1111-4111-8111-111111111111"
 const AT = "2026-11-06T10:00:00.000Z"
@@ -197,5 +204,182 @@ describe("GraphNodeEffectsService.once, when the ledger cannot answer", () => {
         await expect(service.once(WS, "core.send", CALL, act)).rejects.toMatchObject({
             code: GraphNodesErrorCode.EffectNotRecorded,
         })
+    })
+})
+
+const RUN = "0f8e2c1a-5b6d-4e7f-8a9b-0c1d2e3f4a5b"
+const STEP_CALL = { key: `${RUN}:answer:0123456789abcdef`, dedupeKey: null }
+
+describe("placeOf", () => {
+    it("reads the run and the step of a step's call key, an undo's key, and nothing of another key", () => {
+        expect(placeOf(STEP_CALL.key)).toEqual({ runId: RUN, stepKey: "answer" })
+        expect(placeOf(`${RUN}:loop:item:0123456789abcdef`)).toEqual({ runId: RUN, stepKey: "loop:item" })
+        expect(placeOf(`${RUN}:order:undo:2`)).toEqual({ runId: RUN, stepKey: "order" })
+        expect(placeOf("mcp:agent-1:op-7")).toBeNull()
+        expect(placeOf("run:0")).toBeNull()
+    })
+})
+
+describe("ledgerJsonOf", () => {
+    it("keeps plain JSON within the ledger's bounds, and leaves out what it cannot hold", () => {
+        expect(ledgerJsonOf({ text: "Da nhan", at: new Date(AT), skip: undefined })).toEqual({ text: "Da nhan", at: AT })
+        expect(ledgerJsonOf(undefined)).toBeNull()
+        expect(ledgerJsonOf(["a"])).toBeNull()
+        expect(ledgerJsonOf({ text: "x".repeat(20_001) })).toBeNull()
+        expect(ledgerJsonOf({ big: BigInt(1) })).toBeNull()
+    })
+})
+
+describe("GraphNodeEffectsService.once, D.1: the run, the step, the arguments and the facts of each call", () => {
+    it("keeps them beside the subject, the place read from the step's call key", async () => {
+        const { service, engine, mutations } = await build()
+        engine.list.mockResolvedValue({ rows: [], next: null })
+        mutations.mutate.mockResolvedValue({ ok: true, row: recordedAs("message", "m-1").row, version: "1" })
+        const act = jest.fn().mockResolvedValue({ kind: "message", id: "m-1", facts: { conversationId: "c-1" } })
+
+        await service.once(WS, "customer.message.send", STEP_CALL, act, { args: { conversationId: "c-1", text: "Da nhan" } })
+
+        expect(mutations.mutate).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                values: {
+                    effectKey: `call:${STEP_CALL.key}`,
+                    effectId: "customer.message.send",
+                    runId: RUN,
+                    stepKey: "answer",
+                    args: { conversationId: "c-1", text: "Da nhan" },
+                    subjectEntity: "message",
+                    subjectId: "m-1",
+                    facts: { conversationId: "c-1" },
+                },
+            }),
+            "job",
+        )
+    })
+
+    it("takes the place its caller names over the key's", async () => {
+        const { service, engine, mutations } = await build()
+        engine.list.mockResolvedValue({ rows: [], next: null })
+        mutations.mutate.mockResolvedValue({ ok: true, row: recordedAs("message", "m-1").row, version: "1" })
+
+        await service.once(WS, "core.send", CALL, jest.fn().mockResolvedValue({ kind: "message", id: "m-1" }), {
+            place: { runId: RUN, stepKey: "match" },
+        })
+
+        expect(mutations.mutate).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ values: expect.objectContaining({ runId: RUN, stepKey: "match" }) }),
+            "job",
+        )
+    })
+
+    it("answers a replay with the facts the first call answered, not the subject alone", async () => {
+        const { service, engine } = await build()
+        const kept = recordedAs("order", "o-1", "order.confirm")
+        engine.list.mockResolvedValue({
+            rows: [{ ...kept, row: { ...kept.row, data: { ...kept.row.data, facts: { totalVnd: 100_000 } } } }],
+            next: null,
+        })
+
+        await expect(service.once(WS, "order.confirm", CALL, jest.fn())).resolves.toEqual({
+            kind: "order",
+            id: "o-1",
+            facts: { totalVnd: 100_000 },
+        })
+    })
+})
+
+describe("GraphNodeEffectsService.once, an outcome nobody knows", () => {
+    const unknown = (code: string): Error => Object.assign(new Error("sent, no answer"), { code })
+
+    it.each([...OUTCOME_UNKNOWN_CODES])("keeps a call that ended with %s and rethrows it untouched", async (code) => {
+        const { service, engine, mutations } = await build()
+        engine.list.mockResolvedValue({ rows: [], next: null })
+        mutations.mutate.mockResolvedValue({ ok: true, row: recordedAs(OUTCOME_UNKNOWN_KIND, code).row, version: "1" })
+        const thrown = unknown(code)
+
+        await expect(service.once(WS, "agent.tag", STEP_CALL, jest.fn().mockRejectedValue(thrown))).rejects.toBe(thrown)
+
+        expect(mutations.mutate).toHaveBeenCalledWith(
+            expect.anything(),
+            {
+                op: "insert",
+                entity: "agent.node-effect",
+                values: {
+                    effectKey: `call:${STEP_CALL.key}`,
+                    effectId: "agent.tag",
+                    runId: RUN,
+                    stepKey: "answer",
+                    subjectEntity: OUTCOME_UNKNOWN_KIND,
+                    subjectId: code,
+                    facts: { code },
+                },
+            },
+            "job",
+        )
+    })
+
+    it("never makes such a call again: the key answers the same code, nothing acts", async () => {
+        const { service, engine, mutations } = await build()
+        engine.list.mockResolvedValue({
+            rows: [recordedAs(OUTCOME_UNKNOWN_KIND, "tool_outcome_unknown", "agent.tag")],
+            next: null,
+        })
+        const act = jest.fn()
+
+        await expect(service.once(WS, "agent.tag", STEP_CALL, act)).rejects.toMatchObject({ code: "tool_outcome_unknown" })
+
+        expect(act).not.toHaveBeenCalled()
+        expect(mutations.mutate).not.toHaveBeenCalled()
+    })
+
+    it("keeps nothing for any other throw (the call may be made again, as before); a failed keep never hides the act's error", async () => {
+        const { service, engine, mutations, logger } = await build()
+        engine.list.mockResolvedValue({ rows: [], next: null })
+        const other = Object.assign(new Error("refused"), { code: "provider_down" })
+
+        await expect(service.once(WS, "agent.tag", STEP_CALL, jest.fn().mockRejectedValue(other))).rejects.toBe(other)
+        expect(mutations.mutate).not.toHaveBeenCalled()
+
+        mutations.mutate.mockRejectedValue(new Error("db down"))
+        const thrown = unknown("tool_outcome_unknown")
+        await expect(service.once(WS, "agent.tag", STEP_CALL, jest.fn().mockRejectedValue(thrown))).rejects.toBe(thrown)
+        expect(logger.error).toHaveBeenCalledWith("graph_nodes.effect_unknown_not_kept", expect.any(Error), {
+            workspaceId: WS,
+            effect: "agent.tag",
+            code: "tool_outcome_unknown",
+        })
+    })
+})
+
+describe("GraphNodeEffectsService.recordsOf", () => {
+    it("reads a run step's records by run and step, oldest first, cut to the effects named, with their arguments and time", async () => {
+        const { service, engine } = await build()
+        const send = recordedAs("message", "m-1", "customer.message.send")
+        const post = recordedAs("team-message", "t-1", "team.message.post")
+        const args = { conversationId: "c-1", text: "Da nhan" }
+        engine.list.mockResolvedValue({
+            rows: [{ ...send, row: { ...send.row, data: { ...send.row.data, args } } }, post],
+            next: null,
+        })
+
+        await expect(service.recordsOf(WS, { runId: RUN, stepKey: "match" }, ["customer.message.send"])).resolves.toEqual([
+            { effect: "customer.message.send", args, subject: { kind: "message", id: "m-1" }, at: AT },
+        ])
+        expect(engine.list).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                from: "agent.node-effect",
+                where: {
+                    op: "and",
+                    of: [
+                        { op: "eq", field: "runId", value: RUN },
+                        { op: "eq", field: "stepKey", value: "match" },
+                    ],
+                },
+                order: [["id", "asc"]],
+            }),
+            cursorScopeOf("graph-nodes.effect-step", {}, "id"),
+        )
     })
 })

@@ -14,7 +14,18 @@ import { AgentEndedWakesService } from "./agent-ended-wakes.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWakeInterruptionService } from "./agent-wake-interruption.service"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
-import { HEARTBEAT_MAX_BEATS, HEARTBEAT_MS, awaitsAnswer, sessionKeyOf } from "./agent-work.policy"
+import {
+    HEARTBEAT_MAX_BEATS,
+    HEARTBEAT_MS,
+    REARM_MAX_HOPS,
+    REARM_SOURCE,
+    awaitsAnswer,
+    rearmEventKeyOf,
+    rearmHopOf,
+    rearmWaitMsOf,
+    sessionKeyOf,
+} from "./agent-work.policy"
+import type { AgentBeginWait } from "./agent-work-turns.contracts"
 import type { AgentTurnEnding, AgentTurnUsage, AgentTurnView } from "./agent-work.contracts"
 import type {
     AgentHandlerEnding,
@@ -23,6 +34,12 @@ import type {
     AgentTurnRun,
     AgentWorkHandler,
 } from "./agent-work.port"
+
+/** The payload of a follow-up drain: the scope again, and how many follow-ups led to it. */
+interface RearmedDrainPayload extends AgentTurnDrainPayload {
+    /** The hop of this follow-up in its chain, from one. */
+    readonly rearm: number
+}
 
 /** Where a turn stands after one step: it ended, or its worker lost the lease and must stop with no further write. */
 type Step = { readonly kind: "ending"; readonly ending: AgentTurnEnding } | { readonly kind: "fenced" }
@@ -77,10 +94,17 @@ export class AgentDrainService {
         this.owner = ids.next()
     }
 
-    /** Takes one turn of the scope and runs it; when more is due in the scope, starts the next drain after it. A busy or idle scope ends quietly. */
+    /**
+     * Takes one turn of the scope and runs it; when more is due in the scope, starts the next drain after it. A busy or idle scope
+     * ends quietly, except an idle one whose wake is not due yet: that drain comes back when the database says the wait is over.
+     */
     async drain(payload: AgentTurnDrainPayload): Promise<void> {
         const begin = await this.turns.begin(payload.agentId, payload.scopeKey, this.owner)
         await this.endedWakes.tell(begin.ended)
+        if (begin.result === "idle" && begin.wait !== undefined) {
+            await this.rearm(payload, begin.wait)
+            return
+        }
         if (begin.result === "busy") {
             this.logger.info(AgentWorkLogEvent.TurnBusy, { agentId: payload.agentId, scopeKey: payload.scopeKey })
             return
@@ -100,6 +124,40 @@ export class AgentDrainService {
         } finally {
             heartbeat.cancel()
         }
+    }
+
+    /**
+     * Schedules the one follow-up of a drain that came before the burst window of its conversation ended. A drain's delay is
+     * counted by the broker on its own clock while the window is judged on the database's; when the two do not agree (a clock
+     * stepped while the drain waited) the drain comes early, and for a lone message no other drain is coming. The follow-up waits
+     * what the database said is left, so no clock has to agree with another. It is one job per waiting drain at most, and one per
+     * burst when several drains wait for the same newest message: the job is deduplicated on the scope, that wake and the hop. It
+     * takes no lease and begins no turn; the drain it starts goes through `begin` like any other, so one turn runs whatever the
+     * number of drains. Past the last hop the wake is left to the minute sweep.
+     */
+    private async rearm(payload: AgentTurnDrainPayload, wait: AgentBeginWait): Promise<void> {
+        const hop = rearmHopOf(payload) + 1
+        const fields = { agentId: payload.agentId, scopeKey: payload.scopeKey, wakeId: wait.wakeId, hop, waitMs: wait.ms }
+        if (hop > REARM_MAX_HOPS) {
+            this.logger.warn(AgentWorkLogEvent.DrainRearmSpent, fields)
+            return
+        }
+        const next: RearmedDrainPayload = {
+            workspaceId: payload.workspaceId,
+            agentId: payload.agentId,
+            scopeKey: payload.scopeKey,
+            rearm: hop,
+        }
+        await this.entityManager.transaction((tx) =>
+            this.queue.enqueueDrain(
+                next,
+                REARM_SOURCE,
+                rearmEventKeyOf(payload.scopeKey, wait.wakeId, hop),
+                tx,
+                rearmWaitMsOf(wait.ms),
+            ),
+        )
+        this.logger.info(AgentWorkLogEvent.DrainRearmed, fields)
     }
 
     private async step(turn: AgentTurnView, signal: AbortSignal): Promise<Step> {

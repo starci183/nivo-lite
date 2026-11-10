@@ -28,7 +28,7 @@ Luật: `surfacecard-zones-api` (figures wrap), `type-scale-14-12`.
 Grammar: `SurfaceCard kind="figures"`; `node_modules/@starci/grammar/dist/core/frame/SurfaceCard/index.d.ts`, `node_modules/@starci/grammar/dist/core/surfaceCardData.d.ts` (Figure).
 
 ## Card bảng "Khách đang xử lý"
-Một SurfaceCard: tiêu đề + chip đếm ngay sau nhãn, ô tìm, tab lọc có chip đếm, bảng, phân trang. Cột Khách (tên trên, câu cuối dưới), Trạng thái (chip chấm), Kênh; hai cột sau gập vào dòng dưới 768.
+Một SurfaceCard: tiêu đề + chip đếm ngay sau nhãn, ô tìm, tab lọc có chip đếm, bảng, phân trang. Cột Khách (tên trên, câu cuối dưới), Trạng thái (chip chấm), Kênh; hai cột sau gập vào dòng dưới 768. Khách là cột fill (tên trên, câu cuối dưới, cắt bằng dấu ba chấm khi hẹp), Trạng thái và Kênh là fit một dòng. Cột ngắn là fit + một dòng, không xuống dòng; chỉ cột fill cắt bằng dấu ba chấm. Bảng là thẻ trắng kiểu danh sách (Grammar 0.37.8+: không khung xám). Đã soi 1440/1920/390 với Grammar 0.37.17. Lỗi còn mở ở 390 (Grammar, đầu mục có nhãn + chip đếm): chip rơi xuống dòng dưới và nhãn bị cắt nửa trên (xem 390.png).
 
 Vì sao: Cùng một tập dữ liệu (tìm + lọc + bảng + phân trang) là MỘT card; mỗi vùng header là một hàng riêng ngăn bằng divider do shell vẽ. Dưới 768 cột phụ gập vào dòng.
 

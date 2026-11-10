@@ -1,5 +1,5 @@
 import { graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
-import type { Access, Purpose } from "@modules/domain/agent-connections"
+import type { Purpose } from "@modules/domain/agent-connections"
 import type { MANAGEMENT_CONNECTION_IDS } from "@modules/domain/channel-provisioning"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { parseJsonText } from "@modules/platform/primitives"
@@ -36,8 +36,6 @@ export interface ConnectionBinding {
     readonly connection: keyof typeof MANAGEMENT_CONNECTION_IDS
     /** What the agent uses it for. */
     readonly purpose: Purpose
-    /** What the agent may do through it. */
-    readonly access: Access
 }
 
 /**
@@ -45,10 +43,10 @@ export interface ConnectionBinding {
  * feed, the sales agent reads the SePay account the payment QR it sends a customer is drawn from, the chatbot answers on the Zalo OA and on Telegram. A connection the workspace does not hold is skipped by the seed.
  */
 export const CONNECTION_BINDINGS: Readonly<Record<string, ReadonlyArray<ConnectionBinding>>> = {
-    accounting: [{ connection: "sepay", purpose: "bank_feed", access: "auto" }],
-    sales: [{ connection: "sepay", purpose: "data_source", access: "read" }],
+    accounting: [{ connection: "sepay", purpose: "bank_feed" }],
+    sales: [{ connection: "sepay", purpose: "data_source" }],
     chatbot: [
-        { connection: "zaloOa", purpose: "inbound_chat", access: "auto" },
-        { connection: "telegram", purpose: "inbound_chat", access: "auto" },
+        { connection: "zaloOa", purpose: "inbound_chat" },
+        { connection: "telegram", purpose: "inbound_chat" },
     ],
 }

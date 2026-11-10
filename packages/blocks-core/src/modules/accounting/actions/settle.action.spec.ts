@@ -72,6 +72,19 @@ describe("payment.settle", () => {
         expect(settleAction.refreshes).toEqual([])
     })
 
+    it("keeps on the paid order the account the money came into, from the transaction; matching itself is unchanged", async () => {
+        const into = "7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
+        const world = worldOf({ transaction: { ...TRANSACTION, connectionId: into } })
+        await expect(run(world, payload)).resolves.toMatchObject({ ok: true, data: { result: "paid" } })
+        expect(dataOf(world, "sales.order", ORDER.id)).toMatchObject({ status: "paid", paidConnectionId: into })
+    })
+
+    it("writes no account on the order when the transaction names none (a record from before accounts were kept)", async () => {
+        const world = worldOf()
+        await run(world, payload)
+        expect(dataOf(world, "sales.order", ORDER.id)).not.toHaveProperty("paidConnectionId")
+    })
+
     it("ties the transaction to the order, pays it and enqueues the ledger line, the book entry and the notice", async () => {
         const world = worldOf()
         await expect(run(world, payload)).resolves.toEqual({ ok: true, data: { result: "paid", orderId: ORDER.id, ...EXACT } })

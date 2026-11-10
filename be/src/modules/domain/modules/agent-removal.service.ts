@@ -1,8 +1,9 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
 import { AgentsService } from "@modules/domain/agents"
 import { AuthorityRulesService } from "@modules/domain/authority-rules"
 import { EventsService } from "@modules/domain/events"
+import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { WorkspaceRole } from "@modules/domain/workspace-members"
@@ -17,7 +18,8 @@ const GOVERNORS: ReadonlyArray<WorkspaceRole> = ["owner", "manager"]
 @Injectable()
 /**
  * Removes an installed agent (the uninstall): terminal and soft. Its conversations, messages, context versions and knowledge stay for
- * history; it stops at once (no customer turns, its agent is paused, its own authority grants are switched off), leaves every list,
+ * history; it stops at once (no customer turns, its agent is paused, its own authority grants are switched off, its attachments to
+ * the shop's connected accounts are deleted), leaves every list,
  * and goes from OpenClaw on the sync that `installation_changed` starts. Installing the role again makes a new installation. Owners and managers only.
  */
 export class AgentRemovalService {
@@ -30,6 +32,7 @@ export class AgentRemovalService {
         private readonly events: EventsService,
         private readonly changes: InstallationChangesService,
         private readonly readiness: ModuleReadinessService,
+        @Optional() private readonly abilities?: ProviderAbilitiesService,
     ) {}
 
     /** Removes the installation; removing one that is already removed changes nothing. Answers the installation as it is now. */
@@ -46,6 +49,8 @@ export class AgentRemovalService {
             }
             await this.changes.announce({ workspaceId, installationId, force: false }, tx)
         })
+        // A removed agent holds no right on any connected account: its attachments go with it (a paused agent keeps its own).
+        if (current.agentId !== null) await this.abilities?.detachAgent(workspaceId, current.agentId)
         await this.events.record({
             workspaceId,
             kind: "module.removed",

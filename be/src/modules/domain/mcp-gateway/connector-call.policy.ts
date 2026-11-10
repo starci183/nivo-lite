@@ -9,7 +9,71 @@ import type {
     RoleResolution,
     WorkspaceConnector,
 } from "./mcp-gateway.contracts"
+import type { AbilityVerdict } from "./provider-abilities.policy"
 import { fullNameOf } from "./tool-name.policy"
+
+/** What the tick of one ability on one connected account decides about a call: not allowed, run by itself, or ask a person first. */
+export type AbilityDecision = "off" | "auto" | "ask"
+
+/**
+ * The decision of an ability verdict as the owner ticked it: a refusal (not attached, not ticked, no default account) is `off`, a call
+ * that runs by itself is `auto`, a call that waits for a person is `ask`. Null when the tool is no provider right (its tool grant decides).
+ */
+export const abilityDecisionOf = (verdict: AbilityVerdict | null): AbilityDecision | null => {
+    if (verdict === null) return null
+    if (verdict.kind === "refuse") return "off"
+    return verdict.kind === "approval" ? "ask" : "auto"
+}
+
+/** One argument of a call as a person reads it on a permission request. */
+export interface CallWord {
+    /** The argument's name. */
+    readonly name: string
+    /** Its value in plain text. */
+    readonly value: string
+}
+
+/** The most arguments a permission request lists. */
+export const CALL_WORDS_MAX = 12
+
+/** The longest name of an argument on a permission request. */
+const WORD_NAME_MAX = 100
+
+/** The longest value of an argument on a permission request. */
+const WORD_VALUE_MAX = 300
+
+/** The mark of a value cut to fit. */
+const ELLIPSIS = "…"
+
+/** A text cut to its bound, marked when cut. */
+const boundedText = (text: string, max: number): string => (text.length <= max ? text : `${text.slice(0, max - 1)}${ELLIPSIS}`)
+
+/** A value in plain text: a text as it is, a number or a yes/no as written, nothing as a dash, anything else as compact JSON. */
+const plainOf = (value: unknown): string => {
+    if (typeof value === "string") return value.trim()
+    if (typeof value === "number" || typeof value === "boolean") return String(value)
+    if (value === null || value === undefined) return "-"
+    try {
+        return JSON.stringify(value) ?? "-"
+    } catch {
+        return "-"
+    }
+}
+
+/**
+ * The arguments of one call in plain words, in the order the call gave them, at most `max` of them, each name and value bounded: what
+ * a person approves on a permission request. A call whose arguments are no object has none to show.
+ */
+export const callWordsOf = (args: unknown, max: number = CALL_WORDS_MAX): ReadonlyArray<CallWord> => {
+    if (typeof args !== "object" || args === null || Array.isArray(args)) return []
+    return Object.entries(args)
+        .filter(([, value]) => value !== undefined)
+        .slice(0, Math.max(0, max))
+        .map(([name, value]) => ({
+            name: boundedText(name, WORD_NAME_MAX),
+            value: boundedText(plainOf(value), WORD_VALUE_MAX),
+        }))
+}
 
 /** True when the connector may run the tool: a native tool, or a remote tool whose live schema is the approved one. */
 export const usable = (connector: WorkspaceConnector, tool: string): boolean =>

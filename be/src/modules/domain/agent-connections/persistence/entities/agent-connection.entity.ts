@@ -19,8 +19,4 @@ export class AgentConnectionEntity extends AbstractEntity {
     /** What the agent uses the connection for. */
     @Column({ name: "purpose", type: "text", default: () => "'inbound_chat'::text" })
     purpose!: string
-
-    /** What the agent may do through the connection: read, ask or auto. */
-    @Column({ name: "access", type: "text", default: () => "'ask'::text" })
-    access!: string
 }

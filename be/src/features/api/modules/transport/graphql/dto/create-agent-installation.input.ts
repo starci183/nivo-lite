@@ -29,14 +29,14 @@ export class AgentProviderAbilityInput {
 }
 
 @InputType()
-/** One connected provider a new agent is attached to, with its abilities. */
+/** One connected account a new agent is attached to, with its abilities. */
 export class AgentProviderRightInput {
-    /** The provider key. */
-    @Field(() => String)
+    /** The connected account: the connection id. */
+    @Field(() => ID)
     @IsString()
-    @MaxLength(31)
-    @Matches(/^[a-z][a-z0-9_-]{1,30}$/u)
-    provider!: string
+    @MaxLength(36)
+    @IsUUID()
+    connectionId!: string
 
     /** The abilities wanted; an ability left out is off. */
     @Field(() => [AgentProviderAbilityInput])

@@ -130,8 +130,8 @@ const stoppedPreview = (payload: unknown): ReactNode => {
         <Stack gap="inline">
             <Text size="sm">{reason}</Text>
             {question === null ? null : <Text size="sm">{question}</Text>}
-            {facts.map((fact) => (
-                <Text key={fact.name} size="sm" tone="muted">
+            {facts.map((fact, index) => (
+                <Text key={`${fact.name}-${String(index)}`} size="sm" tone="muted">
                     {fact.name}: {fact.value}
                 </Text>
             ))}

@@ -15,7 +15,7 @@ export interface ConnectionOpenContentBaseProps {
 }
 
 /**
- * Draws what the connection's row says beyond its name: the alerts, the notes, the access picker, the SMTP panel, the keys and the
+ * Draws what the connection's row says beyond its name: the alerts, the notes, the SMTP panel, the keys and the
  * last note. The two destructive questions belong to the band, whose menu opens them.
  */
 export const ConnectionOpenContentBase = (props: ConnectionOpenContentBaseProps) => (
@@ -24,6 +24,6 @@ export const ConnectionOpenContentBase = (props: ConnectionOpenContentBaseProps)
         placeholder={props.props.placeholder}
         labels={props.props.slotLabels}
         onRetry={props.on.retry}
-        render={(view) => <ConnectionRowBody view={view} on={props.on} withAccess withoutQuestions />}
+        render={(view) => <ConnectionRowBody view={view} on={props.on} withoutQuestions />}
     />
 )

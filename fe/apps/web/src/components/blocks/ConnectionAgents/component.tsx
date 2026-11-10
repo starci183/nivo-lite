@@ -7,7 +7,7 @@ export interface ConnectionAgentsBaseProps {
     readonly on: ConnectionGrantsBandProps["on"]
 }
 
-/** Draws the agents that work through one connection, each with how far it may go, and the control that hands it to another agent. */
+/** Draws the agents bound to one connection, the command that unbinds each, and the control that binds another agent. */
 export const ConnectionAgentsBase = (props: ConnectionAgentsBaseProps) => (
     <ConnectionGrantsBand props={props.props} on={props.on} />
 )

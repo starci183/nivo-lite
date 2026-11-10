@@ -27,9 +27,6 @@ export type ProviderKind = "money" | "telegram" | "zalo" | "meta" | "webhook" | 
 /** `pending`: created by the wizard but no first event yet (or the wizard was abandoned). */
 export type ConnectionStatus = "pending" | "connected" | "error" | "disconnected"
 
-/** What an agent may do through one connection. */
-export type Access = "read" | "ask" | "auto"
-
 /** How an agent uses a connection (stored on the grant). */
 export type Purpose = "inbound_chat" | "outbound_chat" | "bank_feed" | "data_source" | "tool" | "lead_source"
 
@@ -38,12 +35,6 @@ export interface FirstEvent {
     readonly amount: number
     readonly content: string
     readonly at: string
-}
-
-/** One agent's access to one connection. */
-export interface ConnectionGrant {
-    readonly agentId: string
-    readonly access: Access
 }
 
 /** One workspace connection as the console shows it (non-secret facts only). */
@@ -61,10 +52,8 @@ export interface Connection {
     readonly isDefault: boolean
     readonly lastEventAt: string | null
     readonly firstEvent: FirstEvent | null
-    /** Ids of the agents that use this connection. */
+    /** Ids of the agents bound to this connection. */
     readonly agentIds: ReadonlyArray<string>
-    /** Each agent's access level through this connection (same agents as agentIds). */
-    readonly grants: ReadonlyArray<ConnectionGrant>
 }
 
 /** An agent a connection can be attached to. */

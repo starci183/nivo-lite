@@ -4,6 +4,8 @@ import type { ProviderAttachmentView } from "@modules/domain/mcp-tool-grants"
 import { ABILITY_LABELS, KIND_LABELS, PROVIDER_LABELS } from "./messages/provider-abilities.labels"
 import {
     PROVIDER_CATALOGUE,
+    accountsHolding,
+    defaultAccountKindOf,
     cappedTicks,
     exceedsCeiling,
     isAbilityTool,
@@ -15,11 +17,11 @@ import {
     ticksOfWish,
 } from "./provider-abilities.policy"
 
-const row = (provider: string, abilities: ProviderAttachmentView["abilities"]): ProviderAttachmentView => ({
-    agentId: "a1",
-    provider,
-    abilities,
-})
+const row = (
+    provider: string,
+    abilities: ProviderAttachmentView["abilities"],
+    connectionId = `conn-${provider}`,
+): ProviderAttachmentView => ({ agentId: "a1", connectionId, provider, abilities })
 
 const templateOf = (moduleKey: string) => MODULE_DECLARATIONS.find((module) => module.key === moduleKey)?.agent?.abilities
 
@@ -87,6 +89,7 @@ describe("judgeAbility: the decision table", () => {
     it("ticked read allows", () => {
         expect(judgeAbility([row("google", { "ledger.read": "auto" })], TOOL.ledgerStatus, false)).toEqual({
             kind: "allow",
+            connectionId: "conn-google",
             provider: "google",
             ability: "ledger.read",
         })
@@ -100,6 +103,7 @@ describe("judgeAbility: the decision table", () => {
         const rows = [row("google", { "ledger.write": "ask" })]
         expect(judgeAbility(rows, TOOL.ledgerAppend, false)).toEqual({
             kind: "approval",
+            connectionId: "conn-google",
             provider: "google",
             ability: "ledger.write",
         })
@@ -120,14 +124,14 @@ describe("judgeAbility: customer.message.send on the conversation's channel", ()
     })
 
     it("judges the ability on the channel's own provider, not on another the agent may send on", () => {
-        expect(judgeAbility(rows, TOOL.customerMessageSend, false, "zalo_oa")?.kind).toBe("allow")
-        expect(judgeAbility(rows, TOOL.customerMessageSend, false, "telegram")).toEqual({
+        expect(judgeAbility(rows, TOOL.customerMessageSend, false, { provider: "zalo_oa" })?.kind).toBe("allow")
+        expect(judgeAbility(rows, TOOL.customerMessageSend, false, { provider: "telegram" })).toEqual({
             kind: "refuse",
             reason: "ability_off",
             ability: "customer.send",
             providers: ["telegram"],
         })
-        expect(judgeAbility(rows, TOOL.customerMessageSend, false, "meta")).toMatchObject({
+        expect(judgeAbility(rows, TOOL.customerMessageSend, false, { provider: "meta" })).toMatchObject({
             kind: "refuse",
             reason: "not_attached",
             providers: ["meta"],
@@ -181,5 +185,49 @@ describe("ticks", () => {
         expect(ticksOfTemplate(template, zalo)).toEqual({ "customer.send": "ask" })
         expect(ticksOfTemplate({ kinds: { payment: { "qr.create": "auto" } } }, zalo)).toBeNull()
         expect(ticksOfTemplate(undefined, zalo)).toBeNull()
+    })
+})
+
+describe("judgeAbility: per connected account", () => {
+    const oa1 = row("zalo_oa", { "customer.send": "auto" }, "oa-1")
+    const oa2 = row("zalo_oa", { "customer.send": "ask" }, "oa-2")
+    const mb = row("sepay", { "transactions.read": "auto" }, "mb")
+    const vcb = row("sepay", { "transactions.read": "auto", "qr.create": "auto" }, "vcb")
+
+    it("judges a call that names its account on that account alone: attached to another account of the provider is not attached", () => {
+        const send = TOOL.customerMessageSend
+        expect(judgeAbility([oa1], send, false, { provider: "zalo_oa", connectionId: "oa-1" })).toMatchObject({ kind: "allow", connectionId: "oa-1" })
+        expect(judgeAbility([oa1], send, false, { provider: "zalo_oa", connectionId: "oa-2" })).toEqual({
+            kind: "refuse",
+            reason: "not_attached",
+            ability: "customer.send",
+            providers: ["zalo_oa"],
+            connectionId: "oa-2",
+        })
+        expect(judgeAbility([oa1, oa2], send, false, { provider: "zalo_oa", connectionId: "oa-2" })).toMatchObject({
+            kind: "approval",
+            connectionId: "oa-2",
+        })
+        expect(judgeAbility([mb, vcb], TOOL.paymentQrCreate, false, { connectionId: "mb" })).toMatchObject({
+            kind: "refuse",
+            reason: "ability_off",
+            connectionId: "mb",
+        })
+        expect(judgeAbility([mb, vcb], TOOL.paymentQrCreate, false, { connectionId: "vcb" })).toMatchObject({ kind: "allow" })
+    })
+
+    it("judges a call that names no account over every account of the provider, and tells which accounts hold the tool", () => {
+        expect(judgeAbility([mb, vcb], TOOL.bankTransactions, false)).toMatchObject({ kind: "allow" })
+        expect(judgeAbility([row("sepay", {}, "mb"), vcb], TOOL.bankTransactions, false)).toMatchObject({ kind: "allow", connectionId: "vcb" })
+        expect(judgeAbility([row("sepay", {}, "mb")], TOOL.bankTransactions, false)).toMatchObject({ reason: "ability_off" })
+        expect(accountsHolding([mb, vcb, oa1], TOOL.bankTransactions)).toEqual(["mb", "vcb"])
+        expect(accountsHolding([mb, vcb], TOOL.paymentQrCreate)).toEqual(["vcb"])
+    })
+
+    it("names the kind whose default account a tool acts on: the payment QR, and no other tool", () => {
+        expect(defaultAccountKindOf(TOOL.paymentQrCreate)).toBe("payment")
+        expect(defaultAccountKindOf(TOOL.paymentRematch)).toBeNull()
+        expect(defaultAccountKindOf(TOOL.customerMessageSend)).toBeNull()
+        expect(defaultAccountKindOf(TOOL.ledgerAppend)).toBeNull()
     })
 })

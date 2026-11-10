@@ -66,23 +66,20 @@ export interface ConnectionsListView {
     readonly canManage: boolean
 }
 
-/** One agent of a connection with its level through it. */
+/** One agent bound to a connection. */
 export interface ConnectionGrantRowView {
     readonly id: string
     readonly name: string
-    /** The accessible name of its level picker. */
-    readonly levelLabel: string
-    readonly level: string
 }
 
-/** The agents-of-a-connection section of a connection's page: who works through it, how far, and who could be given it. */
+/** The agents-of-a-connection section of a connection's page: who is bound to it and who could be. */
 export interface ConnectionGrantsView {
-    /** Only the owner changes a level. */
+    /** Only the owner binds or unbinds. */
     readonly canManage: boolean
-    /** The picker's choices: read only, ask first, act, remove. */
-    readonly levels: ReadonlyArray<{ readonly id: string; readonly label: string }>
+    /** The words of the command that unbinds an agent. */
+    readonly removeLabel: string
     readonly rows: ReadonlyArray<ConnectionGrantRowView>
-    /** Agents that can work through this connection and do not yet. */
+    /** Agents that can be bound to this connection and are not yet. */
     readonly candidates: ReadonlyArray<{ readonly id: string; readonly label: string }>
 }
 

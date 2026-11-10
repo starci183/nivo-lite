@@ -5,6 +5,8 @@ area: public
 ---
 # 404 ngoài console
 
+Ảnh 1440/390 được khôi phục từ `gallery/shots` (bản `after` ngày 2026-11-09, trước khi Grammar 0.37.14 đổi link); chưa chụp lại: cần trạng thái (người dùng chưa có workspace / không có quyền; một URL lạ khi đã đăng nhập chỉ cho trang 404 mặc định của Next). Đã khôi phục, không có 1920.
+
 `app/[locale]/not-found.tsx` rendering `AppNotFound` without the console frame. Folders `admin-suc-khoe` and `admin-404` are the same screen (old route names); superseded by this folder. Shots `1440.png`, `390.png`. Grammar paths under `node_modules/@starci/grammar/dist/core/`. Next overlay is dev tooling.
 
 ## Dải đầu trang "Không tìm thấy trang"

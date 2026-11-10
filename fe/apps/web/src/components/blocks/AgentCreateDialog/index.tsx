@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from "next-intl"
 import { abilityRowsOf, toggleAbility, type RightsTranslate } from "@/components/composites/ProviderRightsCard"
 import { useAgentCreate, type AgentCreateView } from "@/hooks/agentCreate"
-import { pickLabel, providerLogoOf, providerNameOf, type AbilityMode } from "@/hooks/providerRights"
+import { accountTitleOf, pickLabel, providerLabelOf, providerLogoOf, type AbilityMode } from "@/hooks/providerRights"
 import { AgentCreateDialogBase, type AgentCreateDialogBaseProps } from "./component"
 
 /** The translator of the dialog copy. */
@@ -21,8 +21,8 @@ const pictureOf = (view: AgentCreateView, t: CreateCopy): AgentCreateDialogBaseP
 })
 
 /**
- * The providers field: every provider the shop has connected that the template names, attached and pre-ticked "by template" and
- * editable; a named provider that is not connected is a dimmed line. FAKE SOURCE today (hooks/providerRights).
+ * The providers field: one card per connected ACCOUNT of a provider the template names ("Zalo OA · <OA name>"), pre-ticked "by
+ * template" (for payment only the shop's default receiving account) and editable; a named provider that is not connected is a dimmed line.
  */
 const providersOf = (
     view: AgentCreateView,
@@ -36,16 +36,19 @@ const providersOf = (
               label: t("createTitle"),
               chip: t("createChip", { agent: view.roleName }),
               emptyLabel: t("createNone"),
-              notConnected: rights.unconnected.map((one) => t("createNotConnected", { provider: providerNameOf(one.provider) })),
-              cards: rights.cards.map(({ provider, held }) => {
-                  const setAbility = (ability: string, mode: AbilityMode) => rights.setAbility(provider.provider, ability, mode)
+              notConnected: rights.unconnected.map((one) =>
+                  t("createNotConnected", { provider: providerLabelOf(one.provider, one.key, locale) }),
+              ),
+              cards: rights.cards.map(({ provider, account, held }) => {
+                  const setAbility = (ability: string, mode: AbilityMode) => rights.setAbility(account.connectionId, ability, mode)
                   return {
-                      id: provider.provider,
+                      id: account.connectionId,
                       card: {
                           props: {
-                              name: providerNameOf(provider.provider),
+                              name: accountTitleOf(pickLabel(provider.label, locale), account.accountLabel),
                               logo: providerLogoOf(provider.provider),
                               line: pickLabel(provider.kindLabel, locale),
+                              badge: account.isDefaultReceiving ? t("defaultReceiving") : undefined,
                               menu: undefined,
                               connectLink: undefined,
                               rows: abilityRowsOf(t, locale, provider, held, setAbility),

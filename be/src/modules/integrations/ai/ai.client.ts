@@ -17,13 +17,16 @@ import type {
     AiEmbedRequest,
     AiFetch,
     AiMessage,
+    AiChatModel,
     AiRunner,
+    AiTurnRequest,
     PassageSearch,
 } from "./ai.contracts"
 import { InjectAiEndpointOptions } from "./ai.decorators"
 import type { AiEndpoint } from "./ai.options"
 import { ANY_OBJECT } from "./ai.schema"
 import { fieldOf, notesBlock, withNotes } from "./reply.policy"
+import { providerFieldOf } from "./routing.policy"
 
 /** The retriever over the domain search: the domain owns which lanes an agent may read, LangChain only wraps the call. */
 class PassageRetriever extends BaseRetriever {
@@ -50,10 +53,16 @@ const titleOf = (metadata: Record<string, unknown>): string | null =>
 /** The value of `maxTokens` that leaves the cap to the provider (the client leaves `max_tokens` out of the body for it). */
 const NO_TOKEN_CAP = -1
 
-/** The `reasoning` field a budget adds to the chat body: the model's reasoning switched off, or asked for at an effort. */
-const reasoningFieldOf = (budget: AiBudget): Readonly<Record<string, unknown>> => ({
-    reasoning: budget.effort === "off" ? { enabled: false } : { effort: budget.effort },
-})
+/**
+ * The `reasoning` field a budget adds to the chat body: the model's reasoning switched off, or bounded. A direct cap
+ * (`max_tokens`) is sent in place of the effort when the budget names one, since the endpoint takes one or the other. The reasoning
+ * text is never asked back (`exclude`): nobody reads it, it is only counted (`reasoningTokens` of the usage).
+ */
+export const reasoningFieldOf = (budget: AiBudget): Readonly<Record<string, unknown>> => {
+    if (budget.effort === "off") return { reasoning: { enabled: false } }
+    const bound = budget.reasoningMaxTokens === undefined ? { effort: budget.effort } : { max_tokens: budget.reasoningMaxTokens }
+    return { reasoning: { ...bound, exclude: true } }
+}
 
 /**
  * The `session_id` field a call's affinity adds to the chat body: OpenRouter routes every request of one session to the same
@@ -134,9 +143,24 @@ export class AiClient implements AiRunner {
         }).embedDocuments([...request.input])
     }
 
+    /**
+     * The chat client of one try of an agent turn. The agent loop binds its tools and makes the call; this client only carries what
+     * holds for the try: the deadline (no retry of its own), the reasoning, the output limit, the affinity, the routing and the gateway.
+     */
+    turnModel(request: AiTurnRequest): AiChatModel {
+        return this.clientOf(request)
+    }
+
     /** The model of one call: plain, or JSON mode parsed into the schema (the raw message is kept for usage). */
     private modelFor(request: AiChatRequest): Runnable {
-        const model = new ChatOpenAI({
+        const model = this.clientOf(request)
+        if (!request.json) return model
+        return model.withStructuredOutput(request.schema ?? ANY_OBJECT, { method: "jsonMode", includeRaw: true })
+    }
+
+    /** The one way a chat client is built: at temperature 0, with no retry of its own, bounded by the call's deadline and budget. */
+    private clientOf(request: AiTurnRequest): ChatOpenAI {
+        return new ChatOpenAI({
             model: this.endpoint.chatModel,
             apiKey: this.endpoint.virtualKey.reveal(),
             temperature: 0,
@@ -148,11 +172,11 @@ export class AiClient implements AiRunner {
             modelKwargs: {
                 ...(request.budget === undefined ? {} : reasoningFieldOf(request.budget)),
                 ...sessionFieldOf(request.affinity),
+                // Nothing unless the call names a routing: the body then has no `provider` field.
+                ...providerFieldOf(request.routing),
             },
             configuration: { baseURL: this.endpoint.gatewayUrl, fetch: this.fetcher(request.timeoutMs) },
         })
-        if (!request.json) return model
-        return model.withStructuredOutput(request.schema ?? ANY_OBJECT, { method: "jsonMode", includeRaw: true })
     }
 
     /** A fetch over the platform HTTP port for the clients: the body goes as the bytes the client wrote, the answer comes back as text. */

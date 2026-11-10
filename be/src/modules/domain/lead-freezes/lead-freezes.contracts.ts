@@ -182,6 +182,32 @@ export type FreezeOutcome =
     | "not_retryable"
     /** Nothing is frozen for this customer. */
     | "not_frozen"
+    /**
+     * The customer is held by the stop of a thread run: the founder answers the stop (its card on /chat or the run page), never the
+     * freeze, and the customer is released when the stop closes.
+     */
+    | "on_stop"
+
+/** Why a freeze released its customer: the retry ended well, the owner skipped the turn, or the thread run's stop closed. */
+export type FreezeReleaseReason = "retried" | "skipped" | "stop_closed"
+
+/** An open stop of a thread run, as a freeze reads it: whose it is and where it waits. */
+export interface HeldStop {
+    /** The run (the thread). */
+    readonly runId: string
+    /** The step that stopped. */
+    readonly stepKey: string
+    /** The agent of the run. */
+    readonly agentId: string
+    /** The workflow the run executes, or null for an agent's own graph. */
+    readonly workflowId: string | null
+    /** The customer, when the run names one. */
+    readonly leadId: string | null
+    /** The conversation of the run, when it has one. */
+    readonly conversationId: string | null
+    /** When it stopped, ISO text. */
+    readonly stoppedAt: string
+}
 
 /** What the lead page and the run page read: whether the customer waits for the owner, and why. */
 export interface FreezeState {
@@ -209,6 +235,8 @@ export interface FreezeState {
     readonly heldBy: string | null
     /** When it froze, ISO text. */
     readonly frozenAt: string | null
+    /** True when the stop of a thread run holds the customer: the stop is answered, not the freeze (no item, no retry here). */
+    readonly onStop: boolean
 }
 
 /** One thing of a customer that waits for the founder: the step its workflow stopped on, and since when. */

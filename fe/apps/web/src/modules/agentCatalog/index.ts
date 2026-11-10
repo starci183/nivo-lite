@@ -14,8 +14,6 @@ export interface CatalogGrantChip {
     readonly brand: string
     /** The account: bot username, bank account or connection name. */
     readonly label: string
-    /** The access level in words. */
-    readonly level: string
 }
 
 /** What one installed agent shows as a row of the list, already in the reader language. */

@@ -21,6 +21,7 @@ type TransactionFields = {
     readonly invoiceId: FieldDef<"uuid", true>
     readonly externalRef: FieldDef<"text", true>
     readonly account: FieldDef<"text", true>
+    readonly connectionId: FieldDef<"uuid", true>
     readonly occurredAt: FieldDef<"timestamptz", false>
     readonly status: FieldDef<"enum", false>
 }
@@ -35,6 +36,8 @@ const transactionFields: TransactionFields = {
     invoiceId: field.uuid({ nullable: true }),
     externalRef: field.text({ maxLength: MAX_ID, nullable: true }),
     account: field.text({ maxLength: MAX_ID, nullable: true }),
+    /** The connected account (bank feed connection) the movement arrived on: a fact for the books, not a matching rule. */
+    connectionId: field.uuid({ nullable: true }),
     occurredAt: field.timestamptz({ default: "now" }),
     status: field.enum({ of: TRANSACTION_STATUSES, default: { literal: "unmatched" } }),
 }

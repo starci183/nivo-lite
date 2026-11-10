@@ -54,14 +54,3 @@ export interface OfficeStop {
     readonly eventType: string
 }
 
-/** What the Office needs to say a background line: who speaks, the words, and the moment of the wake the line answers. */
-export interface OfficeBackgroundLine {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The agent that speaks. */
-    readonly agentId: string
-    /** When the wake was written: a line the same words already said since then is not said again. */
-    readonly wakeCreatedAt: Date
-    /** What it says. */
-    readonly text: string
-}

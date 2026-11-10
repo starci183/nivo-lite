@@ -4,6 +4,6 @@ export interface DetachAgentProviderRequest {
     readonly workspaceId: string
     /** The agent. */
     readonly agentId: string
-    /** The provider. */
-    readonly provider: string
+    /** The connected account (the connection). */
+    readonly connectionId: string
 }

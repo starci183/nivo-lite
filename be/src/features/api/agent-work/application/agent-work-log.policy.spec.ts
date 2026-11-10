@@ -46,7 +46,6 @@ const grantOf = (overrides: Partial<BoundConnection> = {}): BoundConnection => (
     botUsername: null,
     accountMasked: null,
     status: "connected",
-    access: "auto",
     purpose: "bank_feed",
     ...overrides,
 })

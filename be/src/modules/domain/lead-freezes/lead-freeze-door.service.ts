@@ -70,6 +70,8 @@ export class LeadFreezeDoorService {
         await this.access.manager(principalId, answer.workspaceId)
         const state = await this.freezes.stateOf(answer.workspaceId, answer.freezeId)
         if (state === null || !ANSWERS.has(answer.action)) return "not_frozen"
+        // The stop of a thread run is answered on the stop (its card, the run page), never here: no retry, skip or take-over of the hold.
+        if (state.onStop) return "on_stop"
         if (answer.action === "take_over") {
             const member = await this.members.require(principalId, answer.workspaceId)
             return this.freezes.takeOver(answer.workspaceId, state.id, member.displayName)

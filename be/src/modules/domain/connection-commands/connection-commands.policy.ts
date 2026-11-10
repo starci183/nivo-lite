@@ -56,10 +56,9 @@ const levelOf = (value: unknown, field: string): Level => LEVELS.find((level) =>
 const idField = (input: Input, field: string): string => uuidOf(input[field], field)
 const connectionOf = (input: Input): string => idField(input, "connectionId")
 
-/** One wish of a list: the id of the other side and the level when the caller picked one. */
+/** One wish of a list: the id of the other side (a level a client still sends is checked and ignored: rights live in attachments). */
 interface Wish {
     readonly id: string
-    readonly access?: Level
 }
 
 /** A list of wishes: each entry is a bare id or an object with the id and an optional level. */
@@ -70,11 +69,10 @@ const wishesOf = (input: Input, listKey: string, idKey: string): ReadonlyArray<W
         if (typeof entry === "string") return { id: uuidOf(entry, listKey) }
         if (!isRecord(entry)) return invalid(listKey)
         const id = uuidOf(entry[idKey], listKey)
-        return entry.access === undefined ? { id } : { id, access: levelOf(entry.access, listKey) }
+        if (entry.access !== undefined) levelOf(entry.access, listKey)
+        return { id }
     })
 }
-
-const withAccess = (wish: Wish): Pick<Wish, "access"> => (wish.access === undefined ? {} : { access: wish.access })
 
 const eventsOf = (input: Input): ReadonlyArray<string> => {
     const events = input.events
@@ -107,19 +105,19 @@ export const COMMANDS: Readonly<Record<string, Runner>> = {
             a,
             connectionOf(i),
             idField(i, "agentId"),
-            i.access === null ? null : levelOf(i.access, "access"),
+            i.access === null ? false : levelOf(i.access, "access") !== undefined,
         ),
     "grant.connection-agents": (s, a, i) =>
         s.grants.setConnectionAgents(
             a,
             connectionOf(i),
-            wishesOf(i, "agents", "agentId").map((wish) => ({ agentId: wish.id, ...withAccess(wish) })),
+            wishesOf(i, "agents", "agentId").map((wish) => ({ agentId: wish.id })),
         ),
     "grant.agent-connections": (s, a, i) =>
         s.grants.setAgentConnections(
             a,
             idField(i, "agentId"),
-            wishesOf(i, "connections", "connectionId").map((wish) => ({ connectionId: wish.id, ...withAccess(wish) })),
+            wishesOf(i, "connections", "connectionId").map((wish) => ({ connectionId: wish.id })),
         ),
     "telegram.connect": (s, a, i) =>
         s.channels.connectTelegram(a, { name: textOf(i.name, "name", 120), token: textOf(i.token, "token", 200) }),

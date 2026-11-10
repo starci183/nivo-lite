@@ -172,7 +172,6 @@ export class ShiftsNotifyService {
         const agentId = await this.agents.firstActiveIdOfModule(workspaceId, "shifts")
         if (agentId === null) return null
         const bound = await this.bindings.connectionsFor(agentId, "outbound_chat", {
-            acting: true,
             connectedOnly: true,
             providers: [provider],
         })

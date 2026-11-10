@@ -195,6 +195,12 @@ const BOOKED = (overrides: Record<string, unknown> = {}) => ({
     costUsd: "0.01234568",
     estimated: false,
     runId: null,
+    purpose: null,
+    reasoningTokens: 0,
+    durationMs: null,
+    tryNumber: null,
+    upstream: null,
+    finishReason: null,
     ...overrides,
 })
 
@@ -241,6 +247,23 @@ describe("AiUsageEventsService > record", () => {
 
         expect(em.query).toHaveBeenCalledTimes(1)
         expect(logger.error).not.toHaveBeenCalled()
+    })
+
+    it("metering: books what the call was and how it went beside its figures (kind, hidden reasoning, time, try, upstream)", async () => {
+        const em = mockEntityManager({ insert: [AiUsageEventEntity, {}], query: [SELECT_QUOTA_STATUS, []] })
+        const { usage } = await build(em)
+        const call = {
+            purpose: "accounting.match-payment:agent",
+            reasoningTokens: 18,
+            durationMs: 4_572,
+            tryNumber: 2,
+            upstream: "Parasail",
+            finishReason: "stop",
+        }
+
+        await usage.record({ ...INPUT, call })
+
+        expect(em.insert.mock.calls).toEqual([[AiUsageEventEntity, BOOKED(call)]])
     })
 
     it("logs a write failure without failing the model reply or reading its quota", async () => {
@@ -463,5 +486,56 @@ describe("AiUsageEventsService > creditsByRun", () => {
 
         await expect(usage.creditsByRun("ws-1", [])).resolves.toEqual(new Map())
         expect(em.createQueryBuilder).not.toHaveBeenCalled()
+    })
+})
+
+describe("AiUsageEventsService > callKindsByRun", () => {
+    it("groups one run's calls by call kind (the guide left out), in the order the kinds were first called", async () => {
+        const em = mockEntityManager()
+        const rollup = fakeQueryBuilder({
+            getRawMany: [
+                {
+                    purpose: "accounting.match-payment:agent",
+                    calls: 1,
+                    max_try: 1,
+                    prompt_tokens: 8162,
+                    cached_tokens: 8064,
+                    completion_tokens: 2636,
+                    reasoning_tokens: 2542,
+                    duration_ms: 7414,
+                    slowest_ms: 7414,
+                    cost_usd: 0.0012,
+                    upstreams: ["Parasail"],
+                    finish_reasons: ["stop"],
+                },
+            ],
+        })
+        em.createQueryBuilder.mockReturnValue(rollup.builder)
+        const { usage } = await build(em)
+
+        await expect(usage.callKindsByRun("ws-1", "run-1")).resolves.toEqual([
+            {
+                purpose: "accounting.match-payment:agent",
+                calls: 1,
+                maxTry: 1,
+                promptTokens: 8162,
+                cachedTokens: 8064,
+                completionTokens: 2636,
+                reasoningTokens: 2542,
+                durationMs: 7414,
+                slowestMs: 7414,
+                costUsd: 0.0012,
+                upstreams: ["Parasail"],
+                finishReasons: ["stop"],
+            },
+        ])
+        expect(em.createQueryBuilder).toHaveBeenCalledWith(AiUsageEventEntity, "u")
+        expect(rollup.callsOf("where")).toEqual([
+            ["u.workspace_id = :workspaceId AND u.run_id = :runId AND u.kind <> 'guide'", { workspaceId: "ws-1", runId: "run-1" }],
+        ])
+        expect(rollup.callsOf("select")).toEqual([["COALESCE(u.purpose, u.kind)", "purpose"]])
+        expect(rollup.callsOf("groupBy")).toEqual([["1"]])
+        expect(rollup.callsOf("orderBy")).toEqual([["MIN(u.created_at)", "ASC"]])
+        expect(rollup.callsOf("limit")).toEqual([[100]])
     })
 })

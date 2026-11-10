@@ -23,6 +23,7 @@ import { AgentGraphHoursGateService } from "./agent-graph-hours-gate.service"
 import { AgentGraphConversationHoldsService } from "./agent-graph-conversation-holds.service"
 import type { WorkflowRoute } from "./agent-workflows.contracts"
 import { AgentGraphWakeNoticesService } from "./agent-graph-wake-notices.service"
+import type { UntakenReason } from "./agent-graph-wake-notices.service"
 import {
     GRAPH_FLOW_TRIGGER,
     graphNodeStepOf,
@@ -53,6 +54,54 @@ const OUTSIDE_HOURS = "outside_hours"
 /** Why a customer's wake started no run here: another agent keeps the conversation (an open consult), so it went on to that agent. */
 const CONVERSATION_HELD = "conversation_held"
 
+/** The engine a run is on: the old step engine, or a LangGraph thread. */
+export type FlowRunEngine = "legacy" | "langgraph"
+
+/** The engine a wake's run already started on, or null when the wake has no run yet. */
+export type OptionalFlowRunEngine = FlowRunEngine | null
+
+/** A run the flow opened for a thread: everything the thread needs to start, or to go on when the wake is tried again. */
+export interface FlowThreadRun {
+    /** The wake's turn: its fence and scope are the lease the thread is driven under. */
+    readonly turn: AgentTurnView
+    /** The run, which is the thread. */
+    readonly runId: string
+    /** The version the wake was routed to; a run tried again stays on the version it started on. */
+    readonly versionId: string
+    /** The graph of that version. */
+    readonly flow: GraphSpec
+    /** `<moduleKey>.<workflowKey>` of the workflow. */
+    readonly namespace: string
+    /** The workflow the run is pinned to, or null for the agent's own graph. */
+    readonly workflowId: string | null
+    /** The workflow version number, or null for the agent's own graph. */
+    readonly workflowVersion: number | null
+    /** The trigger scope the nodes read as `trigger.*`. */
+    readonly trigger: FlowTriggerScope
+}
+
+/**
+ * The thread runs as the flow sees them: the capability that runs a workflow on a LangGraph thread registers itself here when the app
+ * starts (`setThreads`). With none registered every run is the old engine's, exactly as before.
+ */
+export interface FlowThreads {
+    /** True when a NEW run of this workflow (`<moduleKey>.<workflowKey>`) starts on a thread. */
+    engages(namespace: string): boolean
+    /** True when the wake is a thread's own (a founder's decision or a re-drive of a run): the flow hands it over and does nothing else. */
+    owns(turn: AgentTurnView): boolean
+    /** The engine the run of this wake started on, or null when the wake has no run yet. */
+    engineOfWake(turn: AgentTurnView): Promise<OptionalFlowRunEngine>
+    /** Marks the run just opened as a thread's, in the transaction that opened it. */
+    opened(tx: EntityManager, workspaceId: string, runId: string): Promise<void>
+    /** Starts the thread of the run under the wake's lease (or goes on with it when the wake is tried again) and answers how the wake ends. */
+    started(run: FlowThreadRun, signal: AbortSignal): Promise<AgentHandlerEnding>
+    /** Runs a wake the threads own, under its lease. */
+    woken(turn: AgentTurnView, signal: AbortSignal): Promise<AgentHandlerEnding>
+}
+
+/** The member of a thread run's context that keeps the lock scope its wake ran under: every later drive of the thread takes that scope. */
+export const THREAD_SCOPE_MEMBER = "threadScope"
+
 /** What joins the customer messages of a burst into one text. */
 const LINE = "\n"
 
@@ -64,6 +113,15 @@ interface ActiveFlow {
     readonly route: WorkflowRoute | null
 }
 
+/**
+ * Why no workflow took a customer wake: the agent has no workflow at all yet, none of its workflows is switched on, or none of the
+ * running ones has a trigger for the wake.
+ */
+const untakenReasonOf = (standing: { readonly total: number; readonly running: ReadonlyArray<string> }): UntakenReason => {
+    if (standing.total === 0) return "no_workflow"
+    return standing.running.length === 0 ? "no_workflow_running" : "no_trigger_takes_wake"
+}
+
 @Injectable()
 /**
  * Runs the wakes of an agent whose published graph is a node graph, with no model turn. It takes a wake when the active version holds a
@@ -71,6 +129,9 @@ interface ActiveFlow {
  * drives the rest, one durable step per node. The steps that follow are the step handler's to write.
  */
 export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
+    /** The thread runs, once their capability registered; undefined runs everything on the old engine. */
+    private threads: FlowThreads | undefined
+
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
         private readonly graphs: AgentGraphsService,
@@ -92,16 +153,22 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         this.handlers.setFlow(this)
     }
 
+    /** Registers the thread runs: the workflows they engage start on a thread, and their own wakes are handed to them. */
+    setThreads(threads: FlowThreads): void {
+        this.threads = threads
+    }
+
     /**
      * True when a workflow of the agent takes the wake (a trigger of it, or the pin of a hand-off), or its own graph is woken from
-     * there. A customer wake of an agent that runs on workflows is this flow's too, even when no workflow takes it or the routing
-     * itself fails: such an agent is never answered by a turn outside its workflows, so `run` (which then tells the founder, or fails
-     * the wake) must be the one that ends it.
+     * there. EVERY customer wake is this flow's, whatever the agent: workflows are the only thing that answers a customer, so an
+     * agent with no workflow at all, one whose workflows take no such wake, and a routing that fails all end in `run` (which tells
+     * the founder, or fails the wake). No turn outside a workflow exists to hand a customer to.
      */
     async takes(turn: AgentTurnView): Promise<boolean> {
+        if (this.threads?.owns(turn) === true) return true
+        if (turn.source === CUSTOMER_SOURCE) return true
         try {
-            if (takenBy(await this.flowOf(turn), turn)) return true
-            return turn.source === CUSTOMER_SOURCE && (await this.runsOnWorkflows(turn))
+            return takenBy(await this.flowOf(turn), turn)
         } catch (cause) {
             this.logger?.error(AgentGraphsLogEvent.WorkflowRouteFailed, cause, { agentId: turn.agentId })
             return true
@@ -116,12 +183,6 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         await this.wakeNotices?.failed(turn, code)
     }
 
-    /** True when the agent has a graph of its own or at least one workflow, running or not. */
-    private async runsOnWorkflows(turn: AgentTurnView): Promise<boolean> {
-        if ((await this.activeOf(turn.workspaceId, turn.agentId)) !== null) return true
-        return ((await this.workflows?.standingOf(turn.workspaceId, turn.agentId))?.total ?? 0) > 0
-    }
-
     /** Ends a customer wake no workflow took: the founder is told why with the facts, the customer is told nothing, nothing runs. */
     private async untaken(turn: AgentTurnView): Promise<AgentHandlerEnding> {
         const standing = (await this.workflows?.standingOf(turn.workspaceId, turn.agentId)) ?? {
@@ -129,14 +190,21 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
             running: [],
             sources: [],
         }
-        const reason = standing.running.length === 0 ? "no_workflow_running" : "no_trigger_takes_wake"
+        // An agent that runs a graph of its own has a workflow, whatever the workflow records count.
+        const ownGraph = standing.total === 0 && (await this.activeOf(turn.workspaceId, turn.agentId)) !== null
+        const reason = ownGraph ? "no_trigger_takes_wake" : untakenReasonOf(standing)
         this.logger?.warn(AgentGraphsLogEvent.WakeUntaken, { agentId: turn.agentId, wakeId: turn.wakeId, code: reason })
         await this.wakeNotices?.untaken(turn, { reason, running: standing.running, sources: standing.sources })
         return { status: "skipped", reason: NO_WORKFLOW, outcome: null }
     }
 
-    /** Opens the wake's run and writes the step of the first node; a replay of the wake finds the run and the step already there. */
-    async run(turn: AgentTurnView): Promise<AgentHandlerEnding> {
+    /**
+     * Opens the wake's run and writes the step of the first node; a replay of the wake finds the run and the step already there. A
+     * workflow the thread runs engage opens its run as a thread's instead and is driven there under the wake's lease (`signal` aborts
+     * when the lease is lost); a wake the threads own goes straight to them.
+     */
+    async run(turn: AgentTurnView, signal: AbortSignal = new AbortController().signal): Promise<AgentHandlerEnding> {
+        if (this.threads?.owns(turn) === true) return this.threads.woken(turn, signal)
         const active = await this.flowOf(turn)
         if (!takenBy(active, turn) && turn.source === CUSTOMER_SOURCE) return this.untaken(turn)
         const first = active?.flow.nodes[0]
@@ -161,6 +229,9 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
             })
             return { status: "skipped", reason: refused, outcome: null }
         }
+        const namespace = namespaceOf(active.flow.moduleKey, active.route?.workflowKey)
+        if (this.threads !== undefined && (await this.onThread(this.threads, turn, namespace)))
+            return this.threadRun(this.threads, turn, active, namespace, told, signal)
         const runId = await this.entityManager.transaction(async (tx) => {
             const opened = await this.runs.open(tx, {
                 workspaceId: turn.workspaceId,
@@ -178,13 +249,64 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
                     versionId: active.versionId,
                     nodeKey: first.key,
                     trigger: told,
-                    namespace: namespaceOf(active.flow.moduleKey, active.route?.workflowKey),
+                    namespace,
                     workflowId: active.route?.workflowId ?? null,
                 }),
             ])
             return opened.id
         })
         return { status: "done", reason: null, outcome: { runId } }
+    }
+
+    /**
+     * Whether the wake's run is a thread's. A run stays on the engine it started on: a wake tried again reads the engine of the run
+     * it already opened, whatever the flag says now; only a wake with no run yet asks the flag.
+     */
+    private async onThread(threads: FlowThreads, turn: AgentTurnView, namespace: string): Promise<boolean> {
+        const started = turn.attempts > 1 ? await threads.engineOfWake(turn) : null
+        return started === null ? threads.engages(namespace) : started === "langgraph"
+    }
+
+    /**
+     * Opens the wake's run as a thread's (no step is written: the old engine has nothing to drive) and hands it to the thread runs,
+     * which drive it under the wake's lease. The run keeps the lock scope of its wake, so every later drive takes the same lease.
+     */
+    private async threadRun(
+        threads: FlowThreads,
+        turn: AgentTurnView,
+        active: ActiveFlow,
+        namespace: string,
+        trigger: FlowTriggerScope,
+        signal: AbortSignal,
+    ): Promise<AgentHandlerEnding> {
+        const runId = await this.entityManager.transaction(async (tx) => {
+            const opened = await this.runs.open(tx, {
+                workspaceId: turn.workspaceId,
+                agentId: turn.agentId,
+                wakeId: turn.wakeId,
+                trigger: GRAPH_FLOW_TRIGGER,
+                versionId: active.versionId,
+                context: { ...turn.context, [THREAD_SCOPE_MEMBER]: turn.scopeKey },
+            })
+            if (active.route !== null && this.workflows !== undefined) {
+                await this.workflows.pinRun(tx, turn.workspaceId, opened.id, active.route)
+            }
+            await threads.opened(tx, turn.workspaceId, opened.id)
+            return opened.id
+        })
+        return threads.started(
+            {
+                turn,
+                runId,
+                versionId: active.versionId,
+                flow: active.flow,
+                namespace,
+                workflowId: active.route?.workflowId ?? null,
+                workflowVersion: active.route?.workflowVersion ?? null,
+                trigger,
+            },
+            signal,
+        )
     }
 
     /**

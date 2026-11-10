@@ -3,7 +3,7 @@ import { ConnectionInterestButton } from "@/components/blocks/ConnectionInterest
 import { ConnectionRow } from "@/components/blocks/ConnectionRow"
 import { ProviderLogo } from "@/components/branches/ProviderLogo"
 import type { ReactNode } from "react"
-import type { AgentOption, Connection, ConnectorGlyph, Provider } from "@/modules/types"
+import type { Connection, ConnectorGlyph, Provider } from "@/modules/types"
 import { connectorDetailClassNames as classNames } from "./classNames"
 
 /** One connection of the connector with the names of the agents bound to it. */
@@ -62,7 +62,6 @@ export interface ConnectorDetailOverlayBaseProps {
         readonly entry: DetailEntry | null
         readonly words: DetailWords
         readonly rows: ReadonlyArray<DetailRow>
-        readonly agents: ReadonlyArray<AgentOption>
         readonly localOnly: boolean
         readonly ownerEmail: string
         readonly canManage: boolean
@@ -105,7 +104,6 @@ const bodyOf = (props: ConnectorDetailOverlayBaseProps, entry: DetailEntry) => {
                             agentNames={row.agentNames}
                             localOnly={detail.localOnly}
                             ownerEmail={detail.ownerEmail}
-                            agents={detail.agents}
                             canManage={detail.canManage}
                         />
                     ),

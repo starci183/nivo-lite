@@ -291,13 +291,13 @@ const buildBare = async () => {
 describe("DoorPortsService platform ports", () => {
     it("serves the agent regions in the language of the run, and lets a caller ask for another", async () => {
         const { service, regions, run } = await build()
-        regions.connectionsWithCandidatesOf.mockResolvedValue({ manageLabel: "m", manageHref: "", rows: [] })
+        regions.connectionsOf.mockResolvedValue({ label: "l", rightsLabel: "r", rightsHref: "", rows: [] })
         const connections = service
             .providerFor({ ...run, locale: "en" })
             .implementationOf(portOf("platform.agent-connections"))
         await (isRegionPort(connections) ? connections.of("a1") : Promise.reject(new Error("no port")))
         await (isRegionPort(connections) ? connections.of("a1", "vi") : Promise.reject(new Error("no port")))
-        expect(regions.connectionsWithCandidatesOf.mock.calls).toEqual([
+        expect(regions.connectionsOf.mock.calls).toEqual([
             ["ws-1", "a1", "en"],
             ["ws-1", "a1", "vi"],
         ])

@@ -74,7 +74,10 @@ export const rowViewOf = (row: AgentRunRowWire, context: RunContext): RunRowView
         idLabel: `#${shortIdOf(row.id)}`,
         workflowName: row.workflowName ?? context.t("workflowNone"),
         startedLabel: context.timeOf(row.startedAt),
-        workflowLabel: [workflowLabelOf(row.versionNumber, context, row.workflowName), context.t(`source_${runSourceOf(row.source)}`)].join(" · "),
+        workflowLabel: [
+            workflowLabelOf(row.versionNumber, context, row.workflowName),
+            context.t(`source_${runSourceOf(row.source)}`),
+        ].join(" · "),
         stepLine: stepLineOf(row, context),
         durationLabel: lengthOf(row, status, context),
         statusLabel: context.t(`status_${status}`),
@@ -125,7 +128,10 @@ const sourcesOf = (wire: AgentRunsWire, context: RunContext): ReadonlyArray<RunC
     })),
 ]
 
-/** The list of runs as the page draws it: the workflows with their counts, the rows after every filter, the tabs and the head line. */
+/**
+ * The list of runs as the page draws it: the workflows with their counts, the rows after every filter, the tabs and the head line. The
+ * count of the title is the runs of the workflow the list is narrowed to (every run when it is not), so the page of one workflow counts only its own.
+ */
 export const runsViewOf = (wire: AgentRunsWire, filter: RunsFilter, context: RunContext): RunsView => {
     const narrow = narrowed(wire, filter, context)
     return {
@@ -146,7 +152,7 @@ export const runsViewOf = (wire: AgentRunsWire, filter: RunsFilter, context: Run
             queued: wire.queuedCount,
         }),
         title: context.t("title"),
-        total: wire.runs.length,
+        total: wire.runs.filter((row) => filter.workflow === ALL || row.workflowKey === filter.workflow).length,
         isFiltered:
             filter.workflow !== ALL || filter.tab !== "all" || filter.source !== ALL || filter.query.trim() !== "",
     }

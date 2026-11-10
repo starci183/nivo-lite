@@ -287,13 +287,17 @@
       "entity": "agent.node-effect",
       "partition": "records_agent_node_effect",
       "checks": [
+        "records_agent_node_effect_args_chk",
         "records_agent_node_effect_effect_id_chk",
         "records_agent_node_effect_effect_key_chk",
+        "records_agent_node_effect_facts_chk",
+        "records_agent_node_effect_run_id_chk",
+        "records_agent_node_effect_step_key_chk",
         "records_agent_node_effect_subject_entity_chk",
         "records_agent_node_effect_subject_id_chk",
         "records_agent_node_effect_undone_at_chk"
       ],
-      "indexes": ["records_agent_node_effect_effect_key_key"]
+      "indexes": ["records_agent_node_effect_effect_key_key", "records_agent_node_effect_run_step"]
     },
     {
       "entity": "agent.run",
@@ -306,6 +310,7 @@
         "records_agent_run_context_chk",
         "records_agent_run_dead_lettered_at_chk",
         "records_agent_run_ended_at_chk",
+        "records_agent_run_engine_chk",
         "records_agent_run_error_chk",
         "records_agent_run_graph_version_id_chk",
         "records_agent_run_park_reason_chk",
@@ -370,6 +375,37 @@
         "records_agent_run_step_status_claimed",
         "records_agent_run_step_status_not_before",
         "records_agent_run_step_wait_item"
+      ]
+    },
+    {
+      "entity": "agent.run-stop",
+      "partition": "records_agent_run_stop",
+      "view": "v_records_agent_run_stop",
+      "checks": [
+        "records_agent_run_stop_agent_id_chk",
+        "records_agent_run_stop_answers_chk",
+        "records_agent_run_stop_card_message_id_chk",
+        "records_agent_run_stop_conversation_id_chk",
+        "records_agent_run_stop_customer_lines_chk",
+        "records_agent_run_stop_decision_chk",
+        "records_agent_run_stop_detail_chk",
+        "records_agent_run_stop_kind_chk",
+        "records_agent_run_stop_lead_id_chk",
+        "records_agent_run_stop_question_chk",
+        "records_agent_run_stop_reason_chk",
+        "records_agent_run_stop_repeats_chk",
+        "records_agent_run_stop_resolved_at_chk",
+        "records_agent_run_stop_run_id_chk",
+        "records_agent_run_stop_state_chk",
+        "records_agent_run_stop_step_key_chk",
+        "records_agent_run_stop_stopped_at_chk",
+        "records_agent_run_stop_workflow_id_chk"
+      ],
+      "indexes": [
+        "records_agent_run_stop_lead_state",
+        "records_agent_run_stop_run",
+        "records_agent_run_stop_run_step_key",
+        "records_agent_run_stop_state_stopped"
       ]
     },
     {
@@ -702,6 +738,7 @@
         "records_payment_transaction_amount_chk",
         "records_payment_transaction_amount_vnd_chk",
         "records_payment_transaction_channel_chk",
+        "records_payment_transaction_connection_id_chk",
         "records_payment_transaction_direction_chk",
         "records_payment_transaction_external_ref_chk",
         "records_payment_transaction_invoice_id_chk",
@@ -775,15 +812,17 @@
         "records_sales_order_carrier_chk",
         "records_sales_order_confirmed_at_chk",
         "records_sales_order_confirmed_by_chk",
-    "records_sales_order_delivery_address_chk",
-    "records_sales_order_delivery_at_chk",
+        "records_sales_order_delivery_address_chk",
+        "records_sales_order_delivery_at_chk",
         "records_sales_order_items_chk",
         "records_sales_order_items_text_chk",
         "records_sales_order_lead_id_chk",
         "records_sales_order_note_chk",
         "records_sales_order_order_no_chk",
-    "records_sales_order_recipient_name_chk",
-    "records_sales_order_recipient_phone_chk",
+        "records_sales_order_paid_connection_id_chk",
+        "records_sales_order_qr_connection_id_chk",
+        "records_sales_order_recipient_name_chk",
+        "records_sales_order_recipient_phone_chk",
         "records_sales_order_shipped_at_chk",
         "records_sales_order_status_chk",
         "records_sales_order_tracking_code_chk"

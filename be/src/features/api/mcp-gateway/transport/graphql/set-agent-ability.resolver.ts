@@ -26,7 +26,7 @@ export class SetAgentAbilityResolver {
                     workspaceId,
                     ability: {
                         agentId: input.agentId,
-                        provider: input.provider,
+                        connectionId: input.connectionId,
                         ability: input.ability,
                         mode: input.mode,
                     },

@@ -216,6 +216,89 @@ describe("AiClient prompt cache", () => {
     })
 })
 
+describe("AiClient upstream routing", () => {
+    it("sends no provider field for a call without a routing, or with a routing that names nothing", async () => {
+        const { client, http } = await build()
+
+        await client.chat({ ...ASK, affinity: "workspace-1", budget: { effort: "low" } })
+        await client.chat({ ...ASK, routing: {} })
+        await client.chat({ ...ASK, routing: { order: [], only: [] } })
+        await client.turnModel({ timeoutMs: 45_000 }).invoke([{ role: "user", content: "STEP" }])
+
+        for (const at of [0, 1, 2, 3]) expect(sentOf(http, at).text).not.toContain('"provider"')
+    })
+
+    it("sends the routing as OpenRouter's provider object, only the fields it names, beside the reasoning and the session", async () => {
+        const { client, http } = await build()
+
+        await client.chat({
+            ...ASK,
+            affinity: "workspace-1",
+            budget: { effort: "low" },
+            routing: { order: ["wafer", "together"], allowFallbacks: true },
+        })
+        await client.chat({ ...ASK, routing: { sort: "throughput" } })
+        await client.chat({ ...ASK, routing: { only: ["wafer", "digitalocean"], allowFallbacks: false } })
+        await client
+            .turnModel({ timeoutMs: 45_000, routing: { order: ["together", "wafer"] } })
+            .invoke([{ role: "user", content: "STEP" }])
+
+        const sent = [0, 1, 2, 3].map((at) => {
+            const read = parseJsonText(sentOf(http, at).text)
+            assert.ok(read.ok, "AI request body was not valid JSON")
+            return read.value
+        })
+        expect(sent[0]).toMatchObject({
+            provider: { order: ["wafer", "together"], allow_fallbacks: true },
+            reasoning: { effort: "low", exclude: true },
+        })
+        expect(sentOf(http, 0).text).toMatch(/"session_id":"[0-9a-f]{32}"/u)
+        expect(sent[1]).toMatchObject({ provider: { sort: "throughput" } })
+        expect(sentOf(http, 1).text).toContain('"provider":{"sort":"throughput"}')
+        expect(sentOf(http, 2).text).toContain('"provider":{"only":["wafer","digitalocean"],"allow_fallbacks":false}')
+        expect(sentOf(http, 3).text).toContain('"provider":{"order":["together","wafer"]}')
+    })
+})
+
+describe("AiClient the client of one try of an agent turn", () => {
+    it("carries the try's limits and lets the loop bind its own tools: one request, no retry, the tools and the choice on the wire", async () => {
+        const { client, http } = await build()
+        const model = client.turnModel({
+            timeoutMs: 45_000,
+            budget: { effort: "low", maxTokens: 4000 },
+            affinity: "workspace-1",
+        })
+        const tools = [
+            {
+                type: "function" as const,
+                function: {
+                    name: "payment.order.settle",
+                    description: "Mark the order paid.",
+                    parameters: { type: "object", properties: { orderId: { type: "string" } }, required: ["orderId"] },
+                },
+            },
+        ]
+
+        const answer = await model.bindTools?.(tools, { tool_choice: "auto" }).invoke([
+            { role: "system", content: "CRAFT" },
+            { role: "user", content: "STEP" },
+        ])
+
+        expect(http.request).toHaveBeenCalledTimes(1)
+        expect(http.request.mock.calls[0]?.[0]).toMatchObject({ timeoutMs: 45_000 })
+        const sent = sentOf(http, 0).text
+        expect(sent).toContain('"name":"payment.order.settle"')
+        expect(sent).toContain('"tool_choice":"auto"')
+        expect(sent).toContain('"reasoning":{"effort":"low","exclude":true}')
+        expect(sent).toContain('"max_tokens":4000')
+        expect(sent).toMatch(/"session_id":"[0-9a-f]{32}"/u)
+        expect(sent).toContain('"temperature":0')
+        // The message comes back untouched: the usage and the raw answer the tries read are on it.
+        expect(answer?.usage_metadata).toMatchObject({ input_tokens: 3, output_tokens: 2 })
+        expect(answer?.additional_kwargs?.__raw_response).toBeDefined()
+    })
+})
+
 describe("AiClient chat budget", () => {
     it("sends a call without a budget with no token cap and no reasoning field", async () => {
         const { client, http } = await build()
@@ -237,12 +320,27 @@ describe("AiClient chat budget", () => {
         expect(sent.text).toContain('"reasoning":{"enabled":false}')
     })
 
-    it("sends a reasoning effort when the budget names one", async () => {
+    it("sends a reasoning effort when the budget names one, with the output limit it is a share of, and never asks the reasoning text back", async () => {
         const { client, http } = await build()
 
         await client.chat({ ...ASK, budget: { effort: "low", maxTokens: 800 } })
+        await client.chat({ ...ASK, budget: { effort: "minimal" } })
 
-        expect(sentOf(http, 0).text).toContain('"reasoning":{"effort":"low"}')
+        expect(sentOf(http, 0).text).toContain('"reasoning":{"effort":"low","exclude":true}')
+        expect(sentOf(http, 0).text).toContain('"max_tokens":800')
+        expect(sentOf(http, 1).text).toContain('"reasoning":{"effort":"minimal","exclude":true}')
+        expect(sentOf(http, 1).text).not.toContain("max_tokens")
+    })
+
+    it("sends a direct cap on reasoning in place of the effort when the budget names one, and none with reasoning off", async () => {
+        const { client, http } = await build()
+
+        await client.chat({ ...ASK, budget: { effort: "low", reasoningMaxTokens: 1024 } })
+        await client.chat({ ...ASK, budget: { effort: "off", reasoningMaxTokens: 1024 } })
+
+        expect(sentOf(http, 0).text).toContain('"reasoning":{"max_tokens":1024,"exclude":true}')
+        expect(sentOf(http, 0).text).not.toContain('"effort"')
+        expect(sentOf(http, 1).text).toContain('"reasoning":{"enabled":false}')
     })
 })
 

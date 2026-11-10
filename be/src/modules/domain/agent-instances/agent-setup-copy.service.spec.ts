@@ -93,7 +93,7 @@ const build = async () => {
             accountMasked: null,
             status: "connected",
             purpose: "data_source",
-            access: "read",
+            bound: true,
         },
         {
             id: "tg1",
@@ -103,7 +103,7 @@ const build = async () => {
             accountMasked: null,
             status: "connected",
             purpose: "outbound_chat",
-            access: "auto",
+            bound: true,
         },
     ])
     const logger = mock<Logger>()
@@ -156,7 +156,7 @@ describe("AgentSetupCopyService", () => {
                 graph: "copied",
                 ...KNOWLEDGE,
             },
-            grants: [{ connectionId: "db1", access: "read" }],
+            grants: [{ connectionId: "db1" }],
         })
         expect(installations.saveSettings).toHaveBeenCalledWith("w1", "inst-minh", SOURCE.settings)
         expect(installations.setOperatingMode).toHaveBeenCalledWith("w1", "inst-minh", "autopilot")

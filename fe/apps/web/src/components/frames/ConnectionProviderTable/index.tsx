@@ -19,8 +19,6 @@ export interface ConnectionProviderTableCopy {
     readonly agentsGrant: string
     /** Where an agent is granted a connection: the agents catalogue. */
     readonly agentsHref: string
-    /** The line under the table: the same record as the agent's Connections tab. */
-    readonly note: string
 }
 
 /** The accounts of a provider, their words and whether they are still being read. */
@@ -30,7 +28,7 @@ interface ConnectionProviderTableProps {
     readonly isLoading: boolean
 }
 
-/** One agent of the cell: its kind mark, its name, what it uses the account for and its level. */
+/** One agent of the cell: its kind mark, its name and what it uses the account for. */
 const AgentUse = (props: { readonly use: ConnectionAgentUse }) => (
     <Cluster gap="inline" align="center" wrap={false}>
         {isModuleKey(props.use.module) ? <AgentKindMark module={props.use.module} /> : null}
@@ -40,7 +38,6 @@ const AgentUse = (props: { readonly use: ConnectionAgentUse }) => (
                 {props.use.purpose}
             </Text>
         </Stack>
-        <Badge tone={props.use.tone}>{props.use.level}</Badge>
     </Cluster>
 )
 
@@ -105,14 +102,12 @@ const cellOf = (row: ConnectionProviderRow, columnId: string, copy: ConnectionPr
 
 /**
  * The accounts of a provider as a Section head (the label and the count chip) over one native table: the account, its state, the agents
- * that use it with their level, and the command that opens it; the note sits under it as a caption. The state column folds into the row on
- * a narrow container.
+ * bound to it with what each uses it for, and the command that opens it. The state column folds into the row on a narrow container.
  */
 export const ConnectionProviderTable = (props: ConnectionProviderTableProps) => (
     <Section
         title={props.copy.label}
         count={props.rows.length}
-        caption={props.copy.note}
         isLoading={props.isLoading}
     >
         <DataTable

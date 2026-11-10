@@ -33,7 +33,7 @@ const mutationMap: Record<
 /** Apollo params for {@link mutateSetConnectionGrant}. */
 type MutateSetConnectionGrantParams = MutateParams<MutationSetConnectionGrant, MutateSetConnectionGrantRequest>
 
-/** Gives one agent a level through a connection, or removes it. */
+/** Binds one agent to a connection, or unbinds it. */
 export const mutateSetConnectionGrant = async ({
     mutation = MutationSetConnectionGrant.Mutation1,
     request,

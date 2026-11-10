@@ -11,8 +11,6 @@ export enum AgentConnectionsErrorCode {
     ResumeConflict = "AGENT_CONNECTIONS_RESUME_CONFLICT",
     /** A manager acts on an agent outside the rooms and roles they manage. */
     OutOfScope = "AGENT_CONNECTIONS_OUT_OF_SCOPE",
-    /** A manager asks for a level above what the owner allows managers. */
-    AccessAboveCeiling = "AGENT_CONNECTIONS_ACCESS_ABOVE_CEILING",
 }
 
 /** How each agent-connections code travels. */
@@ -21,7 +19,6 @@ export const AGENT_CONNECTIONS_ERROR_KINDS: Record<AgentConnectionsErrorCode, Er
     [AgentConnectionsErrorCode.ChannelOwned]: "conflict",
     [AgentConnectionsErrorCode.ResumeConflict]: "conflict",
     [AgentConnectionsErrorCode.OutOfScope]: "forbidden",
-    [AgentConnectionsErrorCode.AccessAboveCeiling]: "forbidden",
 }
 
 /** The one error class of the agent-connections capability. */

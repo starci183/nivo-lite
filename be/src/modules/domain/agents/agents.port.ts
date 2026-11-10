@@ -1,4 +1,4 @@
-import type { AgentAccess, AgentPurpose } from "./agents-connections.contracts"
+import type { AgentPurpose } from "./agents-connections.contracts"
 import type { DashboardLine } from "./agents-reads.contracts"
 import type { AskAsAgentInput, AskedPassage } from "./agent-ask.contracts"
 import type { LensOverview } from "./agent-knowledge-overview.contracts"
@@ -177,8 +177,6 @@ export interface BoundConnectionView {
     readonly accountMasked: string | null
     /** connected, error, pending or disconnected. */
     readonly status: string
-    /** What the agent may do through the connection. */
-    readonly access: AgentAccess
     /** What the agent uses the connection for. */
     readonly purpose: AgentPurpose
 }
@@ -187,7 +185,7 @@ export interface BoundConnectionView {
 export interface AgentGrantView {
     /** The agent that holds the grant. */
     readonly agentId: string
-    /** The connection with the access and purpose of the grant. */
+    /** The connection with the purpose of the grant. */
     readonly connection: BoundConnectionView
 }
 

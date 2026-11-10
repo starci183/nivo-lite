@@ -12,7 +12,6 @@ const query1: TypedDocumentNode<QueryAgentCatalogResponse> = gql`
         agentCatalog {
             agentId
             grants {
-                access
                 accountMasked
                 botUsername
                 connectionId

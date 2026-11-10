@@ -9,13 +9,12 @@ import { ChannelOwnersService } from "./channel-owners.service"
 import { AgentConnectionsErrorCode } from "./errors/agent-connections.error"
 import { AgentConnectionEntity } from "./persistence/entities"
 
-const linkOf = (agentId: string, connectionId: string, purpose: string, access: string, day: number) =>
+const linkOf = (agentId: string, connectionId: string, purpose: string, day: number) =>
     Object.assign(new AgentConnectionEntity(), {
         agentId,
         connectionId,
         workspaceId: "w1",
         purpose,
-        access,
         createdAt: new Date(`2026-11-0${day}T00:00:00.000Z`),
     })
 
@@ -27,11 +26,11 @@ const agentOf = (id: string, module: string, name: string): BindingAgent => ({
 })
 
 const LINKS = [
-    linkOf("c-bot", "tg1", "inbound_chat", "auto", 1),
-    linkOf("s-lan", "tg1", "outbound_chat", "ask", 2),
-    linkOf("s-minh", "tg1", "outbound_chat", "ask", 3),
-    linkOf("s-minh", "zl1", "outbound_chat", "auto", 4),
-    linkOf("s-paused", "zl2", "outbound_chat", "ask", 5),
+    linkOf("c-bot", "tg1", "inbound_chat", 1),
+    linkOf("s-lan", "tg1", "outbound_chat", 2),
+    linkOf("s-minh", "tg1", "outbound_chat", 3),
+    linkOf("s-minh", "zl1", "outbound_chat", 4),
+    linkOf("s-paused", "zl2", "outbound_chat", 5),
 ]
 
 const AGENTS = [
@@ -120,13 +119,12 @@ describe("ChannelOwnersService > conflictOf", () => {
             agentId: "s-new",
             module: "sales",
             purpose: "outbound_chat",
-            access: "ask",
         })
 
         expect(conflict?.agentName).toBe("Lan")
     })
 
-    it("finds no conflict for the owner itself, a read-only claim or another role", async () => {
+    it("finds no conflict for the owner itself or another role", async () => {
         const em = mockEntityManager({ find: [AgentConnectionEntity, LINKS.slice(0, 2)] })
         const { service } = await build(em)
 
@@ -135,15 +133,6 @@ describe("ChannelOwnersService > conflictOf", () => {
                 agentId: "s-lan",
                 module: "sales",
                 purpose: "outbound_chat",
-                access: "auto",
-            }),
-        ).resolves.toBeNull()
-        await expect(
-            service.conflictOf("w1", "tg1", {
-                agentId: "s-new",
-                module: "sales",
-                purpose: "outbound_chat",
-                access: "read",
             }),
         ).resolves.toBeNull()
         await expect(
@@ -151,7 +140,6 @@ describe("ChannelOwnersService > conflictOf", () => {
                 agentId: "b1",
                 module: "booking",
                 purpose: "inbound_chat",
-                access: "ask",
             }),
         ).resolves.toBeNull()
     })
@@ -165,7 +153,6 @@ describe("ChannelOwnersService > conflictOf", () => {
                 agentId: "a1",
                 module: "accounting",
                 purpose: "bank_feed",
-                access: "auto",
             }),
         ).resolves.toBeNull()
         expect(em.find).not.toHaveBeenCalled()
@@ -179,7 +166,7 @@ describe("ChannelOwnersService > conflictOf", () => {
         const conflict = await service.conflictOf(
             "w1",
             "tg1",
-            { agentId: "s-new", module: "sales", purpose: "outbound_chat", access: "ask" },
+            { agentId: "s-new", module: "sales", purpose: "outbound_chat" },
             tx,
         )
 
@@ -198,7 +185,6 @@ describe("ChannelOwnersService > requireFree", () => {
                 agentId: "s-new",
                 module: "sales",
                 purpose: "outbound_chat",
-                access: "ask",
             }),
         ).rejects.toMatchObject({
             code: AgentConnectionsErrorCode.ChannelOwned,
@@ -215,7 +201,6 @@ describe("ChannelOwnersService > requireFree", () => {
                 agentId: "b1",
                 module: "booking",
                 purpose: "inbound_chat",
-                access: "ask",
             }),
         ).resolves.toBeUndefined()
     })
@@ -223,7 +208,7 @@ describe("ChannelOwnersService > requireFree", () => {
 
 describe("ChannelOwnersService > conflictsOfAgent", () => {
     it("lists the channels a paused agent holds that another active agent of its role answers", async () => {
-        const mine = [linkOf("s-paused", "tg1", "outbound_chat", "ask", 6), linkOf("s-paused", "zl9", "outbound_chat", "ask", 7)]
+        const mine = [linkOf("s-paused", "tg1", "outbound_chat", 6), linkOf("s-paused", "zl9", "outbound_chat", 7)]
         const em = mockEntityManager()
         em.find.mockResolvedValueOnce(mine).mockResolvedValueOnce(LINKS.slice(0, 3))
         const { service } = await build(em)
@@ -233,7 +218,7 @@ describe("ChannelOwnersService > conflictsOfAgent", () => {
         expect(conflicts.map((entry) => [entry.connectionId, entry.owner.agentId])).toEqual([["tg1", "s-lan"]])
     })
 
-    it("finds nothing for an agent that holds no channel, and ignores a grant that only reads", async () => {
+    it("finds nothing for an agent that holds no channel, and a conflict for any binding of a channel purpose", async () => {
         const em = mockEntityManager()
         em.find.mockResolvedValueOnce([])
         const { service, directory } = await build(em)
@@ -242,9 +227,10 @@ describe("ChannelOwnersService > conflictsOfAgent", () => {
 
         const reading = mockEntityManager()
         reading.find
-            .mockResolvedValueOnce([linkOf("s-paused", "tg1", "outbound_chat", "read", 6)])
+            .mockResolvedValueOnce([linkOf("s-paused", "tg1", "outbound_chat", 6)])
             .mockResolvedValueOnce(LINKS.slice(0, 3))
         const second = await build(reading)
-        await expect(second.service.conflictsOfAgent("w1", "s-paused", "sales")).resolves.toEqual([])
+        const found = await second.service.conflictsOfAgent("w1", "s-paused", "sales")
+        expect(found.map((entry) => [entry.connectionId, entry.owner.agentId])).toEqual([["tg1", "s-lan"]])
     })
 })

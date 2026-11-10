@@ -1,10 +1,8 @@
 import {
     AlertDialog,
     Button,
-    Cluster,
     Drawer,
     EmptyNotice,
-    Link,
     Pane,
     PaneGrid,
     PaneSection,
@@ -14,7 +12,7 @@ import {
     SurfaceCard,
 } from "@starci/grammar/common"
 import { ProviderRightsCard } from "@/components/composites/ProviderRightsCard"
-import type { AgentConnectionsBaseProps, AttachDrawerView, NivoToolsView } from "./types"
+import type { AgentConnectionsBaseProps, AttachDrawerView } from "./types"
 
 export type { AgentConnectionsBaseProps } from "./types"
 
@@ -27,15 +25,9 @@ interface PartInput {
     readonly on: On
 }
 
-/** The input of the providers list: the view only. */
+/** The input of the accounts list: the view only. */
 interface ViewInput {
     readonly view: Props
-}
-
-/** The input of the tools card. */
-interface ToolsInput {
-    readonly view: NivoToolsView
-    readonly on: On
 }
 
 /** The input of the attach drawer parts. */
@@ -44,7 +36,7 @@ interface DrawerInput {
     readonly on: On
 }
 
-/** The cards of the providers the agent holds in one flat run: a small label above the cards of its group, 8px between all of them. */
+/** The cards of the accounts the agent holds in one flat run: a small label above the cards of its group, 8px between all of them. */
 const ProviderGroups = ({ view }: ViewInput) => {
     if (view.groups.length === 0) return <EmptyNotice message={view.emptyLabel} />
     return (
@@ -57,92 +49,56 @@ const ProviderGroups = ({ view }: ViewInput) => {
     )
 }
 
-/** The NIVO tools the agent may call: a choice card with an "n / m" chip and a head link to the rules in the Second Brain. */
-const NivoTools = ({ view, on }: ToolsInput) => (
+/** The body of the attach drawer: one row per connected account not attached (mark, name, consequence line, "Attach"), or the notice that none is left. */
+const AttachOptions = ({ view, on }: DrawerInput) => (
     <SurfaceCard
-        kind="select"
-        selectionMode="multiple"
-        label={view.title}
-        headingLevel={2}
-        fact={`${view.rows.filter((row) => row.isOn).length} / ${view.rows.length}`}
-        labelEnd={
-            <Link variant="head" href={view.linkHref}>
-                {view.linkLabel}
-            </Link>
-        }
-        items={view.rows.map((row) => ({
-            id: row.id,
-            title: row.title,
-            subtitle: row.subtitle,
-            isDisabled: view.isDisabled,
+        kind="list"
+        ariaLabel={view.optionsLabel}
+        empty={<EmptyNotice message={view.emptyLabel} />}
+        items={view.options.map((option) => ({
+            id: option.id,
+            title: option.title,
+            description: option.subtitle,
+            leading: {
+                avatar: { name: option.name, ...(option.logo === undefined ? {} : { src: option.logo }), shape: "rounded" },
+                size: "md",
+            },
+            actionPlacement: "end",
+            action: { label: view.attachLabel, intent: "neutral", press: () => on.attach(option.id) },
         }))}
-        value={view.rows.filter((row) => row.isOn).map((row) => row.id)}
-        onChange={(keys) => {
-            const next = new Set(keys)
-            view.rows.forEach((row) => {
-                if (next.has(row.id) !== row.isOn) on.toggleTool(row.id, next.has(row.id))
-            })
-        }}
     />
 )
 
-/** The body of the attach drawer: the connected providers to pick from, or the notice that none is left. */
-const AttachOptions = ({ view, on }: DrawerInput) => {
-    if (view.options.length === 0) return <EmptyNotice message={view.emptyLabel} />
-    return (
-        <SurfaceCard
-            kind="select"
-            selectionMode="single"
-            ariaLabel={view.optionsLabel}
-            items={view.options.map((option) => ({ id: option.id, title: option.title, subtitle: option.subtitle }))}
-            value={view.pickedId}
-            onChange={on.pickAttach}
-        />
-    )
-}
-
-/** The drawer that lists the connected providers the agent does not hold yet. */
+/** The drawer that lists the connected accounts the agent does not hold yet. */
 const AttachDrawer = ({ view, on }: DrawerInput) => (
     <Drawer
         isOpen={view.isOpen}
         onOpenChange={(isOpen) => (isOpen ? undefined : on.closeDrawer())}
         title={view.title}
         closeLabel={view.closeLabel}
-        footer={
-            <Cluster gap="inline" justify="end">
-                <Button intent="neutral" onPress={on.closeDrawer}>
-                    {view.cancelLabel}
-                </Button>
-                <Button intent="commit" isDisabled={view.pickedId === null} onPress={on.submitAttach}>
-                    {view.submitLabel}
-                </Button>
-            </Cluster>
-        }
     >
         <AttachOptions view={view} on={on} />
     </Drawer>
 )
 
-/** The section of the held providers: its label with the count chip, the neutral small pill that opens the drawer, then the groups. */
+/** The section of the attached accounts: its label with the count chip and, at the end of the head, the neutral small "attach more" button; then the groups. */
 const ProvidersSection = ({ view, on }: PartInput) => (
     <Section
         kind="region"
         title={view.title}
         count={view.groups.reduce((sum, group) => sum + group.cards.length, 0)}
         headingLevel={2}
+        action={
+            <Button size="sm" intent="neutral" onPress={on.openDrawer}>
+                {view.attachLabel}
+            </Button>
+        }
     >
-        <Stack gap="inline">
-            <Cluster gap="identity" justify="end">
-                <Button size="sm" intent="neutral" onPress={on.openDrawer}>
-                    {view.attachLabel}
-                </Button>
-            </Cluster>
-            <ProviderGroups view={view} />
-        </Stack>
+        <ProviderGroups view={view} />
     </Section>
 )
 
-/** Draws the rights tab of an agent as one well: the providers it holds (grouped), then the NIVO tools; the attach drawer and the detach confirm open over it. */
+/** Draws the rights tab of an agent as one well: the accounts it holds (grouped by kind); the attach drawer and the detach confirm open over it. */
 export const AgentConnectionsBase = (props: AgentConnectionsBaseProps) => {
     const { props: view, on } = props
     return (
@@ -151,7 +107,6 @@ export const AgentConnectionsBase = (props: AgentConnectionsBaseProps) => {
                 <Pane area="well" scroll label={view.paneLabel}>
                     <PaneSection gap="section">
                         <ProvidersSection view={view} on={on} />
-                        <NivoTools view={view.tools} on={on} />
                     </PaneSection>
                 </Pane>
             </PaneGrid>

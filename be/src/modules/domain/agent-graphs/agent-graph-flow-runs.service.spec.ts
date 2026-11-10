@@ -43,6 +43,7 @@ import {
 import { AgentGraphsService } from "./agent-graphs.service"
 import type { GraphState } from "./agent-graphs.service"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
+import type { FlowThreads } from "./agent-graph-flow-runs.service"
 import { GRAPH_FLOW_TRIGGER_MESSAGES } from "./agent-graphs.decorators"
 import type { FlowTriggerConversation, FlowTriggerMessage, FlowTriggerMessages } from "./agent-graphs.port"
 import { tagSourceOf, triggerScopeOf } from "./policies/graph-flow.policy"
@@ -202,6 +203,99 @@ describe("AgentGraphFlowRunsService", () => {
         expect(runs.open).not.toHaveBeenCalled()
         const input = { versionId: "v", nodeKey: "end", trigger: {} }
         expect(flows.stepOf({ key: "end", kind: "output", step: "stop" }, input).effect).toEqual({ kind: "read" })
+    })
+})
+
+describe("AgentGraphFlowRunsService and the thread runs", () => {
+    /** The thread runs as the flow sees them; `FLOW` is the agent's own graph, so its workflow reads `sales.main`. */
+    const threadsOf = (engaged: ReadonlyArray<string>, over: Partial<FlowThreads> = {}) =>
+        mock<FlowThreads>({
+            engages: jest.fn((namespace: string) => engaged.includes(namespace)),
+            owns: jest.fn().mockReturnValue(false),
+            engineOfWake: jest.fn().mockResolvedValue(null),
+            opened: jest.fn().mockResolvedValue(undefined),
+            started: jest.fn().mockResolvedValue({ status: "done", reason: null, outcome: { runId: "run-1" } }),
+            woken: jest.fn().mockResolvedValue({ status: "done", reason: null, outcome: { runId: "run-9" } }),
+            ...over,
+        })
+
+    it("runs a workflow the flag does not name on the old engine, exactly as with no thread runs at all", async () => {
+        const { flows, runs } = await build(stateWith(FLOW))
+        const threads = threadsOf(["chatbot.front-desk"])
+        flows.setThreads(threads)
+
+        await expect(flows.run(TURN)).resolves.toEqual({ status: "done", reason: null, outcome: { runId: "run-1" } })
+
+        expect(runs.open).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ context: TURN.context }))
+        expect(runs.append).toHaveBeenCalledTimes(1)
+        expect(threads.engages).toHaveBeenCalledWith("sales.main")
+        expect(threads.engineOfWake).not.toHaveBeenCalled()
+        expect(threads.opened).not.toHaveBeenCalled()
+        expect(threads.started).not.toHaveBeenCalled()
+    })
+
+    it("opens the run of a workflow the flag names as a thread's: no step is written, the thread is driven under the wake's lease", async () => {
+        const { flows, runs } = await build(stateWith(FLOW))
+        const threads = threadsOf(["sales.main"])
+        flows.setThreads(threads)
+        const lease = new AbortController().signal
+
+        await expect(flows.run(TURN, lease)).resolves.toEqual({ status: "done", reason: null, outcome: { runId: "run-1" } })
+
+        expect(runs.append).not.toHaveBeenCalled()
+        expect(runs.open).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                versionId: "version-1",
+                context: { ...TURN.context, threadScope: "conversation:conv-1" },
+            }),
+        )
+        expect(threads.opened).toHaveBeenCalledWith(expect.anything(), "ws-1", "run-1")
+        expect(threads.started).toHaveBeenCalledWith(
+            expect.objectContaining({
+                turn: TURN,
+                runId: "run-1",
+                versionId: "version-1",
+                flow: FLOW,
+                namespace: "sales.main",
+                workflowId: null,
+                trigger: expect.objectContaining({ text: "order" }),
+            }),
+            lease,
+        )
+    })
+
+    it("keeps a run on the engine it started on when its wake is tried again, whatever the flag says now", async () => {
+        const again = agentTurnViewOf({ ...TURN, attempts: 2 })
+        // Started on the old engine, the flag switched on since: the old engine keeps it.
+        const legacy = await build(stateWith(FLOW))
+        const on = threadsOf(["sales.main"], { engineOfWake: jest.fn().mockResolvedValue("legacy") })
+        legacy.flows.setThreads(on)
+        await legacy.flows.run(again)
+        expect(legacy.runs.append).toHaveBeenCalledTimes(1)
+        expect(on.started).not.toHaveBeenCalled()
+
+        // Started on a thread, the flag switched off since: the thread keeps it, and the old engine is given no step.
+        const thread = await build(stateWith(FLOW))
+        const off = threadsOf([], { engineOfWake: jest.fn().mockResolvedValue("langgraph") })
+        thread.flows.setThreads(off)
+        await thread.flows.run(again)
+        expect(thread.runs.append).not.toHaveBeenCalled()
+        expect(off.started).toHaveBeenCalledTimes(1)
+    })
+
+    it("takes a wake the thread runs own and hands it over before anything else", async () => {
+        const { flows, runs } = await build(null)
+        const threads = threadsOf([], { owns: jest.fn().mockReturnValue(true) })
+        flows.setThreads(threads)
+        const wake = agentTurnViewOf({ source: "internal", context: { eventName: "engine.thread.resume", subjectId: "run-9" } })
+        const lease = new AbortController().signal
+
+        await expect(flows.takes(wake)).resolves.toBe(true)
+        await expect(flows.run(wake, lease)).resolves.toEqual({ status: "done", reason: null, outcome: { runId: "run-9" } })
+
+        expect(threads.woken).toHaveBeenCalledWith(wake, lease)
+        expect(runs.open).not.toHaveBeenCalled()
     })
 })
 

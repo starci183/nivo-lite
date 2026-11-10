@@ -19,7 +19,6 @@ const build = async (conversation: ChatHumanConversation | null) => {
         agentName: "Lan",
         module: "sales",
         purpose: "outbound_chat",
-        access: "ask",
         grantedAt: new Date("2026-11-01T00:00:00.000Z"),
     })
     const moduleRef = await Test.createTestingModule({

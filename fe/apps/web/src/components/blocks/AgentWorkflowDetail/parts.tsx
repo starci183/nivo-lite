@@ -7,9 +7,7 @@ import {
     AgentWorkflowVersionTable,
     type AgentWorkflowVersionTableCopy,
 } from "@/components/composites/AgentWorkflowVersionTable"
-import type { AgentWorkflowDiffCopy } from "@/components/composites/AgentWorkflowDiff"
 import { PaneHead } from "@/components/composites/PaneHead"
-import { AgentWorkflowDiffDrawer } from "@/components/frames/AgentWorkflowDiffDrawer"
 import type {
     DataSlot,
     RunsFilter,
@@ -18,7 +16,6 @@ import type {
     SlotLabels,
     StepsMapView,
     WorkflowDetailView,
-    WorkflowDiffReadView,
     WorkflowOverviewView,
 } from "@/modules/types"
 
@@ -36,8 +33,6 @@ export interface AgentWorkflowDetailCopy {
     readonly graphEmpty: string
     readonly overview: AgentWorkflowOverviewCopy
     readonly versions: AgentWorkflowVersionTableCopy
-    readonly diff: AgentWorkflowDiffCopy
-    readonly close: string
     readonly runs: RunsTableCopy
 }
 
@@ -92,11 +87,11 @@ interface DetailPanelProps {
     readonly runsPlaceholder: RunsView
     readonly runsFilter: RunsFilter
     readonly slotLabels: SlotLabels
+    readonly versionBase: string
     readonly isLoading: boolean
     readonly on: {
         readonly pressStep: (nodeKey: string) => void
         readonly rollback: (number: number) => void
-        readonly diff: (number: number) => void
         readonly runsFilter: (next: Partial<RunsFilter>) => void
         readonly runsTab: (key: string) => void
         readonly runsRetry: () => void
@@ -142,8 +137,13 @@ export const DetailPanel = (props: DetailPanelProps) => {
     if (props.tab === "versions")
         return (
             <AgentWorkflowVersionTable
-                props={{ copy: copy.versions, versions: view.versions, isLoading }}
-                on={{ rollback: props.on.rollback, diff: props.on.diff }}
+                props={{
+                    copy: copy.versions,
+                    versions: view.versions,
+                    hrefOf: (number) => `${props.versionBase}/${number}`,
+                    isLoading,
+                }}
+                on={{ rollback: props.on.rollback }}
             />
         )
     if (props.tab === "runs")
@@ -172,29 +172,3 @@ export const DetailPanel = (props: DetailPanelProps) => {
         />
     )
 }
-
-/** What the diff drawer of a version needs. */
-interface DiffPartProps {
-    readonly copy: AgentWorkflowDetailCopy
-    readonly slot: DataSlot<WorkflowDiffReadView>
-    readonly placeholder: WorkflowDiffReadView
-    readonly isOpen: boolean
-    readonly slotLabels: SlotLabels
-    readonly on: { readonly close: () => void; readonly retry: () => void }
-}
-
-/** The drawer that shows what a version changed against the one before it. */
-export const DiffPart = (props: DiffPartProps) => (
-    <SlotView
-        slot={props.slot}
-        placeholder={props.placeholder}
-        labels={props.slotLabels}
-        onRetry={props.on.retry}
-        render={(diff, isLoading) => (
-            <AgentWorkflowDiffDrawer
-                props={{ copy: props.copy.diff, closeLabel: props.copy.close, diff, isOpen: props.isOpen, isLoading }}
-                on={{ close: props.on.close }}
-            />
-        )}
-    />
-)
