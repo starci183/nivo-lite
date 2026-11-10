@@ -1,6 +1,6 @@
 import type { McpBadgeView, McpTranslator } from "./mcpGateway.types"
 
-/** The catalog text of a native tool (`sepay.transactions.list` reads `tool_sepay-transactions-list`; its plain name `toolName_...`), else what its server sent. */
+/** The catalog text of a native tool (`sepay.transaction.list` reads `tool_sepay-transactions-list`; its plain name `toolName_...`), else what its server sent. */
 export const toolTextOf = (t: McpTranslator, kind: "tool" | "toolName", id: string, fallback: string): string => {
     const key = `${kind}_${id.replaceAll(".", "-")}`
     return t.has(key) ? t(key) : fallback

@@ -41,7 +41,7 @@ namespaces:
       reason: "Key family built at run time as `step_${key}` in modules/agentWorkLog/agentWorkLog.view.ts: the steps of a work item come from data, so the detector cannot enumerate the keys."
   agentWorkflows:
     - prefix: "grant_"
-      reason: "Key family built at run time as `grant_${kind}_${id}` in modules/agentWorkflows/agentWorkflows.view.ts: the tool or effect id (`customer.message.send`) comes from the diff data, so the detector cannot enumerate the keys."
+      reason: "Key family built at run time as `grant_${kind}_${id}` in modules/agentWorkflows/agentWorkflows.view.ts: the tool or effect id (`nivo.lead.message.send`) comes from the diff data, so the detector cannot enumerate the keys."
     - prefix: "right_"
       reason: "Key family built at run time as `right_${kind}_${access}` in modules/agentWorkflows/agentWorkflows.view.ts: the kind and access of a right come from the diff data, so the detector cannot enumerate the keys."
   auth:

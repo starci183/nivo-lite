@@ -34,7 +34,7 @@ const OLD_WILDCARDS = [
 ]
 
 /** Paths that keep history or belong to another chat; and this check. */
-const ALLOWED = ["db/migrations/", ".starciwork/", "fe/", "scripts/tool-names-check.mjs"]
+const ALLOWED = ["db/migrations/", ".starciwork/", "scripts/tool-names-check.mjs"]
 
 const SKIP = [
     /(^|\/)node_modules\//u, /(^|\/)dist([.\w-]*)?\//u, /(^|\/)\.next\//u, /(^|\/)\.turbo\//u, /(^|\/)coverage\//u,

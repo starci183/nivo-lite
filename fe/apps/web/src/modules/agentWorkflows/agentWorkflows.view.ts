@@ -198,7 +198,7 @@ const rightWordOf = (right: string, context: WorkflowContext): string => {
     return context.t(access === "write" ? "rightOtherWrite" : "rightOtherRead")
 }
 
-/** The plain words of a tool or an effect (`customer.message.send`); one the catalog does not name says a general phrase, never the id. */
+/** The plain words of a tool or an effect (`nivo.lead.message.send`); one the catalog does not name says a general phrase, never the id. */
 const grantWordOf = (kind: "tool" | "effect", id: string, context: WorkflowContext): string => {
     const key = `grant_${kind}_${id.replaceAll(".", "_")}`
     if (context.has(key)) return context.t(key)
