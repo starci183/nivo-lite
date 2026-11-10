@@ -4,7 +4,6 @@ import {
     answer,
     button,
     founderDecides,
-    playOld,
     redrive,
     rowsOf,
     stopsOf,
@@ -13,7 +12,6 @@ import {
 import {
     ACCOUNTING,
     P,
-    RECONCILE_WORKFLOW,
     bankFeedWake,
     calls,
     linesOf,
@@ -24,11 +22,13 @@ import {
     type WakeIn,
 } from "./thread-world-money"
 import { moneyProcessOf } from "./thread-world-money-process"
+import baseline from "./reconcile.baseline.json"
 
 // Package P7 (design row 1-8): `accounting.reconcile` on a LangGraph thread, both triggers (the bank feed's credit and the rematch
 // job's start), with the real thread engine, stops, effect ledger and door checks of the 0-9 world. The money decisions are the
 // model's (scripted here): what the specs prove is what the ENGINE does with them — one settle, one ledger line per transaction, one
-// stop record per run + step, one customer line per stop, a stop moved only by a person, nothing undone by itself.
+// stop record per run + step, one customer line per stop, a stop moved only by a person, nothing undone by itself. The old engine's
+// half of the twin walk is gone (phase 3, package X1); what the twin held equal is kept as a fixed baseline (`reconcile.baseline.json`).
 
 const ORDER = "order-1"
 const OWES = 4000
@@ -96,8 +96,8 @@ const PAID_PATH = ["match", "mark-paid", "ledger", "notify-paid", "to-after-sale
 
 const ref = (runId: string) => ({ workspaceId: "11111111-1111-4111-8111-111111111111", runId })
 
-const started = async (db: MoneyDb, start: WakeIn, flag: ReadonlyArray<string> = [RECONCILE_WORKFLOW]) => {
-    const process = await moneyProcessOf(db, flag)
+const started = async (db: MoneyDb, start: WakeIn) => {
+    const process = await moneyProcessOf(db)
     const woken = await wake(process, start)
     expect(woken.error).toBeNull()
     return { process, runId: woken.runId ?? "" }
@@ -105,7 +105,7 @@ const started = async (db: MoneyDb, start: WakeIn, flag: ReadonlyArray<string> =
 
 const statusOf = async (process: ThreadProcess, runId: string) => (await process.threads.stateOf(ref(runId)))?.status
 
-/** What a walk left in the world, comparable across engines. */
+/** What a walk left in the world, in the form the baseline holds. */
 const outcomeOf = (db: MoneyDb) => ({
     acts: db.acts.map((act) => ({ effect: act.effect, payload: act.payload, key: act.key, dedupeKey: act.dedupeKey })),
     lines: db.lines.map((line) => ({ conversationId: line.conversationId, text: line.text })),
@@ -137,22 +137,18 @@ describe("reconcile on a thread: an exact transfer, both triggers", () => {
         ["bank feed", bankFeedWake(EXACT.id)],
         ["rematch job", rematchWake(EXACT.id, ORDER)],
     ])(
-        "%s: the old engine and the thread walk the same steps with the same acts, lines, cards and ledger line",
-        async (_name, start) => {
-            const old = moneyDbOf(books())
-            settles(old, EXACT.id)
-            const oldRun = await started(old, start, [])
-            const played = await playOld(oldRun.process, oldRun.runId)
-
+        "%s: the thread walks the old engine's steps with its acts, lines, cards and ledger line (fixed baseline)",
+        async (name, start) => {
+            const old = name === "bank feed" ? baseline["bank feed"] : baseline["rematch job"]
             const db = moneyDbOf(books())
             settles(db, EXACT.id)
             const { process, runId } = await started(db, start)
 
-            expect(played.path).toEqual(PAID_PATH)
             const view = await process.threads.stateOf(ref(runId))
             expect(view?.status).toBe("ended")
-            expect(Object.keys(view?.state.steps ?? {})).toEqual(played.path)
-            expect(outcomeOf(db)).toEqual(outcomeOf(old))
+            // The old engine walked PAID_PATH on both triggers.
+            expect(Object.keys(view?.state.steps ?? {})).toEqual(PAID_PATH)
+            expect(outcomeOf(db)).toEqual(old.outcome)
             expect(rowsOf(db, runId).run).toMatchObject({ engine: "langgraph", status: "done" })
             // Exactly one settle and ONE ledger line, keyed by the transaction; the paid card once; the hand-off to the after-sale once.
             expect(actsOf(db, TOOL.paymentMarkPaid).map((act) => act.payload)).toEqual([
@@ -166,8 +162,8 @@ describe("reconcile on a thread: an exact transfer, both triggers", () => {
             })
             expect(linesOf(db)).toEqual([])
             expect(await stopsOf(process, runId)).toEqual([])
-            // A thread adds no model call.
-            expect(db.model.asked.length).toBe(old.model.asked.length)
+            // A thread adds no model call: 7 on the old engine (baseline).
+            expect(db.model.asked.length).toBe(old.asked)
         },
     )
 })
@@ -202,7 +198,7 @@ describe("reconcile on a thread: one ledger line per transaction, whatever wakes
             done += 1
             return done === 2
         })
-        const first = await moneyProcessOf(db, [RECONCILE_WORKFLOW])
+        const first = await moneyProcessOf(db)
         const woken = await wake(first, bankFeedWake(EXACT.id))
         expect(String(woken.error)).toContain("WORLD_PROCESS_DIED")
         const runId = woken.runId ?? ""
@@ -213,7 +209,7 @@ describe("reconcile on a thread: one ledger line per transaction, whatever wakes
         db.model.script(P.settle, calls(TOOL.paymentMarkPaid, { orderId: ORDER, transactionId: EXACT.id }), {
             done: { result: "paid" },
         })
-        const second = await moneyProcessOf(db, [RECONCILE_WORKFLOW])
+        const second = await moneyProcessOf(db)
         const ran = await redrive(second, runId, "sweep-1")
 
         expect(ran.map((one) => one.error)).toEqual([null])

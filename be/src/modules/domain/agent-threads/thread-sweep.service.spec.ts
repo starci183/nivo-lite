@@ -95,7 +95,6 @@ interface World {
     readonly stepRows?: ReadonlyArray<RecordRow>
     readonly deadline?: StopDeadline | null
     readonly reader?: boolean
-    readonly workflows?: ReadonlyArray<string>
 }
 
 const build = async (world: World = {}) => {
@@ -147,7 +146,7 @@ const build = async (world: World = {}) => {
     const moduleRef = await Test.createTestingModule({
         providers: [
             ThreadSweepService,
-            { provide: AGENT_THREADS_OPTIONS, useValue: { workflows: world.workflows ?? ["chatbot.front-desk"] } },
+            { provide: AGENT_THREADS_OPTIONS, useValue: {} },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: logger },
             { provide: EntityEngineService, useValue: engine },
@@ -347,16 +346,6 @@ describe("ThreadSweepService", () => {
 
         expect(rode).toEqual(["ws-1"])
         expect(world.logger.error).toHaveBeenCalledTimes(1)
-    })
-
-    it("reads nothing at all while no workflow is on threads", async () => {
-        const world = await build({ runs: [runRow()], openStops: [stopOf()], workflows: [] })
-
-        await expect(world.service.sweep()).resolves.toEqual({ redriven: 0, repaired: 0, abandoned: 0, closed: 0, fired: 0 })
-
-        expect(world.queries).toEqual([])
-        expect(world.port.stateOf).not.toHaveBeenCalled()
-        expect(world.wakes.hasLiveWake).not.toHaveBeenCalled()
     })
 
     it("keeps going when one item fails, and does nothing in an app with no threads port", async () => {

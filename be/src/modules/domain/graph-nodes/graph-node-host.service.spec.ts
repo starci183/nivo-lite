@@ -549,7 +549,7 @@ describe("GraphNodeHostService ports", () => {
     })
 })
 
-describe("GraphNodeHostService subjects and undo", () => {
+describe("GraphNodeHostService subjects", () => {
     it("gives a turn with no subject the first subject a resolver knows, and keeps a subject the trigger named", async () => {
         const none = mock<NodeSubjectResolver>()
         none.subjectOf.mockResolvedValue(null)
@@ -578,34 +578,6 @@ describe("GraphNodeHostService subjects and undo", () => {
         await host.run(INPUT)
 
         expect(port.read.mock.calls[0]?.[0].subject).toBeNull()
-    })
-
-    it("undoes each effect with a compensation, last first, keyed by its place, and skips one with none", async () => {
-        const { host, executor, effects } = await build(readingPort())
-        const done = [
-            { id: "core.ping", subject: { kind: "record", id: "a" } },
-            { id: "core.other", subject: { kind: "record", id: "b" } },
-            { id: "core.lost", subject: { kind: "record", id: "c" } },
-            { id: "core.ping", subject: { kind: "record", id: "d" } },
-        ]
-
-        await host.undo({ turn: INPUT.turn, done, key: "run-1:node" })
-
-        expect(effects.once.mock.calls.map((call) => [call[1], call[2]])).toEqual([
-            ["core.unping", { key: "run-1:node:undo:3", dedupeKey: null }],
-            ["core.unping", { key: "run-1:node:undo:0", dedupeKey: null }],
-        ])
-        expect(executor.execute.mock.calls.map((call) => call[1])).toEqual([{ id: "d" }, { id: "a" }])
-    })
-
-    it("skips the undo of an effect whose compensation payload is not a record, running nothing", async () => {
-        const { host, executor, effects } = await build(readingPort())
-        const done = [{ id: "core.flat", subject: { kind: "record", id: "a" } }]
-
-        await host.undo({ turn: INPUT.turn, done, key: "run-1:node" })
-
-        expect(effects.once).not.toHaveBeenCalled()
-        expect(executor.execute).not.toHaveBeenCalled()
     })
 })
 

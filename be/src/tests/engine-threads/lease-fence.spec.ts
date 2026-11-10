@@ -5,7 +5,6 @@ import {
     ANSWER,
     CONV,
     FRONT,
-    FRONT_DESK,
     UNDERSTAND,
     WS,
     actsOf,
@@ -41,7 +40,7 @@ describe("two drivers on one thread", () => {
     it("same process: the second driver is refused busy and runs nothing; the first finishes once", async () => {
         const db = threadDbOf()
         answers(db, 1)
-        const process = await processOf(db, { flag: [FRONT_DESK] })
+        const process = await processOf(db)
         const held = db.model.hold(ANSWER)
         const first = customerWrites(process, "Shop mo cua may gio?")
         await held.entered
@@ -67,7 +66,7 @@ describe("two drivers on one thread", () => {
     it("two processes: the driver whose lease was taken over is fenced at the saver; the new one finishes; one send", async () => {
         const db = threadDbOf()
         answers(db, 2)
-        const zombie = await processOf(db, { flag: [FRONT_DESK] })
+        const zombie = await processOf(db)
         const held = db.model.hold(ANSWER)
         const first = customerWrites(zombie, "Shop mo cua may gio?")
         await held.entered
@@ -76,7 +75,7 @@ describe("two drivers on one thread", () => {
 
         // Another worker takes the lease of the scope (a higher fence) and drives the thread on from its last checkpoint.
         db.checkpoints.takeOver(runId, db.fence + 1)
-        const fresh = await processOf(db, { flag: [FRONT_DESK] })
+        const fresh = await processOf(db)
         const taken = await redrive(fresh, runId, "sweep-1")
         expect(taken.map((one) => one.error)).toEqual([null])
         const after = await fresh.threads.stateOf(ref)

@@ -1,12 +1,11 @@
 import { isRecord } from "@modules/platform/primitives"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { AgentRunsError, AgentRunsErrorCode } from "./errors/agent-runs.error"
-import type { AgentRunStatus, AgentStepStatus, StepEffect, StepJson, StepView } from "./agent-runs.contracts"
-import type { RunStepView, RunView } from "./agent-runs-engine.contracts"
+import type { AgentRunStatus, AgentStepStatus, StepEffect, StepJson } from "./agent-runs.contracts"
+import type { RunView } from "./agent-runs-engine.contracts"
 import type { RunRecord, StepRecord } from "./agent-runs-records.contracts"
 import type { RunEngine } from "./agent-runs-view.contracts"
 import { DEFAULT_DEADLINE_MS } from "./policies/agent-runs.policy"
-import type { RouteStep } from "./policies/failure-route.policy"
 
 const RUN_STATUSES: ReadonlyArray<AgentRunStatus> = [
     "running",
@@ -94,7 +93,7 @@ const enumOf = <T extends string>(data: Data, key: string, allowed: ReadonlyArra
 /**
  * How long one try of the step may run. A row that names none (a thread's step row, which the projection writes with the deadline its
  * spec named, often none; every such row on dev before FX1) reads the default every step is filled with at append (`filled`), never a
- * refusal: the run page, the thread runs' engine read, the stop door and the old engine's item reads all read step rows through here,
+ * refusal: the run page, the thread runs' engine read and the stop door read step rows through here,
  * and one unreadable row made a crashed thread's wake and the sweep fail for ever (D-P10-6). A value that is no number is still refused.
  */
 const deadlineOf = (data: Data): number => {
@@ -161,7 +160,7 @@ export const stepRecordOf = (row: RecordRow): StepRecord => ({
     errorCode: textOrNull(row.data, "errorCode"),
 })
 
-/** A run as the engine and the trace read it. */
+/** A run as its readers read it. */
 export const runViewOf = (run: RunRecord): RunView => ({
     id: run.id,
     workspaceId: run.workspaceId,
@@ -174,55 +173,3 @@ export const runViewOf = (run: RunRecord): RunView => ({
     errorCode: run.errorCode,
     spoken: run.deadLetteredAt !== null,
 })
-
-/** A step as the trace and the sweep read it. */
-export const stepViewOf = (step: StepRecord): RunStepView => ({
-    stepKey: step.stepKey,
-    nodeKey: step.nodeKey,
-    kind: step.kind,
-    seq: step.ordinal,
-    status: step.status,
-    effect: step.effect,
-    attempt: step.attempt,
-    errorCode: step.errorCode,
-    result: step.result,
-    waitItemId: step.waitItemId,
-    fence: Number(step.version),
-})
-
-/** The part of a step the failure route reads. */
-export const routeStepOf = (step: RunStepView): RouteStep => ({
-    stepKey: step.stepKey,
-    seq: step.seq,
-    status: step.status,
-    effect: step.effect,
-})
-
-/** One step of a run as a handler reads it: its own record, and the results of the steps done before it. */
-export const handlerViewOf = (run: RunRecord, steps: ReadonlyArray<StepRecord>, step: StepRecord): StepView => ({
-    stepKey: step.stepKey,
-    nodeKey: step.nodeKey,
-    kind: step.kind,
-    effect: step.effect,
-    input: step.input,
-    maxAttempts: step.maxAttempts,
-    deadlineMs: step.deadlineMs,
-    runId: run.id,
-    workspaceId: run.workspaceId,
-    agentId: run.agentId,
-    status: step.status,
-    attempt: step.attempt,
-    fence: Number(step.version),
-    result: step.result,
-    earlier: Object.fromEntries(
-        steps.flatMap((earlier) =>
-            earlier.status === "done" && earlier.ordinal < step.ordinal && earlier.result !== null
-                ? [[earlier.stepKey, earlier.result] as const]
-                : [],
-        ),
-    ),
-})
-
-/** Every step of a run as a handler reads it. */
-export const handlerViewsOf = (run: RunRecord, steps: ReadonlyArray<StepRecord>): ReadonlyArray<StepView> =>
-    steps.map((step) => handlerViewOf(run, steps, step))

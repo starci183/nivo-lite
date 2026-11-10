@@ -3,7 +3,6 @@ import { FakeClock, mock } from "@starci/jest-preset"
 import { LATEST_VERSION, WORKFLOW_CALL_MEMBER, WORKFLOW_PARAMS_MEMBER } from "@nivo-lite/agent-sdk/graph"
 import { WORKFLOW_TEMPLATES, latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
 import { AgentTagService } from "@modules/domain/agent-work"
-import { ThreadRunsService } from "@modules/domain/agent-threads"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentCard } from "@modules/domain/agents"
 import { BrainChangeRequestsService } from "@modules/domain/brain-facts"
@@ -24,12 +23,15 @@ const OWNER = "u-owner"
 const STAFF = "u-lan"
 const SALES = "agent-sales"
 const ACCOUNTING = "agent-acc"
+/** An agent of a module that ships no chat turn. */
+const MARKETING = "agent-mkt"
 const GROUP = "room-common"
 const DIRECT = "room-direct-sales"
 
 const CARDS: ReadonlyArray<AgentCard> = [
     { id: SALES, name: "Sales", module: "sales", canTagAgentIds: [] },
     { id: ACCOUNTING, name: "Kế toán", module: "accounting", canTagAgentIds: [] },
+    { id: MARKETING, name: "Marketing", module: "marketing", canTagAgentIds: [] },
 ]
 
 const PEOPLE: ReadonlyArray<MemberRow> = [
@@ -67,7 +69,7 @@ const agentLine = (agentMessage: string | null, kind = "text"): HeardReply => ({
     createdAt: AT.toISOString(),
 })
 
-const build = async (engaged: ReadonlyArray<string> = ["sales.team-chat", "accounting.team-chat", "chatbot.team-chat"]) => {
+const build = async () => {
     const tags = mock<AgentTagService>()
     const agents = mock<AgentDirectoryService>()
     const members = mock<WorkspaceMembersReadService>()
@@ -75,7 +77,6 @@ const build = async (engaged: ReadonlyArray<string> = ["sales.team-chat", "accou
     const cards = mock<TeamChatCardsService>()
     const chat = mock<TeamChatRoomsService>()
     const changes = mock<BrainChangeRequestsService>()
-    const threads = mock<ThreadRunsService>()
     const clock = new FakeClock(AT)
     /** The model port of the whole path: a turn reaches it only through a wake, so it counts what a wake would cost. */
     const model = { calls: 0 }
@@ -88,7 +89,6 @@ const build = async (engaged: ReadonlyArray<string> = ["sales.team-chat", "accou
     members.directory.mockResolvedValue([...PEOPLE])
     store.threadKeys.mockResolvedValue(ROOM_LINES.map((line) => ({ id: line.id, at: "0" })))
     store.messagesByIds.mockResolvedValue([...ROOM_LINES])
-    threads.engages.mockImplementation((namespace) => engaged.includes(namespace))
     const moduleRef = await Test.createTestingModule({
         providers: [
             TeamChatTurnsService,
@@ -100,7 +100,6 @@ const build = async (engaged: ReadonlyArray<string> = ["sales.team-chat", "accou
             { provide: TeamChatCardsService, useValue: cards },
             { provide: TeamChatRoomsService, useValue: chat },
             { provide: BrainChangeRequestsService, useValue: changes },
-            { provide: ThreadRunsService, useValue: threads },
             { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: mock<Logger>() },
             { provide: TEAM_CHAT_TURNS_OPTIONS, useValue: { limit: { turns: 2, windowMs: 60_000 } } },
@@ -214,10 +213,10 @@ describe("TeamChatTurnsService: the common-room rule", () => {
         expect(paramsOf(tags.tagAgent.mock.calls[0]?.[0])["asker"]).toEqual({ name: "Lan", standing: "staff" })
     })
 
-    it("an agent whose chat turn is not on threads keeps the old tag path: the router takes nothing", async () => {
-        const { service, tags } = await build([])
+    it("an agent whose module ships no chat turn keeps the old tag path: the router takes nothing", async () => {
+        const { service, tags } = await build()
 
-        await expect(service.heard(lineOf({ agentMentions: [SALES] }))).resolves.toEqual([])
+        await expect(service.heard(lineOf({ agentMentions: [MARKETING] }))).resolves.toEqual([])
 
         expect(tags.tagAgent).not.toHaveBeenCalled()
     })

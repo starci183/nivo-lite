@@ -1,11 +1,8 @@
 import { TOOL } from "@nivo-lite/blocks-core"
-import { CONV, actsOf, playOld, redrive, rowsOf, stopsOf, type ThreadProcess } from "../../thread-world"
+import { CONV, actsOf, redrive, rowsOf, stopsOf, type ThreadProcess } from "../../thread-world"
 import {
     ACCOUNTING,
-    AFTER_SALE_WORKFLOW,
-    CONSULT_WORKFLOW,
     P,
-    RECONCILE_WORKFLOW,
     SALES,
     bankFeedWake,
     calls,
@@ -17,10 +14,13 @@ import {
     type MoneyDb,
 } from "../reconcile/thread-world-money"
 import { moneyProcessOf } from "../reconcile/thread-world-money-process"
+import baseline from "./consult.baseline.json"
 
-// Package P7 (design row 1-8): `sales.consult` on a LangGraph thread — the consult turns, the order, the QR — the same walk on the old
-// engine and on a thread (twin), a kill in the middle of the consult and its continuation, and the whole baseline of 8.1 across the
-// workflows: order → QR → wait → the transfer arrives → settled → ledger line → paid card → the hand-off to the after-sale.
+// Package P7 (design row 1-8): `sales.consult` on a LangGraph thread — the consult turns, the order, the QR — against the old engine's
+// walk kept as a fixed baseline (`consult.baseline.json`: its steps, acts, customer lines, cards, orders, ledger rows and model calls at
+// tree aa40f9655, recorded from its step handler before the old half of this twin walk was removed in phase 3, package X1), a kill in
+// the middle of the consult and its continuation, and the whole baseline of 8.1 across the workflows: order → QR → wait → the transfer
+// arrives → settled → ledger line → paid card → the hand-off to the after-sale.
 
 const SUMMARY =
     "Chi Lan oi, shop tom tat: 2 gio hoa nho, giao 25 Nguyen Hue, chi Lan 0901 234 567, thu Bay 9-11h. Chi dong y nhe?"
@@ -94,7 +94,7 @@ const statusOf = async (process: ThreadProcess, runId: string) =>
 const stepsOf = async (process: ThreadProcess, runId: string) =>
     Object.keys((await process.threads.stateOf({ workspaceId: WS, runId }))?.state.steps ?? {})
 
-/** What a walk left in the world, comparable across engines. */
+/** What a walk left in the world, in the form the baseline holds. */
 const outcomeOf = (db: MoneyDb) => ({
     acts: db.acts.map((act) => ({ effect: act.effect, payload: act.payload, key: act.key, dedupeKey: act.dedupeKey })),
     lines: db.lines.map((line) => ({
@@ -111,44 +111,36 @@ const outcomeOf = (db: MoneyDb) => ({
 
 const books = () => ({ "catalogue-item": [{ ...catalogue }] })
 
-/** The two consult turns of a customer on one engine: `flag` empty plays the old engine (its step handler), else the thread. */
-const twoTurns = async (thread: boolean) => {
+/** The two consult turns of a customer on a thread. */
+const twoTurns = async () => {
     const db = moneyDbOf(books())
     asks(db)
     orders(db)
-    const process = await moneyProcessOf(db, thread ? [CONSULT_WORKFLOW] : [])
+    const process = await moneyProcessOf(db)
     const first = await wake(process, consultWake("Cho chi 2 gio hoa nho giao thu Bay"))
-    const firstPath = thread
-        ? await stepsOf(process, first.runId ?? "")
-        : (await playOld(process, first.runId ?? "")).path
+    const firstPath = await stepsOf(process, first.runId ?? "")
     const second = await wake(process, consultWake("Dong y nhe em", "call-workflow:turn-1:sales.consult"))
-    const secondPath = thread
-        ? await stepsOf(process, second.runId ?? "")
-        : (await playOld(process, second.runId ?? "")).path
+    const secondPath = await stepsOf(process, second.runId ?? "")
     return { db, process, first, second, paths: [firstPath, secondPath] }
 }
 
-describe("consult on a thread: twin walk with the old engine", () => {
-    it("two turns (asked, then ready → order → QR → team): same steps, acts, customer lines, cards and orders on both engines", async () => {
-        const old = await twoTurns(false)
-        const thread = await twoTurns(true)
+describe("consult on a thread against the old engine's baseline", () => {
+    it("two turns (asked, then ready → order → QR → team): the old engine's steps, acts, customer lines, cards and orders", async () => {
+        const old = baseline
+        const thread = await twoTurns()
 
-        expect([old.first.error, old.second.error, thread.first.error, thread.second.error]).toEqual([
-            null,
-            null,
-            null,
-            null,
-        ])
+        expect([thread.first.error, thread.second.error]).toEqual([null, null])
         expect(old.paths).toEqual([["consult"], ORDER_PATH])
         expect(thread.paths).toEqual(old.paths)
         expect(await statusOf(thread.process, thread.second.runId ?? "")).toBe("ended")
-        expect(outcomeOf(thread.db)).toEqual(outcomeOf(old.db))
+        expect(outcomeOf(thread.db)).toEqual(old.outcome)
         expect(thread.db.acts.map((act) => act.effect)).toEqual([TOOL.customerMessageSend, ...ORDER_ACTS])
         expect(linesOf(thread.db)).toEqual([SUMMARY])
         expect(thread.db.store.order).toEqual([
             expect.objectContaining({ id: "order-1", orderNo: "DH-1", status: "confirmed", amountVnd: 4000 }),
         ])
-        expect(thread.db.model.asked.length).toBe(old.db.model.asked.length)
+        // A thread adds no model call: the old engine asked 13 times (baseline).
+        expect(thread.db.model.asked.length).toBe(old.asked)
         for (const runId of [thread.first.runId ?? "", thread.second.runId ?? ""])
             expect(rowsOf(thread.db, runId).run).toMatchObject({ engine: "langgraph", status: "done" })
     })
@@ -170,7 +162,7 @@ describe("consult on a thread: killed in the middle and continued", () => {
         const db = moneyDbOf(books())
         orders(db)
         diesAtDone(db, 3)
-        const first = await moneyProcessOf(db, [CONSULT_WORKFLOW])
+        const first = await moneyProcessOf(db)
         const woken = await wake(first, consultWake("Dong y nhe em"))
         expect(String(woken.error)).toContain("WORLD_PROCESS_DIED")
         const runId = woken.runId ?? ""
@@ -185,7 +177,7 @@ describe("consult on a thread: killed in the middle and continued", () => {
             calls(TOOL.careSchedule, { kind: "payment-stale", ref: "order-1", afterHours: 24 }),
             { done: { orderId: "order-1", sent: true } },
         )
-        const second = await moneyProcessOf(db, [CONSULT_WORKFLOW])
+        const second = await moneyProcessOf(db)
         const ran = await redrive(second, runId, "sweep-1")
 
         expect(ran.map((one) => one.error)).toEqual([null])
@@ -204,13 +196,13 @@ describe("consult on a thread: killed in the middle and continued", () => {
         asks(db)
         asks(db)
         diesAtDone(db, 1)
-        const first = await moneyProcessOf(db, [CONSULT_WORKFLOW])
+        const first = await moneyProcessOf(db)
         const woken = await wake(first, consultWake("Cho chi 2 gio hoa nho giao thu Bay"))
         expect(String(woken.error)).toContain("WORLD_PROCESS_DIED")
         const runId = woken.runId ?? ""
         expect(linesOf(db)).toEqual([SUMMARY])
 
-        const second = await moneyProcessOf(db, [CONSULT_WORKFLOW])
+        const second = await moneyProcessOf(db)
         const ran = await redrive(second, runId, "sweep-1")
 
         expect(ran.map((one) => one.error)).toEqual([null])
@@ -224,7 +216,7 @@ describe("the money walk across workflows (8.1 baseline): order → QR → wait 
     it("one order, one QR, ONE settle, ONE ledger line keyed by the transaction, one paid card, one thank-you reading the paid order", async () => {
         const db = moneyDbOf(books())
         orders(db)
-        const process = await moneyProcessOf(db, [CONSULT_WORKFLOW, RECONCILE_WORKFLOW, AFTER_SALE_WORKFLOW])
+        const process = await moneyProcessOf(db)
         const ordered = await wake(process, consultWake("Dong y nhe em"))
         expect(await statusOf(process, ordered.runId ?? "")).toBe("ended")
         // Wait: the order is confirmed and owes its total; nothing reconciles before money arrives.

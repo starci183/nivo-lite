@@ -22,7 +22,7 @@ const RUN = world.id()
 const STEP = world.id()
 const SUBJECT = world.id()
 
-/** The run the engine parked on its failed step, about an accounting entry: the records the engine writes when a step fails. */
+/** A run the OLD engine parked on its failed step, about an accounting entry: the records it wrote when a step failed (history rows). */
 const parkedRun = async (): Promise<void> => {
     const at = "2026-11-06T09:00:00.000Z"
     await saveRecord(seed.manager, who.workspaceId, "agent.run", RUN, {
@@ -91,36 +91,20 @@ describe("the platform module through the door, as the back-end role", () => {
         expect(typeof knowledge["publicTitle"]).toBe("string")
     })
 
-    it("lists the parked run with its module, subject and step, narrowed by module and subject", async () => {
-        const all = await door.read(who.userId, "platform.parked-runs")
-        expect(all).toMatchObject({
-            count: "1",
-            rows: [
-                {
-                    id: RUN,
-                    module: "accounting",
-                    subjectKind: "accounting.entry",
-                    subjectId: SUBJECT,
-                    step: "post",
-                    errorCode: "INVALID_STEP_INPUT",
-                },
-            ],
-        })
-        expect(await door.read(who.userId, "platform.parked-runs", { module: "sales" })).toMatchObject({ count: null })
-        expect(await door.read(who.userId, "platform.parked-runs", { subjectId: SUBJECT })).toMatchObject({
-            count: "1",
-        })
+    // Phase 3 (package D): the engine parks no run any more (a thread run that cannot go on stops for the founder), so the parked-runs
+    // port answers an empty list and resumes nothing, even over an old-engine row left `parked` in the records.
+    it("lists no parked run, whatever the records hold and however it is narrowed", async () => {
+        expect(await door.read(who.userId, "platform.parked-runs")).toMatchObject({ count: null, rows: [] })
+        expect(await door.read(who.userId, "platform.parked-runs", { module: "accounting" })).toMatchObject({ count: null })
+        expect(await door.read(who.userId, "platform.parked-runs", { subjectId: SUBJECT })).toMatchObject({ count: null })
     })
 
-    it("resumes the parked run like the engine's own resume, then refuses to resume it again as not parked", async () => {
-        expect(await statusOfRun()).toBe("parked")
-        expect(await door.act(who.userId, "platform.resume-run", { id: RUN })).toMatchObject({ ok: true })
-        expect(await statusOfRun()).not.toBe("parked")
-        expect(await door.read(who.userId, "platform.parked-runs")).toMatchObject({ count: null })
+    it("refuses to resume the old parked row as a run it does not know, and leaves the row as it is", async () => {
         expect(await door.act(who.userId, "platform.resume-run", { id: RUN })).toMatchObject({
             ok: false,
             reason: "refused",
-            message: { key: "refusal_not_parked" },
+            message: { key: "refusal_missing" },
         })
+        expect(await statusOfRun()).toBe("parked")
     })
 })

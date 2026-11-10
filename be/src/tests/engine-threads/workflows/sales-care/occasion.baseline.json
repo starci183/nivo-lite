@@ -1,0 +1,71 @@
+{
+    "baseline": "Twin walk at tree aa40f9655 (old engine == thread, green): recorded 2026-11-11 by package X1 from the walk the twin assertion held equal to the old engine; the old half is removed.",
+    "outcome": {
+        "acts": [
+            {
+                "effect": "customer.message.send",
+                "payload": {
+                    "text": "Chi Lan oi, sap toi sinh nhat me chi roi, chi co muon dat gio hoa nho nhu lan truoc khong a?",
+                    "conversationId": "conv-1"
+                },
+                "key": "00000000-0000-4000-8000-000000000001:suggest:8db54b38573e4291",
+                "dedupeKey": null
+            },
+            {
+                "effect": "customer.care.schedule",
+                "payload": {
+                    "kind": "occasion",
+                    "ref": "lead-1",
+                    "dueAt": "2027-11-06T17:00:00.000Z",
+                    "suffix": "sinhnhatme-11-14"
+                },
+                "key": "00000000-0000-4000-8000-000000000001:suggest:9e66221a99da8f8a",
+                "dedupeKey": "care-arm:occasion:lead-1:sinhnhatme-11-14:2027-11-06T17:00:00.000Z"
+            }
+        ],
+        "lines": [
+            {
+                "conversationId": "conv-1",
+                "text": "Chi Lan oi, sap toi sinh nhat me chi roi, chi co muon dat gio hoa nho nhu lan truoc khong a?",
+                "channelRef": "line:00000000-0000-4000-8000-000000000001:suggest:8db54b38573e4291"
+            }
+        ],
+        "team": [],
+        "ledger": [
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000001:suggest:8db54b38573e4291",
+                "effectId": "customer.message.send",
+                "runId": "00000000-0000-4000-8000-000000000001",
+                "stepKey": "suggest",
+                "args": {
+                    "leadId": "lead-1",
+                    "text": "Chi Lan oi, sap toi sinh nhat me chi roi, chi co muon dat gio hoa nho nhu lan truoc khong a?"
+                },
+                "subjectEntity": "message",
+                "subjectId": "m-1",
+                "facts": {
+                    "conversationId": "conv-1"
+                }
+            },
+            {
+                "effectKey": "dedupe:care-arm:occasion:lead-1:sinhnhatme-11-14:2027-11-06T17:00:00.000Z",
+                "effectId": "customer.care.schedule",
+                "runId": "00000000-0000-4000-8000-000000000001",
+                "stepKey": "suggest",
+                "args": {
+                    "kind": "occasion",
+                    "ref": "lead-1",
+                    "dueAt": "2027-11-06T17:00:00.000Z",
+                    "suffix": "sinhnhatme-11-14"
+                },
+                "subjectEntity": "customer.care.schedule",
+                "subjectId": "customer.care.schedule-2"
+            }
+        ],
+        "modelAsked": [
+            "sales.care-occasion:occasion",
+            "sales.care-occasion:occasion"
+        ]
+    },
+    "asked": 2
+}

@@ -1,0 +1,83 @@
+{
+    "baseline": "Twin walk at tree aa40f9655 (old engine == thread, green): recorded 2026-11-11 by package X1 from the walk the twin assertion held equal to the old engine; the old half is removed.",
+    "due": {
+        "outcome": {
+            "acts": [
+                {
+                    "effect": "customer.message.send",
+                    "payload": {
+                        "text": "Chi Lan oi, 2 gio hoa nho da toi noi chu? Chi co hai long khong a?",
+                        "conversationId": "conv-1"
+                    },
+                    "key": "00000000-0000-4000-8000-000000000001:check:de120463c4b39d0b",
+                    "dedupeKey": null
+                }
+            ],
+            "lines": [
+                {
+                    "conversationId": "conv-1",
+                    "text": "Chi Lan oi, 2 gio hoa nho da toi noi chu? Chi co hai long khong a?",
+                    "channelRef": "line:00000000-0000-4000-8000-000000000001:check:de120463c4b39d0b"
+                }
+            ],
+            "team": [],
+            "ledger": [
+                {
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:check:de120463c4b39d0b",
+                    "effectId": "customer.message.send",
+                    "runId": "00000000-0000-4000-8000-000000000001",
+                    "stepKey": "check",
+                    "args": {
+                        "leadId": "lead-1",
+                        "text": "Chi Lan oi, 2 gio hoa nho da toi noi chu? Chi co hai long khong a?"
+                    },
+                    "subjectEntity": "message",
+                    "subjectId": "m-1",
+                    "facts": {
+                        "conversationId": "conv-1"
+                    }
+                }
+            ],
+            "modelAsked": [
+                "sales.care-delivery-check:delivery-check",
+                "sales.care-delivery-check:delivery-check"
+            ]
+        },
+        "asked": 2
+    },
+    "early": {
+        "outcome": {
+            "acts": [
+                {
+                    "effect": "customer.care.schedule",
+                    "payload": {
+                        "kind": "delivery-check",
+                        "ref": "order-1",
+                        "dueAt": "2026-11-20T02:00:00.000Z"
+                    },
+                    "key": "00000000-0000-4000-8000-000000000001:check:cefc22c467e16006",
+                    "dedupeKey": "care-arm:delivery-check:order-1::2026-11-20T02:00:00.000Z"
+                }
+            ],
+            "lines": [],
+            "team": [],
+            "ledger": [
+                {
+                    "effectKey": "dedupe:care-arm:delivery-check:order-1::2026-11-20T02:00:00.000Z",
+                    "effectId": "customer.care.schedule",
+                    "runId": "00000000-0000-4000-8000-000000000001",
+                    "stepKey": "check",
+                    "args": {
+                        "kind": "delivery-check",
+                        "ref": "order-1",
+                        "dueAt": "2026-11-20T02:00:00.000Z"
+                    },
+                    "subjectEntity": "customer.care.schedule",
+                    "subjectId": "customer.care.schedule-1"
+                }
+            ],
+            "modelAsked": []
+        },
+        "asked": 0
+    }
+}

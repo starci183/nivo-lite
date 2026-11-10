@@ -3,7 +3,6 @@ import { mock } from "@starci/jest-preset"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { queryProblems } from "@nivo-lite/agent-sdk/query"
 import { agentRunStopEntity } from "@nivo-lite/blocks-core/entities"
-import { AGENT_THREADS_OPTIONS } from "@modules/domain/agent-threads"
 import { EntityEngineService } from "@modules/domain/entity-engine"
 import { pageOf, wireScope } from "@tests/fixtures/builders/agent-graph-records.builder"
 import { LeadFreezeStopsService } from "./lead-freeze-stops.service"
@@ -31,15 +30,11 @@ const OPEN_ROW = rowOf("stop-1", {
 /** The catalog the entity engine validates every list against: the real `agent.run-stop` with its declared indexes. */
 const CATALOG = new Map([[agentRunStopEntity.name, agentRunStopEntity]])
 
-const build = async (workflows: ReadonlyArray<string> = ["chatbot.front-desk"]) => {
+const build = async () => {
     const engine = mock<EntityEngineService>()
     wireScope(engine)
     const moduleRef = await Test.createTestingModule({
-        providers: [
-            LeadFreezeStopsService,
-            { provide: EntityEngineService, useValue: engine },
-            { provide: AGENT_THREADS_OPTIONS, useValue: { workflows } },
-        ],
+        providers: [LeadFreezeStopsService, { provide: EntityEngineService, useValue: engine }],
     }).compile()
     return { service: moduleRef.get(LeadFreezeStopsService), engine }
 }
@@ -120,17 +115,6 @@ describe("LeadFreezeStopsService: the open stops a freeze reads", () => {
 
         expect(engine.list).toHaveBeenCalledTimes(2)
         expect(problemsOf(engine)).toEqual([])
-    })
-
-    it("is not engaged and reads nothing when no workflow runs on threads (the old engine's hot path)", async () => {
-        const { service, engine } = await build([])
-
-        expect(service.engaged()).toBe(false)
-        await expect(service.openOfCustomer("ws-1", { leadId: "lead-1", conversationId: "c-1" })).resolves.toEqual([])
-        await expect(service.openOfRun("ws-1", "run-7")).resolves.toEqual([])
-
-        expect(engine.scoped).not.toHaveBeenCalled()
-        expect(engine.list).not.toHaveBeenCalled()
     })
 
     it("proves the validator bites: the first shape (an `or` across lead and conversation, ordered by id) is refused", () => {

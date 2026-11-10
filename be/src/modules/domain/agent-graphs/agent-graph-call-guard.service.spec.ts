@@ -151,7 +151,7 @@ describe("AgentGraphCallGuardService: chains and duplicates", () => {
 
     it("starts no second run of the target for the same lead and params while one stands, and lets a replay of the same wake through", async () => {
         const caller = runOf("run-c", "chatbot", null)
-        const standing = runOf("run-t", "sales", "run-c", { status: "parked" })
+        const standing = runOf("run-t", "sales", "run-c", { status: "waiting" })
         const replay = runOf("run-r", "sales", "run-c", { status: "running", wakeId: "wake-9" })
         const done = runOf("run-d", "sales", "run-c", { status: "done" })
         const { guard, records } = await build([caller, standing, replay, done], {}, ["run-t"])

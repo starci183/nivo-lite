@@ -9,26 +9,13 @@ import {
     templateGraph,
     workflowDoubles,
 } from "@tests/fixtures/builders/agent-workflows.builder"
-import { TOOL } from "@nivo-lite/blocks-core"
 import type { WorkflowDoubles } from "@tests/fixtures/builders/agent-workflows.builder"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { FakeClock, mock } from "@starci/jest-preset"
-import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
-import { stepViewOf } from "@tests/fixtures/builders/agent-runs.builder"
-import { AgentRunHandlersService } from "@modules/domain/agent-runs"
-import { GraphNodeHostService, GraphNodeRegistryService } from "@modules/domain/graph-nodes"
-import { CLOCK } from "@modules/platform/clock"
-import { MESSAGE_CATALOG } from "@modules/platform/i18n"
-import type { MessageCatalog } from "@modules/platform/i18n"
-import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
-import { AgentGraphNodeStepService } from "./agent-graph-node-step.service"
-import { AgentGraphRunNoticesService } from "./agent-graph-run-notices.service"
 import { AgentGraphRecordsService } from "./agent-graph-records.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { agentToolsOf } from "./policies/flow.policy"
 import { ownRunGrantOf, workflowRunGrantOf } from "./policies/workflow-grant.policy"
-import { withDefaultReads } from "./policies/agent-tools.policy"
 import { AgentWorkflowAdoptionService } from "./agent-workflow-adoption.service"
 import { AgentWorkflowRecordsService } from "./agent-workflow-records.service"
 import { AgentWorkflowRunsService } from "./agent-workflow-runs.service"
@@ -360,7 +347,7 @@ const engineRouteOf = async (world: EngineWorld, source: string): Promise<Workfl
     return route
 }
 
-/** The graph the steps of a run read by its version id: what `AgentGraphNodeStepService` runs each node of. */
+/** The graph the steps of a run read by its version id: what the thread of the run is compiled from (`ThreadGraphsService.pinned`). */
 const stepGraphOf = async (world: EngineWorld, versionId: string): Promise<GraphSpec | undefined> =>
     (await world.graphs.documentOf("ws-1", "agent-1", versionId)).flow
 
@@ -450,88 +437,5 @@ describe("AgentGraphsService.runGrantOf: what a step of each workflow may reach"
         await expect(world.graphs.runGrantOf("ws-1", "agent-1", "none")).rejects.toMatchObject({
             code: AgentGraphsErrorCode.VersionNotFound,
         })
-    })
-})
-
-/** The node step on the engine world's graph store, with `payment.settle` installed to run the effects `effects` holds. */
-const nodeStepWorldOf = async (effects: Array<`${string}.${string}`>) => {
-    const host = mock<GraphNodeHostService>()
-    host.run.mockResolvedValue({ output: { done: true }, effects: [] })
-    const settle = mock<NodeDefinition>({ id: "payment.settle", effects })
-    const installed = mock<ReturnType<GraphNodeRegistryService["installed"]>>({
-        nodes: new Map([["payment.settle", settle]]),
-    })
-    const registry = mock<GraphNodeRegistryService>({ installed: () => installed })
-    const world = await buildEngineWorld()
-    const moduleRef = await Test.createTestingModule({
-        providers: [
-            AgentGraphNodeStepService,
-            { provide: AgentGraphsService, useFactory: () => world.graphs },
-            { provide: GraphNodeHostService, useValue: host },
-            { provide: GraphNodeRegistryService, useValue: registry },
-            { provide: AgentRunHandlersService, useValue: mock<AgentRunHandlersService>() },
-            { provide: AgentGraphFlowRunsService, useValue: mock<AgentGraphFlowRunsService>() },
-            { provide: AgentGraphRunNoticesService, useValue: mock<AgentGraphRunNoticesService>() },
-            { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>() },
-            { provide: CLOCK, useValue: new FakeClock("2026-11-09T02:00:00.000Z") },
-        ],
-    }).compile()
-    return { world, steps: moduleRef.get(AgentGraphNodeStepService), host }
-}
-
-/** A one-step workflow of the agent whose graph declares these effects: its version id. */
-const settleWorkflowOf = async (world: EngineWorld, effects: ReadonlyArray<string>): Promise<string> => {
-    await world.runs.route("ws-1", "agent-1", { source: "system-event", scope: {}, pin: null })
-    const blank = { name: `Settle ${effects.join(" ")}`, moduleKey: "accounting" }
-    const made = await world.workflows.createBlank("ws-1", "agent-1", blank, OWNER, "vi")
-    const graph: GraphSpec = {
-        ...templateGraph("accounting.reconcile"),
-        grant: { rights: [], tools: [], effects: [...effects] },
-        nodes: [{ key: "settle", kind: "output", step: "payment.settle" }],
-    }
-    return (await world.workflows.publish("ws-1", made.id, graph, OWNER, 1, "")).id
-}
-
-const settleStep = (versionId: string) =>
-    stepViewOf({
-        stepKey: "settle",
-        nodeKey: "settle",
-        kind: "graph_node",
-        input: { versionId, nodeKey: "settle", trigger: {} },
-    })
-
-describe("AgentGraphNodeStepService over the graph store: a step needing more than its workflow declares", () => {
-    it("parks the step as a missing right when its workflow does not declare the effect, though the agent holds it", async () => {
-        const { world, steps, host } = await nodeStepWorldOf([TOOL.paymentMarkPaid])
-
-        await expect(steps.run(settleStep(await settleWorkflowOf(world, [])))).resolves.toEqual({
-            kind: "failed",
-            code: "RIGHTS_DENIED",
-        })
-        expect(host.run).not.toHaveBeenCalled()
-    })
-
-    it("parks it when the workflow declares an effect the agent does not hold", async () => {
-        const { world, steps, host } = await nodeStepWorldOf(["payment.refund"])
-
-        await expect(steps.run(settleStep(await settleWorkflowOf(world, ["payment.refund"])))).resolves.toEqual({
-            kind: "failed",
-            code: "RIGHTS_DENIED",
-        })
-        expect(host.run).not.toHaveBeenCalled()
-    })
-
-    it("runs it when both the workflow and the agent hold the effect, under the workflow's own grant", async () => {
-        const { world, steps, host } = await nodeStepWorldOf([TOOL.paymentMarkPaid])
-
-        await expect(
-            steps.run(settleStep(await settleWorkflowOf(world, [TOOL.paymentMarkPaid]))),
-        ).resolves.toMatchObject({
-            kind: "done",
-        })
-        expect(host.run).toHaveBeenCalledWith(
-            // The workflow's own grant, with the default context reads every run holds (W2/W3).
-            expect.objectContaining({ nodeId: "payment.settle", grant: { rights: [], tools: withDefaultReads([]) } }),
-        )
     })
 })

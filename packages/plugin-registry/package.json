@@ -23,7 +23,7 @@
   },
   "peerDependencies": {
     "@heroui/react": "3.2.6",
-    "@starci/grammar": "0.37.33",
+    "@starci/grammar": "0.37.34",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "4.6.7"

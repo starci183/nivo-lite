@@ -1,8 +1,7 @@
 import { TOOL } from "@nivo-lite/blocks-core"
-import { LEAD, actsOf, answer, button, founderDecides, playOld, redrive, rowsOf, stopsOf } from "../../thread-world"
+import { LEAD, actsOf, answer, button, founderDecides, redrive, rowsOf, stopsOf } from "../../thread-world"
 import {
     W8P,
-    W8_WORKFLOWS,
     careTimerWake,
     confusedAnswer,
     coreReport,
@@ -16,9 +15,11 @@ import {
 } from "../../thread-world-w8-wakes"
 import { calls, linesOf, moneyDbOf, type MoneyDb } from "../reconcile/thread-world-money"
 import { moneyProcessOf } from "../reconcile/thread-world-money-process"
+import baseline from "./payment-reminder.baseline.json"
 
 // Package W8 (design row 2-2): `sales.payment-reminder` on a LangGraph thread (which → remind → reminded, or which → tell-team →
-// timed-out), woken by the two payment timers the QR armed. Twin walk of both branches, one stop at the reminder, one kill after the
+// timed-out), woken by the two payment timers the QR armed. Twin walk of both branches against the old engine
+// (fixed baseline: the old engine's walk, which this twin held equal to the thread at tree aa40f9655; old half removed in phase 3, package X1), one stop at the reminder, one kill after the
 // reminder was sent; the side step `tell-team` (blocking: false) is passed over, never a stop.
 
 const ORDER = "order-1"
@@ -52,27 +53,26 @@ const reminds = (db: MoneyDb) =>
 const tellsTeam = (db: MoneyDb) =>
     db.model.script(W8P.unpaidNotice, calls(TOOL.teamMessagePost, NOTICE), { done: { orderId: ORDER, result: "told" } })
 
-const started = async (flag: ReadonlyArray<string>, kind: CareKind, script: (db: MoneyDb) => void) => {
-    const process = await w8ProcessOf(books(), flag, script)
+const started = async (kind: CareKind, script: (db: MoneyDb) => void) => {
+    const process = await w8ProcessOf(books(), script)
     const woken = await w8Wake(process, careTimerWake(kind, ORDER, DUE))
     expect(woken.error).toBeNull()
     return { process, db: process.db, runId: woken.runId ?? "" }
 }
 
-describe("payment-reminder on a thread: twin walk with the old engine", () => {
+describe("payment-reminder on a thread against the old engine's baseline", () => {
     it.each<[CareKind, ReadonlyArray<string>, (db: MoneyDb) => void]>([
         ["payment-reminder", REMIND_PATH, reminds],
         ["payment-stale", STALE_PATH, tellsTeam],
-    ])("%s: same steps, acts, lines, cards, ledger and model calls on both engines", async (kind, path, script) => {
-        const old = await started([], kind, script)
-        const played = await playOld(old.process, old.runId)
-        const thread = await started([W8_WORKFLOWS.paymentReminder], kind, script)
+    ])("%s: the old engine's steps, acts, lines, cards, ledger and model calls", async (kind, path, script) => {
+        const old = kind === "payment-stale" ? baseline["payment-stale"] : baseline["payment-reminder"]
+        const thread = await started(kind, script)
 
-        expect(played.path).toEqual(path)
         expect(await threadStatusOf(thread.process, thread.runId)).toBe("ended")
-        expect(await threadStepsOf(thread.process, thread.runId)).toEqual(played.path)
-        expect(w8OutcomeOf(thread.db)).toEqual(w8OutcomeOf(old.db))
-        expect(thread.db.model.asked.length).toBe(old.db.model.asked.length)
+        expect(await threadStepsOf(thread.process, thread.runId)).toEqual(path)
+        expect(w8OutcomeOf(thread.db)).toEqual(old.outcome)
+        // A thread adds no model call: 2 on the old engine, each branch.
+        expect(thread.db.model.asked.length).toBe(old.asked)
         expect(rowsOf(thread.db, thread.runId).run).toMatchObject({ engine: "langgraph", status: "done" })
         if (kind === "payment-reminder") {
             expect(linesOf(thread.db)).toEqual([REMINDER])
@@ -83,17 +83,18 @@ describe("payment-reminder on a thread: twin walk with the old engine", () => {
         }
     })
 
-    it("an order paid in the meantime: nothing to remind, no model call, on both engines alike", async () => {
+    it("an order paid in the meantime: nothing to remind, no model call, as on the old engine", async () => {
         const paid = (db: MoneyDb) => {
             db.store.order = [{ ...OPEN, status: "paid" }]
         }
-        const old = await started([], "payment-reminder", paid)
-        const played = await playOld(old.process, old.runId)
-        const thread = await started([W8_WORKFLOWS.paymentReminder], "payment-reminder", paid)
+        const old = baseline.paid
+        const thread = await started("payment-reminder", paid)
 
-        expect(await threadStepsOf(thread.process, thread.runId)).toEqual(played.path)
-        expect(w8OutcomeOf(thread.db)).toEqual(w8OutcomeOf(old.db))
+        // The old engine walked the reminder's path too; its step found the order paid and did nothing.
+        expect(await threadStepsOf(thread.process, thread.runId)).toEqual(REMIND_PATH)
+        expect(w8OutcomeOf(thread.db)).toEqual(old.outcome)
         expect(thread.db.acts).toEqual([])
+        expect(thread.db.model.asked.length).toBe(old.asked)
         expect(thread.db.model.asked).toEqual([])
     })
 })
@@ -110,7 +111,7 @@ describe("payment-reminder on a thread: the stop", () => {
     }
 
     it("one line, one record, one card; a retry with no words makes no second line; skip undoes nothing", async () => {
-        const { process, db, runId } = await started([W8_WORKFLOWS.paymentReminder], "payment-reminder", (one) =>
+        const { process, db, runId } = await started("payment-reminder", (one) =>
             remindsThenStops(one, REMINDER),
         )
         expect(await threadStatusOf(process, runId)).toBe("stopped")
@@ -136,7 +137,7 @@ describe("payment-reminder on a thread: the stop", () => {
     })
 
     it("confused before reminding: a stop with no line; the founder's free-text answer resumes it; one reminder, run done", async () => {
-        const { process, db, runId } = await started([W8_WORKFLOWS.paymentReminder], "payment-reminder", (one) => {
+        const { process, db, runId } = await started("payment-reminder", (one) => {
             one.model.script(W8P.paymentReminder, confusedAnswer("Khach hen chuyen sau", Q))
             one.model.script(W8P.core, coreReport(Q))
         })
@@ -158,7 +159,7 @@ describe("payment-reminder on a thread: the stop", () => {
     })
 
     it("the side step tell-team that fails is passed over: no stop, one notice to the founder, the run ends", async () => {
-        const { process, db, runId } = await started([W8_WORKFLOWS.paymentReminder], "payment-stale", (one) =>
+        const { process, db, runId } = await started("payment-stale", (one) =>
             one.model.script(W8P.unpaidNotice, confusedAnswer("Khong ro", "?")),
         )
 
@@ -176,14 +177,14 @@ describe("payment-reminder on a thread: killed and replayed", () => {
         const db = moneyDbOf(books())
         reminds(db)
         diesAtDone(db, 2)
-        const first = await moneyProcessOf(db, [W8_WORKFLOWS.paymentReminder])
+        const first = await moneyProcessOf(db)
         const woken = await w8Wake(first, careTimerWake("payment-reminder", ORDER, DUE))
         expect(String(woken.error)).toContain("WORLD_PROCESS_DIED")
         const runId = woken.runId ?? ""
         expect(linesOf(db)).toEqual([REMINDER])
 
         reminds(db)
-        const second = await moneyProcessOf(db, [W8_WORKFLOWS.paymentReminder])
+        const second = await moneyProcessOf(db)
         const ran = await redrive(second, runId, "sweep-1")
 
         expect(ran.map((one) => one.error)).toEqual([null])

@@ -48,6 +48,17 @@ import { CHECKPOINT_LIMITS, DEFAULT_CHECKPOINT_LIMITS, THREAD_END, replayRunOf }
 import type { CheckpointLimits } from "@modules/integrations/langgraph"
 import type { ReplayPortsOf, ThreadNodeAnswer, ThreadNodeScope, ThreadState } from "@modules/integrations/langgraph"
 import { FREEZE_NODE, stepExitOf, type CompiledStep } from "./template-compiler.policy"
+import {
+    iterationEnded,
+    iterationInputOf,
+    loopFrameOf,
+    loopStarted,
+    loopStepKeyOf,
+    loopVisitOf,
+    type LoopItem,
+    type OptionalThreadLoopFrame,
+    type ThreadLoopMove,
+} from "./compiler-loop.policy"
 import { ThreadProjectionService } from "./thread-projection.service"
 import { RunStopsService } from "./stops/run-stops.service"
 import { ThreadApprovalsService } from "./thread-approvals.service"
@@ -69,6 +80,16 @@ export interface ThreadStepNode {
     readonly workflowId: string | null
     /** The replay wrapper of the LangGraph port (`GraphThreads.replayPortsOf`). */
     readonly replay: ReplayPortsOf
+    /** The loop in progress when this visit began (`state.loop`), or null/absent outside every loop. Set by `run` for its own calls. */
+    readonly frame?: OptionalThreadLoopFrame | undefined
+}
+
+/** How a visit leaves a step other than its own exit: the loop node's move (where it goes, the frame it writes). */
+interface StepRoute {
+    /** The node to go to instead of the step's exit. */
+    readonly goto?: string | undefined
+    /** The loop frame to write (`null` clears it). */
+    readonly loop?: OptionalThreadLoopFrame | undefined
 }
 
 /** What the gate node of a thread graph needs: the run's agent and the language of its cards. */
@@ -79,8 +100,10 @@ export interface ThreadGateNode {
 
 /** What a step that went to the gate leaves in `state.trouble`: the step and the question of its stop. */
 export interface ThreadTrouble {
-    /** The step that stopped. */
+    /** The step that stopped (`<node>[<i>]` in an iteration of a loop). */
     readonly stepKey: string
+    /** The graph node of that step, which the gate routes back to; absent in a trouble written before loops ran (= `stepKey`). */
+    readonly nodeKey?: string | undefined
     /** The question of its stop, as the gate hands it to `scope.stop`. */
     readonly question: StopQuestion
     /** The language of the team, for the card when the stop resolves. */
@@ -132,6 +155,16 @@ const textOf = (trigger: StepJson, member: string): string | null => {
 }
 
 const isRecord = (value: unknown): value is StepJson => typeof value === "object" && value !== null && !Array.isArray(value)
+
+/** The node of a step's trouble, written only for an iteration's step (`<node>[<i>]`): any other trouble stays as it always was. */
+const nodeKeyIn = (view: StepView): { readonly nodeKey?: string } =>
+    view.nodeKey === view.stepKey ? {} : { nodeKey: view.nodeKey }
+
+/** The list a loop node's bound input names (`items`); none when the binding gave no list (the node itself refused such an input). */
+const itemsOf = (input: unknown): ReadonlyArray<LoopItem> => {
+    const items: unknown = isRecord(input) ? input.items : undefined
+    return Array.isArray(items) ? items.map((item: unknown) => jsonOf(item) as LoopItem) : []
+}
 
 /** The founder's words the thread carries, kept only when each is `{ text, at }`. */
 const founderAnswersOf = (state: ThreadState): ReadonlyArray<FounderAnswerJson> =>
@@ -226,19 +259,29 @@ export class ThreadStepService {
     }
 
     /** Runs the node of `at` for one visit of a thread: the step's output and the next node, or the gate with the stop's question. */
-    async run(at: ThreadStepNode, state: ThreadState, scope: ThreadNodeScope): Promise<ThreadNodeAnswer> {
+    async run(pinned: ThreadStepNode, state: ThreadState, scope: ThreadNodeScope): Promise<ThreadNodeAnswer> {
+        // The loop in progress: a body node runs under `<node>[<i>]` with the element in its input; the loop node starts, joins or sums.
+        const frame = loopFrameOf(state.loop)
+        const at: ThreadStepNode = { ...pinned, frame }
         const { flow, step } = at
         const node = flow.nodes.find((candidate) => candidate.key === step.key)
         const trigger: StepJson = isRecord(state.trigger) ? state.trigger : {}
+        const inBody = step.inLoop !== undefined && frame !== null && frame.nodeKey === step.inLoop
         const input: GraphNodeStepInput = {
             versionId: at.versionId,
             nodeKey: step.key,
             trigger,
             ...(at.namespace === undefined ? {} : { namespace: at.namespace }),
             workflowId: at.workflowId,
+            ...(inBody ? iterationInputOf(frame) : {}),
         }
         const view = this.viewOf(at, state, scope, input)
         const turn = this.turnOf(view, trigger, state)
+        // An iteration just ended: the loop node joins it and starts the next one (or sums the loop); the node itself does not run again.
+        if (step.loop !== undefined && node !== undefined) {
+            const visit = loopVisitOf(step.key, step.loop.body, frame)
+            if (visit.kind === "join") return this.looped(at, view, input, node, turn, visit.move)
+        }
         await this.started(at, view, input, state, node)
         const marked = this.oversized.get(`${view.runId}:${view.stepKey}`)
         if (marked !== undefined) {
@@ -257,7 +300,31 @@ export class ThreadStepService {
         leaseHeld(scope)
         if ("ask" in ran) return this.asked(at, view, input, node, turn, ran.ask)
         if ("trouble" in ran) return this.troubled(at, view, input, node, turn, ran.trouble)
+        // The loop node ran (it checked the list): the loop starts over the list its `items` bind to.
+        if (step.loop !== undefined) {
+            const bound = await this.boundOf(at, view, input, node)
+            const move = loopStarted(step.key, step.loop.body, itemsOf(bound.input))
+            if (move.kind === "iterate")
+                return this.completed(at, view, input, node, turn, ran.output, ran.effects, undefined, {
+                    goto: move.goto,
+                    loop: move.frame,
+                })
+            return this.completed(at, view, input, node, turn, move.output, ran.effects, undefined, { loop: null })
+        }
         return this.completed(at, view, input, node, turn, ran.output, ran.effects)
+    }
+
+    /** The loop node's visit after an iteration ended: the next iteration starts, or the loop's output completes the loop node. */
+    private async looped(
+        at: ThreadStepNode,
+        view: StepView,
+        input: GraphNodeStepInput,
+        node: GraphSpecNode,
+        turn: NodeTurn,
+        move: ThreadLoopMove,
+    ): Promise<ThreadNodeAnswer> {
+        if (move.kind === "iterate") return { update: { loop: move.frame }, goto: move.goto }
+        return this.completed(at, view, input, node, turn, move.output, [], undefined, { loop: null })
     }
 
     /**
@@ -270,6 +337,8 @@ export class ThreadStepService {
         const decision = scope.stop<unknown>(trouble.question)
         const ref = { workspaceId: scope.thread.workspaceId, runId: scope.thread.runId }
         const route = await this.stops.decide(ref, trouble.stepKey, decision, FREEZE_NODE, { locale: trouble.locale })
+        // A stop of an iteration is keyed `<node>[<i>]`; the thread goes back to the graph node (the frame still names the iteration).
+        const goto = route.goto === trouble.stepKey ? (trouble.nodeKey ?? trouble.stepKey) : route.goto
         const by = isRecord(decision) && typeof decision.by === "string" ? decision.by : null
         // A take-over keeps the thread at the gate: the run keeps waiting, marked as held by a person, never `running`.
         if (route.goto === FREEZE_NODE) await this.projection?.takenOver(ref, by)
@@ -280,7 +349,7 @@ export class ThreadStepService {
         void at
         return {
             update: { founderAnswers: route.founderAnswers, trouble: route.goto === FREEZE_NODE ? trouble : null },
-            goto: route.goto,
+            goto,
         }
     }
 
@@ -447,7 +516,7 @@ export class ThreadStepService {
             { workspaceId: view.workspaceId, runId: view.runId },
             { ...this.factOf(view, input, node), code: trouble.code, error: { code: trouble.code, text: trouble.text }, calls: [], waitItemId: null },
         )
-        const left: ThreadTrouble = { stepKey: view.stepKey, question, locale: card.locale }
+        const left: ThreadTrouble = { stepKey: view.stepKey, ...nodeKeyIn(view), question, locale: card.locale }
         return { update: { trouble: { ...left } }, goto: FREEZE_NODE }
     }
 
@@ -489,7 +558,7 @@ export class ThreadStepService {
             calls: [],
             waitItemId: null,
         })
-        const left: ThreadTrouble = { stepKey: view.stepKey, question: asked.question, locale }
+        const left: ThreadTrouble = { stepKey: view.stepKey, ...nodeKeyIn(view), question: asked.question, locale }
         return { update: { trouble: { ...left } }, goto: FREEZE_NODE }
     }
 
@@ -503,6 +572,7 @@ export class ThreadStepService {
         output: unknown,
         effects: NodeRun["effects"],
         recovered?: StepJson,
+        route: StepRoute = {},
     ): Promise<ThreadNodeAnswer> {
         const kept = jsonOf(output)
         // An output the checkpoint could not keep is no business and no AI failure: the engine stops the step for the founder before
@@ -520,9 +590,17 @@ export class ThreadStepService {
         await this.stops.completed(ref, view.stepKey, { locale: turn.locale === "en" ? "en" : "vi" })
         const result: StepJson = { output: kept, effects: jsonOf(effects), ...(recovered === undefined ? {} : { recovered }) }
         await this.projection?.stepEnded(ref, { ...this.factOf(view, input, node), result, calls: [], code: null, workItemId: null })
-        const goto = stepExitOf(at.step, output)
+        const goto = route.goto ?? stepExitOf(at.step, output)
         if (goto === THREAD_END) await this.pathEnded(view, input, turn)
-        return { update: { steps: { [view.stepKey]: { output: kept } }, trouble: null }, goto }
+        const loop = route.loop !== undefined ? { loop: route.loop } : this.iterationLeft(at, goto, kept)
+        return { update: { steps: { [view.stepKey]: { output: kept } }, trouble: null, ...loop }, goto }
+    }
+
+    /** A body node that goes back to its loop node ends the iteration: the frame keeps how it ended, for the loop node to join. */
+    private iterationLeft(at: ThreadStepNode, goto: string, output: LoopItem): { readonly loop?: OptionalThreadLoopFrame } {
+        const frame = at.frame ?? null
+        if (frame === null || at.step.inLoop === undefined || goto !== at.step.inLoop || frame.nodeKey !== at.step.inLoop) return {}
+        return { loop: iterationEnded(frame, { output }) }
     }
 
     /** The path ended: the right to speak in the conversation goes back unless the workflow keeps it. */
@@ -592,7 +670,7 @@ export class ThreadStepService {
             Object.entries(state.steps).map(([key, value]): [string, StepJson] => [key, isRecord(value) ? value : { output: null }]),
         )
         return {
-            stepKey: at.step.key,
+            stepKey: loopStepKeyOf(at.step.key, at.step.inLoop, at.frame ?? null),
             nodeKey: at.step.key,
             kind: GRAPH_NODE_STEP_KIND,
             effect: { kind: "read" },
@@ -738,7 +816,7 @@ export class ThreadStepService {
         })
         const goto = stepExitOf(at.step, null)
         if (goto === THREAD_END) await this.pathEnded(view, input, turn)
-        return { update: { steps: { [view.stepKey]: { ...result } }, trouble: null }, goto }
+        return { update: { steps: { [view.stepKey]: { ...result } }, trouble: null, ...this.iterationLeft(at, goto, null) }, goto }
     }
 
     /** The title of an installed node in the team's language, or null. */
@@ -752,10 +830,11 @@ export class ThreadStepService {
     private troubleOf(state: ThreadState): ThreadTrouble | null {
         const trouble = state.trouble
         if (!isRecord(trouble)) return null
-        const { stepKey, question, locale } = trouble
+        const { stepKey, nodeKey, question, locale } = trouble
         if (typeof stepKey !== "string" || !isRecord(question)) return null
         return {
             stepKey,
+            ...(typeof nodeKey === "string" ? { nodeKey } : {}),
             question: question as unknown as StopQuestion,
             locale: locale === "en" ? "en" : "vi",
         }

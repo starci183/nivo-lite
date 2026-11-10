@@ -1,12 +1,10 @@
 import type { GraphSpecNode, GraphTagSource } from "@nivo-lite/agent-sdk/graph"
-import type { NodeSaga } from "@nivo-lite/agent-sdk/node"
+import { iterationKeyOf, type NodeSaga } from "@nivo-lite/agent-sdk/node"
 import type { StepEffect, StepJson, StepSpec } from "@modules/domain/agent-runs"
 import { tagPayloadOf } from "@modules/domain/agent-work"
 import type { AgentWakeContext } from "@modules/domain/agent-work"
 import type { Locale } from "@modules/platform/i18n"
 import { suppliedScopeOf } from "./workflow-trigger.policy"
-import { iterationKeyOf, joinKeyOf, loopNodeKeyOf } from "./for-each.policy"
-import type { LoopFrame, LoopJoin } from "./for-each.policy"
 
 /** The step kind a node of a graph runs as. */
 export const GRAPH_NODE_STEP_KIND = "graph_node"
@@ -27,6 +25,16 @@ export interface FlowWake {
     readonly actorMemberId: string | null
 }
 
+/** The loop a body step runs in: the for-each node, the iteration and the list (at most the node's `max`, so bounded). */
+export interface LoopFrame {
+    /** The for-each node. */
+    readonly nodeKey: string
+    /** The iteration, from 0. */
+    readonly index: number
+    /** The whole list, in order. */
+    readonly items: ReadonlyArray<StepJson[string]>
+}
+
 /** What a graph node step carries: all it needs to run from its row alone. */
 export interface GraphNodeStepInput {
     /** The published graph version the run was opened on. */
@@ -35,32 +43,14 @@ export interface GraphNodeStepInput {
     readonly nodeKey: string
     /** The trigger scope the node reads as trigger.*. */
     readonly trigger: StepJson
-    /** The person's approval of a tool call this node asked for, when the step runs the node again after it. */
-    readonly approval?: GraphNodeApproval | undefined
     /** The namespace of the workflow the run executes (`<moduleKey>.<workflowKey>`), under which lead memory keeps its outcomes. */
     readonly namespace?: string | undefined
     /** The workflow the run is pinned to, or null for the agent's own graph. */
     readonly workflowId?: string | null | undefined
     /** Inside a for-each body: the element this iteration works on; memory keys the step `<nodeKey>[<index>]`. */
     readonly item?: { readonly value: StepJson[string]; readonly index: number } | undefined
-    /** Inside a for-each body, and on its join steps: the loop, the iteration and the list. */
+    /** Inside a for-each body: the loop, the iteration and the list. */
     readonly loop?: LoopFrame | undefined
-    /** On the join step of one iteration of a loop: how the iteration ended. */
-    readonly join?: LoopJoin | undefined
-}
-
-/** The input of the step of a node that follows: what the run carries (version, trigger, workflow, iteration, loop), never an approval. */
-export const carriedStepInput = (input: GraphNodeStepInput, nodeKey: string): GraphNodeStepInput => {
-    const { versionId, trigger, namespace, workflowId, item, loop } = input
-    return {
-        versionId,
-        trigger,
-        nodeKey,
-        ...(namespace === undefined ? {} : { namespace }),
-        ...(workflowId === undefined ? {} : { workflowId }),
-        ...(item === undefined ? {} : { item }),
-        ...(loop === undefined ? {} : { loop }),
-    }
 }
 
 /** The workflow key of the agent's own graph (a run of no workflow), in memory namespaces. */
@@ -69,19 +59,6 @@ export const MAIN_WORKFLOW_KEY = "main"
 /** The memory namespace of a workflow: `<moduleKey>.<workflowKey>`, the agent's own graph under `main`. */
 export const namespaceOf = (moduleKey: string, workflowKey: string | undefined): string =>
     `${moduleKey}.${workflowKey ?? MAIN_WORKFLOW_KEY}`
-
-/** An approval a node step carries: the step that asked (its key is the run's replay key), who approved, and what they saw. */
-export interface GraphNodeApproval {
-    /** The key of the step that asked; the node runs again under it, so its effects and calls stay the ones of that step. */
-    readonly stepKey: string
-    /** The member who approved. */
-    readonly by: string
-    /** The fingerprint of the tool call they approved. */
-    readonly fingerprint: string
-}
-
-/** The mark of a step that runs a node again after a person approved its tool call: `<node step key>~approved-<fingerprint>`. */
-export const APPROVED_STEP_MARK = "~approved-"
 
 /**
  * Where a wake came from, in the words of a graph's tag trigger: a clock slot is a schedule, an internal event or a system tag a system
@@ -134,11 +111,9 @@ const stepEffectOf = (saga: NodeSaga): StepEffect => {
     return saga === "pivot" ? { kind: "pivot" } : { kind: "read" }
 }
 
-/** The key of a node's step: the join of an iteration of a loop, else the iteration of a body node, else the node itself. */
-const nodeStepKeyIn = (node: GraphSpecNode, input: GraphNodeStepInput): string => {
-    if (input.join !== undefined) return joinKeyOf(node.key, input.join.index)
-    return input.item === undefined ? node.key : iterationKeyOf(node.key, input.item.index)
-}
+/** The key of a node's step: the iteration of a body node (`<node>[<index>]`), else the node itself. */
+const nodeStepKeyIn = (node: GraphSpecNode, input: GraphNodeStepInput): string =>
+    input.item === undefined ? node.key : iterationKeyOf(node.key, input.item.index)
 
 /** The step of one graph node in the run, keyed by the node, with the saga kind of the node it runs. */
 export const graphNodeStepOf = (node: GraphSpecNode, input: GraphNodeStepInput, saga: NodeSaga): StepSpec => ({
@@ -149,16 +124,8 @@ export const graphNodeStepOf = (node: GraphSpecNode, input: GraphNodeStepInput, 
     input: { ...input },
 })
 
-/** The outputs of the nodes done before, by node key, from the results their steps stored. */
-export const outputsOf = (earlier: Readonly<Record<string, StepJson>>): Readonly<Record<string, unknown>> => {
-    const approvedLast = Object.entries(earlier).sort(
-        ([left], [right]) => Number(left.includes(APPROVED_STEP_MARK)) - Number(right.includes(APPROVED_STEP_MARK)),
-    )
-    return Object.fromEntries(approvedLast.map(([key, result]) => [nodeStepKeyOf(key), result.output]))
-}
-
-/** The step key of the node a step ran: the key itself, or the node's key for a step that ran it again after an approval. */
-export const nodeStepKeyOf = (stepKey: string): string => loopNodeKeyOf(stepKey.split(APPROVED_STEP_MARK, 1).join(""))
+/** The key of the node a step ran: the step key without the iteration of a for-each body (`<node>[<index>]` → `<node>`). */
+export const nodeStepKeyOf = (stepKey: string): string => stepKey.replace(/\[\d+\]$/, "")
 
 /**
  * Whether a node blocks its run when it fails: the graph node's own `blocking` when it says one, else what the node definition says

@@ -333,7 +333,6 @@
       "indexes": [
         "records_agent_run_agent_started",
         "records_agent_run_agent_status_ended",
-        "records_agent_run_status_dead_lettered",
         "records_agent_run_status_resume",
         "records_agent_run_wake",
         "records_agent_run_wake_planning_key"
@@ -372,10 +371,7 @@
       "indexes": [
         "records_agent_run_step_kind_work_item",
         "records_agent_run_step_run_ordinal",
-        "records_agent_run_step_run_step_key",
-        "records_agent_run_step_status_claimed",
-        "records_agent_run_step_status_not_before",
-        "records_agent_run_step_wait_item"
+        "records_agent_run_step_run_step_key"
       ]
     },
     {

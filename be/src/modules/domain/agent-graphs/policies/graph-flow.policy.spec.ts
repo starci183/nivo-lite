@@ -4,7 +4,7 @@ import {
     graphNodeStepOf,
     localeOf,
     nodeBlocks,
-    outputsOf,
+    nodeStepKeyOf,
     subjectOfLabel,
     tagSourceOf,
     triggerScopeOf,
@@ -17,7 +17,7 @@ interface Subject {
     readonly triggerScopeOf: typeof triggerScopeOf
     readonly localeOf: typeof localeOf
     readonly graphNodeStepOf: typeof graphNodeStepOf
-    readonly outputsOf: typeof outputsOf
+    readonly nodeStepKeyOf: typeof nodeStepKeyOf
     readonly subjectOfLabel: typeof subjectOfLabel
     readonly nodeBlocks: typeof nodeBlocks
 }
@@ -35,7 +35,7 @@ const build = async (): Promise<Subject> => {
                     triggerScopeOf,
                     localeOf,
                     graphNodeStepOf,
-                    outputsOf,
+                    nodeStepKeyOf,
                     subjectOfLabel,
                     nodeBlocks,
                 },
@@ -128,12 +128,17 @@ describe("graphNodeStepOf", () => {
         expect(policy.graphNodeStepOf(node, input, "read").effect).toEqual({ kind: "read" })
     })
 
-    it("reads the output each done step kept, by node key", async () => {
+    it("keys a step by the node it ran: an iteration of a for-each body is its node", async () => {
         const policy = await build()
-        expect(policy.outputsOf({ record: { output: { orderId: "o-1" } }, gone: {} })).toEqual({
-            record: { orderId: "o-1" },
-            gone: undefined,
-        })
+        expect(policy.nodeStepKeyOf("record")).toBe("record")
+        expect(policy.nodeStepKeyOf("ship[2]")).toBe("ship")
+        expect(
+            policy.graphNodeStepOf(
+                { key: "ship", kind: "output", step: "s" },
+                { versionId: "v", nodeKey: "ship", trigger: {}, item: { value: 1, index: 2 } },
+                "read",
+            ).stepKey,
+        ).toBe("ship[2]")
     })
 })
 

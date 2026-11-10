@@ -3,7 +3,6 @@ import {
     ANSWER,
     CONV,
     CORE,
-    FRONT_DESK,
     UNDERSTAND,
     WS,
     customerWrites,
@@ -28,7 +27,7 @@ describe("the checkpoint size ceiling", () => {
             { call: { tool: TOOL.customerMessageSend, args: { conversationId: CONV, text: "Shop mo cua 8h-21h a." } } },
             { done: { reply: LONG } },
         )
-        const process = await processOf(db, { flag: [FRONT_DESK], limits: LIMITS })
+        const process = await processOf(db, { limits: LIMITS })
 
         const woken = await customerWrites(process, "Shop mo cua may gio?")
 
@@ -65,7 +64,7 @@ describe("the checkpoint size ceiling", () => {
             { call: { tool: TOOL.customerMessageSend, args: { conversationId: CONV, text: "Shop mo cua 8h-21h a." } } },
             { done: { reply: "Shop mo cua 8h-21h a." } },
         )
-        const process = await processOf(db, { flag: [FRONT_DESK], limits: LIMITS })
+        const process = await processOf(db, { limits: LIMITS })
 
         const woken = await customerWrites(process, "Shop mo cua may gio?")
 

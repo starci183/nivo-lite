@@ -10,7 +10,6 @@ import type { Logger } from "@modules/platform/logging"
 import { AgentDrainService } from "./agent-drain.service"
 import { AgentTurnsService } from "./agent-turns.service"
 import { AgentEndedWakesService } from "./agent-ended-wakes.service"
-import { AgentWakeInterruptionService } from "./agent-wake-interruption.service"
 import { AgentWorkHandlersService } from "./agent-work-handlers.service"
 import { AgentWorkLogEvent } from "./agent-work.log-events"
 import { HEARTBEAT_MS, LEASE_SECONDS } from "./agent-work.policy"
@@ -81,7 +80,6 @@ const build = async ({ handler = true }: Options = {}) => {
             { provide: LOGGER, useValue: logger },
             { provide: AGENT_TURN_QUEUE_PRODUCER, useValue: queue },
             { provide: AgentEndedWakesService, useValue: endedWakes },
-            { provide: AgentWakeInterruptionService, useValue: mock<AgentWakeInterruptionService>() },
         ],
     }).compile()
     const service = container.get(AgentDrainService)

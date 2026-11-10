@@ -1,5 +1,4 @@
 import { EnvSource } from "@modules/platform/config"
-import { AgentThreadsErrorCode } from "@modules/domain/agent-threads"
 import { LanggraphErrorCode } from "@modules/integrations/langgraph"
 import { readApiEnv } from "./api.env"
 
@@ -22,16 +21,10 @@ describe("the API environment and the engine on LangGraph", () => {
         },
     )
 
-    it("refuses to boot with an engine flag that names a workflow not cleared for threads", () => {
-        expect(bootStopOf({ AGENT_ENGINE_LANGGRAPH: "sales.ghost" })).toBe(AgentThreadsErrorCode.FlagInvalid)
-    })
-
-    it("passes the guard and the flag with neither set, and with the front desk named: the boot stops on a later key", () => {
+    it("passes the tracing guard with nothing set: the boot stops on a later key", () => {
         const later = bootStopOf({})
 
         expect(later).not.toBeNull()
         expect(later).not.toBe(LanggraphErrorCode.TracingForbidden)
-        expect(later).not.toBe(AgentThreadsErrorCode.FlagInvalid)
-        expect(bootStopOf({ AGENT_ENGINE_LANGGRAPH: "chatbot.front-desk" })).toBe(later)
     })
 })

@@ -1,0 +1,92 @@
+{
+    "baseline": "Twin walk at tree aa40f9655 (old engine == thread, green): recorded 2026-11-11 by package X1 from the walk the twin assertion held equal to the old engine; the old half is removed.",
+    "outcome": {
+        "acts": [
+            {
+                "effect": "customer.message.send",
+                "payload": {
+                    "text": "Shop da nhan thanh toan don DH-1, cam on chi Lan! Shop giao toi 25 Nguyen Hue thu Bay 9-11h nhe.",
+                    "conversationId": "conv-1"
+                },
+                "key": "00000000-0000-4000-8000-000000000001:thank:10e8126e5ccba841",
+                "dedupeKey": null
+            },
+            {
+                "effect": "lead.update",
+                "payload": {
+                    "leadId": "lead-1",
+                    "consultStage": "after_sale"
+                },
+                "key": "00000000-0000-4000-8000-000000000001:thank:510847826aeb2baf",
+                "dedupeKey": null
+            },
+            {
+                "effect": "customer.care.schedule",
+                "payload": {
+                    "kind": "delivery-check",
+                    "ref": "order-1",
+                    "dueAt": "2026-11-15T02:00:00.000Z"
+                },
+                "key": "00000000-0000-4000-8000-000000000001:plan:c17901a79761bd7c",
+                "dedupeKey": "care-arm:delivery-check:order-1::2026-11-15T02:00:00.000Z"
+            }
+        ],
+        "lines": [
+            {
+                "conversationId": "conv-1",
+                "text": "Shop da nhan thanh toan don DH-1, cam on chi Lan! Shop giao toi 25 Nguyen Hue thu Bay 9-11h nhe.",
+                "channelRef": "line:00000000-0000-4000-8000-000000000001:thank:10e8126e5ccba841"
+            }
+        ],
+        "team": [],
+        "ledger": [
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000001:thank:10e8126e5ccba841",
+                "effectId": "customer.message.send",
+                "runId": "00000000-0000-4000-8000-000000000001",
+                "stepKey": "thank",
+                "args": {
+                    "leadId": "lead-1",
+                    "text": "Shop da nhan thanh toan don DH-1, cam on chi Lan! Shop giao toi 25 Nguyen Hue thu Bay 9-11h nhe."
+                },
+                "subjectEntity": "message",
+                "subjectId": "m-1",
+                "facts": {
+                    "conversationId": "conv-1"
+                }
+            },
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000001:thank:510847826aeb2baf",
+                "effectId": "lead.update",
+                "runId": "00000000-0000-4000-8000-000000000001",
+                "stepKey": "thank",
+                "args": {
+                    "leadId": "lead-1",
+                    "consultStage": "after_sale"
+                },
+                "subjectEntity": "lead.update",
+                "subjectId": "lead.update-2"
+            },
+            {
+                "effectKey": "dedupe:care-arm:delivery-check:order-1::2026-11-15T02:00:00.000Z",
+                "effectId": "customer.care.schedule",
+                "runId": "00000000-0000-4000-8000-000000000001",
+                "stepKey": "plan",
+                "args": {
+                    "kind": "delivery-check",
+                    "ref": "order-1",
+                    "dueAt": "2026-11-15T02:00:00.000Z"
+                },
+                "subjectEntity": "customer.care.schedule",
+                "subjectId": "customer.care.schedule-3"
+            }
+        ],
+        "modelAsked": [
+            "sales.after-sale:after-sale",
+            "sales.after-sale:after-sale",
+            "sales.after-sale:after-sale",
+            "sales.care-plan:care-plan-delivery-day"
+        ]
+    },
+    "asked": 4
+}

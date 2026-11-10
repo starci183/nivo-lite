@@ -1,7 +1,4 @@
 import { WorkDecisionTimeoutService } from "./work-decision-timeout.service"
-import { AgentRunItemVerdictsService } from "./agent-run-item-verdicts.service"
-import { AGENT_RUN_ITEM_VERDICTS } from "@modules/domain/agent-runs"
-import { AgentRunParkedAlertsService } from "./agent-run-parked-alerts.service"
 import { GraphWorkDecisionService } from "./graph-work-decision.service"
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
@@ -70,7 +67,6 @@ export class DecisionsModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 { provide: INBOX, useClass: InboxService },
-                { provide: AGENT_RUN_ITEM_VERDICTS, useExisting: AgentRunItemVerdictsService },
                 { provide: WORK_PERFORMER_REGISTRY, useExisting: WorkPerformersService },
                 { provide: WORK_AGENT_DIRECTORY, useExisting: options.ports.agentDirectory },
                 { provide: WORK_ASK_CARDS, useExisting: TeamChatRoomsService },
@@ -81,8 +77,6 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 AuthorityGrantsService,
                 CommandBusService,
                 CommandPlannerService,
-                AgentRunItemVerdictsService,
-                AgentRunParkedAlertsService,
                 DecisionsService,
                 EvidenceService,
                 DurableWorkService,
@@ -106,7 +100,6 @@ export class DecisionsModule extends ConfigurableModuleClass {
                 WorkRecorderService,
             ],
             exports: [
-                AGENT_RUN_ITEM_VERDICTS,
                 GraphWorkDecisionService,
                 ...owners,
                 DecisionsQueueModule,

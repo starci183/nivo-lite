@@ -5,7 +5,6 @@ import {
     CONV,
     CORE,
     FRONT,
-    FRONT_DESK,
     UNDERSTAND,
     WS,
     actsOf,
@@ -43,7 +42,7 @@ const stopsAtAnswer = async (db: ThreadDb) => {
     db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
     db.model.script(ANSWER, { confused: { reason: "Khong ro gio mo cua", question: "Shop mo may gio?" } })
     db.model.script(CORE, report())
-    const process = await processOf(db, { flag: [FRONT_DESK] })
+    const process = await processOf(db)
     const runId = (await customerWrites(process, "Shop mo cua may gio?")).runId ?? ""
     return { process, runId, ref: { workspaceId: WS, runId } }
 }
@@ -53,7 +52,7 @@ describe("a stop for a run with no customer at all (the bank-fed shape: no lead,
         const db = threadDbOf({ leadId: null })
         // The understand step cannot even bind (no conversation): the trouble goes to the AI core, which reports.
         db.model.script(CORE, report("Day la giao dich gi?"), report("Van chua ro."))
-        const process = await processOf(db, { flag: [FRONT_DESK] })
+        const process = await processOf(db)
         const started = await startThread(process, {
             flow: frontDeskFlow(),
             versionId: "chatbot-agent:front-desk@4",
@@ -200,7 +199,7 @@ describe("a side node (blocking: false) that fails (item 8)", () => {
         }
         db.model.script(UNDERSTAND, { answer: { branch: "complaint", summary: "Lan: hoa heo" } })
         db.model.script(COMPLAINT, { confused: { reason: "Khong ro don nao", question: null } })
-        const process = await processOf(db, { flag: [FRONT_DESK] })
+        const process = await processOf(db)
         const started = await startThread(process, {
             flow: variant,
             versionId: "chatbot-agent:front-desk@9",

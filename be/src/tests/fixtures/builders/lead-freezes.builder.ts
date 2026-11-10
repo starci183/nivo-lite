@@ -1,33 +1,5 @@
 import { builder } from "@starci/jest-preset"
-import { LEAD_FREEZES_MESSAGES } from "@modules/domain/lead-freezes"
-import type { LeadFreeze, PendingEvent, StoppedRun } from "@modules/domain/lead-freezes"
-import type { MessageCatalog } from "@modules/platform/i18n"
-
-/** The parameters of a message, as the catalog takes them. */
-type MessageParams = Parameters<MessageCatalog["get"]>[1]
-
-/** The placeholders of a message: `{{name}}`. */
-const PLACEHOLDER = /\{\{(\w+)\}\}/g
-
-/** The words of one key with its parameters, in one language. */
-export type FreezeWords = (key: string, params?: MessageParams) => string
-
-/** The words of the freezes in one language, as the app's catalog fills them; an unknown key answers the key itself. */
-export const freezeWordsOf =
-    (locale: "vi" | "en"): FreezeWords =>
-    (key, params = {}) => {
-        const text = LEAD_FREEZES_MESSAGES[locale][key]
-        if (text === undefined) return key
-        return text.replace(PLACEHOLDER, (placeholder, name: string) => {
-            const value = params[name]
-            return value === undefined ? placeholder : String(value)
-        })
-    }
-
-/** The app's catalog over the words of the freezes alone. */
-export const freezeCatalog: MessageCatalog = {
-    get: (key, params, locale) => freezeWordsOf(locale)(key, params),
-}
+import type { LeadFreeze, PendingEvent } from "@modules/domain/lead-freezes"
 
 /** A customer who is not frozen yet: the record a first freeze creates. */
 export const releasedFreezeOf: (overrides?: Partial<LeadFreeze>) => LeadFreeze = builder<LeadFreeze>({
@@ -99,21 +71,4 @@ export const pendingPaymentOf: (overrides?: Partial<PendingEvent>) => PendingEve
     kind: "payment",
     conversationId: null,
     messageIds: [],
-})
-
-/** Run-1 of the front desk, parked at its claim step because the claim's executor is missing. */
-export const stoppedRunOf: (overrides?: Partial<StoppedRun>) => StoppedRun = builder<StoppedRun>({
-    runId: "run-1",
-    agentId: "chatbot",
-    status: "parked",
-    failed: {
-        stepKey: "claim-ack",
-        nodeKey: "claim-ack",
-        kind: "graph_node",
-        nodeStep: true,
-        errorCode: "GRAPH_NODES_EXECUTOR_MISSING",
-        input: { versionId: "v-1", nodeKey: "claim-ack", trigger: { conversationId: "c-1", leadId: "lead-1" } },
-    },
-    context: { conversationId: "c-1" },
-    locale: "vi",
 })

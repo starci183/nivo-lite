@@ -2,7 +2,6 @@ import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type {
     RunOpen,
     RunRecord,
-    RunStepView,
     RunView,
     StepRecord,
     StepSpec,
@@ -41,22 +40,6 @@ export const runViewOf = (over: Partial<RunView> = {}): RunView => ({
     context: { conversationId: "c-1" },
     errorCode: null,
     spoken: false,
-    ...over,
-})
-
-/** A step as the trace and the sweep read it. */
-export const runStepViewOf = (over: Partial<RunStepView> = {}): RunStepView => ({
-    stepKey: "turn",
-    nodeKey: "node-turn",
-    kind: "turn",
-    seq: 1,
-    status: "done",
-    effect: { kind: "read" },
-    attempt: 1,
-    errorCode: null,
-    result: null,
-    waitItemId: null,
-    fence: 1,
     ...over,
 })
 

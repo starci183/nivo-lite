@@ -1,5 +1,4 @@
 export { GraphWorkDecisionService } from "./graph-work-decision.service"
-export { AgentRunItemVerdictsService } from "./agent-run-item-verdicts.service"
 export { DECISIONS_ERROR_KINDS, DecisionsError, DecisionsErrorCode } from "./errors/decisions.error"
 export { DECISIONS_MESSAGES } from "./messages/decisions.messages"
 export type {

@@ -1,65 +1,34 @@
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { Test } from "@nestjs/testing"
 import { fakeTransaction, mock, mockEntityManager } from "@starci/jest-preset"
 import { nodeIndexOf } from "@nivo-lite/agent-sdk/node"
 import type { NodeDefinition } from "@nivo-lite/agent-sdk/node"
 import { coreDataKinds, coreEffects, coreNodes, coreTools, TOOL } from "@nivo-lite/blocks-core"
-import { graphSpecProblems } from "@nivo-lite/agent-sdk/graph"
+import { graphSpecProblems, graphSpecSchema } from "@nivo-lite/agent-sdk/graph"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { GraphNodeRegistryService } from "@modules/domain/graph-nodes"
 import { AgentRunsService } from "@modules/domain/agent-runs"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
+import type { AgentWakeContext } from "@modules/domain/agent-work"
 import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
-import { EnvSource } from "@modules/platform/config"
-import { THREAD_READY_WORKFLOWS, parseAgentThreadsConfig } from "@modules/domain/agent-threads"
 import { runViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
 import { stateOf } from "@tests/fixtures/builders/agent-graph.builder"
-import {
-    FEED_ROW,
-    ORDER_ROW,
-    salesWake,
-    claimWake,
-    flowWorldOf,
-    handOffWake,
-    seededGraphOf,
-    teamLineOf,
-} from "@tests/fixtures/builders/flow-f-world.builder"
-import type { SeededGraphName } from "@tests/fixtures/builders/flow-f-world.builder"
-import { driveRouted, routedWorkflowsOf } from "@tests/fixtures/builders/flow-routed-world.builder"
-import { seededWorkflowsOf } from "@tests/fixtures/builders/workflow-world.builder"
-import {
-    CONSULT_PURPOSE,
-    CREATE_ORDER_PURPOSE,
-    ORDER_NOTICE_PURPOSE,
-    POT_ADDRESS,
-    POT_PICKS,
-    SALES_FLOW_CASES,
-    SEND_QR_PURPOSE,
-    agreeingStore,
-    agrees,
-    consultReady,
-    createsOrder,
-    noticesOrder,
-    sendsQr,
-} from "@tests/fixtures/builders/sales-flow-cases.builder"
+import { seededWorkflowsOf, workflowWorldOf } from "@tests/fixtures/builders/workflow-world.builder"
+import type { ModuleName } from "@tests/fixtures/builders/workflow-world.builder"
 import { AgentGraphsService } from "./agent-graphs.service"
 import type { GraphState } from "./agent-graphs.service"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
-import type { FlowThreads } from "./agent-graph-flow-runs.service"
+import type { FlowThreadRun, FlowThreads } from "./agent-graph-flow-runs.service"
+import { AgentWorkflowRunsService } from "./agent-workflow-runs.service"
 import { GRAPH_FLOW_TRIGGER_MESSAGES } from "./agent-graphs.decorators"
 import type { FlowTriggerConversation, FlowTriggerMessage, FlowTriggerMessages } from "./agent-graphs.port"
 import { tagSourceOf, triggerScopeOf } from "./policies/graph-flow.policy"
 import type { FlowWake } from "./policies/graph-flow.policy"
 
 /** The agent each module's workflows are seeded for in the routed worlds. */
-const MODULES = { accounting: "accounting-agent", chatbot: "chatbot-agent", sales: "sales-agent" } as const
-
-/** The purposes the agents of the front desk and of the reconcile chain ask the model under (`<node id>:<purpose>`). */
-const UNDERSTAND_PURPOSE = "chatbot.understand:understand"
-const MATCH_PURPOSE = "accounting.match-payment:agent"
-const SETTLE_PURPOSE = "payment.settle:agent"
-const LEDGER_PURPOSE = "accounting.post-payment:agent"
-const RECEIVED_PURPOSE = "payment.received-notice:agent"
+const agentOf = (module: ModuleName): string => `${module}-agent`
 
 /** A step of the spec that only records an order: every effect it runs can be undone, which no shipped node is any more. */
 const RECORD_ONLY = "spec.record-order" as const
@@ -89,6 +58,13 @@ const installedNodes = () => {
     return { ...index, nodes: new Map<string, NodeDefinition>([...index.nodes, [RECORD_ONLY, recordOnly]]) }
 }
 
+/** Where the seed keeps its graph files, from this folder. */
+const SEEDS_DIR = "../../../../../.starcistacks/dev/seeds/data/graphs"
+
+/** The graph of a module as the seed ships it, parsed by the SDK's own schema. */
+const seededGraphOf = (name: ModuleName): GraphSpec =>
+    graphSpecSchema.parse(JSON.parse(readFileSync(join(__dirname, SEEDS_DIR, `${name}.json`), "utf8")))
+
 const TURN = agentTurnViewOf({
     source: "tag",
     context: { authorAgentId: "agent-2", text: "order" },
@@ -106,43 +82,54 @@ interface TriggerAnswers {
     readonly conversation: FlowTriggerConversation | null
 }
 
-const build = async (state: GraphState | null, answers: TriggerAnswers | null = null) => {
+/** What the world is built with: the agent's own graph, the trigger messages port and the routing over seeded workflows. */
+interface BuildOptions {
+    readonly answers?: TriggerAnswers | null
+    readonly workflows?: AgentWorkflowRunsService
+}
+
+const build = async (state: GraphState | null, options: BuildOptions = {}) => {
     const graphs = mock<AgentGraphsService>({ stateOfAgent: jest.fn().mockResolvedValue(state) })
-    const runs = mock<AgentRunsService>({
-        open: jest.fn().mockResolvedValue(runViewOf({ id: "run-1" })),
-        append: jest.fn().mockResolvedValue(undefined),
-    })
+    const runs = mock<AgentRunsService>({ open: jest.fn().mockResolvedValue(runViewOf({ id: "run-1" })) })
     const handlers = mock<AgentWorkHandlersService>()
     const nodes = mock<GraphNodeRegistryService>({ installed: jest.fn().mockReturnValue(installedNodes()) })
+    const answers = options.answers ?? null
     const messages = mock<FlowTriggerMessages>({
         messagesOf: jest.fn().mockResolvedValue(answers?.said ?? []),
         conversationOf: jest.fn().mockResolvedValue(answers?.conversation ?? null),
     })
     const tx = fakeTransaction(mockEntityManager())
-    const moduleRef =
-        answers === null
-            ? await Test.createTestingModule({
-                  providers: [
-                      AgentGraphFlowRunsService,
-                      { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
-                      { provide: AgentGraphsService, useValue: graphs },
-                      { provide: AgentRunsService, useValue: runs },
-                      { provide: AgentWorkHandlersService, useValue: handlers },
-                      { provide: GraphNodeRegistryService, useValue: nodes },
-                  ],
-              }).compile()
-            : await Test.createTestingModule({
-                  providers: [
-                      AgentGraphFlowRunsService,
-                      { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
-                      { provide: AgentGraphsService, useValue: graphs },
-                      { provide: AgentRunsService, useValue: runs },
-                      { provide: AgentWorkHandlersService, useValue: handlers },
-                      { provide: GraphNodeRegistryService, useValue: nodes },
-                      { provide: GRAPH_FLOW_TRIGGER_MESSAGES, useValue: messages },
-                  ],
-              }).compile()
+    const moduleRef = await Test.createTestingModule({
+        providers: [
+            AgentGraphFlowRunsService,
+            { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
+            { provide: AgentGraphsService, useValue: graphs },
+            { provide: AgentRunsService, useValue: runs },
+            { provide: AgentWorkHandlersService, useValue: handlers },
+            { provide: GraphNodeRegistryService, useValue: nodes },
+            ...(answers === null ? [] : [{ provide: GRAPH_FLOW_TRIGGER_MESSAGES, useValue: messages }]),
+            ...(options.workflows === undefined
+                ? []
+                : [{ provide: AgentWorkflowRunsService, useValue: options.workflows }]),
+        ],
+    }).compile()
     return { flows: moduleRef.get(AgentGraphFlowRunsService), runs, handlers, messages }
+}
+
+/** The thread runs as the flow sees them: every run they are handed is kept, in order. */
+const threadsOf = (over: Partial<FlowThreads> = {}) => {
+    const started: Array<FlowThreadRun> = []
+    const threads = mock<FlowThreads>({
+        owns: jest.fn().mockReturnValue(false),
+        opened: jest.fn().mockResolvedValue(undefined),
+        started: jest.fn((run: FlowThreadRun) => {
+            started.push(run)
+            return Promise.resolve({ status: "done" as const, reason: null, outcome: { runId: run.runId } })
+        }),
+        woken: jest.fn().mockResolvedValue({ status: "done", reason: null, outcome: { runId: "run-9" } }),
+        ...over,
+    })
+    return { threads, started }
 }
 
 describe("AgentGraphFlowRunsService", () => {
@@ -161,10 +148,44 @@ describe("AgentGraphFlowRunsService", () => {
         await expect((await build(null)).flows.takes(TURN)).resolves.toBe(false)
     })
 
-    it("opens the wake's run and writes the first node's step, compensable when its effects undo", async () => {
-        const { flows, runs } = await build(stateWith(FLOW))
+    it("skips a wake when the agent no longer runs a flow, and reads a step of an uninstalled or stop node", async () => {
+        const { flows, runs } = await build(stateWith(undefined))
+        flows.setThreads(threadsOf().threads)
+        await expect(flows.run(TURN)).resolves.toEqual({ status: "skipped", reason: "no_flow", outcome: null })
+        expect(runs.open).not.toHaveBeenCalled()
+        const input = { versionId: "v", nodeKey: "end", trigger: {} }
+        expect(flows.stepOf({ key: "end", kind: "output", step: "stop" }, input).effect).toEqual({ kind: "read" })
+    })
 
-        await expect(flows.run(TURN)).resolves.toEqual({ status: "done", reason: null, outcome: { runId: "run-1" } })
+    it("keys the projected step of a node by the node, with the saga kind of what it runs", async () => {
+        const { flows } = await build(stateWith(FLOW))
+        const node = FLOW.nodes[0]
+        if (node === undefined) throw new Error("FLOW has no first node")
+        const input = { versionId: "version-1", nodeKey: "keep", trigger: { text: "order" }, namespace: "sales.main" }
+
+        expect(flows.stepOf(node, input)).toEqual({
+            stepKey: "keep",
+            nodeKey: "keep",
+            kind: "graph_node",
+            effect: { kind: "compensable", compensation: "graph_node" },
+            input,
+        })
+        expect(flows.stepOf(node, { ...input, item: { value: "a", index: 2 } }).stepKey).toBe("keep[2]")
+    })
+})
+
+describe("AgentGraphFlowRunsService and the thread runs, the one engine", () => {
+    it("opens the wake's run as a thread's and drives it under the wake's lease: no step row is written by the flow", async () => {
+        const { flows, runs } = await build(stateWith(FLOW))
+        const { threads } = threadsOf()
+        flows.setThreads(threads)
+        const lease = new AbortController().signal
+
+        await expect(flows.run(TURN, lease)).resolves.toEqual({
+            status: "done",
+            reason: null,
+            outcome: { runId: "run-1" },
+        })
 
         expect(runs.open).toHaveBeenCalledWith(expect.anything(), {
             workspaceId: "ws-1",
@@ -172,165 +193,67 @@ describe("AgentGraphFlowRunsService", () => {
             wakeId: "wake-1",
             trigger: "tag",
             versionId: "version-1",
-            context: TURN.context,
+            context: { ...TURN.context, threadScope: "conversation:conv-1" },
         })
-        expect(runs.append).toHaveBeenCalledWith("ws-1", expect.anything(), "run-1", [
-            {
-                stepKey: "keep",
-                nodeKey: "keep",
-                kind: "graph_node",
-                effect: { kind: "compensable", compensation: "graph_node" },
-                input: {
-                    versionId: "version-1",
-                    nodeKey: "keep",
-                    trigger: {
-                        authorAgentId: "agent-2",
-                        text: "order",
-                        subject: null,
-                        context: {},
-                        source: "agent",
-                        origin: "agent",
-                        locale: "vi",
-                    },
-                    namespace: "sales.main",
-                    workflowId: null,
-                },
-            },
-        ])
-    })
-
-    it("skips a wake when the agent no longer runs a flow, and reads a step of an uninstalled or stop node", async () => {
-        const { flows, runs } = await build(stateWith(undefined))
-        await expect(flows.run(TURN)).resolves.toEqual({ status: "skipped", reason: "no_flow", outcome: null })
-        expect(runs.open).not.toHaveBeenCalled()
-        const input = { versionId: "v", nodeKey: "end", trigger: {} }
-        expect(flows.stepOf({ key: "end", kind: "output", step: "stop" }, input).effect).toEqual({ kind: "read" })
-    })
-})
-
-describe("AgentGraphFlowRunsService and the thread runs", () => {
-    /** The thread runs as the flow sees them; `FLOW` is the agent's own graph, so its workflow reads `sales.main`. */
-    const threadsOf = (engaged: ReadonlyArray<string>, over: Partial<FlowThreads> = {}) =>
-        mock<FlowThreads>({
-            engages: jest.fn((namespace: string) => engaged.includes(namespace)),
-            owns: jest.fn().mockReturnValue(false),
-            engineOfWake: jest.fn().mockResolvedValue(null),
-            opened: jest.fn().mockResolvedValue(undefined),
-            started: jest.fn().mockResolvedValue({ status: "done", reason: null, outcome: { runId: "run-1" } }),
-            woken: jest.fn().mockResolvedValue({ status: "done", reason: null, outcome: { runId: "run-9" } }),
-            ...over,
-        })
-
-    it("runs a workflow the flag does not name on the old engine, exactly as with no thread runs at all", async () => {
-        const { flows, runs } = await build(stateWith(FLOW))
-        const threads = threadsOf(["chatbot.front-desk"])
-        flows.setThreads(threads)
-
-        await expect(flows.run(TURN)).resolves.toEqual({ status: "done", reason: null, outcome: { runId: "run-1" } })
-
-        expect(runs.open).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ context: TURN.context }))
-        expect(runs.append).toHaveBeenCalledTimes(1)
-        expect(threads.engages).toHaveBeenCalledWith("sales.main")
-        expect(threads.engineOfWake).not.toHaveBeenCalled()
-        expect(threads.opened).not.toHaveBeenCalled()
-        expect(threads.started).not.toHaveBeenCalled()
-    })
-
-    it("opens the run of a workflow the flag names as a thread's: no step is written, the thread is driven under the wake's lease", async () => {
-        const { flows, runs } = await build(stateWith(FLOW))
-        const threads = threadsOf(["sales.main"])
-        flows.setThreads(threads)
-        const lease = new AbortController().signal
-
-        await expect(flows.run(TURN, lease)).resolves.toEqual({ status: "done", reason: null, outcome: { runId: "run-1" } })
-
-        expect(runs.append).not.toHaveBeenCalled()
-        expect(runs.open).toHaveBeenCalledWith(
-            expect.anything(),
-            expect.objectContaining({
-                versionId: "version-1",
-                context: { ...TURN.context, threadScope: "conversation:conv-1" },
-            }),
-        )
         expect(threads.opened).toHaveBeenCalledWith(expect.anything(), "ws-1", "run-1")
         expect(threads.started).toHaveBeenCalledWith(
-            expect.objectContaining({
+            {
                 turn: TURN,
                 runId: "run-1",
                 versionId: "version-1",
                 flow: FLOW,
                 namespace: "sales.main",
                 workflowId: null,
-                trigger: expect.objectContaining({ text: "order" }),
-            }),
+                workflowVersion: null,
+                trigger: {
+                    authorAgentId: "agent-2",
+                    text: "order",
+                    subject: null,
+                    context: {},
+                    source: "agent",
+                    origin: "agent",
+                    locale: "vi",
+                },
+            },
             lease,
         )
     })
 
-    it("keeps a run on the engine it started on when its wake is tried again, whatever the flag says now", async () => {
-        const again = agentTurnViewOf({ ...TURN, attempts: 2 })
-        // Started on the old engine, the flag switched on since: the old engine keeps it.
-        const legacy = await build(stateWith(FLOW))
-        const on = threadsOf(["sales.main"], { engineOfWake: jest.fn().mockResolvedValue("legacy") })
-        legacy.flows.setThreads(on)
-        await legacy.flows.run(again)
-        expect(legacy.runs.append).toHaveBeenCalledTimes(1)
-        expect(on.started).not.toHaveBeenCalled()
-
-        // Started on a thread, the flag switched off since: the thread keeps it, and the old engine is given no step.
-        const thread = await build(stateWith(FLOW))
-        const off = threadsOf([], { engineOfWake: jest.fn().mockResolvedValue("langgraph") })
-        thread.flows.setThreads(off)
-        await thread.flows.run(again)
-        expect(thread.runs.append).not.toHaveBeenCalled()
-        expect(off.started).toHaveBeenCalledTimes(1)
-    })
-
-    it("with LangGraph as the default engine engages the nine cleared workflows only, and a legacy run stays legacy", async () => {
-        const { workflows } = parseAgentThreadsConfig(new EnvSource({ AGENT_ENGINE_DEFAULT: "langgraph" }))
-        expect(workflows).toEqual(THREAD_READY_WORKFLOWS)
-
-        // A run of a cleared workflow tried again after it started on the old engine: the old engine keeps it.
-        const again = agentTurnViewOf({ ...TURN, attempts: 2 })
-        const legacy = await build(stateWith(FLOW))
-        const stays = threadsOf([...workflows, "sales.main"], { engineOfWake: jest.fn().mockResolvedValue("legacy") })
-        legacy.flows.setThreads(stays)
-        await legacy.flows.run(again)
-        expect(legacy.runs.append).toHaveBeenCalledTimes(1)
-        expect(stays.started).not.toHaveBeenCalled()
-
-        // A graph no template made (here the agent's own, `sales.main`) is not cleared: its new runs stay on the old engine.
-        const own = await build(stateWith(FLOW))
-        const on = threadsOf(workflows)
-        own.flows.setThreads(on)
-        await own.flows.run(TURN)
-        expect(own.runs.append).toHaveBeenCalledTimes(1)
-        expect(on.started).not.toHaveBeenCalled()
-    })
-
-    it("asks nothing of the thread runs for a first try when the flag is unset: no read, the old engine as before", async () => {
-        const { workflows } = parseAgentThreadsConfig(new EnvSource({}))
+    it("goes on as a thread when the wake is tried again: nothing asks which engine the run started on", async () => {
         const { flows, runs } = await build(stateWith(FLOW))
-        const off = threadsOf(workflows)
-        flows.setThreads(off)
+        const { threads } = threadsOf({})
+        flows.setThreads(threads)
 
-        await flows.run(TURN)
+        await flows.run(agentTurnViewOf({ ...TURN, attempts: 2 }))
 
-        expect(workflows).toEqual([])
-        expect(off.engineOfWake).not.toHaveBeenCalled()
-        expect(off.opened).not.toHaveBeenCalled()
-        expect(runs.append).toHaveBeenCalledTimes(1)
+        expect(runs.open).toHaveBeenCalledTimes(1)
+        expect(threads.started).toHaveBeenCalledTimes(1)
+    })
+
+    it("fails a workflow wake that reaches it before the thread engine registered: no run is opened, nothing runs anywhere else", async () => {
+        const { flows, runs } = await build(stateWith(FLOW))
+
+        await expect(flows.run(TURN)).rejects.toMatchObject({ code: "AGENT_GRAPHS_ENGINE_MISSING" })
+
+        expect(runs.open).not.toHaveBeenCalled()
     })
 
     it("takes a wake the thread runs own and hands it over before anything else", async () => {
         const { flows, runs } = await build(null)
-        const threads = threadsOf([], { owns: jest.fn().mockReturnValue(true) })
+        const { threads } = threadsOf({ owns: jest.fn().mockReturnValue(true) })
         flows.setThreads(threads)
-        const wake = agentTurnViewOf({ source: "internal", context: { eventName: "engine.thread.resume", subjectId: "run-9" } })
+        const wake = agentTurnViewOf({
+            source: "internal",
+            context: { eventName: "engine.thread.resume", subjectId: "run-9" },
+        })
         const lease = new AbortController().signal
 
         await expect(flows.takes(wake)).resolves.toBe(true)
-        await expect(flows.run(wake, lease)).resolves.toEqual({ status: "done", reason: null, outcome: { runId: "run-9" } })
+        await expect(flows.run(wake, lease)).resolves.toEqual({
+            status: "done",
+            reason: null,
+            outcome: { runId: "run-9" },
+        })
 
         expect(threads.woken).toHaveBeenCalledWith(wake, lease)
         expect(runs.open).not.toHaveBeenCalled()
@@ -360,8 +283,7 @@ describe("AgentGraphFlowRunsService.triggerOf", () => {
 
     it("reads the words, times and files of every customer message a channel wake answers, in the order they were said", async () => {
         const { flows, messages } = await build(stateWith(FLOW), {
-            said,
-            conversation: { leadId: "l-1", channel: "zalo" },
+            answers: { said, conversation: { leadId: "l-1", channel: "zalo" } },
         })
 
         const trigger = await flows.triggerOf(CHANNEL)
@@ -377,7 +299,7 @@ describe("AgentGraphFlowRunsService.triggerOf", () => {
     })
 
     it("reads the one message of a wake with no burst, keeps a tag's own words, and reads nothing without the port", async () => {
-        const { flows, messages } = await build(stateWith(FLOW), { said: [], conversation: null })
+        const { flows, messages } = await build(stateWith(FLOW), { answers: { said: [], conversation: null } })
         const single = agentTurnViewOf({
             source: "customer",
             context: { conversationId: "c-1", messageId: "m-2", channelEventId: "e-2" },
@@ -405,9 +327,10 @@ describe("flow F graphs on fake ports", () => {
         tools: coreTools,
         dataKinds: coreDataKinds,
     })
+    const modules: ReadonlyArray<ModuleName> = ["accounting", "chatbot", "sales"]
 
     it("pass the installed nodes with the saga rule on, in every workflow the seed makes active for an agent", () => {
-        const seeded = Object.entries(MODULES).flatMap(([module, agent]) => seededWorkflowsOf(agent, module))
+        const seeded = modules.flatMap((module) => seededWorkflowsOf(agentOf(module), module))
         expect(seeded.map((workflow) => workflow.templateId)).toEqual([
             "accounting.reconcile",
             "accounting.reports",
@@ -427,65 +350,108 @@ describe("flow F graphs on fake ports", () => {
 
     // Out of date after a template change: `npm run seeds:graphs` (from the lane root, after the blocks-core build) rewrites them.
     it("keep the seed's agent graph files the newest version of the primary template of their module", () => {
-        const names: ReadonlyArray<SeededGraphName> = ["sales", "chatbot", "accounting"]
-        for (const name of names) {
-            const primary = seededWorkflowsOf(MODULES[name], name).find((workflow) => workflow.primary)
+        for (const name of modules) {
+            const primary = seededWorkflowsOf(agentOf(name), name).find((workflow) => workflow.primary)
             expect(seededGraphOf(name)).toEqual(primary?.graph)
         }
     })
 })
 
+/** The wake of the end hand-off a workflow writes for another: the words, the pin of the target, ONLY the params it maps, the caller. */
+const handOffWake = (workflow: string, params: Readonly<Record<string, unknown>>, text: string = ""): FlowWake => {
+    const context: AgentWakeContext = {
+        text,
+        tagContext: JSON.stringify({
+            workflowCall: { workflow, version: "latest" },
+            params,
+            caller: { runId: "run-caller" },
+        }),
+        ...(typeof params.conversationId === "string" ? { conversationId: params.conversationId } : {}),
+        ...(typeof params.leadId === "string" ? { leadId: params.leadId } : {}),
+        locale: "vi",
+        authorAgentId: "chatbot-1",
+    }
+    return { source: "tag", actorMemberId: null, context }
+}
+
+/** How a wake was routed: how its start ended, the workflow its run was pinned to, and the run the thread engine was handed. */
+interface Routed {
+    readonly ending: unknown
+    readonly workflow: string | null
+    readonly run: FlowThreadRun | null
+}
+
+/**
+ * Hands a wake to the REAL start of the run of an agent whose workflows were seeded from the templates: the real routing picks the
+ * workflow (by the pin of a hand-off, else by a trigger's source, channel and conditions), the run is opened, pinned and handed to the
+ * thread runs (a double here), which is where the routing ends.
+ */
+const routed = async (
+    module: ModuleName,
+    wake: FlowWake,
+    said: ReadonlyArray<FlowTriggerMessage> = [],
+): Promise<Routed> => {
+    const world = workflowWorldOf({
+        [agentOf("chatbot")]: "chatbot",
+        [agentOf("sales")]: "sales",
+        [agentOf("accounting")]: "accounting",
+    })
+    const { flows } = await build(null, { answers: { said, conversation: null }, workflows: world.service })
+    const { threads, started } = threadsOf()
+    flows.setThreads(threads)
+    const turn = agentTurnViewOf({
+        agentId: agentOf(module),
+        source: wake.source,
+        actorMemberId: wake.actorMemberId,
+        context: structuredClone(wake.context),
+    })
+    const ending = await flows.run(turn)
+    return {
+        ending,
+        workflow: world.pins.get("run-1")?.workflowId.split(":").at(-1) ?? null,
+        run: started.at(0) ?? null,
+    }
+}
+
 describe("routing a wake through the workflows of an agent", () => {
-    const world = () => flowWorldOf({})
     const customerLine = (channel: string): FlowWake => ({
         source: "customer",
         actorMemberId: null,
         context: { conversationId: "conv-1", messageId: "msg-1", channelEventId: `${channel}:1`, lookupName: false },
     })
-    const store = { messages: [{ id: "msg-1", body: "mua hoa", at: "2026-11-04T01:00:00.000Z" }] }
+    const line = [{ id: "msg-1", text: "mua hoa", at: "2026-11-04T01:00:00.000Z", attachments: [] }]
 
     it("takes a customer line of Zalo or Telegram with the front desk's matching trigger, and the line is trigger.text", async () => {
-        const model = () => ({
-            [UNDERSTAND_PURPOSE]: [{ answer: { branch: "buy", summary: "The customer wants flowers" } }],
-        })
-        const zalo = await driveRouted(
-            flowWorldOf(store),
-            routedWorkflowsOf(),
-            "chatbot",
-            model(),
-            customerLine("zalo"),
-        )
-        const telegram = await driveRouted(
-            flowWorldOf(store),
-            routedWorkflowsOf(),
-            "chatbot",
-            model(),
-            customerLine("telegram"),
-        )
+        const zalo = await routed("chatbot", customerLine("zalo"), line)
+        const telegram = await routed("chatbot", customerLine("telegram"), line)
 
         expect([zalo.workflow, telegram.workflow]).toEqual(["front-desk", "front-desk"])
-        expect(zalo.namespace).toBe("chatbot.front-desk")
-        expect(zalo.trigger).toMatchObject({ triggerKey: "zalo", text: "mua hoa", conversationId: "conv-1" })
-        expect(telegram.trigger).toMatchObject({ triggerKey: "telegram" })
+        expect(zalo.run?.namespace).toBe("chatbot.front-desk")
+        expect(zalo.run?.trigger).toMatchObject({ triggerKey: "zalo", text: "mua hoa", conversationId: "conv-1" })
+        expect(telegram.run?.trigger).toMatchObject({ triggerKey: "telegram" })
     })
 
     it("takes a hand-off by its pin: only the mapped params and the calling run reach trigger.*, whatever the wake's source", async () => {
-        const run = await driveRouted(world(), routedWorkflowsOf(), "sales", {}, salesWake())
+        const words = "One flower pot to 69 Hang Xanh please"
+        const consult = await routed(
+            "sales",
+            handOffWake("consult", { leadId: "lead-1", conversationId: "conv-1", text: words, channel: "zalo" }, words),
+        )
 
-        expect(run.workflow).toBe("consult")
-        expect(run.namespace).toBe("sales.consult")
-        expect(run.trigger).toMatchObject({
+        expect(consult.workflow).toBe("consult")
+        expect(consult.run?.namespace).toBe("sales.consult")
+        expect(consult.run?.workflowId).toBe("sales-agent:consult")
+        expect(consult.run?.trigger).toMatchObject({
             leadId: "lead-1",
             conversationId: "conv-1",
-            text: "One flower pot to 69 Hang Xanh please",
+            text: words,
             channel: "zalo",
             caller: { agent: "chatbot-1", runId: "run-caller" },
         })
-        const wake = handOffWake({ workflow: "after-sale" }, { orderId: "o-1" })
-        const afterSale = await driveRouted(world(), routedWorkflowsOf(), "sales", {}, wake)
+        const afterSale = await routed("sales", handOffWake("after-sale", { orderId: "o-1" }))
         expect(afterSale.workflow).toBe("after-sale")
-        expect(afterSale.trigger).toMatchObject({ orderId: "o-1" })
-        expect(afterSale.trigger).not.toHaveProperty("items")
+        expect(afterSale.run?.trigger).toMatchObject({ orderId: "o-1" })
+        expect(afterSale.run?.trigger).not.toHaveProperty("items")
     })
 
     it("sends a bank credit to the reconcile workflow by its SePay trigger, with the transaction from the subject", async () => {
@@ -494,16 +460,25 @@ describe("routing a wake through the workflows of an agent", () => {
             actorMemberId: null,
             context: { text: "credit", tagSource: "sepay", subject: "bank-transaction:t-9" },
         }
-        const run = await driveRouted(world(), routedWorkflowsOf(), "accounting", {}, wake)
+        const run = await routed("accounting", wake)
 
         expect(run.workflow).toBe("reconcile")
-        expect(run.trigger).toMatchObject({ triggerKey: "sepay", transactionId: "t-9" })
+        expect(run.run?.trigger).toMatchObject({ triggerKey: "sepay", transactionId: "t-9" })
+    })
+
+    it("sends a customer's word that they paid to the reconcile workflow by the pin of the Chatbot's hand-off", async () => {
+        const text = "I transferred 5k"
+        const run = await routed(
+            "accounting",
+            handOffWake("reconcile", { leadId: "lead-1", conversationId: "conv-1", text, channel: "zalo" }, text),
+        )
+
+        expect(run.workflow).toBe("reconcile")
+        expect(run.run?.trigger).toMatchObject({ conversationId: "conv-1", text, leadId: "lead-1" })
     })
 })
 
 describe("routing a wake by the conditions of a trigger", () => {
-    const world = () => flowWorldOf({})
-
     it("sends a care timer to the workflow whose condition its careKind meets, and a timer of no workflow starts nothing", async () => {
         const timer = (careKind: string): FlowWake => ({
             source: "tag",
@@ -522,415 +497,25 @@ describe("routing a wake by the conditions of a trigger", () => {
             },
         })
         const kinds = ["payment-stale", "delivery-check", "occasion"]
-        const routed = await Promise.all(
-            kinds.map((kind) => driveRouted(world(), routedWorkflowsOf(), "sales", {}, timer(kind))),
-        )
-        const unknown = await driveRouted(world(), routedWorkflowsOf(), "sales", {}, timer("loyalty"))
+        const runs = await Promise.all(kinds.map((kind) => routed("sales", timer(kind))))
+        const unknown = await routed("sales", timer("loyalty"))
 
-        expect(routed.map((run) => run.workflow)).toEqual(["payment-reminder", "delivery-check", "occasion"])
+        expect(runs.map((run) => run.workflow)).toEqual(["payment-reminder", "delivery-check", "occasion"])
         expect(unknown.ending).toEqual({ status: "skipped", reason: "no_flow", outcome: null })
         expect(unknown.workflow).toBeNull()
-        expect(unknown.path).toEqual([])
+        expect(unknown.run).toBeNull()
     })
 
     it("answers a hand-off to a workflow the agent does not run with nothing: the agent has no graph of its own that answers instead", async () => {
-        const wake = handOffWake({ workflow: "ghost" }, { orderId: "o-1" })
-        const run = await driveRouted(world(), routedWorkflowsOf(), "sales", {}, wake)
+        const run = await routed("sales", handOffWake("ghost", { orderId: "o-1" }))
 
         expect(run.ending).toEqual({ status: "skipped", reason: "no_flow", outcome: null })
         expect(run.workflow).toBeNull()
-    })
-})
-
-describe("flow F workflows: Sales", () => {
-    it("Sales settles the order with the customer, records and confirms it, sends its QR and tells the team, each step its own agent", async () => {
-        const world = flowWorldOf(agreeingStore())
-        const drive = await driveRouted(world, routedWorkflowsOf(), "sales", agrees(), salesWake())
-
-        expect(drive.failed).toBeNull()
-        expect(drive.workflow).toBe("consult")
-        expect(drive.path).toEqual(["consult", "create-order", "send-qr", "notify-order", "won"])
-        expect(world.ran.map((entry) => entry.effect)).toEqual([
-            TOOL.orderRecord,
-            TOOL.orderConfirm,
-            TOOL.paymentQrCreate,
-            TOOL.teamMessagePost,
-        ])
-        // The agent types ids and quantities only: no price, no total, no order number, no key.
-        expect(world.ran[0]?.payload).toEqual({
-            leadId: "lead-1",
-            items: [{ catalogueItemId: "c1", qty: 1 }],
-            address: POT_ADDRESS,
-        })
-        expect(world.ran[1]?.payload).toEqual({ orderId: "order-1" })
-        expect(world.ran[2]?.payload).toEqual({ orderId: "order-1" })
-        expect(world.ran[3]?.payload).toEqual({ kind: "order.summary", orderId: "order-1" })
-        // Each step hands the next what it answered: the draft of the consult, then the order.
-        expect(drive.outputs.consult?.output).toMatchObject({ branch: "ready", leadId: "lead-1", address: POT_ADDRESS })
-        expect(drive.outputs["create-order"]?.output).toEqual({ orderId: "order-1", orderNo: "DH001" })
-        // The won outcome binds the outputs the consult declares, which a call-workflow step would read as out.*.
-        expect(drive.outputs.won?.output).toMatchObject({ outcome: "won", values: { orderId: "order-1" } })
-    })
-
-    it("Sales ensures the lead of a customer who is none yet before the draft is ready, and the order is theirs", async () => {
-        const world = flowWorldOf({ "catalogue-item": [...(agreeingStore()["catalogue-item"] ?? [])] })
-        const wake = handOffWake(
-            { workflow: "consult" },
-            { conversationId: "conv-1", text: "One flower pot to 69 Hang Xanh please", channel: "zalo" },
-        )
-        const draft = { conversationId: "conv-1", channel: "zalo", items: POT_PICKS, address: POT_ADDRESS }
-        const model = {
-            ...agrees(),
-            [CONSULT_PURPOSE]: [...consultReady({ ...draft, leadId: null, ensuredLeadId: "sales-lead-1" })],
-            [CREATE_ORDER_PURPOSE]: [
-                ...createsOrder({
-                    leadId: "sales-lead-1",
-                    items: POT_PICKS,
-                    address: POT_ADDRESS,
-                    orderId: "order-2",
-                    orderNo: "DH001",
-                }),
-            ],
-            [SEND_QR_PURPOSE]: [...sendsQr("order-2")],
-            [ORDER_NOTICE_PURPOSE]: [...noticesOrder("order-2")],
-        }
-        const drive = await driveRouted(world, routedWorkflowsOf(), "sales", model, wake)
-
-        expect(drive.failed).toBeNull()
-        expect(world.ran.map((entry) => entry.effect)).toEqual([
-            TOOL.leadEnsure,
-            TOOL.orderRecord,
-            TOOL.orderConfirm,
-            TOOL.paymentQrCreate,
-            TOOL.teamMessagePost,
-        ])
-        expect(world.ran[0]?.payload).toEqual({ conversationId: "conv-1", channel: "zalo" })
-        expect(world.ran[1]?.payload).toMatchObject({ leadId: "sales-lead-1" })
-    })
-
-    it("Sales stops at the create-order step when the confirmation is down: the team is told once, nothing after it runs and no QR goes out", async () => {
-        const world = flowWorldOf(agreeingStore(), TOOL.orderConfirm)
-        const model = {
-            ...agrees(),
-            // The confirm call comes back as a refusal (a fact); the agent cannot finish the step and says so.
-            [CREATE_ORDER_PURPOSE]: [
-                ...createsOrder({
-                    leadId: "lead-1",
-                    items: POT_PICKS,
-                    address: POT_ADDRESS,
-                    orderId: "order-1",
-                    orderNo: "DH001",
-                }).slice(0, 2),
-                { confused: { reason: "Khong xac nhan duoc don", question: "Anh xem giup he thong don hang?" } },
-            ],
-        }
-        const drive = await driveRouted(world, routedWorkflowsOf(), "sales", model, salesWake())
-
-        expect(drive.failed).toBe("create-order")
-        expect(drive.path).toEqual(["consult"])
-        expect(world.ran.map((entry) => entry.effect)).toEqual([TOOL.orderRecord, TOOL.teamMessagePost])
-        expect(teamLineOf(world.ran.at(-1)?.payload ?? {})).toContain("ai_confused")
-        expect(world.ran.some((entry) => entry.effect === TOOL.paymentQrCreate)).toBe(false)
-    })
-})
-
-describe("flow F workflows: the Sales consult, its care and the website form", () => {
-    it.each(SALES_FLOW_CASES.map((each) => [each.name, each] as const))("%s", async (_name, each) => {
-        const world = flowWorldOf(each.store())
-        const drive = await driveRouted(world, routedWorkflowsOf(), "sales", each.model(), each.wake())
-        expect(drive.failed).toBeNull()
-        expect(drive.workflow).toBe(each.workflow)
-        expect(drive.path).toEqual(each.path)
-        expect(world.ran.map((entry) => entry.effect)).toEqual(each.effects)
-    })
-})
-
-describe("flow F workflows: Chatbot", () => {
-    const lineWake: FlowWake = {
-        source: "customer",
-        actorMemberId: null,
-        context: { conversationId: "conv-1", messageId: "msg-1", channelEventId: "zalo:1", lookupName: false },
-    }
-    const saying = (body: string) => ({ messages: [{ id: "msg-1", body, at: "2026-11-04T01:00:00.000Z" }] })
-    const understands = (branch: string) => ({
-        [UNDERSTAND_PURPOSE]: [{ answer: { branch, summary: `The customer: ${branch}` } }],
-    })
-
-    it("Chatbot says nothing to a customer who wants to buy and hands them to the Sales consult with their words", async () => {
-        const world = flowWorldOf(saying("Order one flower pot, deliver to 69 Hang Xanh"))
-        const drive = await driveRouted(world, routedWorkflowsOf(), "chatbot", understands("buy"), lineWake)
-
-        expect(drive.failed).toBeNull()
-        expect(drive.workflow).toBe("front-desk")
-        expect(drive.path).toEqual(["understand", "to-consult"])
-        expect(world.ran.map((entry) => entry.effect)).toEqual([TOOL.agentTag])
-        expect(world.ran[0]?.payload).toMatchObject({
-            toModuleKey: "sales",
-            conversationId: "conv-1",
-            context: {
-                workflowCall: { workflow: "consult", version: "latest" },
-                params: {
-                    conversationId: "conv-1",
-                    text: "Order one flower pot, deliver to 69 Hang Xanh",
-                    channel: "zalo",
-                },
-            },
-        })
-    })
-
-    it("Chatbot hands a customer who says they paid to Accounting's reconcile workflow with their words, recording no claim itself", async () => {
-        const world = flowWorldOf(saying("I transferred 2k"))
-        const drive = await driveRouted(world, routedWorkflowsOf(), "chatbot", understands("paid"), lineWake)
-
-        expect(drive.failed).toBeNull()
-        expect(drive.path).toEqual(["understand", "to-reconcile"])
-        expect(world.ran).toHaveLength(1)
-        expect(world.ran[0]).toMatchObject({
-            effect: TOOL.agentTag,
-            payload: {
-                toModuleKey: "accounting",
-                context: {
-                    workflowCall: { workflow: "reconcile", version: "latest" },
-                    params: { conversationId: "conv-1", text: "I transferred 2k" },
-                },
-            },
-        })
-    })
-
-    it("Chatbot answers a question itself with the customer send, and the turn ends there", async () => {
-        const world = flowWorldOf(saying("When do you open?"))
-        const model = {
-            ...understands("question"),
-            "chatbot.answer:answer": [
-                { call: { tool: TOOL.customerMessageSend, args: { conversationId: "conv-1", text: "We open at 8." } } },
-                { done: { reply: "We open at 8." } },
-            ],
-        }
-        const drive = await driveRouted(world, routedWorkflowsOf(), "chatbot", model, lineWake)
-
-        expect(drive.failed).toBeNull()
-        expect(drive.path).toEqual(["understand", "answer"])
-        expect(world.ran.map((entry) => [entry.effect, entry.payload.text])).toEqual([
-            [TOOL.customerMessageSend, "We open at 8."],
-        ])
-    })
-
-    it("Chatbot apologises to a customer who complains, tells the team, and ends on the owner outcome with the summary", async () => {
-        const world = flowWorldOf(saying("The flowers arrived wilted"))
-        const model = {
-            ...understands("complaint"),
-            "chatbot.complaint:complaint": [
-                { call: { tool: TOOL.customerMessageSend, args: { conversationId: "conv-1", text: "We are sorry." } } },
-                {
-                    call: {
-                        tool: TOOL.teamMessagePost,
-                        args: {
-                            kind: "message.text",
-                            intent: "notify",
-                            audience: "founder",
-                            title: "Complaint",
-                            text: "The customer says the flowers arrived wilted.",
-                        },
-                    },
-                },
-                { done: { reply: "We are sorry.", posted: true, summary: "Wilted flowers, no order number yet" } },
-            ],
-        }
-        const drive = await driveRouted(world, routedWorkflowsOf(), "chatbot", model, lineWake)
-
-        expect(drive.failed).toBeNull()
-        expect(drive.path).toEqual(["understand", "complaint", "to-owner"])
-        expect(world.ran.map((entry) => entry.effect)).toEqual([TOOL.customerMessageSend, TOOL.teamMessagePost])
-        expect(drive.outputs["to-owner"]?.output).toEqual({
-            outcome: "owner",
-            values: { summary: "Wilted flowers, no order number yet" },
-        })
-    })
-
-    it("Chatbot stops and tells the team when its AI cannot tell what the customer wants: no branch is guessed", async () => {
-        const world = flowWorldOf(saying("???"))
-        const model = {
-            [UNDERSTAND_PURPOSE]: [{ confused: { reason: "Khong ro y khach", question: "Khach muon gi?" } }],
-        }
-        const drive = await driveRouted(world, routedWorkflowsOf(), "chatbot", model, lineWake)
-
-        expect(drive.failed).toBe("understand")
-        expect(drive.path).toEqual([])
-        expect(world.ran.map((entry) => entry.effect)).toEqual([TOOL.teamMessagePost])
-    })
-})
-
-describe("flow F workflows: Accounting", () => {
-    const credit = (id: string): FlowWake => ({
-        source: "tag",
-        actorMemberId: null,
-        context: { text: "credit", tagSource: "sepay", subject: `bank-transaction:${id}` },
-    })
-    const PAID_STORE = () => ({
-        "bank-transaction": [
-            { ...FEED_ROW, id: "t-5", amountVnd: 5000, reference: "SO-0001 chuyen khoan", status: "new" },
-        ],
-        order: [{ ...ORDER_ROW }],
-        "sales-lead": [{ id: "lead-1", contactName: "Bui Nguyen Dinh" }],
-    })
-    /** The agents of a credit that pays order-1: the match names the two ids, the order is marked paid, posted and told. */
-    const paysOrder = () => ({
-        [MATCH_PURPOSE]: [
-            {
-                done: {
-                    transactionId: "t-5",
-                    orderId: "order-1",
-                    claimId: null,
-                    settle: true,
-                    reason: "The code names the order",
-                },
-            },
-        ],
-        [SETTLE_PURPOSE]: [
-            { call: { tool: TOOL.paymentMarkPaid, args: { orderId: "order-1", transactionId: "t-5" } } },
-            { done: { result: "paid" } },
-        ],
-        [LEDGER_PURPOSE]: [
-            { call: { tool: TOOL.ledgerAppend, args: { transactionId: "t-5" } } },
-            { done: { ref: "Ledger!A2:G2" } },
-        ],
-        [RECEIVED_PURPOSE]: [
-            { call: { tool: TOOL.teamMessagePost, args: { kind: "payment.received", orderId: "order-1" } } },
-            { done: { posted: true } },
-        ],
-    })
-    const LEDGER_DOOR = { door: { call: () => Promise.resolve({ ref: "Ledger!A2:G2" }) } }
-
-    it("Accounting matches a bank credit to its order, marks it paid, posts it, tells the team and hands the paid order to the Sales after-sale workflow", async () => {
-        const world = flowWorldOf(PAID_STORE())
-        const drive = await driveRouted(
-            world,
-            routedWorkflowsOf(),
-            "accounting",
-            paysOrder(),
-            credit("t-5"),
-            LEDGER_DOOR,
-        )
-
-        expect(drive.failed).toBeNull()
-        expect(drive.workflow).toBe("reconcile")
-        expect(drive.path).toEqual(["match", "mark-paid", "ledger", "notify-paid", "to-after-sale"])
-        expect(world.ran.map((entry) => entry.effect)).toEqual([
-            TOOL.paymentMarkPaid,
-            TOOL.teamMessagePost,
-            TOOL.agentTag,
-        ])
-        // Only the two ids mark an order paid: the amount and the verdict are the tool's.
-        expect(world.ran[0]?.payload).toEqual({ orderId: "order-1", transactionId: "t-5" })
-        // The numbers of the match are read back from the records, never typed by the agent.
-        expect(drive.outputs.match?.output).toMatchObject({
-            branch: "matched",
-            leadId: "lead-1",
-            verdict: "exact",
-            expectedVnd: 5000,
-            receivedVnd: 5000,
-        })
-        expect(world.ran.at(-1)).toMatchObject({
-            effect: TOOL.agentTag,
-            payload: {
-                toModuleKey: "sales",
-                context: {
-                    workflowCall: { workflow: "after-sale", version: "latest" },
-                    params: { orderId: "order-1" },
-                },
-            },
-        })
-    })
-
-    it("Accounting stops at the match and tells the team when its agent cannot tell which order a credit pays: nothing is marked paid", async () => {
-        const world = flowWorldOf({
-            "bank-transaction": [
-                { ...FEED_ROW, id: "t-1", amountVnd: 99_000, reference: "CHUYEN TIEN", status: "new" },
-            ],
-        })
-        const model = {
-            [MATCH_PURPOSE]: [
-                { confused: { reason: "Khong don nao khop 99.000d", question: "Khoan nay cua don nao?" } },
-            ],
-        }
-        const drive = await driveRouted(world, routedWorkflowsOf(), "accounting", model, credit("t-1"))
-
-        expect(drive.failed).toBe("match")
-        expect(drive.path).toEqual([])
-        expect(world.ran.map((entry) => entry.effect)).toEqual([TOOL.teamMessagePost])
-        expect(teamLineOf(world.ran[0]?.payload ?? {})).toContain("bank-transaction:t-1")
-    })
-
-    it("Accounting stops at the mark-paid step when the tool refuses the transfer: the refusal is a fact the agent reads, the order stays unpaid and nothing is posted", async () => {
-        const world = flowWorldOf(PAID_STORE(), TOOL.paymentMarkPaid)
-        const model = {
-            ...paysOrder(),
-            [SETTLE_PURPOSE]: [
-                { call: { tool: TOOL.paymentMarkPaid, args: { orderId: "order-1", transactionId: "t-5" } } },
-                { confused: { reason: "Cong cu tu choi danh dau da tra", question: "Anh xu ly khoan nay the nao?" } },
-            ],
-        }
-        const drive = await driveRouted(world, routedWorkflowsOf(), "accounting", model, credit("t-5"), LEDGER_DOOR)
-
-        expect(drive.failed).toBe("mark-paid")
-        expect(drive.path).toEqual(["match"])
-        expect(world.ran.map((entry) => entry.effect)).toEqual([TOOL.teamMessagePost])
-        expect(world.ran.some((entry) => entry.effect === TOOL.agentTag)).toBe(false)
-    })
-})
-
-describe("flow F workflows: Accounting, called with a customer's word that they paid", () => {
-    const STORE = () => ({
-        "bank-transaction": [],
-        "payment-claim": [],
-        order: [{ ...ORDER_ROW }],
-        "sales-lead": [{ id: "lead-1", contactName: "Bui Nguyen Dinh" }],
-    })
-
-    it("records the claim from the customer's words and ends the turn while the money has not arrived: nothing is marked paid", async () => {
-        const world = flowWorldOf(STORE())
-        const model = {
-            [MATCH_PURPOSE]: [
-                {
-                    call: {
-                        tool: TOOL.paymentClaimRecord,
-                        args: {
-                            leadId: "lead-1",
-                            conversationId: "conv-1",
-                            amountVnd: 5000,
-                            names: [],
-                            body: "I transferred 5k",
-                        },
-                    },
-                },
-                {
-                    done: {
-                        transactionId: null,
-                        orderId: "order-1",
-                        claimId: "payment-claim-1",
-                        settle: false,
-                        reason: "One open order of 5,000",
-                    },
-                },
-            ],
-        }
-        const drive = await driveRouted(world, routedWorkflowsOf(), "accounting", model, claimWake("I transferred 5k"))
-
-        expect(drive.failed).toBeNull()
-        expect(drive.workflow).toBe("reconcile")
-        // `not-arrived` has no route: the turn ends at the match, and the next bank credit starts the reconciliation again.
-        expect(drive.path).toEqual(["match"])
-        expect(drive.outputs.match?.output).toMatchObject({
-            branch: "not-arrived",
-            claimId: "payment-claim-1",
-            verdict: null,
-        })
-        expect(world.ran.map((entry) => entry.effect)).toEqual([TOOL.paymentClaimRecord])
-        expect(drive.trigger).toMatchObject({ conversationId: "conv-1", text: "I transferred 5k", leadId: "lead-1" })
+        expect(run.run).toBeNull()
     })
 
     it("the Chatbot passes the customer's words, conversation and channel to Accounting as the mapped params of its hand-off", () => {
-        const chatbot = seededWorkflowsOf("chatbot-agent", "chatbot").find((workflow) => workflow.primary)
+        const chatbot = seededWorkflowsOf(agentOf("chatbot"), "chatbot").find((workflow) => workflow.primary)
         const handoff = chatbot?.graph.nodes.find((node) => node.key === "to-reconcile")
 
         expect(handoff?.params).toMatchObject({

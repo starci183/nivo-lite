@@ -430,7 +430,6 @@ const BE_READS: ReadonlyArray<BeRead> = [
         ["ordinal", "asc"],
         ["id", "asc"],
     ]),
-    read("agent-run-records: the steps waiting on a work item", "agent.run-step", EQ("waitItemId"), BY_ID),
     read(
         "agent-run-records: the steps of a kind about a work item",
         "agent.run-step",

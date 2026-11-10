@@ -82,6 +82,7 @@ describe("boardStatusOf", () => {
 
     it("tells a stopped, parked or given-away run as failed and a waiting or finished one as itself", () => {
         expect(boardStatusOf(entryOf({}, { status: "failed" }))).toBe("failed")
+        expect(boardStatusOf(entryOf({}, { status: "compensating" }))).toBe("failed")
         expect(boardStatusOf(entryOf({}, { status: "parked" }))).toBe("failed")
         expect(boardStatusOf(entryOf({}, { status: "dead" }))).toBe("failed")
         expect(boardStatusOf(entryOf({}, { status: "waiting" }))).toBe("waiting")
@@ -206,46 +207,48 @@ describe("detailOf", () => {
         steps,
     })
 
-    it("offers a failed run to run again from its failed step", () => {
+    it("never offers Resume; tells a failed run's row from its steps", () => {
         const failed = detailOf(
-            detail("failed", [stepOf(), stepOf({ stepKey: "write", status: "failed", errorCode: "tool_denied" })]),
+            {
+                ...detail("failed", [stepOf(), stepOf({ stepKey: "write", status: "failed", errorCode: "tool_denied" })]),
+                engine: "langgraph",
+            },
             new Map([["v-3", 3]]),
             null,
             NOW,
         )
-        expect(failed.canResume).toBe(true)
+        expect(failed.canResume).toBe(false)
         expect(failed.row.status).toBe("failed")
         expect(failed.row.stepNumber).toBe(2)
-    })
-
-    it("offers to cancel a run that is running, waiting or parked, and to no other", () => {
-        const step = stepOf({ status: "running" })
-        const credits = new Map([["run-1", 7]])
-        const running = detailOf(detail("running", [step]), new Map(), null, NOW, credits)
-        expect(running.canCancel).toBe(true)
-        expect(running.row.creditsUsed).toBe(7)
-        expect(detailOf(detail("waiting", [step]), new Map(), null, NOW).canCancel).toBe(true)
-        expect(detailOf(detail("parked", [step]), new Map(), null, NOW).canCancel).toBe(true)
-        for (const status of ["failed", "dead", "done", "cancelled"])
-            expect(detailOf(detail(status, [step]), new Map(), null, NOW).canCancel).toBe(false)
     })
 
     it("never offers the old Resume on a thread run; its Cancel (the stop's skip) only while it waits at a stop", () => {
         const failed = [stepOf({ stepKey: "match", status: "failed", errorCode: "ai_report" })]
         const thread = (status: string): RunDetail => ({ ...detail(status, failed), engine: "langgraph" })
-        const waiting = detailOf(thread("waiting"), new Map(), null, NOW)
+        const credits = new Map([["run-1", 7]])
+        const waiting = detailOf(thread("waiting"), new Map(), null, NOW, credits)
         expect(waiting.canResume).toBe(false)
         expect(waiting.canCancel).toBe(true)
+        expect(waiting.row.creditsUsed).toBe(7)
         for (const status of ["running", "failed", "dead", "parked", "done", "cancelled"]) {
             const other = detailOf(thread(status), new Map(), null, NOW)
             expect(other.canResume).toBe(false)
             expect(other.canCancel).toBe(false)
         }
-        const legacy = detailOf({ ...detail("failed", failed), engine: "legacy" }, new Map(), null, NOW)
-        expect(legacy.canResume).toBe(true)
     })
 
-    it("offers nothing to a run that undid a step and carries the work item it waits on", () => {
+    it("offers nothing on a run of the old engine, whatever its status: it is history", () => {
+        const step = stepOf({ status: "failed" })
+        for (const status of ["running", "waiting", "parked", "failed", "dead"]) {
+            const legacy = detailOf({ ...detail(status, [step]), engine: "legacy" }, new Map(), null, NOW)
+            expect(legacy.canResume).toBe(false)
+            expect(legacy.canCancel).toBe(false)
+        }
+        const unnamed = detailOf(detail("waiting", [step]), new Map(), null, NOW)
+        expect(unnamed.canCancel).toBe(false)
+    })
+
+    it("carries the work item a run is about, with its evidence", () => {
         const undone = detailOf(
             detail("failed", [stepOf({ status: "compensated" }), stepOf({ stepKey: "b", status: "failed" })]),
             new Map(),

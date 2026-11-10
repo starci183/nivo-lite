@@ -76,9 +76,7 @@ The capability is off while its keys are absent; a group is all-or-none where no
 | `STARCI_AI_KEY` | The one virtual key of the AI gateway (`sk-starci-nivo-...`), sealed in `ai`, read through `STARCI_AI_KEY_FILE` by the api. |
 | `AI_CHAT_MODEL` | Profile the chat calls use (default `work`; stack value). |
 | `AI_EMBEDDING_MODEL` | Profile the embedding calls use (default `embed`; stack value). |
-| `APP_BUILD_ID` | The name of the running build (the release tag or git sha), set per release; a run parked under an older build is run again when a newer one starts. Absent = the empty build, so parked runs are resumed only by the sweep. |
-| `AGENT_RUNS_PARK_SWEEP_MINUTES` | Minutes between two sweeps of the parked agent runs (default `30`; stack value). |
-| `AGENT_RUNS_PARK_MAX_RESUMES` | How many times a parked agent run is tried again before it is dead-lettered (default `5`; stack value). |
+| `APP_BUILD_ID` | The name of the running build (the release tag or git sha), set per release; the jobs and the entity engine read it. |
 
 ## api: optional executable paths
 

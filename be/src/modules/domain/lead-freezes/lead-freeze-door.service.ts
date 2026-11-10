@@ -1,13 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import { AgentWorkAccessService } from "@modules/domain/agent-work"
-import { WorkDecisionService } from "@modules/domain/decisions"
-import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import type { Locale } from "@modules/platform/i18n"
 import { LeadFreezesService } from "./lead-freezes.service"
 import type { FreezeOutcome, OptionalFreezeState } from "./lead-freezes.contracts"
-
-/** The owner's three answers, as the pages send them. */
-const ANSWERS: ReadonlySet<string> = new Set(["retry", "take_over", "skip"])
 
 /** Which customer a page asks about: a lead, or the customer of a run. */
 export interface FreezeLookup {
@@ -19,7 +14,7 @@ export interface FreezeLookup {
     readonly runId?: string | undefined
 }
 
-/** The owner's answer as a page sends it. */
+/** The owner's answer as a page sends it (kept for the pages that still send it; a hold is answered on its stop). */
 export interface FreezeAnswer {
     /** The workspace the caller names. */
     readonly workspaceId: string
@@ -27,29 +22,27 @@ export interface FreezeAnswer {
     readonly freezeId: string
     /** `retry`, `take_over` or `skip`. */
     readonly action: string
-    /** The language of the decision log. */
+    /** The language of the page. */
     readonly locale: Locale
 }
 
 /** How the owner's answer ended, as the pages read it. */
 export interface FreezeAnswered {
-    /** The outcome. */
+    /** `on_stop` while a stop holds the customer, else `not_found`. */
     readonly outcome: FreezeOutcome
 }
 
 @Injectable()
 /**
- * The pages' door to the freezes, for an owner or manager only. Reading answers the freeze of a lead (the Inputs page) or of the customer
- * of a run (the run page). Answering retries or skips through the freeze's own work item, as the inbox decides it (approving retries the
- * run, rejecting skips the turn), so the item, the decision log and the run move together; taking over hands the conversation to the
- * caller by name and keeps the customer frozen.
+ * The pages' door to the holds of customers, for an owner or manager only. Reading answers the hold of a lead (the Inputs page) or of
+ * the customer of a run (the run page). A hold is the shadow of a thread run's stop, so it is never answered here: the founder answers
+ * the stop (its card on /chat, the run page), and the customer is released when the stop closes. An answer sent to a hold is told
+ * `on_stop`; one sent to a freeze that holds nobody is told `not_found`.
  */
 export class LeadFreezeDoorService {
     constructor(
         private readonly access: AgentWorkAccessService,
-        private readonly members: WorkspaceMembersService,
         private readonly freezes: LeadFreezesService,
-        private readonly work: WorkDecisionService,
     ) {}
 
     /** Whether the customer of a lead or of a run waits for the owner; null when nothing holds them or the page names neither. */
@@ -61,30 +54,10 @@ export class LeadFreezeDoorService {
         return this.freezes.stateOfLead(lookup.workspaceId, lookup.leadId)
     }
 
-    /** Sends the owner's answer and answers how it ended, as the pages read it. */
+    /** Answers where the hold stands: `on_stop` (answer the stop), else `not_found`; nothing moves here. */
     async answer(principalId: string, answer: FreezeAnswer): Promise<FreezeAnswered> {
-        return { outcome: await this.outcomeOf(principalId, answer) }
-    }
-
-    private async outcomeOf(principalId: string, answer: FreezeAnswer): Promise<FreezeOutcome> {
         await this.access.manager(principalId, answer.workspaceId)
         const state = await this.freezes.stateOf(answer.workspaceId, answer.freezeId)
-        if (state === null || !ANSWERS.has(answer.action)) return "not_frozen"
-        // The stop of a thread run is answered on the stop (its card, the run page), never here: no retry, skip or take-over of the hold.
-        if (state.onStop) return "on_stop"
-        if (answer.action === "take_over") {
-            const member = await this.members.require(principalId, answer.workspaceId)
-            return this.freezes.takeOver(answer.workspaceId, state.id, member.displayName)
-        }
-        if (state.workItemId === null) return "not_frozen"
-        const retry = answer.action === "retry"
-        await this.work.decide(principalId, answer.workspaceId, {
-            workItemId: state.workItemId,
-            decision: retry ? "approved" : "rejected",
-            locale: answer.locale,
-        })
-        const after = await this.freezes.stateOf(answer.workspaceId, state.id)
-        if (after === null) return retry ? "released" : "skipped"
-        return after.status === "retrying" ? "retrying" : "still_frozen"
+        return { outcome: state?.onStop === true ? "on_stop" : "not_found" }
     }
 }

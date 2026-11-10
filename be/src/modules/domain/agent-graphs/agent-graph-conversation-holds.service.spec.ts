@@ -29,9 +29,9 @@ import {
     speakingChat,
     speakingTurnOf,
 } from "@tests/fixtures/builders/chat-speaking.builder"
-import { AgentGraphRunNoticesService } from "./agent-graph-run-notices.service"
 import { AgentGraphConversationHoldsService, HOLD_TTL_MS } from "./agent-graph-conversation-holds.service"
 import { AgentGraphFlowRunsService } from "./agent-graph-flow-runs.service"
+import type { FlowThreadRun, FlowThreads } from "./agent-graph-flow-runs.service"
 import { AgentGraphFreezeGateService } from "./agent-graph-freeze-gate.service"
 import { AgentGraphsService } from "./agent-graphs.service"
 import { GRAPH_FLOW_TRIGGER_MESSAGES } from "./agent-graphs.decorators"
@@ -146,9 +146,15 @@ const build = async ({ frozen = false, pinned = false }: BuildOptions = {}) => {
             ),
         ),
     })
-    const runs = mock<AgentRunsService>({
-        open: jest.fn().mockResolvedValue(runViewOf({ id: "run-new" })),
-        append: jest.fn().mockResolvedValue(undefined),
+    const runs = mock<AgentRunsService>({ open: jest.fn().mockResolvedValue(runViewOf({ id: "run-new" })) })
+    const started: Array<FlowThreadRun> = []
+    const threads = mock<FlowThreads>({
+        owns: jest.fn().mockReturnValue(false),
+        opened: jest.fn().mockResolvedValue(undefined),
+        started: jest.fn((run: FlowThreadRun) => {
+            started.push(run)
+            return Promise.resolve({ status: "done" as const, reason: null, outcome: { runId: run.runId } })
+        }),
     })
     const freezes = mock<AgentGraphFreezeGateService>({
         hold: jest.fn().mockResolvedValue(frozen),
@@ -188,9 +194,12 @@ const build = async ({ frozen = false, pinned = false }: BuildOptions = {}) => {
                 : []),
         ],
     }).compile()
+    const flows = moduleRef.get(AgentGraphFlowRunsService)
+    flows.setThreads(threads)
     return {
         holds: moduleRef.get(AgentGraphConversationHoldsService),
-        flows: moduleRef.get(AgentGraphFlowRunsService),
+        flows,
+        started,
         rows,
         wakes,
         runs,
@@ -350,7 +359,7 @@ describe("AgentGraphConversationHoldsService: the customer's follow-up during an
 
 describe("AgentGraphConversationHoldsService: the line reaches the consult as its customer turn", () => {
     it("pins the line sent on to the consult's workflow, so a consult no channel trigger takes still runs it with the customer's words", async () => {
-        const { holds, flows, wakes, runs, workflows } = await build({ pinned: true })
+        const { holds, flows, wakes, started, workflows } = await build({ pinned: true })
         const reply = endOfSalesTurn("reply")
         await holds.keptAfter(reply.step, reply.input, CONVERSATION)
 
@@ -371,8 +380,7 @@ describe("AgentGraphConversationHoldsService: the line reaches the consult as it
             expect.objectContaining({ pin: { workflow: "consult", version: "latest" } }),
         )
         expect(workflows.pinRun).toHaveBeenCalledWith(expect.anything(), "ws-1", "run-new", CONSULT_ROUTE)
-        const [first] = runs.append.mock.calls[0]?.[3] ?? []
-        expect(first?.input).toMatchObject({
+        expect(started[0]).toMatchObject({
             versionId: "wfv-1",
             workflowId: "wf-consult",
             trigger: {
@@ -392,7 +400,7 @@ const KEEPER_ID = KEEPER_AGENT
 /** The Sales consult: it keeps the conversation between its turns. */
 const KEEPING_CONSULT: GraphSpec = { ...CONSULT, trigger: { kind: "tag", sources: ["agent"] } }
 
-/** The real conversations, channel send, holds and run notices over a fake chat store; the channel and the line store are doubles. */
+/** The real conversations, channel send and holds over a fake chat store; the channel and the line store are doubles. */
 const buildSpeaking = async () => {
     const chat = speakingChat()
     const engine = mock<EntityEngineService>()
@@ -402,8 +410,6 @@ const buildSpeaking = async () => {
         providers: [
             ...chat.providers,
             AgentGraphConversationHoldsService,
-            AgentGraphRunNoticesService,
-
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: mock<Logger>() },
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn().mockReturnValue("hold on") }) },
@@ -424,10 +430,7 @@ const buildSpeaking = async () => {
                 provide: AgentWorkflowRunsService,
                 useValue: mock<AgentWorkflowRunsService>({ workflowKeyOfRun: jest.fn().mockResolvedValue("consult") }),
             },
-            {
-                provide: AgentGraphFreezeGateService,
-                useValue: mock<AgentGraphFreezeGateService>({ stopped: jest.fn().mockResolvedValue(true) }),
-            },
+            { provide: AgentGraphFreezeGateService, useValue: mock<AgentGraphFreezeGateService>() },
         ],
     }).compile()
     const index = nodeIndexOf({ nodes: coreNodes, effects: coreEffects, tools: coreTools, dataKinds: coreDataKinds })
@@ -438,7 +441,6 @@ const buildSpeaking = async () => {
         conversations: moduleRef.get(ChatConversationsService),
         send,
         holds: moduleRef.get(AgentGraphConversationHoldsService),
-        notices: moduleRef.get(AgentGraphRunNoticesService),
         messages: chat.messages,
         delivery: chat.delivery,
     }
@@ -502,53 +504,7 @@ describe("AgentGraphConversationHoldsService: the keeper keeps the right to spea
         expect(world.delivery.deliver).toHaveBeenCalledTimes(2)
     })
 
-    it("sends the line the AI core chose for a stuck step as the agent that speaks now, so the line never fails on who speaks", async () => {
-        const world = await buildSpeaking()
-        const conversationId = await consultOpen(world)
-        await nextLine(world, conversationId)
-        const step = stepViewOf({ workspaceId: CHAT_WORKSPACE, agentId: KEEPER_ID, runId: "run-s2", stepKey: "reply" })
-        const notice = {
-            step,
-            turn: salesTurn(conversationId),
-            trigger: { conversationId, channel: "telegram" },
-            code: "handler_threw",
-        }
-
-        await world.notices.stuck(notice, {
-            report: { reason: "Em chua tao duoc don, anh xem giup", question: null, suggestions: [] },
-            customerLine: "Da shop dang kiem tra, se bao chi ngay a",
-            facts: [["code", "handler_threw"]],
-            leadId: null,
-        })
-
-        expect(world.messages.storeAgentLine).toHaveBeenLastCalledWith(
-            expect.objectContaining({
-                conversationId,
-                body: "Da shop dang kiem tra, se bao chi ngay a",
-                sentBy: DOOR_ID,
-            }),
-        )
-        expect(world.delivery.deliver).toHaveBeenCalledTimes(2)
-    })
-
-    it("says nothing to the customer when a run stops: the engine has no line of its own any more", async () => {
-        const world = await buildSpeaking()
-        const conversationId = await consultOpen(world)
-        await nextLine(world, conversationId)
-        const step = stepViewOf({ workspaceId: CHAT_WORKSPACE, agentId: KEEPER_ID, runId: "run-s2", stepKey: "reply" })
-
-        await world.notices.runStopped({
-            step,
-            turn: salesTurn(conversationId),
-            trigger: { conversationId, channel: "telegram" },
-            code: "handler_threw",
-        })
-
-        // Only the consult's own first answer ever went out.
-        expect(world.delivery.deliver).toHaveBeenCalledTimes(1)
-    })
-
-    it("gives the right to speak back to a frozen consult run when the owner retries it, with no new line from the customer", async () => {
+    it("gives the right to speak back to a stopped consult run when the founder's answer resumes it, with no new line from the customer", async () => {
         const world = await buildSpeaking()
         const conversationId = await consultOpen(world)
         await nextLine(world, conversationId)
@@ -560,7 +516,7 @@ describe("AgentGraphConversationHoldsService: the keeper keeps the right to spea
         const retried = stepViewOf({
             workspaceId: CHAT_WORKSPACE,
             agentId: KEEPER_ID,
-            runId: "run-frozen",
+            runId: "run-stopped",
             stepKey: "reply",
         })
         await world.holds.speakFor(

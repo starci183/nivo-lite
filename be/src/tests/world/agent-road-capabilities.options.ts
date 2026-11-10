@@ -16,8 +16,6 @@ import type {
 import { InvoicesModule } from "@modules/domain/invoices"
 import { ModuleInstallationsModule } from "@modules/domain/module-installations"
 import { IdsModule } from "@modules/platform/ids"
-import { AgentRunSweepService } from "../../modules/domain/agent-runs/agent-run-sweep.service"
-import { QUIET_RUN_SWEEP } from "./quiet-peers.options"
 import { OFFICE_CHAIN_MODULES } from "./office-chain-capabilities.options"
 import { KnowledgeReadModule } from "./agent-road-knowledge-read.module"
 import { redisQueueModules } from "./redis-capabilities.options"
@@ -86,10 +84,9 @@ class RoadWorkModule {
             providers: [
                 RoadWork,
                 RoadWorkRegistration,
-                QUIET_RUN_SWEEP,
                 { provide: AGENT_TURN_EXECUTOR, useExisting: RoadWork },
             ],
-            exports: [RoadWork, AGENT_TURN_EXECUTOR, AgentRunSweepService],
+            exports: [RoadWork, AGENT_TURN_EXECUTOR],
         }
     }
 }

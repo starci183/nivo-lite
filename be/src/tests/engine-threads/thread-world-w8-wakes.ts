@@ -25,7 +25,7 @@ import { moneyProcessOf } from "./workflows/reconcile/thread-world-money-process
 // (`core.call-workflow` → `AgentTagService`), a care timer (`AgentWorkSweepService.wakeForCare`), a website form
 // (`WebsiteLeadWakeService.wake`) and the evening close (`AgentWorkSweepService`/scheduler, source `schedule`, probe `accounting_close`).
 
-/** The workflows of this package, by namespace (what the flag names). */
+/** The workflows of this package, by namespace. */
 export const W8_WORKFLOWS = {
     afterSale: "sales.after-sale",
     deliveryCheck: "sales.delivery-check",
@@ -167,15 +167,14 @@ export const w8Wake = async (process: ThreadProcess, input: W8WakeIn): Promise<W
     }
 }
 
-/** A process over a fresh money database with the books given; `flag` empty plays the old engine. */
+/** A process over a fresh money database with the books given, the `seed` applied before it starts. */
 export const w8ProcessOf = async (
     books: Books,
-    flag: ReadonlyArray<string>,
     seed: (db: MoneyDb) => void = () => undefined,
 ): Promise<ThreadProcess & { readonly db: MoneyDb }> => {
     const db = moneyDbOf(books)
     seed(db)
-    const process = await moneyProcessOf(db, flag)
+    const process = await moneyProcessOf(db)
     return { ...process, db }
 }
 
@@ -197,7 +196,7 @@ export const diesAtDone = (db: MoneyDb, nth: number): void => {
     })
 }
 
-/** What a walk left in the world, comparable across engines (no clock stamps). */
+/** What a walk left in the world, comparable with a fixed baseline (no clock stamps). */
 export const w8OutcomeOf = (db: MoneyDb): Readonly<Record<string, unknown>> => ({
     acts: db.acts.map((act) => ({ effect: act.effect, payload: act.payload, key: act.key, dedupeKey: act.dedupeKey })),
     lines: db.lines.map((line) => ({ conversationId: line.conversationId, text: line.text, channelRef: line.channelRef })),

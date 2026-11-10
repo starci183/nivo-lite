@@ -1,8 +1,10 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
 import type { FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
 import { EntityEngineService } from "@modules/domain/entity-engine"
-import { lineKeyOf, type AgentLineReplied } from "@modules/domain/team-chat"
+import { TeamChatRoomsService, lineKeyOf, type AgentLineReplied } from "@modules/domain/team-chat"
 import { DomainError } from "@modules/platform/errors"
+import { InjectLogger, type Logger } from "@modules/platform/logging"
+import { AgentThreadsLogEvent } from "../agent-threads.log-events"
 import { runStopOf } from "./run-stop-records.service"
 import type { RunStop, StopState } from "./run-stop.contracts"
 import { stopCardKeyOf } from "./stop-cards.service"
@@ -74,13 +76,30 @@ export const stopOfLine = (stops: ReadonlyArray<RunStop>, lineKey: string): RunS
  * the stop whose card it answers (the card's key is the stop's run and step), and handed to the stop door as an `answer` with the words
  * and the moment of the reply, as the person who wrote it: who may answer, the wake and the step's next run all go as from the card's
  * box. A reply to the card of a stop already resolved is told `stop_closed` and moves nothing. A reply to any other line is not this
- * reader's: it answers null, and the freezes of the old engine take it.
+ * reader's: it answers null and changes nothing. It is the team chat's one listener of replies to engine lines (registered at start).
  */
-export class StopAnswersService {
+export class StopAnswersService implements OnModuleInit {
     constructor(
         private readonly engine: EntityEngineService,
         private readonly door: StopDoorService,
+        @InjectLogger() private readonly logger: Logger,
+        @Optional() private readonly chat?: TeamChatRoomsService,
     ) {}
+
+    /** Registers with the team chat once the app has started; an app without the chat hears nothing. */
+    onModuleInit(): void {
+        this.chat?.listenReplies(async (reply) => {
+            await this.heard(reply)
+        })
+    }
+
+    /** A reply the team chat heard: handed to the stop whose card it answers; true when a resume was asked. */
+    async heard(reply: StopReply): Promise<boolean> {
+        const stopped = await this.replied(reply)
+        if (stopped === null) return false
+        this.logger.info(AgentThreadsLogEvent.AnsweredInChat, { runId: stopped.runId, outcome: stopped.outcome })
+        return stopped.outcome === "admitted" || stopped.outcome === "already_admitted"
+    }
 
     /** Hands the words of a reply to the stop whose card it answers; null when it answers the card of no stop. */
     async replied(reply: StopReply): Promise<StopReplied | null> {

@@ -9,20 +9,16 @@ import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
 import { isRefused } from "@nivo-lite/agent-sdk/node"
 import type { EffectPayload, NodeModelRequest, NodeQuery, SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { coreDataKinds, coreEffects, coreNodes, coreTools, TOOL } from "@nivo-lite/blocks-core"
-import { AgentRunHandlersService, AgentRunsService } from "@modules/domain/agent-runs"
-
-import type { StepJson, StepSpec, StepView } from "@modules/domain/agent-runs"
+import { AgentRunsService } from "@modules/domain/agent-runs"
 import { AgentWorkHandlersService } from "@modules/domain/agent-work"
-import type { AgentWakeContext } from "@modules/domain/agent-work"
 import {
     AgentGraphFlowRunsService,
     AgentGraphFreezeGateService,
-    AgentGraphNodeStepService,
     AgentGraphRunNoticesService,
     AgentGraphsService,
     GRAPH_FLOW_TRIGGER_MESSAGES,
 } from "@modules/domain/agent-graphs"
-import type { FlowTriggerMessages, FlowWake } from "@modules/domain/agent-graphs"
+import type { FlowTriggerMessages } from "@modules/domain/agent-graphs"
 import {
     GRAPH_NODE_MODEL,
     GRAPH_NODE_TOOL_DOOR,
@@ -37,7 +33,6 @@ import { PRIMARY_ENTITY_MANAGER } from "@modules/platform/database"
 import { MESSAGE_CATALOG } from "@modules/platform/i18n"
 import { LOGGER } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
-import { eachInOrder } from "@modules/platform/primitives"
 import { LeadMemoryService } from "@modules/domain/lead-memory"
 import { AgentGraphStepMemoryService } from "../../../modules/domain/agent-graphs/agent-graph-step-memory.service"
 import { AgentGraphCallGuardService } from "../../../modules/domain/agent-graphs/agent-graph-call-guard.service"
@@ -48,11 +43,12 @@ import { AgentGraphConversationHoldsService } from "../../../modules/domain/agen
 import type { LeadMemoryWorld } from "./lead-memory-world.builder"
 import type { WorkflowWorld } from "./workflow-world.builder"
 import { stateOf } from "./agent-graph.builder"
-import { stepViewOf } from "./agent-runs.builder"
-import { agentTurnViewOf } from "./agent-work.builder"
 
-/** A run engine in which every try still owns its step: no step of the world is superseded by another try. */
-const ownTriesEngine = (): AgentRunsService => mock<AgentRunsService>({ holds: jest.fn().mockResolvedValue(true) })
+// The flow world of the graphs (seeded graphs, an in-memory store behind every data kind, the real flow over it). Phase 3 (package X1):
+// the old engine's node step and its drivers are gone; a run is driven on a thread only.
+
+/** A run engine that writes nothing: the flow's start of a run reads it, no step of the world lives in it. */
+const quietRuns = (): AgentRunsService => mock<AgentRunsService>()
 
 /** Where the seed keeps its graph files, from this folder. */
 const SEEDS_DIR = "../../../../../.starcistacks/dev/seeds/data/graphs"
@@ -107,20 +103,6 @@ export interface FlowWorld {
     readonly read: (kind: string, query: NodeQuery) => Promise<ReadonlyArray<NodeRow>>
     /** The customer messages of the store. */
     readonly conversation: FlowTriggerMessages
-}
-
-/**
- * The words of one team line a run posted: its plain `text`, or for the `workflow.stopped` card its summary with the AI core's reason and
- * question; the kind alone for a line with neither.
- */
-export const teamLineOf = (payload: EffectPayload): string => {
-    if (typeof payload.text === "string") return payload.text
-    const card: unknown = payload.card
-    const words = [payload.summary]
-    if (typeof card === "object" && card !== null)
-        words.push(Reflect.get(card, "reason"), Reflect.get(card, "question"))
-    const told = words.filter((word) => typeof word === "string" && word !== "").join("\n")
-    return told === "" ? String(payload.kind) : told
 }
 
 /** The kinds of subject the effects of the fake world answer. */
@@ -195,10 +177,8 @@ const DOOR: NodeToolDoor = {
 
 /** The services that drive a graph. */
 export interface FlowServices {
-    /** Opens the run of a wake and writes the step of a node. */
+    /** Routes a wake, opens its run and hands it to the threads the spec registers (`setThreads`). */
     readonly flows: AgentGraphFlowRunsService
-    /** Runs a step of a node and undoes it. */
-    readonly steps: AgentGraphNodeStepService
 }
 
 /** What the scripted model answers, by the purpose a node asks it for: text or a structured answer, one per call. */
@@ -206,7 +186,7 @@ export type FlowModelScript = Record<string, Array<string | Readonly<Record<stri
 
 /** What a spec swaps in the engine around the graphs: the gate of the freezes, and the run engine the start of a run writes to. */
 export interface FlowEngine {
-    /** The gate the start of a run and a stopped run ask; none by default. */
+    /** The gate the start of a run asks; none by default. */
     readonly gate?: AgentGraphFreezeGateService
     /** The run engine; a mock that writes nothing by default. */
     readonly runs?: AgentRunsService
@@ -222,8 +202,8 @@ export interface FlowEngine {
     /** The lead memory the steps read and write: one per customer across workflows. Absent, refs read the run and the trigger only. */
     readonly memory?: LeadMemoryWorld
     /**
-     * The ledger of the effects, by effect and call key: given, it outlives these services, so a run played again later (a retry from
-     * its failed step) repeats no call it already made. Absent, the services keep their own.
+     * The ledger of the effects, by effect and call key: given, it outlives these services, so a run played again later repeats no call
+     * it already made. Absent, the services keep their own.
      */
     readonly ledger?: Map<string, SubjectRef>
 }
@@ -278,7 +258,7 @@ const engineProvidersOf = (engine: FlowEngine, graphs: AgentGraphsService): Read
                   { provide: AgentWorkflowRecordsService, useValue: workflows.records },
               ]
     return [
-        { provide: AgentRunsService, useValue: engine.runs ?? ownTriesEngine() },
+        { provide: AgentRunsService, useValue: engine.runs ?? quietRuns() },
         ...(gate === undefined ? [] : [{ provide: AgentGraphFreezeGateService, useValue: gate }]),
         ...(workflows === undefined ? [] : [{ provide: AgentWorkflowRunsService, useValue: workflows.service }]),
         ...guards,
@@ -326,7 +306,6 @@ export const flowServicesOf = async (
             GraphNodeRegistryService,
             GraphNodeHostService,
             AgentGraphFlowRunsService,
-            AgentGraphNodeStepService,
             AgentGraphRunNoticesService,
             {
                 provide: GRAPH_NODES_OPTIONS,
@@ -342,7 +321,6 @@ export const flowServicesOf = async (
             { provide: CLOCK, useValue: new FakeClock("2026-11-04T10:00:00.000Z") },
             { provide: AgentGraphsService, useValue: graphs },
             ...engineProvidersOf(engine, graphs),
-            { provide: AgentRunHandlersService, useValue: mock<AgentRunHandlersService>() },
             { provide: AgentWorkHandlersService, useValue: mock<AgentWorkHandlersService>() },
             { provide: PRIMARY_ENTITY_MANAGER, useValue: { transaction: (work: (tx: object) => unknown) => work({}) } },
             { provide: GRAPH_FLOW_TRIGGER_MESSAGES, useValue: world.conversation },
@@ -359,152 +337,5 @@ export const flowServicesOf = async (
     for (const effect of coreEffects) {
         registry.addExecutor({ effect: effect.id, execute: (turn, payload) => world.execute(effect.id, payload, turn) })
     }
-    return { flows: moduleRef.get(AgentGraphFlowRunsService), steps: moduleRef.get(AgentGraphNodeStepService) }
-}
-
-/** How a run of a graph ended: the nodes done, in order, the step that failed, and the steps a compensation undid. */
-export interface FlowDrive {
-    /** The node steps done, in order. */
-    readonly path: ReadonlyArray<string>
-    /** The result of each done step, by step key. */
-    readonly outputs: Readonly<Record<string, StepJson>>
-    /** The step that failed or threw, or null. */
-    readonly failed: string | null
-    /** The steps a compensation undid, last first. */
-    readonly undone: ReadonlyArray<string>
-}
-
-/** What a run has done so far. */
-interface FlowProgress {
-    /** The steps done, in order. */
-    readonly done: ReadonlyArray<StepView>
-    /** The result of each done step, by step key. */
-    readonly earlier: Readonly<Record<string, StepJson>>
-    /** The step that failed or threw, or null. */
-    readonly failed: string | null
-}
-
-/** Runs the queued steps one after another, each with the results of the done ones, until the queue is empty or a step fails. */
-const advance = async (
-    steps: AgentGraphNodeStepService,
-    queue: ReadonlyArray<StepSpec>,
-    progress: FlowProgress,
-): Promise<FlowProgress> => {
-    const [spec, ...rest] = queue
-    if (spec === undefined || progress.failed !== null) return progress
-    const view = stepViewOf({ ...spec, earlier: { ...progress.earlier }, result: null })
-    const answer = await steps.run(view).catch((cause: unknown) => ({ kind: "failed" as const, code: String(cause) }))
-    if (answer.kind !== "done") return { ...progress, failed: spec.stepKey }
-    return advance(steps, [...rest, ...answer.next], {
-        done: [...progress.done, { ...view, result: answer.result }],
-        earlier: { ...progress.earlier, [spec.stepKey]: answer.result },
-        failed: null,
-    })
-}
-
-/**
- * Drives a graph the way the run engine does, from the wake as the store answers it: the first node's step, then each step the last one
- * wrote, with the results of the done steps as `earlier`. A step that throws or fails ends the run; when no pivot is done, the done
- * compensable steps are undone, last first, as the engine's compensation does.
- */
-export const driveFlow = async (built: FlowServices, graph: GraphSpec, wake: FlowWake): Promise<FlowDrive> => {
-    const turn = agentTurnViewOf({
-        source: wake.source,
-        actorMemberId: wake.actorMemberId,
-        context: structuredClone(wake.context),
-    })
-    const trigger = await built.flows.triggerOf(turn)
-    const first = graph.nodes[0]
-    const queue =
-        first === undefined ? [] : [built.flows.stepOf(first, { versionId: "version-1", nodeKey: first.key, trigger })]
-    return driveQueue(built, queue)
-}
-
-/** Plays the queued first steps of a run the way the run engine does, and undoes the compensable ones when it fails before a pivot. */
-export const driveQueue = async (built: FlowServices, queue: ReadonlyArray<StepSpec>): Promise<FlowDrive> => {
-    const { done, earlier, failed } = await advance(built.steps, queue, { done: [], earlier: {}, failed: null })
-    const pivoted = done.some((step) => step.effect.kind === "pivot")
-    const undoable =
-        failed === null || pivoted ? [] : done.filter((step) => step.effect.kind === "compensable").reverse()
-    await eachInOrder(undoable, (step) => built.steps.compensate(step))
-    return {
-        path: done.map((step) => step.stepKey),
-        outputs: earlier,
-        failed,
-        undone: undoable.map((step) => step.stepKey),
-    }
-}
-
-/** The catalogue of the shop in the Sales scenarios: one flower pot. */
-export const CATALOGUE: ReadonlyArray<NodeRow> = [{ id: "c1", name: "Flower pot", priceVnd: 150_000, active: true }]
-
-/** The workflow a hand-off calls: its key and the version (`latest` unless one is pinned). */
-export interface HandOffTarget {
-    readonly workflow: string
-    readonly version?: string | number
-}
-
-/**
- * The wake of the end hand-off a workflow writes for another: the words, the pin of the target (workflow and version), ONLY the params it
- * maps, and the calling run. It carries the lead and the conversation as flat members, as the tag door writes them.
- */
-export const handOffWake = (
-    target: HandOffTarget,
-    params: Readonly<Record<string, unknown>>,
-    text: string = "",
-    callerRunId: string = "run-caller",
-): FlowWake => {
-    const context: AgentWakeContext = {
-        text,
-        tagContext: JSON.stringify({
-            workflowCall: { workflow: target.workflow, version: target.version ?? "latest" },
-            params,
-            caller: { runId: callerRunId },
-        }),
-        ...(typeof params.conversationId === "string" ? { conversationId: params.conversationId } : {}),
-        ...(typeof params.leadId === "string" ? { leadId: params.leadId } : {}),
-        locale: "vi",
-        authorAgentId: "chatbot-1",
-    }
-    return { source: "tag", actorMemberId: null, context }
-}
-
-/** The wake of the Chatbot's hand-off to the Sales consult: the customer's words, their conversation and channel, and who they are. */
-export const salesWake = (): FlowWake =>
-    handOffWake(
-        { workflow: "consult" },
-        {
-            leadId: "lead-1",
-            conversationId: "conv-1",
-            text: "One flower pot to 69 Hang Xanh please",
-            channel: "zalo",
-        },
-        "One flower pot to 69 Hang Xanh please",
-    )
-
-/** The wake of the tag the Chatbot's hand-off writes for Accounting when a customer says they paid: their words go to the reconcile workflow. */
-export const claimWake = (text: string = "I transferred 2k"): FlowWake =>
-    handOffWake({ workflow: "reconcile" }, { leadId: "lead-1", conversationId: "conv-1", text, channel: "zalo" }, text)
-
-/** The bank transaction of 2,000 the feed holds, matched to no order. */
-export const FEED_ROW: NodeRow = {
-    id: "tx-95937289",
-    amountVnd: 2000,
-    reference: "Test Sepay",
-    payer: null,
-    occurredAt: "2026-11-03T22:51:00.000Z",
-    orderId: null,
-    status: "unmatched",
-}
-
-/** A confirmed order of 5,000 of the customer of the scenarios. */
-export const ORDER_ROW: NodeRow = {
-    id: "order-1",
-    orderNo: "SO-0001",
-    leadId: "lead-1",
-    items: [],
-    amountVnd: 5000,
-    status: "confirmed",
-    confirmedAt: "2026-11-04T00:40:00.000Z",
-    createdAt: "2026-11-04T00:35:00.000Z",
+    return { flows: moduleRef.get(AgentGraphFlowRunsService) }
 }

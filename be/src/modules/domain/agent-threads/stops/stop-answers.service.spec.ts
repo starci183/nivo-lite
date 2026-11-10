@@ -4,7 +4,8 @@ import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import { queryProblems } from "@nivo-lite/agent-sdk/query"
 import { agentRunStopEntity } from "@nivo-lite/blocks-core/entities"
 import { EntityEngineService } from "@modules/domain/entity-engine"
-import { lineKeyOf } from "@modules/domain/team-chat"
+import { TeamChatRoomsService, lineKeyOf } from "@modules/domain/team-chat"
+import { LOGGER, type Logger } from "@modules/platform/logging"
 import { DomainError } from "@modules/platform/errors"
 import { stopCardKeyOf } from "./stop-cards.service"
 import { StopAnswersService, stopOfLine } from "./stop-answers.service"
@@ -52,7 +53,7 @@ const replyTo = (runId: string, stepKey: string, over: Partial<StopReply> = {}):
 
 class RoleForbidden extends DomainError<"WORKSPACE_MEMBERS_ROLE_FORBIDDEN"> {}
 
-const build = async (rows: ReadonlyArray<RecordRow>) => {
+const build = async (rows: ReadonlyArray<RecordRow>, withChat = true) => {
     const engine = mock<EntityEngineService>()
     engine.scoped.mockImplementation(((_ws: string, work: (tx: unknown) => unknown) => work({})) as never)
     engine.list.mockImplementation(((_tx: unknown, query: { where: { value: string } }) =>
@@ -60,15 +61,55 @@ const build = async (rows: ReadonlyArray<RecordRow>) => {
             rows: rows.filter((row) => row.data.state === query.where.value).map((row) => ({ row })),
         })) as never)
     const door = mock<StopDoorService>({ decide: jest.fn().mockResolvedValue({ outcome: "admitted", stepKey: "match" }) })
+    const chat = mock<TeamChatRoomsService>()
+    const logger = mock<Logger>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             StopAnswersService,
             { provide: EntityEngineService, useValue: engine },
             { provide: StopDoorService, useValue: door },
+            { provide: LOGGER, useValue: logger },
+            ...(withChat ? [{ provide: TeamChatRoomsService, useValue: chat }] : []),
         ],
     }).compile()
-    return { service: moduleRef.get(StopAnswersService), door, engine }
+    return { service: moduleRef.get(StopAnswersService), door, engine, chat, logger }
 }
+
+describe("StopAnswersService: the team chat's listener of replies", () => {
+    it("registers itself with the team chat at start, and the reply it hears resumes the stop", async () => {
+        const { service, chat, door, logger } = await build([rowOf("run-1", "match", "open")])
+
+        service.onModuleInit()
+
+        expect(chat.listenReplies).toHaveBeenCalledTimes(1)
+        const listener = chat.listenReplies.mock.calls[0]?.[0]
+        await listener?.(replyTo("run-1", "match"))
+        expect(door.decide).toHaveBeenCalledTimes(1)
+        expect(logger.info).toHaveBeenCalledWith("agent_threads.answered_in_chat", { runId: "run-1", outcome: "admitted" })
+    })
+
+    it("hears a reply to a line that is no stop's card as nothing: no door, no log", async () => {
+        const { service, door, logger } = await build([rowOf("run-1", "match", "open")])
+
+        await expect(service.heard(replyTo("run-x", "other"))).resolves.toBe(false)
+        expect(door.decide).not.toHaveBeenCalled()
+        expect(logger.info).not.toHaveBeenCalled()
+    })
+
+    it("tells a resume asked as true and any other outcome as false", async () => {
+        const { service, door } = await build([rowOf("run-1", "match", "open")])
+        await expect(service.heard(replyTo("run-1", "match"))).resolves.toBe(true)
+
+        door.decide.mockResolvedValueOnce({ outcome: "stop_closed", stepKey: "match" } as never)
+        await expect(service.heard(replyTo("run-1", "match"))).resolves.toBe(false)
+    })
+
+    it("hears nothing in an app with no team chat, and starts", async () => {
+        const { service } = await build([], false)
+
+        expect(() => service.onModuleInit()).not.toThrow()
+    })
+})
 
 describe("StopAnswersService.replied: the founder's words in the team chat resume the stopped step", () => {
     it("hands the reply's own words and moment to the stop door as an answer of the person who wrote it", async () => {
@@ -110,7 +151,7 @@ describe("StopAnswersService.replied: the founder's words in the team chat resum
         expect(door.decide).not.toHaveBeenCalled()
     })
 
-    it("answers null for a reply to a line that is the card of no stop: the old engine's freezes take it", async () => {
+    it("answers null for a reply to a line that is the card of no stop", async () => {
         const { service, door } = await build([rowOf("run-1", "match", "open")])
 
         await expect(service.replied(replyTo("run-1", "other-step"))).resolves.toBeNull()

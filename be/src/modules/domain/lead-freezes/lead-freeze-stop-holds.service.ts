@@ -1,5 +1,6 @@
 import { Injectable, Optional, type OnModuleInit } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
+import { AgentRunsService } from "@modules/domain/agent-runs"
 import { ThreadRunsService, ThreadSweepService } from "@modules/domain/agent-threads"
 import type { AgentTurnView } from "@modules/domain/agent-work"
 import { InjectClock, type Clock } from "@modules/platform/clock"
@@ -7,7 +8,6 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger, type Logger } from "@modules/platform/logging"
 import { eachInOrder } from "@modules/platform/primitives"
 import { LeadFreezeRecordsService } from "./lead-freeze-records.service"
-import { LeadFreezeRunsService } from "./lead-freeze-runs.service"
 import { LeadFreezeStopsService } from "./lead-freeze-stops.service"
 import {
     THREAD_RELEASER,
@@ -21,7 +21,7 @@ import {
 } from "./lead-freeze-threads.policy"
 import { LeadFreezeWakesService } from "./lead-freeze-wakes.service"
 import { LeadFreezesLogEvent } from "./lead-freezes.log-events"
-import { holds, pendingEventOf, replayOf, withPending, workflowOfTrigger } from "./lead-freeze.policy"
+import { holds, pendingEventOf, withPending, workflowOfTrigger } from "./lead-freeze.policy"
 import type { FreezeOutcome, FreezeSubject, FreezeTrigger, HeldStop, LeadFreeze } from "./lead-freezes.contracts"
 
 @Injectable()
@@ -31,8 +31,7 @@ import type { FreezeOutcome, FreezeSubject, FreezeTrigger, HeldStop, LeadFreeze 
  * owner item, no retry, no take-over: the stop (its card, its answer box, its decisions) is the one thing that tells the founder. When
  * no stop of the run is open any more (the step completed after an answer, the founder skipped, a deadline moved it, the run is over)
  * the customer is released and the pending events are written again as wakes, once, in the order they came. It registers on the
- * thread runs (after every drive) and on the thread sweep (per workspace) when the app starts; with no workflow on threads it reads
- * nothing at all, so the old engine's hot path is unchanged.
+ * thread runs (after every drive) and on the thread sweep (per workspace) when the app starts.
  */
 export class LeadFreezeStopHoldsService implements OnModuleInit {
     constructor(
@@ -40,7 +39,7 @@ export class LeadFreezeStopHoldsService implements OnModuleInit {
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         private readonly records: LeadFreezeRecordsService,
-        private readonly runs: LeadFreezeRunsService,
+        private readonly runs: AgentRunsService,
         private readonly wakes: LeadFreezeWakesService,
         private readonly stops: LeadFreezeStopsService,
         @Optional() private readonly threadRuns?: ThreadRunsService,
@@ -53,11 +52,6 @@ export class LeadFreezeStopHoldsService implements OnModuleInit {
         this.sweep?.alsoPerWorkspace(async (workspaceId) => {
             await this.settleThreads(workspaceId)
         })
-    }
-
-    /** True when the app runs workflows on threads: only then can a stop hold a customer, and only then is anything read. */
-    engaged(): boolean {
-        return this.stops.engaged()
     }
 
     /** True when the wake, tried again, already opened this run: the wake that opened a stopped run is never held by that run. */
@@ -77,8 +71,9 @@ export class LeadFreezeStopHoldsService implements OnModuleInit {
         const keyed = stopSubjectOf(subject, stop)
         const name = keyed.leadId === null ? null : await this.records.nameOfLead(turn.workspaceId, keyed.leadId)
         const record = await this.records.ensure(turn.workspaceId, keyed, { status: "released", pending: [] })
+        // A freeze of the old engine left on the same key holds nobody any more: the stop's hold takes its place.
         const held = await this.records.patch(turn.workspaceId, record.id, (fresh) =>
-            holds(fresh)
+            holds(fresh) && isThreadHold(fresh)
                 ? { pending: withPending(fresh.pending, event) }
                 : {
                       ...threadHoldOf(fresh, stop, at),
@@ -101,7 +96,7 @@ export class LeadFreezeStopHoldsService implements OnModuleInit {
 
     /**
      * The oldest open stop that holds a wake of the trigger's workflow for the customer, of a run that is not over and is not the wake's
-     * own run; null when none does (and always null with no workflow on threads).
+     * own run; null when none does.
      */
     async holding(
         workspaceId: string,
@@ -115,11 +110,11 @@ export class LeadFreezeStopHoldsService implements OnModuleInit {
         const ownRunId = turn === null ? null : await this.ownRunOf(turn)
         const open = about.filter((stop) => stop.runId !== ownRunId)
         if (open.length === 0) return null
-        const statuses = await Promise.all(open.map((stop) => this.runs.statusOf(workspaceId, stop.runId)))
+        const statuses = await Promise.all(open.map((stop) => this.statusOf(workspaceId, stop.runId)))
         return oldestStopOf(open.filter((_, at) => !isRunClosed(statuses[at] ?? null)))
     }
 
-    /** The open stops of thread runs about the customer, whatever the workflow; none with no workflow on threads. */
+    /** The open stops of thread runs about the customer, whatever the workflow. */
     async openAbout(workspaceId: string, subject: FreezeSubject): Promise<ReadonlyArray<HeldStop>> {
         return (await this.stops.openOfCustomer(workspaceId, subject)).filter((stop) => stopIsAbout(stop, subject))
     }
@@ -148,7 +143,6 @@ export class LeadFreezeStopHoldsService implements OnModuleInit {
      * the next wake or the next sweep; it never fails the drive.
      */
     async threadSettled(workspaceId: string, runId: string): Promise<void> {
-        if (!this.engaged()) return
         try {
             const freeze = await this.records.byRun(workspaceId, runId)
             if (!holds(freeze) || !isThreadHold(freeze)) return
@@ -160,7 +154,6 @@ export class LeadFreezeStopHoldsService implements OnModuleInit {
 
     /** Settles every hold of a thread run's stop in the workspace (the sweep's backstop); answers how many it released. */
     async settleThreads(workspaceId: string): Promise<number> {
-        if (!this.engaged()) return 0
         const threadHolds = (await this.records.holding(workspaceId)).filter(isThreadHold)
         let released = 0
         await eachInOrder(threadHolds, async (freeze) => {
@@ -171,13 +164,18 @@ export class LeadFreezeStopHoldsService implements OnModuleInit {
 
     /** The open stop of a run that is not over, or null. */
     private async openStopOfRun(workspaceId: string, runId: string): Promise<HeldStop | null> {
-        if (isRunClosed(await this.runs.statusOf(workspaceId, runId))) return null
+        if (isRunClosed(await this.statusOf(workspaceId, runId))) return null
         return oldestStopOf(await this.stops.openOfRun(workspaceId, runId))
     }
 
     /** The run a wake tried again already opened, or null (a wake on its first try opened none). */
     private async ownRunOf(turn: AgentTurnView): Promise<string | null> {
-        return turn.attempts > 1 ? this.runs.runOfWake(turn.workspaceId, turn.wakeId) : null
+        return turn.attempts > 1 ? this.runs.runIdOfWake(turn.workspaceId, turn.wakeId) : null
+    }
+
+    /** Where a run stands, or null when it is gone. */
+    private async statusOf(workspaceId: string, runId: string): Promise<string | null> {
+        return (await this.runs.runOf(workspaceId, runId))?.status ?? null
     }
 
     /** Releases the customer and writes the pending events again as wakes, in one transaction: the release and the replay never come apart. */
@@ -198,7 +196,7 @@ export class LeadFreezeStopHoldsService implements OnModuleInit {
                 tx,
             )
             if (released === null) return
-            const written = await this.wakes.replay(tx, workspaceId, released, replayOf(released.pending, "stop_closed"))
+            const written = await this.wakes.replay(tx, workspaceId, released, released.pending)
             this.logger.info(LeadFreezesLogEvent.Released, { freezeId: released.id, reason: "stop_closed", replayed: written })
         })
     }

@@ -186,7 +186,9 @@ export class ThreadDeadlinesService implements OnModuleInit {
             const seen = await this.port.stateOf(ref)
             if (seen === null) return undefined
             const { document } = await this.graphs.versionAt(ref.workspaceId, stop.agentId, seen.version)
-            return document.flow?.nodes.find((node) => node.key === stop.stepKey)?.wait?.timeout
+            // A stop of a loop's iteration is keyed `<node>[<i>]`: the wait is the node's.
+            const nodeKey = stop.stepKey.replace(/\[\d+\]$/, "")
+            return document.flow?.nodes.find((node) => node.key === nodeKey)?.wait?.timeout
         } catch {
             this.logger.warn(AgentThreadsLogEvent.DeadlineSkipped, { runId: ref.runId, code: "template_unreadable" })
             return undefined

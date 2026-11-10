@@ -89,16 +89,6 @@ export interface NodeSubjectResolver {
     subjectOf(turn: NodeTurn): Promise<SubjectRef | null>
 }
 
-/** The effects a node step ran, to undo when its run fails before a pivot. */
-export interface NodeUndoInput {
-    /** The turn the node ran in. */
-    readonly turn: NodeTurn
-    /** The effects it ran, in order, with the subjects the ledger kept. */
-    readonly done: ReadonlyArray<{ readonly id: string; readonly subject: SubjectRef }>
-    /** The run step's idempotency key. */
-    readonly key: string
-}
-
 /** Who and what language a node's model call is for. */
 export interface NodeModelScope {
     /** The workspace whose allowance the call is metered against. */

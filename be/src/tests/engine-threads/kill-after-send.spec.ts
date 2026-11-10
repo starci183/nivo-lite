@@ -14,7 +14,7 @@ import { NodeImagesService } from "../../modules/domain/ai-tasks/node-images.ser
 import { NotesService } from "../../modules/domain/ai-tasks/notes.service"
 import { agentTurnViewOf } from "../fixtures/builders/agent-work.builder"
 import { CONV, WS, actsOf, redrive, rowsOf, runsViewOf, stopsOf, type ThreadProcess } from "./thread-world"
-import { CONSULT_WORKFLOW, SALES, consultWake, linesOf, moneyDbOf, type MoneyDb } from "./workflows/reconcile/thread-world-money"
+import { SALES, consultWake, linesOf, moneyDbOf, type MoneyDb } from "./workflows/reconcile/thread-world-money"
 import { moneyProcessOf } from "./workflows/reconcile/thread-world-money-process"
 
 // Package FX1 (D-P10-6, D-P10-7): the LIVE sequence of run 3355daf0 on dev (restart FOURTEEN), with the REAL run reader (records +
@@ -99,7 +99,7 @@ const send = { call: { tool: TOOL.customerMessageSend, args: { conversationId: C
 
 /** One process of the money world on the thread engine for the consult, with the REAL tries policy as its model door. */
 const processOf = (db: MoneyDb, endpoint: Endpoint): Promise<ThreadProcess> =>
-    moneyProcessOf(db, [CONSULT_WORKFLOW], [{ provide: GRAPH_NODE_MODEL, useValue: endpoint.door }])
+    moneyProcessOf(db, [{ provide: GRAPH_NODE_MODEL, useValue: endpoint.door }])
 
 /** The process dies on the first `done` write of a step row: the send is in the ledger, the step row still says `running`. */
 const diesRightAfterTheSend = (db: MoneyDb): void => {

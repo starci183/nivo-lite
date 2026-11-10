@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing"
 import { builder, mock } from "@starci/jest-preset"
 import { ThreadRunsService } from "@modules/domain/agent-threads"
 import { ThreadApprovalsService } from "@modules/domain/agent-threads/thread-approvals.service"
-import { ModuleCatalogService, WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
+import { WORK_PERFORMER_REGISTRY } from "@modules/domain/decisions"
 import type { PerformedBy, Proposal, WorkContext, WorkItem, WorkPerformerRegistry } from "@modules/domain/decisions"
 import { WorkspaceMemberSeatsService } from "@modules/domain/workspace-members"
 import type { MemberSeatRecord } from "@modules/domain/workspace-members"
@@ -21,7 +21,7 @@ const THREAD_FIELDS: Proposal["fields"] = {
     fingerprint: "f".repeat(64),
 }
 
-/** An item of the old engine: its fields name no engine. */
+/** A left-over item of the deleted old engine: its fields name no engine. */
 const OLD_FIELDS: Proposal["fields"] = {
     runId: "run-0",
     nodeKey: "qr",
@@ -80,7 +80,6 @@ const build = async (decided: unknown = { kind: "admitted", fresh: true }) => {
     const seats = mock<WorkspaceMemberSeatsService>({
         seatById: jest.fn((_ws: string, memberId: string) => Promise.resolve(SEATS[memberId] ?? null)),
     })
-    const modules = mock<ModuleCatalogService>({ actionOf: jest.fn().mockResolvedValue(null) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             ToolApprovalPerformerService,
@@ -89,7 +88,6 @@ const build = async (decided: unknown = { kind: "admitted", fresh: true }) => {
             { provide: ThreadApprovalsService, useValue: approvals },
             { provide: ThreadRunsService, useValue: runs },
             { provide: WorkspaceMemberSeatsService, useValue: seats },
-            { provide: ModuleCatalogService, useValue: modules },
         ],
     }).compile()
     return { service: moduleRef.get(ToolApprovalPerformerService), registry, approvals, runs }
@@ -148,7 +146,7 @@ describe("ToolApprovalPerformerService", () => {
     })
 })
 
-describe("ToolApprovalPerformerService, refusals and the old engine", () => {
+describe("ToolApprovalPerformerService, refusals and items of no thread", () => {
     it("hands a refusal by a person in words, and the deadline's refusal without a person", async () => {
         const { service, approvals, runs } = await build()
         const item = itemOf()
@@ -179,14 +177,14 @@ describe("ToolApprovalPerformerService, refusals and the old engine", () => {
         await expect(service.onReject(ctx, item, item.proposal, OWNER)).resolves.toBeUndefined()
     })
 
-    it("leaves the old engine's item as it was: the decision is recorded, the thread is not touched", async () => {
+    it("does not pass an approval of an item no thread raised, and a refusal of it changes nothing", async () => {
         const { service, approvals } = await build()
         const item = itemOf({ proposal: { summary: "old", fields: OLD_FIELDS } })
 
-        const performed = await service.perform(ctx, item, item.proposal, MANAGER)
-        await service.onReject(ctx, item, item.proposal, OWNER)
-
-        expect(performed).toEqual({ summary: "[engine.recordOnly]", evidence: "pending", lead_id: "lead-1" })
+        await expect(service.perform(ctx, item, item.proposal, OWNER)).rejects.toMatchObject({
+            code: WorkPerformersErrorCode.ApprovalInvalid,
+        })
+        await expect(service.onReject(ctx, item, item.proposal, OWNER)).resolves.toBeUndefined()
         expect(approvals.decided).not.toHaveBeenCalled()
     })
 

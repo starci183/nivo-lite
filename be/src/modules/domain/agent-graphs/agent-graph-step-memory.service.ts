@@ -59,14 +59,13 @@ export const failureOfResult = (result: StepJson): StepFailure | null => {
     }
 }
 
-/** The outcome of each node done before in this run, by node key, from the results their steps kept (an approved re-run wins). */
+/** The outcome of each node done before in this run, by node key, from the results their steps kept (a later iteration wins). */
 export const stepsOfRun = (
     step: StepView,
     versionId: string,
-): Readonly<Record<string, StepMemory>> => {
-    const ordered = Object.entries(step.earlier).sort(([left], [right]) => Number(left !== nodeStepKeyOf(left)) - Number(right !== nodeStepKeyOf(right)))
-    return Object.fromEntries(
-        ordered.map(([key, result]): [string, StepMemory] => {
+): Readonly<Record<string, StepMemory>> =>
+    Object.fromEntries(
+        Object.entries(step.earlier).map(([key, result]): [string, StepMemory] => {
             const error = failureOfResult(result)
             const output: unknown = result.output
             return [
@@ -82,7 +81,6 @@ export const stepsOfRun = (
             ]
         }),
     )
-}
 
 /** The values the latest outcome step of the run bound (`output.values`), which `out.*` reads; undefined before any. */
 export const outOfRun = (flow: GraphSpec, steps: Readonly<Record<string, StepMemory>>): Readonly<Record<string, JsonValue>> | undefined => {
@@ -114,9 +112,8 @@ export const bindNode = (
 @Injectable()
 /**
  * The lead memory as a node step uses it: the scope its refs resolve against (the trigger, the outcomes of this run, the customer's
- * memory across workflows, the element of a for-each iteration, the values of the last outcome), the stored outcome a resume returns
- * instead of running the node again, and the write of each outcome with the lead facts it proves. Without the lead-memory capability (an
- * app that does not register it) refs read this run only and nothing is kept.
+ * memory across workflows, the element of a for-each iteration, the values of the last outcome), and the write of each outcome with the
+ * lead facts it proves. Without the lead-memory capability (an app that does not register it) refs read this run only and nothing is kept.
  */
 export class AgentGraphStepMemoryService {
     constructor(
@@ -173,14 +170,6 @@ export class AgentGraphStepMemoryService {
      */
     bind(node: GraphSpecNode, scope: RefScope): BoundNode {
         return bindNode(this.nodes.installed().nodes.get(node.step), node, scope)
-    }
-
-    /** The outcome this node already had in this run (a resume, a replay), so it is not run again; null when it has none. */
-    async recalled(step: StepView, input: GraphNodeStepInput): Promise<StepMemory | null> {
-        const subject = this.subjectOf(step, input)
-        if (subject === null || this.memory === undefined || input.approval !== undefined) return null
-        const found = await this.memory.stepOf(step.workspaceId, subject, step.runId, this.memoryKeyOf(input))
-        return found?.status === "done" ? found : null
     }
 
     /**

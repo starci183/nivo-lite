@@ -23,7 +23,7 @@ export const ACCOUNTING = "accounting-agent"
 export const SEPAY = "sepay-1"
 /** The shop's books (Google Sheets). */
 export const SHEET = "google-1"
-/** The consult workflow, by namespace (what the flag names). */
+/** The consult workflow, by namespace. */
 export const CONSULT_WORKFLOW = "sales.consult"
 /** The reconcile workflow, by namespace. */
 export const RECONCILE_WORKFLOW = "accounting.reconcile"
@@ -129,7 +129,6 @@ export const moneyDbOf = (books: Books = {}): MoneyDb => {
         checkpoints: memoryCheckpointStore(),
         wakes: [],
         runs: new Map(),
-        appended: new Map(),
         versions,
         workflows,
         model: new ScriptedModel(),

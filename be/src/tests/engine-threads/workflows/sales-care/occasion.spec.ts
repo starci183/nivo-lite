@@ -1,8 +1,7 @@
 import { TOOL } from "@nivo-lite/blocks-core"
-import { LEAD, actsOf, answer, founderDecides, playOld, redrive, rowsOf, stopsOf } from "../../thread-world"
+import { LEAD, actsOf, answer, founderDecides, redrive, rowsOf, stopsOf } from "../../thread-world"
 import {
     W8P,
-    W8_WORKFLOWS,
     careTimerWake,
     confusedAnswer,
     coreReport,
@@ -15,9 +14,11 @@ import {
 } from "../../thread-world-w8-wakes"
 import { calls, linesOf, moneyDbOf, type MoneyDb } from "../reconcile/thread-world-money"
 import { moneyProcessOf } from "../reconcile/thread-world-money-process"
+import baseline from "./occasion.baseline.json"
 
 // Package W8 (design row 2-2): `sales.occasion` (suggest → greeted) on a LangGraph thread, woken by an occasion timer. Twin walk (the
-// suggestion goes out and next year is armed by code), one stop, one kill after the suggestion was sent.
+// suggestion goes out and next year is armed by code) against the old engine (fixed baseline: the old engine's walk, which this twin held equal to the thread at tree aa40f9655; old half removed in phase 3, package X1),
+// one stop, one kill after the suggestion was sent.
 
 const PAID = {
     id: "order-1",
@@ -56,26 +57,25 @@ const suggests = (db: MoneyDb) => {
     })
 }
 
-const started = async (flag: ReadonlyArray<string>, script: (db: MoneyDb) => void) => {
-    const process = await w8ProcessOf(books(), flag, script)
+const started = async (script: (db: MoneyDb) => void) => {
+    const process = await w8ProcessOf(books(), script)
     const woken = await w8Wake(process, careTimerWake("occasion", LEAD, DUE_AT, SUFFIX))
     expect(woken.error).toBeNull()
     return { process, db: process.db, runId: woken.runId ?? "" }
 }
 
-describe("occasion on a thread: twin walk with the old engine", () => {
-    it("the suggestion goes out once and next year is armed: same steps, acts, line, ledger and model calls on both engines", async () => {
-        const old = await started([], suggests)
-        const played = await playOld(old.process, old.runId)
-        const thread = await started([W8_WORKFLOWS.occasion], suggests)
+describe("occasion on a thread against the old engine's baseline", () => {
+    it("the suggestion goes out once and next year is armed: the old engine's steps, acts, line, ledger and model calls", async () => {
+        const old = baseline
+        const thread = await started(suggests)
 
-        expect(played.path).toEqual(PATH)
         expect(await threadStatusOf(thread.process, thread.runId)).toBe("ended")
-        expect(await threadStepsOf(thread.process, thread.runId)).toEqual(played.path)
-        expect(w8OutcomeOf(thread.db)).toEqual(w8OutcomeOf(old.db))
+        expect(await threadStepsOf(thread.process, thread.runId)).toEqual(PATH)
+        expect(w8OutcomeOf(thread.db)).toEqual(old.outcome)
         expect(linesOf(thread.db)).toEqual([SUGGESTION])
         expect(actsOf(thread.db, TOOL.careSchedule).map((act) => act.payload)).toEqual([NEXT_YEAR])
-        expect(thread.db.model.asked.length).toBe(old.db.model.asked.length)
+        // A thread adds no model call: 2 on the old engine.
+        expect(thread.db.model.asked.length).toBe(old.asked)
         expect(rowsOf(thread.db, thread.runId).run).toMatchObject({ engine: "langgraph", status: "done" })
     })
 })
@@ -83,7 +83,7 @@ describe("occasion on a thread: twin walk with the old engine", () => {
 describe("occasion on a thread: the stop", () => {
     it("the agent cannot tell what to suggest: a stop, one card, no line, nothing armed; the founder's words resume it", async () => {
         const Q = "Lan truoc khach phan nan hoa heo, van goi y dat lai khong?"
-        const { process, db, runId } = await started([W8_WORKFLOWS.occasion], (one) => {
+        const { process, db, runId } = await started((one) => {
             occasionLead(one)
             one.model.script(W8P.occasion, confusedAnswer("Don truoc co phan nan", Q))
             one.model.script(W8P.core, coreReport(Q))
@@ -121,14 +121,14 @@ describe("occasion on a thread: killed and replayed", () => {
         const db = moneyDbOf(books())
         suggests(db)
         diesAtDone(db, 1)
-        const first = await moneyProcessOf(db, [W8_WORKFLOWS.occasion])
+        const first = await moneyProcessOf(db)
         const woken = await w8Wake(first, careTimerWake("occasion", LEAD, DUE_AT, SUFFIX))
         expect(String(woken.error)).toContain("WORLD_PROCESS_DIED")
         const runId = woken.runId ?? ""
         expect(linesOf(db)).toEqual([SUGGESTION])
 
         suggests(db)
-        const second = await moneyProcessOf(db, [W8_WORKFLOWS.occasion])
+        const second = await moneyProcessOf(db)
         const ran = await redrive(second, runId, "sweep-1")
 
         expect(ran.map((one) => one.error)).toEqual([null])

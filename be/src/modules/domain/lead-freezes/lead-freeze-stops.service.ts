@@ -1,8 +1,5 @@
-import { Injectable, Optional } from "@nestjs/common"
-import { AGENT_THREADS_OPTIONS } from "@modules/domain/agent-threads"
-import type { AgentThreadsOptions } from "@modules/domain/agent-threads"
+import { Injectable } from "@nestjs/common"
 import { EntityEngineService, type ScopedTx } from "@modules/domain/entity-engine"
-import { injector } from "@modules/platform/composition"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
 import type { FilterExpr, OrderBy } from "@nivo-lite/agent-sdk/query"
 import type { HeldStop } from "./lead-freezes.contracts"
@@ -79,25 +76,15 @@ export interface StopCustomer {
 @Injectable()
 /**
  * What a freeze reads of the stops of thread runs (`agent.run-stop`, written by the stops of the agent threads only): the open stops of
- * a customer and the open stops of one run. Reads only. ENGAGED ONLY WITH THE THREAD ENGINE: in an app whose flag names no workflow
- * (`AgentThreadsOptions.workflows` empty, or no thread capability at all) it reads nothing and answers none, so the old engine's hot
- * path sends no query of this reader. Every read is served by a declared index of the entity: `lead_state` (lead, state), `run`
+ * a customer and the open stops of one run. Reads only. Every read is served by a declared index of the entity: `lead_state` (lead, state), `run`
  * (run, then the state in code) and `state_stopped` (open stops, newest first, the conversation matched in code).
  */
 export class LeadFreezeStopsService {
-    constructor(
-        private readonly engine: EntityEngineService,
-        @Optional() @injector<AgentThreadsOptions>(AGENT_THREADS_OPTIONS) private readonly threads?: AgentThreadsOptions,
-    ) {}
-
-    /** True when the app starts runs on threads: only then can a stop be open, and only then does this reader read. */
-    engaged(): boolean {
-        return (this.threads?.workflows.length ?? 0) > 0
-    }
+    constructor(private readonly engine: EntityEngineService) {}
 
     /** The open stops about a customer: of their lead, or of their conversation; none when the customer names neither. */
     async openOfCustomer(workspaceId: string, customer: StopCustomer): Promise<ReadonlyArray<HeldStop>> {
-        if (!this.engaged() || (customer.leadId === null && customer.conversationId === null)) return []
+        if (customer.leadId === null && customer.conversationId === null) return []
         return this.engine.scoped(workspaceId, async (tx) => {
             const ofLead =
                 customer.leadId === null
@@ -113,9 +100,8 @@ export class LeadFreezeStopsService {
         })
     }
 
-    /** The open stops of a run, in the order they were written; none with the thread engine off. */
+    /** The open stops of a run, in the order they were written. */
     async openOfRun(workspaceId: string, runId: string): Promise<ReadonlyArray<HeldStop>> {
-        if (!this.engaged()) return []
         return this.engine.scoped(workspaceId, (tx) => this.read(tx, eq("runId", runId), BY_ID))
     }
 

@@ -131,6 +131,8 @@ export class ThreadGraphsService {
                 spec: flow,
             },
             new Set(this.nodes.installed().nodes.keys()),
+            // A for-each runs as a sequential cycle: the node function drives its frame (`compiler-loop.policy.ts`).
+            { loops: true },
         )
         if (compiled.kind === "refused") {
             const [problem] = compiled.problems

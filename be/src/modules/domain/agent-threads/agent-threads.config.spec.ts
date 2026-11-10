@@ -1,13 +1,9 @@
 import { EnvSource } from "@modules/platform/config"
 import { parseAgentThreadsConfig } from "./agent-threads.config"
-import { AgentThreadsError, AgentThreadsErrorCode } from "./errors/agent-threads.error"
-import { THREAD_READY_WORKFLOWS } from "./thread-flag.policy"
 
 describe("parseAgentThreadsConfig", () => {
-    it("starts no workflow on a thread and leaves every tunable to its default when nothing is set", () => {
+    it("leaves every tunable to its default when nothing is set (every workflow runs on threads: no list, no engine to choose)", () => {
         expect(parseAgentThreadsConfig(new EnvSource({}))).toEqual({
-            workflows: [],
-            everyWorkflow: false,
             graphsMax: undefined,
             approvalDeadlineMs: undefined,
             ownerDeadlineMs: undefined,
@@ -15,53 +11,22 @@ describe("parseAgentThreadsConfig", () => {
         })
     })
 
-    it("reads the flag and the windows of the stops' deadlines", () => {
+    it("reads the bound of built graphs and the windows of the stops' deadlines", () => {
         expect(
             parseAgentThreadsConfig(
                 new EnvSource({
-                    AGENT_ENGINE_LANGGRAPH: "chatbot.front-desk",
+                    AGENT_THREADS_GRAPHS_MAX: "50",
                     AGENT_THREADS_APPROVAL_DEADLINE_MS: "60000",
                     AGENT_THREADS_OWNER_DEADLINE_MS: "120000",
                 }),
             ),
-        ).toMatchObject({ workflows: ["chatbot.front-desk"], approvalDeadlineMs: 60_000, ownerDeadlineMs: 120_000 })
+        ).toEqual({ graphsMax: 50, approvalDeadlineMs: 60_000, ownerDeadlineMs: 120_000, doors: true })
     })
 
-    it("boots with the phase-1 walk's flag: front desk, consult and reconcile", () => {
-        expect(
-            parseAgentThreadsConfig(
-                new EnvSource({ AGENT_ENGINE_LANGGRAPH: "chatbot.front-desk,sales.consult,accounting.reconcile" }),
-            ).workflows,
-        ).toEqual(["chatbot.front-desk", "sales.consult", "accounting.reconcile"])
-    })
-
-    it("starts every cleared workflow's new runs on a thread with LangGraph as default engine, and only the flag's with legacy", () => {
-        expect(parseAgentThreadsConfig(new EnvSource({ AGENT_ENGINE_DEFAULT: "langgraph" })).workflows).toEqual(
-            THREAD_READY_WORKFLOWS,
-        )
-        // Default-on reaches the workflows no template made too (owner-drawn, `<module>.main`): `engages` reads `everyWorkflow`.
-        expect(parseAgentThreadsConfig(new EnvSource({ AGENT_ENGINE_DEFAULT: "langgraph" })).everyWorkflow).toBe(true)
-        expect(parseAgentThreadsConfig(new EnvSource({ AGENT_ENGINE_LANGGRAPH: "sales.consult" })).everyWorkflow).toBe(false)
-        expect(
-            parseAgentThreadsConfig(new EnvSource({ AGENT_ENGINE_DEFAULT: "legacy", AGENT_ENGINE_LANGGRAPH: "sales.consult" }))
-                .workflows,
-        ).toEqual(["sales.consult"])
-    })
-
-    it("refuses by name a default engine that is none", () => {
-        const read = () => parseAgentThreadsConfig(new EnvSource({ AGENT_ENGINE_DEFAULT: "on" }))
-
-        expect(read).toThrow(expect.objectContaining({ code: AgentThreadsErrorCode.FlagInvalid, params: { name: "on" } }))
-    })
-
-    it("refuses by name a workflow not cleared for threads", () => {
-        const read = () => parseAgentThreadsConfig(new EnvSource({ AGENT_ENGINE_LANGGRAPH: "sales.nothing" }))
-
-        expect(read).toThrow(AgentThreadsError)
-        try {
-            read()
-        } catch (cause) {
-            expect(cause instanceof AgentThreadsError ? cause.code : null).toBe(AgentThreadsErrorCode.FlagInvalid)
-        }
-    })
+    it.each([{ AGENT_THREADS_WORKFLOWS: "sales.ghost" }, { AGENT_ENGINE: "legacy" }])(
+        "reads no other key: a stale engine switch in the env changes nothing (%p)",
+        (values) => {
+            expect(parseAgentThreadsConfig(new EnvSource(values))).toEqual(parseAgentThreadsConfig(new EnvSource({})))
+        },
+    )
 })

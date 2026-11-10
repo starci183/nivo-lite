@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common"
 import type { EntityManager } from "typeorm"
-import { ChatConversationsService } from "@modules/domain/chat-records"
 import { AgentWakeService } from "@modules/domain/agent-work"
 import type { AgentWakeContext } from "@modules/domain/agent-work"
 import { eachInOrder } from "@modules/platform/primitives"
@@ -27,13 +26,10 @@ const wakeContextOf = (context: Readonly<Record<string, PendingContextValue>>): 
 @Injectable()
 /**
  * What a freeze writes outside itself: the replay of the events it held, as new wakes of the same agents in the order they came (each
- * under its own key marked with the freeze, so one release writes it once), and the owner's take-over of the conversation.
+ * under its own key marked with the freeze, so one release writes it once).
  */
 export class LeadFreezeWakesService {
-    constructor(
-        private readonly wakes: AgentWakeService,
-        private readonly conversations: ChatConversationsService,
-    ) {}
+    constructor(private readonly wakes: AgentWakeService) {}
 
     /** Writes the events again as wakes in `tx`, oldest first; answers how many were written (a replay already written is skipped). */
     async replay(
@@ -56,10 +52,5 @@ export class LeadFreezeWakesService {
             written.push(id !== null)
         })
         return written.filter(Boolean).length
-    }
-
-    /** A person holds the conversation from now on: the AI stays quiet in it while they do. */
-    takeOver(workspaceId: string, conversationId: string, holder: string): Promise<void> {
-        return this.conversations.setHolder(workspaceId, conversationId, holder)
     }
 }

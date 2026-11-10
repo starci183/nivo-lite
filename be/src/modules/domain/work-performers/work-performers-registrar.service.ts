@@ -5,7 +5,6 @@ import type { WorkPerformerRegistry } from "@modules/domain/decisions"
 import { BOOKING_ACTIONS, BookingPerformerService } from "./booking-performer.service"
 import { BookingRemindPerformerService } from "./booking-remind-performer.service"
 import { GatewayCallPerformerService } from "./gateway-call-performer.service"
-import { ResumeRunPerformerService } from "./resume-run-performer.service"
 import { ReplyCustomerPerformerService } from "./reply-customer-performer.service"
 import { SendEmailPerformerService } from "./send-email-performer.service"
 
@@ -19,7 +18,6 @@ export class WorkPerformersRegistrarService implements OnModuleInit {
         private readonly booking: BookingPerformerService,
         private readonly remind: BookingRemindPerformerService,
         private readonly gatewayCall: GatewayCallPerformerService,
-        private readonly resumeRun: ResumeRunPerformerService,
     ) {}
 
     /** Adds the performers to the registry: the customer reply, the email, the booking actions and the gateway calls. */
@@ -29,6 +27,5 @@ export class WorkPerformersRegistrarService implements OnModuleInit {
         for (const action of BOOKING_ACTIONS) this.registry.add(action, this.booking)
         this.registry.add("remind_booking", this.remind)
         this.registry.add("gateway_call", this.gatewayCall)
-        this.registry.add("review_agent_run", this.resumeRun)
     }
 }

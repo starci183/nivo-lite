@@ -1,0 +1,110 @@
+{
+    "baseline": "Twin walk at tree aa40f9655 (old engine == thread, green): recorded 2026-11-11 by package X1 from the walk the twin assertion held equal to the old engine; the old half is removed.",
+    "payment-reminder": {
+        "outcome": {
+            "acts": [
+                {
+                    "effect": "customer.message.send",
+                    "payload": {
+                        "text": "Shop nhac nhe chi Lan: don DH-1 van dang cho thanh toan a, thong tin chuyen khoan o tin nhan phia tren.",
+                        "conversationId": "conv-1"
+                    },
+                    "key": "00000000-0000-4000-8000-000000000001:remind:12e808b9c6c817bf",
+                    "dedupeKey": null
+                }
+            ],
+            "lines": [
+                {
+                    "conversationId": "conv-1",
+                    "text": "Shop nhac nhe chi Lan: don DH-1 van dang cho thanh toan a, thong tin chuyen khoan o tin nhan phia tren.",
+                    "channelRef": "line:00000000-0000-4000-8000-000000000001:remind:12e808b9c6c817bf"
+                }
+            ],
+            "team": [],
+            "ledger": [
+                {
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:remind:12e808b9c6c817bf",
+                    "effectId": "customer.message.send",
+                    "runId": "00000000-0000-4000-8000-000000000001",
+                    "stepKey": "remind",
+                    "args": {
+                        "leadId": "lead-1",
+                        "text": "Shop nhac nhe chi Lan: don DH-1 van dang cho thanh toan a, thong tin chuyen khoan o tin nhan phia tren."
+                    },
+                    "subjectEntity": "message",
+                    "subjectId": "m-1",
+                    "facts": {
+                        "conversationId": "conv-1"
+                    }
+                }
+            ],
+            "modelAsked": [
+                "sales.payment-reminder:payment-reminder",
+                "sales.payment-reminder:payment-reminder"
+            ]
+        },
+        "asked": 2
+    },
+    "payment-stale": {
+        "outcome": {
+            "acts": [
+                {
+                    "effect": "team.message.post",
+                    "payload": {
+                        "kind": "message.text",
+                        "intent": "ask",
+                        "title": "Don DH-1 chua thanh toan",
+                        "text": "Chi Lan chua chuyen khoan don DH-1 sau mot ngay va mot lan nhac. Giu don hay huy a?"
+                    },
+                    "key": "00000000-0000-4000-8000-000000000001:tell-team:1c6fba6a9567269a",
+                    "dedupeKey": null
+                }
+            ],
+            "lines": [],
+            "team": [
+                {
+                    "key": "00000000-0000-4000-8000-000000000001:tell-team:1c6fba6a9567269a",
+                    "versions": [
+                        {
+                            "kind": "message.text",
+                            "intent": "ask",
+                            "title": "Don DH-1 chua thanh toan",
+                            "text": "Chi Lan chua chuyen khoan don DH-1 sau mot ngay va mot lan nhac. Giu don hay huy a?"
+                        }
+                    ]
+                }
+            ],
+            "ledger": [
+                {
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:tell-team:1c6fba6a9567269a",
+                    "effectId": "team.message.post",
+                    "runId": "00000000-0000-4000-8000-000000000001",
+                    "stepKey": "tell-team",
+                    "args": {
+                        "kind": "message.text",
+                        "intent": "ask",
+                        "title": "Don DH-1 chua thanh toan",
+                        "text": "Chi Lan chua chuyen khoan don DH-1 sau mot ngay va mot lan nhac. Giu don hay huy a?"
+                    },
+                    "subjectEntity": "chat-message",
+                    "subjectId": "chat-1"
+                }
+            ],
+            "modelAsked": [
+                "sales.unpaid-notice:unpaid-notice",
+                "sales.unpaid-notice:unpaid-notice"
+            ]
+        },
+        "asked": 2
+    },
+    "paid": {
+        "outcome": {
+            "acts": [],
+            "lines": [],
+            "team": [],
+            "ledger": [],
+            "modelAsked": []
+        },
+        "asked": 0
+    }
+}

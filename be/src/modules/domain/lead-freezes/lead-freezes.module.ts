@@ -1,11 +1,7 @@
 import { Module } from "@nestjs/common"
 import type { DynamicModule } from "@nestjs/common"
-import { LeadFreezeAnswersService } from "./lead-freeze-answers.service"
 import { LeadFreezeDoorService } from "./lead-freeze-door.service"
-import { LeadFreezeItemsService } from "./lead-freeze-items.service"
-import { LeadFreezePerformerService } from "./lead-freeze-performer.service"
 import { LeadFreezeRecordsService } from "./lead-freeze-records.service"
-import { LeadFreezeRunsService } from "./lead-freeze-runs.service"
 import { LeadFreezeStopHoldsService } from "./lead-freeze-stop-holds.service"
 import { LeadFreezeStopsService } from "./lead-freeze-stops.service"
 import { LeadFreezeWakesService } from "./lead-freeze-wakes.service"
@@ -14,9 +10,8 @@ import { LeadFreezesService } from "./lead-freezes.service"
 
 @Module({})
 /**
- * The freeze of a customer whose run failed for good: no new run starts for them until the owner retries the run or skips the turn. It
- * registers with the gate of the graph flows and with the work engine's performers when it starts, so neither holds it in a constructor.
- * It needs the run engine, the graph flows, the work engine, the wakes and the conversations of the app, all registered globally.
+ * The holds of customers whose thread run waits at a stop: a new wake of that customer and workflow is kept as a pending event and
+ * replayed once the stop closes. It registers with the gate of the graph flows, the thread runs and the thread sweep when it starts.
  */
 export class LeadFreezesModule extends ConfigurableModuleClass {
     /** Registers the capability once per app. */
@@ -27,15 +22,11 @@ export class LeadFreezesModule extends ConfigurableModuleClass {
             providers: [
                 ...(base.providers ?? []),
                 LeadFreezeRecordsService,
-                LeadFreezeItemsService,
-                LeadFreezeRunsService,
                 LeadFreezeStopsService,
                 LeadFreezeStopHoldsService,
                 LeadFreezeWakesService,
                 LeadFreezesService,
-                LeadFreezePerformerService,
                 LeadFreezeDoorService,
-                LeadFreezeAnswersService,
             ],
             exports: [LeadFreezesService, LeadFreezeDoorService],
         }

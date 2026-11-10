@@ -49,7 +49,7 @@ export interface DecideLeadFreezeRequest {
     readonly locale: Locale
 }
 
-/** How the answer ended: `released`, `retrying`, `still_frozen`, `skipped`, `taken_over`, `not_retryable` or `not_frozen`. */
+/** How the answer ended: `on_stop` (a stop holds the customer: answer the stop) or `not_found`. Kept as a shell for the pages. */
 export interface DecideLeadFreezeOutcome {
     /** The outcome. */
     readonly outcome: string

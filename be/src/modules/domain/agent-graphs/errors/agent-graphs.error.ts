@@ -39,6 +39,8 @@ export enum AgentGraphsErrorCode {
     WorkflowConflict = "AGENT_GRAPHS_WORKFLOW_CONFLICT",
     /** The workflow change is refused: its graph has problems, the status move or the template version is not allowed. */
     WorkflowRefused = "AGENT_GRAPHS_WORKFLOW_REFUSED",
+    /** A workflow wake reached the flow before the thread engine registered: the app composed no engine to run it. */
+    EngineMissing = "AGENT_GRAPHS_ENGINE_MISSING",
 }
 
 /** How each agent-graphs code travels. */
@@ -61,6 +63,7 @@ export const AGENT_GRAPHS_ERROR_KINDS: Record<AgentGraphsErrorCode, ErrorKind> =
     [AgentGraphsErrorCode.TemplateNotFound]: "not-found",
     [AgentGraphsErrorCode.WorkflowConflict]: "conflict",
     [AgentGraphsErrorCode.WorkflowRefused]: "invalid",
+    [AgentGraphsErrorCode.EngineMissing]: "internal",
 }
 
 /** The one error class of the agent-graphs capability. */

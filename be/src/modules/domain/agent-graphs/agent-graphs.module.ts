@@ -8,8 +8,6 @@ import { DATA_RIGHTS_GATE, TOOL_GRAPH_GATE } from "@modules/domain/mcp-gateway"
 import { BANK_FEED_FLOW } from "@modules/domain/billing"
 import { AgentDataRightsService } from "./agent-data-rights.service"
 import { AgentGraphApprovalsService } from "./agent-graph-approvals.service"
-import { AGENT_RUN_WAIT_TIMEOUT } from "@modules/domain/agent-runs"
-import { AgentGraphWaitTimeoutService } from "./agent-graph-wait-timeout.service"
 import { AgentGraphAsksService } from "./agent-graph-asks.service"
 import { AgentGraphBriefService } from "./agent-graph-brief.service"
 import { AgentGraphContractSetupService } from "./agent-graph-contract-setup.service"
@@ -52,7 +50,6 @@ import { AgentGraphCallGuardService } from "./agent-graph-call-guard.service"
 import { AgentGraphHoursGateService } from "./agent-graph-hours-gate.service"
 import { AgentGraphConversationHoldsService } from "./agent-graph-conversation-holds.service"
 import { AgentGraphConversationReleaseService } from "./agent-graph-conversation-release.service"
-import { AgentGraphNodeStepService } from "./agent-graph-node-step.service"
 import { AgentGraphStepMemoryService } from "./agent-graph-step-memory.service"
 import { AgentGraphRunNoticesService } from "./agent-graph-run-notices.service"
 import { AgentGraphAiCoreService } from "./agent-graph-ai-core.service"
@@ -171,7 +168,6 @@ const WHOLE: Part = {
         AgentGraphWatchService,
         AgentGraphSetupService,
         AgentGraphContractSetupService,
-        AgentGraphWaitTimeoutService,
         AgentGraphFreezeGateService,
         AgentGraphCallGuardService,
         AgentGraphHoursGateService,
@@ -183,7 +179,6 @@ const WHOLE: Part = {
         AgentGraphAiCoreService,
         AgentGraphTurnPolicyService,
         AgentGraphStepMemoryService,
-        AgentGraphNodeStepService,
         AgentGraphBurstService,
         AgentWorkflowStoreService,
         AgentWorkflowAdoptionService,
@@ -200,7 +195,6 @@ const WHOLE: Part = {
         TOOL_PORT,
         OUTPUT_NODES_PORT,
         { provide: SETUP_GRAPH, useExisting: AgentGraphSetupService },
-        { provide: AGENT_RUN_WAIT_TIMEOUT, useExisting: AgentGraphWaitTimeoutService },
         { provide: BANK_FEED_FLOW, useExisting: AgentGraphsService },
         { provide: AGENT_BURST_POLICY, useExisting: AgentGraphBurstService },
     ],

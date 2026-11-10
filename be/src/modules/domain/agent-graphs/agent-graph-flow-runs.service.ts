@@ -12,6 +12,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import type { FlowTriggerScope } from "./agent-graphs.contracts"
+import { AgentGraphsError, AgentGraphsErrorCode } from "./errors/agent-graphs.error"
 import { InjectFlowTriggerMessages } from "./agent-graphs.decorators"
 import type { FlowTriggerMessages } from "./agent-graphs.port"
 import { AgentGraphsService } from "./agent-graphs.service"
@@ -54,12 +55,6 @@ const OUTSIDE_HOURS = "outside_hours"
 /** Why a customer's wake started no run here: another agent keeps the conversation (an open consult), so it went on to that agent. */
 const CONVERSATION_HELD = "conversation_held"
 
-/** The engine a run is on: the old step engine, or a LangGraph thread. */
-export type FlowRunEngine = "legacy" | "langgraph"
-
-/** The engine a wake's run already started on, or null when the wake has no run yet. */
-export type OptionalFlowRunEngine = FlowRunEngine | null
-
 /** A run the flow opened for a thread: everything the thread needs to start, or to go on when the wake is tried again. */
 export interface FlowThreadRun {
     /** The wake's turn: its fence and scope are the lease the thread is driven under. */
@@ -82,15 +77,12 @@ export interface FlowThreadRun {
 
 /**
  * The thread runs as the flow sees them: the capability that runs a workflow on a LangGraph thread registers itself here when the app
- * starts (`setThreads`). With none registered every run is the old engine's, exactly as before.
+ * starts (`setThreads`). It is the one engine: every run of every workflow is a thread, and a workflow wake that reaches the flow before
+ * it registered fails loudly (`AGENT_GRAPHS_ENGINE_MISSING`), never runs on anything else.
  */
 export interface FlowThreads {
-    /** True when a NEW run of this workflow (`<moduleKey>.<workflowKey>`) starts on a thread. */
-    engages(namespace: string): boolean
     /** True when the wake is a thread's own (a founder's decision or a re-drive of a run): the flow hands it over and does nothing else. */
     owns(turn: AgentTurnView): boolean
-    /** The engine the run of this wake started on, or null when the wake has no run yet. */
-    engineOfWake(turn: AgentTurnView): Promise<OptionalFlowRunEngine>
     /** Marks the run just opened as a thread's, in the transaction that opened it. */
     opened(tx: EntityManager, workspaceId: string, runId: string): Promise<void>
     /** Starts the thread of the run under the wake's lease (or goes on with it when the wake is tried again) and answers how the wake ends. */
@@ -125,11 +117,11 @@ const untakenReasonOf = (standing: { readonly total: number; readonly running: R
 @Injectable()
 /**
  * Runs the wakes of an agent whose published graph is a node graph, with no model turn. It takes a wake when the active version holds a
- * flow whose tag trigger names where the wake came from, opens the wake's run and writes the step of the first node; the run engine
- * drives the rest, one durable step per node. The steps that follow are the step handler's to write.
+ * flow whose tag trigger names where the wake came from, passes the gates (hours, conversation holds, freezes, call guard), opens the
+ * wake's run and hands it to the thread runs, which drive it under the wake's lease.
  */
 export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
-    /** The thread runs, once their capability registered; undefined runs everything on the old engine. */
+    /** The thread runs, once their capability registered; until then a workflow wake fails (`AGENT_GRAPHS_ENGINE_MISSING`). */
     private threads: FlowThreads | undefined
 
     constructor(
@@ -153,7 +145,7 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
         this.handlers.setFlow(this)
     }
 
-    /** Registers the thread runs: the workflows they engage start on a thread, and their own wakes are handed to them. */
+    /** Registers the thread runs: every run starts on a thread, and their own wakes are handed to them. */
     setThreads(threads: FlowThreads): void {
         this.threads = threads
     }
@@ -199,9 +191,8 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
     }
 
     /**
-     * Opens the wake's run and writes the step of the first node; a replay of the wake finds the run and the step already there. A
-     * workflow the thread runs engage opens its run as a thread's instead and is driven there under the wake's lease (`signal` aborts
-     * when the lease is lost); a wake the threads own goes straight to them.
+     * Opens the wake's run as a thread's and has the thread runs drive it under the wake's lease (`signal` aborts when the lease is
+     * lost); a replay of the wake finds the run already there and the thread goes on. A wake the threads own goes straight to them.
      */
     async run(turn: AgentTurnView, signal: AbortSignal = new AbortController().signal): Promise<AgentHandlerEnding> {
         if (this.threads?.owns(turn) === true) return this.threads.woken(turn, signal)
@@ -230,45 +221,17 @@ export class AgentGraphFlowRunsService implements AgentWorkFlow, OnModuleInit {
             return { status: "skipped", reason: refused, outcome: null }
         }
         const namespace = namespaceOf(active.flow.moduleKey, active.route?.workflowKey)
-        if (this.threads !== undefined && (await this.onThread(this.threads, turn, namespace)))
-            return this.threadRun(this.threads, turn, active, namespace, told, signal)
-        const runId = await this.entityManager.transaction(async (tx) => {
-            const opened = await this.runs.open(tx, {
-                workspaceId: turn.workspaceId,
-                agentId: turn.agentId,
-                wakeId: turn.wakeId,
-                trigger: GRAPH_FLOW_TRIGGER,
-                versionId: active.versionId,
-                context: { ...turn.context },
-            })
-            if (active.route !== null && this.workflows !== undefined) {
-                await this.workflows.pinRun(tx, turn.workspaceId, opened.id, active.route)
-            }
-            await this.runs.append(turn.workspaceId, tx, opened.id, [
-                this.stepOf(first, {
-                    versionId: active.versionId,
-                    nodeKey: first.key,
-                    trigger: told,
-                    namespace,
-                    workflowId: active.route?.workflowId ?? null,
-                }),
-            ])
-            return opened.id
-        })
-        return { status: "done", reason: null, outcome: { runId } }
+        return this.threadRun(this.threadsOf(), turn, active, namespace, told, signal)
+    }
+
+    /** The thread runs; a workflow wake with none registered fails, so it is tried again and, at the end, told to the founder. */
+    private threadsOf(): FlowThreads {
+        if (this.threads === undefined) throw new AgentGraphsError({ code: AgentGraphsErrorCode.EngineMissing })
+        return this.threads
     }
 
     /**
-     * Whether the wake's run is a thread's. A run stays on the engine it started on: a wake tried again reads the engine of the run
-     * it already opened, whatever the flag says now; only a wake with no run yet asks the flag.
-     */
-    private async onThread(threads: FlowThreads, turn: AgentTurnView, namespace: string): Promise<boolean> {
-        const started = turn.attempts > 1 ? await threads.engineOfWake(turn) : null
-        return started === null ? threads.engages(namespace) : started === "langgraph"
-    }
-
-    /**
-     * Opens the wake's run as a thread's (no step is written: the old engine has nothing to drive) and hands it to the thread runs,
+     * Opens the wake's run as a thread's (no step row is written: the thread writes its own steps) and hands it to the thread runs,
      * which drive it under the wake's lease. The run keeps the lock scope of its wake, so every later drive takes the same lease.
      */
     private async threadRun(

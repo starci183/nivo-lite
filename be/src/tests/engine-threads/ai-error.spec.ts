@@ -17,7 +17,6 @@ import {
     ANSWER,
     CONV,
     CORE,
-    FRONT_DESK,
     UNDERSTAND,
     WS,
     actsOf,
@@ -88,7 +87,7 @@ describe("the AI fails on a thread", () => {
     it("three failed tries: one ai_error stop written by the engine with the tries; no AI-core call", async () => {
         const db = threadDbOf()
         const model = await aiTasksOver(["fails", "fails", "fails"])
-        const process = await processOf(db, { flag: [FRONT_DESK], model: model.door })
+        const process = await processOf(db, { model: model.door })
 
         const woken = await customerWrites(process, "Shop mo cua may gio?")
         const runId = woken.runId ?? ""
@@ -115,7 +114,7 @@ describe("the AI fails on a thread", () => {
             { call: { tool: TOOL.customerMessageSend, args: { conversationId: CONV, text: "Shop mo cua 8h-21h a." } } },
             { done: { reply: "Shop mo cua 8h-21h a." } },
         ])
-        const process = await processOf(db, { flag: [FRONT_DESK], model: model.door })
+        const process = await processOf(db, { model: model.door })
 
         const runId = (await customerWrites(process, "Shop mo cua may gio?")).runId ?? ""
 
@@ -138,7 +137,7 @@ describe("the AI fails on a turn of the prebuilt agent loop", () => {
         const db = threadDbOf()
         db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
         db.model.script(ANSWER, timeout(), new Error("502 from the upstream"), { cut: true }, { done: { reply: "never" } })
-        const process = await processOf(db, { flag: [FRONT_DESK], agentLoop: [ANSWERS] })
+        const process = await processOf(db, { agentLoop: [ANSWERS] })
 
         const runId = (await customerWrites(process, "Shop mo cua may gio?")).runId ?? ""
 
@@ -173,7 +172,7 @@ describe("the AI fails on a turn of the prebuilt agent loop", () => {
             { call: { tool: TOOL.customerMessageSend, args: { conversationId: CONV, text: reply } } },
             { done: { reply } },
         )
-        const process = await processOf(db, { flag: [FRONT_DESK], agentLoop: [ANSWERS] })
+        const process = await processOf(db, { agentLoop: [ANSWERS] })
 
         const runId = (await customerWrites(process, "Shop mo cua may gio?")).runId ?? ""
 

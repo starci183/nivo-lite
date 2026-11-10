@@ -6,7 +6,6 @@ import { BookingPerformerService } from "./booking-performer.service"
 import { BookingRemindPerformerService } from "./booking-remind-performer.service"
 import { BookingToolsService } from "./booking-tools.service"
 import { GatewayCallPerformerService } from "./gateway-call-performer.service"
-import { ResumeRunPerformerService } from "./resume-run-performer.service"
 import { ToolApprovalPerformerService } from "./tool-approval-performer.service"
 import { ConversationLeadsService } from "./conversation-leads.service"
 import { InboundStatusService } from "./inbound-status.service"
@@ -41,7 +40,6 @@ export class WorkPerformersModule extends ConfigurableModuleClass {
                 PerformerKitService,
                 CustomerDeliveryService,
                 GatewayCallPerformerService,
-                ResumeRunPerformerService,
                 ToolApprovalPerformerService,
                 ReplyCustomerPerformerService,
                 SendEmailPerformerService,

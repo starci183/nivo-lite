@@ -1,0 +1,340 @@
+{
+    "baseline": "Old engine (step handler, playOld) at tree aa40f9655, recorded 2026-11-11 by package X1 from the twin walk before its old half was removed.",
+    "buy": {
+        "path": [
+            "understand",
+            "to-consult"
+        ],
+        "outputs": {
+            "understand": {
+                "branch": "buy",
+                "summary": "Lan: buy"
+            },
+            "to-consult": {
+                "agent": "sales",
+                "workflow": "consult",
+                "version": "latest",
+                "tag": {
+                    "kind": "agent.tag",
+                    "id": "agent.tag-1"
+                }
+            }
+        },
+        "outcome": {
+            "acts": [
+                {
+                    "effect": "agent.tag",
+                    "payload": {
+                        "toModuleKey": "sales",
+                        "text": "Shop oi cho minh dat 1 bo hoa hong",
+                        "conversationId": "conv-1",
+                        "leadId": "lead-1",
+                        "channel": "zalo",
+                        "context": {
+                            "workflowCall": {
+                                "workflow": "consult",
+                                "version": "latest"
+                            },
+                            "params": {
+                                "conversationId": "conv-1",
+                                "text": "Shop oi cho minh dat 1 bo hoa hong",
+                                "channel": "zalo",
+                                "leadId": "lead-1"
+                            },
+                            "caller": {
+                                "runId": "run-1"
+                            }
+                        },
+                        "visibility": "chat"
+                    },
+                    "key": "run-1:to-consult:c234cad7e48e8bea",
+                    "dedupeKey": "call-workflow:run-1:sales.consult"
+                }
+            ],
+            "lines": [],
+            "team": [],
+            "ledger": [
+                {
+                    "effectKey": "dedupe:call-workflow:run-1:sales.consult",
+                    "effectId": "agent.tag",
+                    "args": {
+                        "toModuleKey": "sales",
+                        "text": "Shop oi cho minh dat 1 bo hoa hong",
+                        "conversationId": "conv-1",
+                        "leadId": "lead-1",
+                        "channel": "zalo",
+                        "context": {
+                            "workflowCall": {
+                                "workflow": "consult",
+                                "version": "latest"
+                            },
+                            "params": {
+                                "conversationId": "conv-1",
+                                "text": "Shop oi cho minh dat 1 bo hoa hong",
+                                "channel": "zalo",
+                                "leadId": "lead-1"
+                            },
+                            "caller": {
+                                "runId": "run-1"
+                            }
+                        },
+                        "visibility": "chat"
+                    },
+                    "subjectEntity": "agent.tag",
+                    "subjectId": "agent.tag-1"
+                }
+            ],
+            "modelAsked": [
+                "chatbot.understand:understand"
+            ]
+        },
+        "asked": 1
+    },
+    "paid": {
+        "path": [
+            "understand",
+            "to-reconcile"
+        ],
+        "outputs": {
+            "understand": {
+                "branch": "paid",
+                "summary": "Lan: paid"
+            },
+            "to-reconcile": {
+                "agent": "accounting",
+                "workflow": "reconcile",
+                "version": "latest",
+                "tag": {
+                    "kind": "agent.tag",
+                    "id": "agent.tag-1"
+                }
+            }
+        },
+        "outcome": {
+            "acts": [
+                {
+                    "effect": "agent.tag",
+                    "payload": {
+                        "toModuleKey": "accounting",
+                        "text": "Minh chuyen khoan roi nhe",
+                        "conversationId": "conv-1",
+                        "leadId": "lead-1",
+                        "channel": "zalo",
+                        "context": {
+                            "workflowCall": {
+                                "workflow": "reconcile",
+                                "version": "latest"
+                            },
+                            "params": {
+                                "conversationId": "conv-1",
+                                "text": "Minh chuyen khoan roi nhe",
+                                "channel": "zalo",
+                                "leadId": "lead-1"
+                            },
+                            "caller": {
+                                "runId": "run-1"
+                            }
+                        },
+                        "visibility": "chat"
+                    },
+                    "key": "run-1:to-reconcile:48cec3bd5fd89fda",
+                    "dedupeKey": "call-workflow:run-1:accounting.reconcile"
+                }
+            ],
+            "lines": [],
+            "team": [],
+            "ledger": [
+                {
+                    "effectKey": "dedupe:call-workflow:run-1:accounting.reconcile",
+                    "effectId": "agent.tag",
+                    "args": {
+                        "toModuleKey": "accounting",
+                        "text": "Minh chuyen khoan roi nhe",
+                        "conversationId": "conv-1",
+                        "leadId": "lead-1",
+                        "channel": "zalo",
+                        "context": {
+                            "workflowCall": {
+                                "workflow": "reconcile",
+                                "version": "latest"
+                            },
+                            "params": {
+                                "conversationId": "conv-1",
+                                "text": "Minh chuyen khoan roi nhe",
+                                "channel": "zalo",
+                                "leadId": "lead-1"
+                            },
+                            "caller": {
+                                "runId": "run-1"
+                            }
+                        },
+                        "visibility": "chat"
+                    },
+                    "subjectEntity": "agent.tag",
+                    "subjectId": "agent.tag-1"
+                }
+            ],
+            "modelAsked": [
+                "chatbot.understand:understand"
+            ]
+        },
+        "asked": 1
+    },
+    "complaint": {
+        "path": [
+            "understand",
+            "complaint",
+            "to-owner"
+        ],
+        "outputs": {
+            "understand": {
+                "branch": "complaint",
+                "summary": "Lan: hoa heo"
+            },
+            "complaint": {
+                "reply": "Shop xin loi, shop kiem tra ngay.",
+                "posted": true,
+                "summary": "Lan phan nan hoa heo"
+            },
+            "to-owner": {
+                "outcome": "owner",
+                "values": {
+                    "summary": "Lan phan nan hoa heo"
+                }
+            }
+        },
+        "outcome": {
+            "acts": [
+                {
+                    "effect": "customer.message.send",
+                    "payload": {
+                        "conversationId": "conv-1",
+                        "text": "Shop xin loi, shop kiem tra ngay."
+                    },
+                    "key": "run-1:complaint:ad07ffcb4fbffd5c",
+                    "dedupeKey": null
+                },
+                {
+                    "effect": "team.message.post",
+                    "payload": {
+                        "kind": "message.text",
+                        "intent": "notify",
+                        "title": "Khieu nai",
+                        "text": "Lan: hoa heo",
+                        "audience": "own"
+                    },
+                    "key": "run-1:complaint:e09ba44b11f934f0",
+                    "dedupeKey": null
+                }
+            ],
+            "lines": [
+                {
+                    "conversationId": "conv-1",
+                    "text": "Shop xin loi, shop kiem tra ngay.",
+                    "channelRef": "line:run-1:complaint:ad07ffcb4fbffd5c"
+                }
+            ],
+            "team": [
+                {
+                    "key": "run-1:complaint:e09ba44b11f934f0",
+                    "versions": [
+                        {
+                            "kind": "message.text",
+                            "intent": "notify",
+                            "title": "Khieu nai",
+                            "text": "Lan: hoa heo",
+                            "audience": "own"
+                        }
+                    ]
+                }
+            ],
+            "ledger": [
+                {
+                    "effectKey": "call:run-1:complaint:ad07ffcb4fbffd5c",
+                    "effectId": "customer.message.send",
+                    "args": {
+                        "conversationId": "conv-1",
+                        "text": "Shop xin loi, shop kiem tra ngay."
+                    },
+                    "subjectEntity": "message",
+                    "subjectId": "m-1"
+                },
+                {
+                    "effectKey": "call:run-1:complaint:e09ba44b11f934f0",
+                    "effectId": "team.message.post",
+                    "args": {
+                        "kind": "message.text",
+                        "intent": "notify",
+                        "title": "Khieu nai",
+                        "text": "Lan: hoa heo",
+                        "audience": "own"
+                    },
+                    "subjectEntity": "chat-message",
+                    "subjectId": "chat-1"
+                }
+            ],
+            "modelAsked": [
+                "chatbot.understand:understand",
+                "chatbot.complaint:complaint",
+                "chatbot.complaint:complaint",
+                "chatbot.complaint:complaint"
+            ]
+        },
+        "asked": 4
+    },
+    "question": {
+        "path": [
+            "understand",
+            "answer"
+        ],
+        "outputs": {
+            "understand": {
+                "branch": "question",
+                "summary": "Lan: gio mo cua"
+            },
+            "answer": {
+                "reply": "Shop mo cua tu 8h den 21h a."
+            }
+        },
+        "outcome": {
+            "acts": [
+                {
+                    "effect": "customer.message.send",
+                    "payload": {
+                        "conversationId": "conv-1",
+                        "text": "Shop mo cua tu 8h den 21h a."
+                    },
+                    "key": "run-1:answer:b9d227b2b42a15f4",
+                    "dedupeKey": null
+                }
+            ],
+            "lines": [
+                {
+                    "conversationId": "conv-1",
+                    "text": "Shop mo cua tu 8h den 21h a.",
+                    "channelRef": "line:run-1:answer:b9d227b2b42a15f4"
+                }
+            ],
+            "team": [],
+            "ledger": [
+                {
+                    "effectKey": "call:run-1:answer:b9d227b2b42a15f4",
+                    "effectId": "customer.message.send",
+                    "args": {
+                        "conversationId": "conv-1",
+                        "text": "Shop mo cua tu 8h den 21h a."
+                    },
+                    "subjectEntity": "message",
+                    "subjectId": "m-1"
+                }
+            ],
+            "modelAsked": [
+                "chatbot.understand:understand",
+                "chatbot.answer:answer",
+                "chatbot.answer:answer",
+                "chatbot.answer:answer"
+            ]
+        },
+        "asked": 4
+    }
+}

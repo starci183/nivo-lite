@@ -7,7 +7,6 @@ import { latestTemplateVersion, workflowTemplateOf } from "@nivo-lite/blocks-cor
 import {
     AgentGraphAiCoreService,
     AgentGraphFlowRunsService,
-    AgentGraphNodeStepService,
     AgentGraphRunNoticesService,
     AgentGraphStepMemoryService,
     AgentGraphsService,
@@ -16,12 +15,10 @@ import {
     type FlowTriggerMessages,
 } from "@modules/domain/agent-graphs"
 import {
-    AgentRunHandlersService,
     AgentRunsService,
     AgentRunsViewService,
     type RunOpen,
     type RunView,
-    type StepSpec,
 } from "@modules/domain/agent-runs"
 import { AgentThreadsModule, RunStopsService, ThreadApprovalsService, ThreadRunsService } from "@modules/domain/agent-threads"
 import { WorkEngineService, type WorkSpec } from "@modules/domain/decisions"
@@ -123,8 +120,6 @@ export interface ThreadDb extends Outside {
     readonly wakes: Array<WrittenWake>
     /** The runs, by id. */
     readonly runs: Map<string, RunView>
-    /** The steps the old engine was asked to write, by run. */
-    readonly appended: Map<string, Array<StepSpec>>
     /** The graph of each workflow version, by version id; a spec publishes a new version here. */
     readonly versions: Map<string, PublishedVersion>
     /** The workflows behind the real routing. */
@@ -195,7 +190,6 @@ export const threadDbOf = (options: DbOptions = {}): ThreadDb => {
         checkpoints: memoryCheckpointStore(),
         wakes: [],
         runs: new Map(),
-        appended: new Map(),
         versions,
         workflows,
         model: new ScriptedModel(),
@@ -278,7 +272,8 @@ export const openedRun = (db: ThreadDb, input: RunOpen): RunView => {
 
 /**
  * The run row as the run store inserts it (`AgentRunStoreService.insertRun`), every field the REAL reader requires (FX1, D-P10-6): the
- * world reads the run and its step rows through the real `AgentRunsViewService`, never a fake that skips the mapper.
+ * world reads the run and its step rows through the real `AgentRunsViewService`, never a fake that skips the mapper. Like the real
+ * insert it names no engine: the thread runs mark the row `langgraph` when they take the run (`ThreadRunsService.opened`).
  */
 export const runRowOf = (db: { readonly clock: { now(): Date } }, input: RunOpen): RecordRow["data"] => ({
     agentId: input.agentId,
@@ -287,7 +282,6 @@ export const runRowOf = (db: { readonly clock: { now(): Date } }, input: RunOpen
     graphVersionId: input.versionId,
     planning: false,
     status: "running",
-    engine: "legacy",
     context: structuredClone(input.context),
     error: null,
     resumeAttempts: 0,
@@ -302,15 +296,10 @@ export const runsViewOf = (records: MemoryRecords): AgentRunsViewService =>
 /** The run table, as far as the engine reads it. */
 const runsOf = (db: ThreadDb): AgentRunsService =>
     mock<AgentRunsService>({
-        holds: () => Promise.resolve(true),
         open: (_tx: unknown, input: RunOpen) => Promise.resolve(openedRun(db, input)),
         runOf: (_ws: string, id: string) => Promise.resolve(db.runs.get(id) ?? null),
         runIdOfWake: (_ws: string, wakeId: string) =>
             Promise.resolve([...db.runs.values()].find((run) => run.wakeId === wakeId)?.id ?? null),
-        append: (_ws: string, _tx: unknown, runId: string, specs: ReadonlyArray<StepSpec>) => {
-            db.appended.set(runId, [...(db.appended.get(runId) ?? []), ...specs])
-            return Promise.resolve()
-        },
     })
 
 /** One owner's item the work engine raised, with the business key it was raised under. */
@@ -392,15 +381,12 @@ const workProvidersOf = (db: ThreadDb): Array<Provider> => [
         }),
     },
     { provide: AgentWorkHandlersService, useValue: mock<AgentWorkHandlersService>() },
-    { provide: AgentRunHandlersService, useValue: mock<AgentRunHandlersService>() },
     { provide: AgentRunsService, useValue: runsOf(db) },
     { provide: AgentRunsViewService, useValue: runsViewOf(db.records) },
 ]
 
 /** What a process is built with. */
 export interface ProcessOptions {
-    /** The workflows whose new runs start on a thread; the flag. */
-    readonly flag: ReadonlyArray<string>
     /** The checkpoint limits of this process; absent takes the saver's defaults. */
     readonly limits?: CheckpointLimits
     /** The model door; absent is the scripted model of the database. */
@@ -418,7 +404,6 @@ const worldProvidersOf = (db: ThreadDb, options: ProcessOptions, logger: Logger)
     GraphNodeHostService,
     GraphNodeEffectsService,
     AgentGraphFlowRunsService,
-    AgentGraphNodeStepService,
     AgentGraphRunNoticesService,
     AgentGraphAiCoreService,
     AgentGraphStepMemoryService,
@@ -461,8 +446,6 @@ export interface ThreadProcess {
     readonly db: ThreadDb
     /** The real graph flow: routes wakes, hands thread wakes to the thread runs. */
     readonly flows: AgentGraphFlowRunsService
-    /** The old engine's node step. */
-    readonly oldSteps: AgentGraphNodeStepService
     /** The real thread runs. */
     readonly threadRuns: ThreadRunsService
     /** The real LangGraph threads port. */
@@ -480,7 +463,7 @@ export interface ThreadProcess {
 }
 
 /** Builds one process over the database: the world's providers as a global module, the two real engine modules on top. */
-export const processOf = async (db: ThreadDb, options: ProcessOptions): Promise<ThreadProcess> => {
+export const processOf = async (db: ThreadDb, options: ProcessOptions = {}): Promise<ThreadProcess> => {
     const logger = mock<Logger>()
     const providers = worldProvidersOf(db, options, logger)
     const world: DynamicModule = {
@@ -493,7 +476,7 @@ export const processOf = async (db: ThreadDb, options: ProcessOptions): Promise<
         imports: [
             world,
             LanggraphModule.register({ isGlobal: true, compiledMax: 20, stepLimit: 50 }),
-            AgentThreadsModule.register({ isGlobal: true, workflows: options.flag }),
+            AgentThreadsModule.register({ isGlobal: true }),
         ],
     }).compile()
     registerOutside(db, moduleRef.get(GraphNodeRegistryService), moduleRef.get(ProviderAbilitiesService))
@@ -501,7 +484,6 @@ export const processOf = async (db: ThreadDb, options: ProcessOptions): Promise<
     return {
         db,
         flows: moduleRef.get(AgentGraphFlowRunsService),
-        oldSteps: moduleRef.get(AgentGraphNodeStepService),
         threadRuns: moduleRef.get(ThreadRunsService),
         threads: moduleRef.get<GraphThreads>(GRAPH_THREADS),
         graphs: moduleRef.get(ThreadGraphsService, { strict: false }),

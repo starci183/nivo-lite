@@ -61,6 +61,14 @@ describe("ResetWorkflowsCli", () => {
         expect(reset.run.mock.calls[0]?.[1]).toBe("")
     })
 
+    it("asks the reset for a dry run when --dry-run is given", async () => {
+        const { cli, reset } = await build()
+
+        await cli.run([], { workspace: "NIVO", graphs: folder, dryRun: cli.parseDryRun() })
+
+        expect(reset.run.mock.calls).toEqual([['{"documents":[]}', "NIVO", { dryRun: true }]])
+    })
+
     it("fails when the folder does not exist, and resets nothing", async () => {
         const { cli, reset } = await build()
 

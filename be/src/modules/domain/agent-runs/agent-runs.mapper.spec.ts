@@ -1,20 +1,6 @@
 import { Test } from "@nestjs/testing"
-import {
-    WHEN,
-    runRecordOf as sampleRun,
-    runRowOf,
-    stepRecordOf as sampleStep,
-    stepRowOf,
-} from "@tests/fixtures/builders/agent-runs.builder"
-import {
-    handlerViewsOf,
-    routeStepOf,
-    runEngineOf,
-    runRecordOf,
-    runViewOf,
-    stepRecordOf,
-    stepViewOf,
-} from "./agent-runs.mapper"
+import { WHEN, runRowOf, stepRowOf } from "@tests/fixtures/builders/agent-runs.builder"
+import { runEngineOf, runRecordOf, runViewOf, stepRecordOf } from "./agent-runs.mapper"
 
 const SUBJECT = Symbol("agent-runs.mapper")
 
@@ -24,25 +10,19 @@ const buildSubject = async () => {
             {
                 provide: SUBJECT,
                 useValue: {
-                    handlerViewsOf,
-                    routeStepOf,
                     runEngineOf,
                     runRecordOf,
                     runViewOf,
                     stepRecordOf,
-                    stepViewOf,
                 },
             },
         ],
     }).compile()
     return moduleRef.get<{
-        handlerViewsOf: typeof handlerViewsOf
-        routeStepOf: typeof routeStepOf
         runEngineOf: typeof runEngineOf
         runRecordOf: typeof runRecordOf
         runViewOf: typeof runViewOf
         stepRecordOf: typeof stepRecordOf
-        stepViewOf: typeof stepViewOf
     }>(SUBJECT)
 }
 
@@ -86,7 +66,7 @@ describe("run records", () => {
 
 describe("step records", () => {
     it("reads a step record from the engine row", async () => {
-        const { stepRecordOf, stepViewOf } = await buildSubject()
+        const { stepRecordOf } = await buildSubject()
         const step = stepRecordOf(
             stepRowOf({
                 effect: { kind: "compensable", compensation: "undo" },
@@ -97,7 +77,7 @@ describe("step records", () => {
 
         expect(step).toMatchObject({ stepKey: "step-1", effect: { kind: "compensable", compensation: "undo" } })
         expect(step.claimedUntil?.toISOString()).toBe(WHEN.toISOString())
-        expect(stepViewOf(step)).toMatchObject({ seq: 1, fence: 2, result: { ok: true } })
+        expect(step).toMatchObject({ ordinal: 1, version: "2", result: { ok: true } })
     })
 
     it.each([
@@ -125,28 +105,5 @@ describe("step records", () => {
     ])("refuses %s", async (_name, over) => {
         const { stepRecordOf } = await buildSubject()
         expect(() => stepRecordOf(stepRowOf(over))).toThrow()
-    })
-
-    it("hands the failure route only what it reads", async () => {
-        const { routeStepOf, stepViewOf } = await buildSubject()
-        expect(routeStepOf(stepViewOf(sampleStep({ ordinal: 4, status: "failed" })))).toEqual({
-            stepKey: "step-1",
-            seq: 4,
-            status: "failed",
-            effect: { kind: "read" },
-        })
-    })
-
-    it("gives every step the results of the steps done before it, by step key", async () => {
-        const { handlerViewsOf } = await buildSubject()
-        const run = sampleRun()
-        const views = handlerViewsOf(run, [
-            sampleStep({ stepKey: "a", ordinal: 1, result: { x: 1 } }),
-            sampleStep({ stepKey: "b", ordinal: 2, status: "running", result: null }),
-            sampleStep({ stepKey: "c", ordinal: 3, status: "pending" }),
-        ])
-
-        expect(views.map((view) => view.earlier)).toEqual([{}, { a: { x: 1 } }, { a: { x: 1 } }])
-        expect(views[1]).toMatchObject({ workspaceId: "ws-1", agentId: "agent-1", runId: "run-1", fence: 2 })
     })
 })

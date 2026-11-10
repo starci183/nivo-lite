@@ -12,7 +12,6 @@ import type {
 } from "@nivo-lite/agent-sdk/node"
 import { InjectClock } from "@modules/platform/clock"
 import type { Clock } from "@modules/platform/clock"
-import { eachInOrder, isRecord } from "@modules/platform/primitives"
 import { GraphNodesError, GraphNodesErrorCode } from "./errors/graph-nodes.error"
 import { coreModelOf, declaredModelOf } from "./node-model.policy"
 import { GraphNodeEffectsService } from "./graph-node-effects.service"
@@ -33,7 +32,6 @@ import type {
     NodeToolDoor,
     NodeTurn,
     NodeTurnRecord,
-    NodeUndoInput,
 } from "./graph-nodes.contracts"
 import type { GraphNodesOptions } from "./graph-nodes.options"
 import type { NodeToolApproval } from "./node-run-token.contracts"
@@ -126,27 +124,6 @@ export class GraphNodeHostService implements OnModuleInit {
         const [ask] = asks
         if (ask !== undefined) throw ask
         return ran
-    }
-
-    /**
-     * Undoes the effects a node step ran, last first, each through the effect its definition names as its compensation, given the subject
-     * the ledger kept. Each undo is keyed by the step and its place, so a compensation tried again undoes nothing twice. An effect with no
-     * compensation is skipped: its step was a pivot and the engine never asks to undo it.
-     */
-    async undo(input: NodeUndoInput): Promise<void> {
-        const { effects } = this.registry.installed()
-        await eachInOrder([...input.done.entries()].reverse(), async ([index, done]) => {
-            const compensation = effects.get(done.id)?.compensation
-            const undo = compensation === undefined ? undefined : effects.get(compensation)
-            if (undo === undefined) return
-            const executor = this.registry.executorOf(undo.id)
-            const payload: unknown = undo.payload.parse({ id: done.subject.id })
-            if (!isRecord(payload)) return
-            const call = { key: `${input.key}:undo:${index}`, dedupeKey: null }
-            await this.effects.once(input.turn.workspaceId, undo.id, call, () =>
-                executor.execute(input.turn, payload, call),
-            )
-        })
     }
 
     /** The turn with its subject: the trigger's own, else the first a module's resolver knows, else none. */

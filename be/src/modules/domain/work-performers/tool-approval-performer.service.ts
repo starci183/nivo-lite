@@ -8,7 +8,6 @@ import {
 } from "@modules/domain/agent-threads/thread-approvals.service"
 import {
     InjectWorkPerformerRegistry,
-    ModuleCatalogService,
     type Performed,
     type PerformedBy,
     type Prepared,
@@ -29,7 +28,7 @@ const OWNER_ROLE = "owner"
 /** The member behind a decision, or null for the engine (a deadline) or a decider no seat stands for. */
 const memberOf = (by: PerformedBy): string | null => ("memberId" in by ? (by.memberId ?? null) : null)
 
-/** True for the item of a thread run's approval stop; every other item of the action is the old engine's. */
+/** True for the item of a thread run's approval stop; an item that names no engine is a left-over of the deleted old engine. */
 const isThreadItem = (proposal: Proposal): boolean => proposal.fields.engine === THREAD_APPROVAL_ENGINE
 
 @Injectable()
@@ -37,8 +36,8 @@ const isThreadItem = (proposal: Proposal): boolean => proposal.fields.engine ===
  * `approve_tool_call`: the owner's verdict on ONE tool call a workflow step asked for (an ability on a connected account ticked `ask`).
  * For a THREAD run (the item names engine `langgraph`) the verdict goes to the run's approval stop and the thread runs resume it: only
  * the workspace OWNER may approve (anyone else's approval is refused and the item does not pass), a refusal by any decider or by the
- * deadline runs the step again with the refusal. For an item of the old engine nothing changes: it records the decision, exactly as the
- * action did with no performer, and the old run's wait step reads the verdict from the closed item.
+ * deadline runs the step again with the refusal. An item that names no engine was raised by the deleted old engine: no run waits on
+ * it, so an approval is refused (the item does not pass) and a refusal changes nothing.
  */
 export class ToolApprovalPerformerService implements WorkPerformer, OnModuleInit {
     constructor(
@@ -47,7 +46,6 @@ export class ToolApprovalPerformerService implements WorkPerformer, OnModuleInit
         @Optional() private readonly approvals?: ThreadApprovalsService,
         @Optional() private readonly runs?: ThreadRunsService,
         @Optional() private readonly seats?: WorkspaceMemberSeatsService,
-        @Optional() private readonly modules?: ModuleCatalogService,
     ) {}
 
     /** Registers with the work engine once the app has started. */
@@ -60,9 +58,10 @@ export class ToolApprovalPerformerService implements WorkPerformer, OnModuleInit
         return Promise.resolve({ proposal: item.proposal })
     }
 
-    /** The owner approved: the thread runs the step again with the approval of exactly the call shown; the old engine's item only records. */
+    /** The owner approved: the thread runs the step again with the approval of exactly the call shown; no thread item, no pass. */
     async perform(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: PerformedBy): Promise<Performed> {
-        if (!isThreadItem(proposal)) return this.recorded(ctx, item)
+        if (!isThreadItem(proposal))
+            throw new WorkPerformersError({ code: WorkPerformersErrorCode.ApprovalInvalid, params: { item: item.id } })
         const memberId = memberOf(by)
         if (memberId === null || !(await this.isOwner(ctx.workspaceId, memberId)))
             throw new WorkPerformersError({ code: WorkPerformersErrorCode.ApprovalNotOwner, params: { item: item.id } })
@@ -70,7 +69,7 @@ export class ToolApprovalPerformerService implements WorkPerformer, OnModuleInit
         return { summary: proposal.summary, evidence: "captured", lead_id: item.lead_id }
     }
 
-    /** A person refused, or the deadline passed: the thread runs the step again with the refusal; the old engine's item is left as it was. */
+    /** A person refused, or the deadline passed: the thread runs the step again with the refusal; an item of no thread is left as it was. */
     async onReject(ctx: WorkContext, item: WorkItem, proposal: Proposal, by: PerformedBy): Promise<void> {
         if (!isThreadItem(proposal)) return
         await this.hand(ctx, item, proposal, "refused", memberOf(by))
@@ -110,15 +109,5 @@ export class ToolApprovalPerformerService implements WorkPerformer, OnModuleInit
     private async isOwner(workspaceId: string, memberId: string): Promise<boolean> {
         const seat = await this.seats?.seatById(workspaceId, memberId)
         return seat?.role === OWNER_ROLE && seat.status === "active"
-    }
-
-    /** What the work engine answers for an action with no performer: the decision is recorded, nothing is done. */
-    private async recorded(ctx: WorkContext, item: WorkItem): Promise<Performed> {
-        const action = (await this.modules?.actionOf(item.action))?.label[ctx.locale] ?? item.action
-        return {
-            summary: this.catalog.get("engine.recordOnly", { action }, ctx.locale),
-            evidence: "pending",
-            lead_id: item.lead_id,
-        }
     }
 }

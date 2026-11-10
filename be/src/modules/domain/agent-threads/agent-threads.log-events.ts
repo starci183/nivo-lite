@@ -38,4 +38,6 @@ export enum AgentThreadsLogEvent {
     ThreadAbandoned = "agent_threads.thread_abandoned",
     /** One pass of the thread sweep ended, with its counts. */
     SweepDone = "agent_threads.sweep_done",
+    /** A reply in the team chat to the card of a stop was handed to the stop door (`runId`, `outcome`); never the reply's words. */
+    AnsweredInChat = "agent_threads.answered_in_chat",
 }

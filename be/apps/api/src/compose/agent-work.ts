@@ -82,11 +82,11 @@ export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
     AgentPluginsModule.register({ isGlobal: true }),
     AgentInboundModule.register({ isGlobal: true, stopReporter: OfficeInboundStopReporterService }),
     AgentSchedulesModule.register({ isGlobal: true, reactive: true }),
-    // The engine on LangGraph threads. The store of the checkpoints, the one integration that owns the library, and the thread
-    // runs; with `AGENT_ENGINE_LANGGRAPH` unset the thread runs engage no workflow and every run is the old engine's, as before.
+    // The engine on LangGraph threads: the store of the checkpoints, the one integration that owns the library, and the thread
+    // runs (every workflow's runs).
     AgentCheckpointsModule.register({ isGlobal: true }),
     LanggraphModule.register({ isGlobal: true, ...(options.langgraph ?? DEFAULT_LANGGRAPH) }),
-    AgentThreadsModule.register({ isGlobal: true, ...(options.agentThreads ?? THREADS_OFF) }),
+    AgentThreadsModule.register({ isGlobal: true, ...(options.agentThreads ?? THREADS_DEFAULT) }),
     // The owner's doors onto the agents' work: the schedule list with "run now", the care opt-out, handing a conversation back.
     AgentDoorsModule.register({ isGlobal: true }),
 ]
@@ -94,8 +94,8 @@ export const agentWorkModules = (options: ApiOptions): Array<DynamicModule> => [
 /** The bounds of the LangGraph integration for an app whose options name none (a test world): the parser's own defaults. */
 const DEFAULT_LANGGRAPH = { compiledMax: 200, stepLimit: 500 } as const
 
-/** The thread runs with the flag off. */
-const THREADS_OFF = { workflows: [] } as const
+/** The thread runs with their default tunables. */
+const THREADS_DEFAULT = {} as const
 
 /** The error kinds of the capabilities this group registers. */
 export const agentWorkErrorKinds: ReadonlyArray<Readonly<Record<string, ErrorKind>>> = [

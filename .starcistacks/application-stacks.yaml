@@ -593,10 +593,8 @@ environments:
             # The burst window of a conversation (agent-work): quiet for 6s before the agent answers, never more than 20s of waiting.
             AGENT_BURST_WINDOW: "6s"
             AGENT_BURST_MAX_WAIT: "20s"
-            # The parked agent runs (agent-runs): the build a run was parked under, and how often and how many times one is tried again.
+            # The running build's name (the jobs and the entity engine read it).
             APP_BUILD_ID: dev
-            AGENT_RUNS_PARK_SWEEP_MINUTES: "30"
-            AGENT_RUNS_PARK_MAX_RESUMES: "5"
             SMTP_ALLOW_PRIVATE_HOSTS: "true"
             # Embeddings: the pinned OpenAI profile (text-embedding-3-small@1536). The AI pool is ANTHROPIC_API_KEY (chat) + OPENAI_API_KEY
             # (embeddings); OPENROUTER_API_KEY stays sealed and listed in files: but the pool no longer reads it (owner 2026-11-11).
@@ -1084,9 +1082,6 @@ environments:
             AI_BASE_URL: "http://127.0.0.1:8788/v1"
             AI_CHAT_MODEL: work
             AI_EMBEDDING_MODEL: embed-oa
-            # How often a parked agent run is tried again, and how many times (agent-runs); APP_BUILD_ID is set per release (KEYS.md).
-            AGENT_RUNS_PARK_SWEEP_MINUTES: "30"
-            AGENT_RUNS_PARK_MAX_RESUMES: "5"
           settings:
             N8N_ALLOWED_HOSTS: {key: N8N_ALLOWED_HOSTS, default: nivo-n8n}
             JOBS_ALERT_FAILED_MAX: {key: JOBS_FAILED_ALERT, default: "20"}

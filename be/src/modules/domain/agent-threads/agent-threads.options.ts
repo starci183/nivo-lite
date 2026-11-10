@@ -1,15 +1,8 @@
-/** What the thread runs need: which workflows start their new runs on a LangGraph thread, and how many built graphs are kept. */
+/**
+ * What the thread runs need. Every workflow's new runs start on a LangGraph thread (the one engine): there is no list of workflows and
+ * no default engine to choose any more.
+ */
 export interface AgentThreadsOptions {
-    /**
-     * The workflows whose NEW runs start on a thread, each as `<moduleKey>.<workflowKey>` (`chatbot.front-desk`). Empty: no run starts
-     * on a thread and the engine behaves exactly as before. A run already started stays on the engine it started on, whatever this says.
-     */
-    readonly workflows: ReadonlyArray<string>
-    /**
-     * True when LangGraph is the default engine (`AGENT_ENGINE_DEFAULT=langgraph`): EVERY workflow's new runs start on a thread, also
-     * those no template made (owner-drawn workflows, an agent's own `<module>.main` graph). Absent or false: only `workflows`.
-     */
-    readonly everyWorkflow?: boolean | undefined
     /** The most built graphs kept in memory (one per workflow version); the oldest leaves first. Absent takes the default. */
     readonly graphsMax?: number | undefined
     /** How long an approval stop waits before its deadline answers it `timeout`, milliseconds; absent takes 24 hours. */

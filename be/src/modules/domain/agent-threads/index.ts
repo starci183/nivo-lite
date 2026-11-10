@@ -1,8 +1,6 @@
 export { AGENT_THREADS_ERROR_KINDS, AgentThreadsError, AgentThreadsErrorCode } from "./errors/agent-threads.error"
 export { AgentThreadsModule } from "./agent-threads.module"
-export { ENGINE_DEFAULT_FLAG, THREAD_FLAG, parseAgentThreadsConfig } from "./agent-threads.config"
-export { DEFAULT_ENGINE, THREAD_READY_WORKFLOWS, engineDefaultOf, threadWorkflowsOf } from "./thread-flag.policy"
-export type { EngineDefaultRead, EngineDefaultText, ThreadEngine } from "./thread-flag.policy"
+export { parseAgentThreadsConfig } from "./agent-threads.config"
 export { AGENT_THREADS_OPTIONS } from "./agent-threads.decorators"
 export type { AgentThreadsOptions } from "./agent-threads.options"
 export {

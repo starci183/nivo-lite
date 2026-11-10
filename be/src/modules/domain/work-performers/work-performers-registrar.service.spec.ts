@@ -6,7 +6,6 @@ import { BookingPerformerService } from "./booking-performer.service"
 import { BookingRemindPerformerService } from "./booking-remind-performer.service"
 import { GatewayCallPerformerService } from "./gateway-call-performer.service"
 import { ReplyCustomerPerformerService } from "./reply-customer-performer.service"
-import { ResumeRunPerformerService } from "./resume-run-performer.service"
 import { SendEmailPerformerService } from "./send-email-performer.service"
 import { WorkPerformersRegistrarService } from "./work-performers-registrar.service"
 
@@ -17,7 +16,6 @@ const build = async () => {
     const booking = mock<BookingPerformerService>()
     const remind = mock<BookingRemindPerformerService>()
     const gatewayCall = mock<GatewayCallPerformerService>()
-    const resumeRun = mock<ResumeRunPerformerService>()
     const moduleRef = await Test.createTestingModule({
         providers: [
             WorkPerformersRegistrarService,
@@ -27,16 +25,15 @@ const build = async () => {
             { provide: BookingPerformerService, useValue: booking },
             { provide: BookingRemindPerformerService, useValue: remind },
             { provide: GatewayCallPerformerService, useValue: gatewayCall },
-            { provide: ResumeRunPerformerService, useValue: resumeRun },
         ],
     }).compile()
 
-    return { moduleRef, registry, reply, email, booking, remind, gatewayCall, resumeRun }
+    return { moduleRef, registry, reply, email, booking, remind, gatewayCall }
 }
 
 describe("WorkPerformersRegistrarService", () => {
-    it("registers the reply, email, booking, reminder, gateway call and run review performers at boot", async () => {
-        const { moduleRef, registry, reply, email, booking, remind, gatewayCall, resumeRun } = await build()
+    it("registers the reply, email, booking, reminder, and gateway call performers at boot", async () => {
+        const { moduleRef, registry, reply, email, booking, remind, gatewayCall } = await build()
 
         const registered = new Map<string, WorkPerformer>()
         registry.add.mockImplementation((action, performer) => {
@@ -54,10 +51,8 @@ describe("WorkPerformersRegistrarService", () => {
             "reschedule",
             "remind_booking",
             "gateway_call",
-            "review_agent_run",
         ])
         expect(registered.get("gateway_call")).toBe(gatewayCall)
-        expect(registered.get("review_agent_run")).toBe(resumeRun)
         expect(registered.get("reply_customer")).toBe(reply)
         expect(registered.get("send_email")).toBe(email)
         expect(registered.get("cancel_booking")).toBe(booking)
@@ -65,6 +60,6 @@ describe("WorkPerformersRegistrarService", () => {
         expect(registered.get("confirm_booking")).toBe(booking)
         expect(registered.get("reschedule")).toBe(booking)
         expect(registered.get("remind_booking")).toBe(remind)
-        expect(registry.add).toHaveBeenCalledTimes(9)
+        expect(registry.add).toHaveBeenCalledTimes(8)
     })
 })

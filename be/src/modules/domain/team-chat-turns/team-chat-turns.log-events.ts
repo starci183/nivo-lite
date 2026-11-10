@@ -2,7 +2,7 @@
 export enum TeamChatTurnsLogEvent {
     /** A person's message started the chat turn of an agent (`agentId`, `roomId`). */
     TurnStarted = "team_chat_turns.turn_started",
-    /** A person's message for an agent started no turn (`code`: engine_off, no_agent, duplicate, not_tagged). */
+    /** A person's message for an agent started no turn (`code`: no_chat_turn, no_agent, duplicate, not_tagged). */
     TurnSkipped = "team_chat_turns.turn_skipped",
     /** A room reached its limit of turns: the agent said once that it pauses (`roomId`). */
     RoomPaused = "team_chat_turns.room_paused",

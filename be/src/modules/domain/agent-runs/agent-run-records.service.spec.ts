@@ -59,25 +59,7 @@ describe("AgentRunRecordsService reads", () => {
         await expect(service.runOfWake(tx, "wake-2")).resolves.toBeNull()
     })
 
-    it("lists the runs of a status, narrowed by a filter when given", async () => {
-        const { service, engine } = await build()
-        engine.list.mockResolvedValue(page([runRowOf({ status: "parked" })]))
-
-        await service.runsOf(tx, "parked", null, [["id", "asc"]], 5)
-        expect(queryOf(engine).where).toEqual({ op: "eq", field: "status", value: "parked" })
-        const runs = await service.runsOf(tx, "parked", { op: "notNull", field: "endedAt" }, [["id", "asc"]], 5)
-
-        expect(runs).toHaveLength(1)
-        expect(queryOf(engine).where).toEqual({
-            op: "and",
-            of: [
-                { op: "eq", field: "status", value: "parked" },
-                { op: "notNull", field: "endedAt" },
-            ],
-        })
-    })
-
-    it("reads the steps of a run in order, and the steps of a status, a wait and a link", async () => {
+    it("reads the steps of a run in order", async () => {
         const { service, engine } = await build()
         engine.list.mockResolvedValue(page([stepRowOf()]))
 
@@ -86,32 +68,20 @@ describe("AgentRunRecordsService reads", () => {
             ["ordinal", "asc"],
             ["id", "asc"],
         ])
-        await expect(service.stepsOfStatus(tx, "running", null, [["id", "asc"]], 3)).resolves.toHaveLength(1)
-        await expect(service.stepsWaitingOn(tx, "item-1")).resolves.toHaveLength(1)
-        expect(queryOf(engine).where).toEqual({ op: "eq", field: "waitItemId", value: "item-1" })
-        await expect(service.stepsAbout(tx, "approval", "item-1", 2)).resolves.toHaveLength(1)
-        expect(queryOf(engine).page).toEqual({ size: 2 })
+        expect(queryOf(engine).where).toEqual({ op: "eq", field: "runId", value: "run-1" })
     })
 })
 
 describe("AgentRunRecordsService writes", () => {
-    it("inserts a run and a step linked to its run", async () => {
+    it("inserts a run", async () => {
         const { service, mutations } = await build()
         mutations.mutate.mockResolvedValue({ ok: true, row: runRowOf(), version: "1" })
 
         await service.insertRun(tx, { status: "running" })
-        await service.insertStep(tx, "run-1", { ordinal: 1 })
 
-        expect(mutations.mutate).toHaveBeenNthCalledWith(
-            1,
+        expect(mutations.mutate).toHaveBeenCalledWith(
             tx,
             { op: "insert", entity: "agent.run", values: { status: "running" } },
-            "job",
-        )
-        expect(mutations.mutate).toHaveBeenNthCalledWith(
-            2,
-            tx,
-            { op: "insert", entity: "agent.run-step", values: { ordinal: 1, runId: "run-1" }, links: { run: "run-1" } },
             "job",
         )
     })
@@ -158,12 +128,13 @@ describe("AgentRunRecordsService: the engine of a run is read with it, and every
         await expect(service.run(tx, "run-1")).resolves.toMatchObject({ engine: "legacy" })
     })
 
-    it("selects the engine in the run lists the sweep and the park pass read, and the real validator finds no problem", async () => {
+    it("selects the engine in the run lists, and the real validator finds no problem in any list it reads", async () => {
         const { service, engine } = await build()
         engine.list.mockResolvedValue(page([]))
         await service.runOfWake(tx, "wake-1")
-        await service.runsOf(tx, "parked", null, [["resumeNotBefore", "asc"], ["id", "asc"]], 10)
-        await service.stepsOfStatus(tx, "running", { op: "notNull", field: "waitItemId" }, [["claimedUntil", "asc"], ["id", "asc"]], 5)
+        await service.runsOfAgent(tx, "agent-1", 20)
+        await service.stepsOf(tx, "run-1")
+        await service.stepRowsOf(tx, "run-1")
 
         const catalog: EntityCatalog = new Map<string, EntityDefinition>([
             [agentRunEntity.name, agentRunEntity],

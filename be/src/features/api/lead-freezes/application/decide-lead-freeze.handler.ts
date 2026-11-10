@@ -7,7 +7,7 @@ import { DecideLeadFreezeCommand } from "./decide-lead-freeze.command"
 import type { DecideLeadFreezeOutcome } from "./lead-freeze.contracts"
 
 @CommandHandler(DecideLeadFreezeCommand)
-/** The owner's answer to a frozen customer, from the lead page or the run page: retry, take over, or skip the turn. */
+/** PHASE 3 SHELL: the pages' answer to a held customer; a hold is answered on its stop, so this only says `on_stop` or `not_found`. */
 export class DecideLeadFreezeHandler extends ICQRSHandler<DecideLeadFreezeCommand, DecideLeadFreezeOutcome> {
     constructor(
         @InjectLogger() logger: Logger,

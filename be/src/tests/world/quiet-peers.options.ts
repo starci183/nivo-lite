@@ -1,7 +1,6 @@
 import type { Provider } from "@nestjs/common"
 import { mock } from "@starci/jest-preset"
 import { AgentRunsService } from "../../modules/domain/agent-runs/agent-runs.service"
-import { AgentRunSweepService } from "../../modules/domain/agent-runs/agent-run-sweep.service"
 import { AGENTS_INSTALLATIONS } from "@modules/domain/agents"
 import type { InstallationDirectory } from "@modules/domain/agents"
 import { AgentTagService } from "../../modules/domain/agent-work/agent-tag.service"
@@ -37,15 +36,6 @@ export const QUIET_INSTALLATIONS: Provider = {
             firstOfModule: jest.fn().mockResolvedValue(null),
             ofAgent: jest.fn().mockResolvedValue(null),
             contextVersionOf: jest.fn().mockResolvedValue(null),
-        }),
-}
-
-/** The sweep of the durable runs: the road proofs open no run, so the minute's pass finds nothing to resume. */
-export const QUIET_RUN_SWEEP: Provider = {
-    provide: AgentRunSweepService,
-    useFactory: () =>
-        mock<AgentRunSweepService>({
-            sweep: jest.fn().mockResolvedValue({ expired: 0, ready: 0, compensating: 0, unspoken: 0 }),
         }),
 }
 

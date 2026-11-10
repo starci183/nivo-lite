@@ -136,7 +136,7 @@ export interface ApiOptions {
     readonly video: ReturnType<typeof parseVideoConfig>
     /** The bounds of the LangGraph integration; reading them is also the guard that refuses a LangSmith tracing switch at boot. */
     readonly langgraph?: ReturnType<typeof parseLanggraphConfig>
-    /** The workflows whose new runs start on a LangGraph thread (`AGENT_ENGINE_LANGGRAPH`); none unless the flag names them. */
+    /** The thread runs' tunables (graphs kept, the stops' deadline windows). */
     readonly agentThreads?: ReturnType<typeof parseAgentThreadsConfig>
     /** The nodes whose agent runs on the prebuilt loop with native tool calling (`AGENT_LOOP=prebuilt:<ids>`); none unless the flag names them. */
     readonly agentLoop?: ReturnType<typeof parseAgentLoopConfig>

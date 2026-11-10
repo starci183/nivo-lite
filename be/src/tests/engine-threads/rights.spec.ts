@@ -4,7 +4,6 @@ import {
     ANSWER,
     CONV,
     CORE,
-    FRONT_DESK,
     UNDERSTAND,
     WS,
     actsOf,
@@ -65,7 +64,7 @@ const qrFlow: GraphSpec = {
 }
 
 const startsQr = (db: ThreadDb) =>
-    processOf(db, { flag: [FRONT_DESK] }).then((process) =>
+    processOf(db).then((process) =>
         startThread(process, {
             flow: qrFlow,
             versionId: "chatbot-agent:send-qr@1",
@@ -85,7 +84,7 @@ describe("rights per connected account on a thread", () => {
             ...Array.from({ length: 6 }, () => ({ done: { reply: "Shop mo 8h-21h a." } })),
         )
         db.model.script(CORE, report)
-        const process = await processOf(db, { flag: [FRONT_DESK] })
+        const process = await processOf(db)
 
         const runId = (await customerWrites(process, "Shop mo cua may gio?")).runId ?? ""
 
@@ -155,7 +154,7 @@ describe("rights per connected account on the prebuilt agent loop", () => {
             { confused: { reason: "Khong gui duoc cho khach", question: "Gan tai khoan Zalo nao?" } },
         )
         db.model.script(CORE, report)
-        const process = await processOf(db, { flag: [FRONT_DESK], agentLoop: ["chatbot.answer"] })
+        const process = await processOf(db, { agentLoop: ["chatbot.answer"] })
 
         const runId = (await customerWrites(process, "Shop mo cua may gio?")).runId ?? ""
 

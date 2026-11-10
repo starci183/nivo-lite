@@ -1,0 +1,83 @@
+{
+    "baseline": "Twin walk at tree aa40f9655 (old engine == thread, green): recorded 2026-11-11 by package X1 from the walk the twin assertion held equal to the old engine; the old half is removed.",
+    "outcome": {
+        "acts": [
+            {
+                "effect": "lead.update",
+                "payload": {
+                    "leadId": "lead-1",
+                    "consultStage": "close",
+                    "facts": {
+                        "address": "25 Nguyen Hue",
+                        "deliveryAt": "thu Bay"
+                    }
+                },
+                "key": "00000000-0000-4000-8000-000000000001:read:aaa958e870f5e0e9",
+                "dedupeKey": null
+            },
+            {
+                "effect": "team.message.post",
+                "payload": {
+                    "kind": "message.text",
+                    "intent": "ask",
+                    "title": "Don web moi: goi xac nhan",
+                    "text": "Khach Lan dat 2 Gio hoa nho giao 25 Nguyen Hue thu Bay qua website. Goi 0901234567 de xac nhan."
+                },
+                "key": "00000000-0000-4000-8000-000000000001:read:f3be48e9971a2054",
+                "dedupeKey": null
+            }
+        ],
+        "lines": [],
+        "team": [
+            {
+                "key": "00000000-0000-4000-8000-000000000001:read:f3be48e9971a2054",
+                "versions": [
+                    {
+                        "kind": "message.text",
+                        "intent": "ask",
+                        "title": "Don web moi: goi xac nhan",
+                        "text": "Khach Lan dat 2 Gio hoa nho giao 25 Nguyen Hue thu Bay qua website. Goi 0901234567 de xac nhan."
+                    }
+                ]
+            }
+        ],
+        "ledger": [
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000001:read:aaa958e870f5e0e9",
+                "effectId": "lead.update",
+                "runId": "00000000-0000-4000-8000-000000000001",
+                "stepKey": "read",
+                "args": {
+                    "leadId": "lead-1",
+                    "consultStage": "close",
+                    "facts": {
+                        "address": "25 Nguyen Hue",
+                        "deliveryAt": "thu Bay"
+                    }
+                },
+                "subjectEntity": "lead.update",
+                "subjectId": "lead.update-1"
+            },
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000001:read:f3be48e9971a2054",
+                "effectId": "team.message.post",
+                "runId": "00000000-0000-4000-8000-000000000001",
+                "stepKey": "read",
+                "args": {
+                    "kind": "message.text",
+                    "intent": "ask",
+                    "title": "Don web moi: goi xac nhan",
+                    "text": "Khach Lan dat 2 Gio hoa nho giao 25 Nguyen Hue thu Bay qua website. Goi 0901234567 de xac nhan."
+                },
+                "subjectEntity": "chat-message",
+                "subjectId": "chat-1"
+            }
+        ],
+        "modelAsked": [
+            "sales.web-order:web-order",
+            "sales.web-order:web-order",
+            "sales.web-order:web-order"
+        ]
+    },
+    "asked": 3
+}

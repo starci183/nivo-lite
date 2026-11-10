@@ -1,6 +1,5 @@
 import { Injectable, Optional } from "@nestjs/common"
 import { ThreadSweepService } from "@modules/domain/agent-threads"
-import { AgentRunSweepService } from "@modules/domain/agent-runs"
 import type { EntityManager } from "typeorm"
 import {
     AgentTagService,
@@ -51,7 +50,6 @@ export class AgentWorkSweepService {
         private readonly triggers: AgentTriggersService,
         private readonly retention: AgentWakeRetentionService,
         private readonly sync: AgentTriggerSyncService,
-        private readonly runSweep: AgentRunSweepService,
         private readonly tags: AgentTagService,
         @Optional() private readonly threadSweep?: ThreadSweepService,
     ) {}
@@ -63,7 +61,7 @@ export class AgentWorkSweepService {
         await eachInOrder(due, async (item) => {
             done.push(await this.guarded(item))
         })
-        await this.sweepRuns()
+        await this.sweepThreads()
         const report: SweepReport = {
             drains: done.filter((kind) => kind === "drains").length,
             tasks: done.filter((kind) => kind === "tasks").length,
@@ -93,14 +91,8 @@ export class AgentWorkSweepService {
         return woken ? "woken" : "already_ran"
     }
 
-    /** The durable runs ride the same minute: their steps past a deadline are resumed, retried or stopped visibly. One failing pass never stops the rest. */
-    private async sweepRuns(): Promise<void> {
-        try {
-            await this.runSweep.sweep()
-        } catch (cause) {
-            this.logger.error(AgentSchedulesLogEvent.SweepItemFailed, cause, { kind: "runs" })
-        }
-        // The runs on LangGraph threads ride the same minute; that sweep reads nothing while no workflow is on threads.
+    /** The runs on LangGraph threads ride the same minute (deadlines, repairs, timers); a failing thread sweep never stops the work sweep. */
+    private async sweepThreads(): Promise<void> {
         try {
             await this.threadSweep?.sweep()
         } catch (cause) {

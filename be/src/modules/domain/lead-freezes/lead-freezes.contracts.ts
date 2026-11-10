@@ -94,102 +94,17 @@ export interface FreezeValues extends Partial<Omit<LeadFreeze, "id" | "version" 
     readonly pending?: ReadonlyArray<PendingEvent>
 }
 
-/** The step a stopped run failed on, as the freeze reads it. */
-export interface StoppedStep {
-    /** The step. */
-    readonly stepKey: string
-    /** Its node. */
-    readonly nodeKey: string
-    /** The handler kind. */
-    readonly kind: string
-    /** Whether it is a node step of a graph: only a graph run freezes its customer. */
-    readonly nodeStep: boolean
-    /** Why it failed. */
-    readonly errorCode: string | null
-    /** Its stored input. */
-    readonly input: Readonly<Record<string, unknown>>
-}
-
-/** The run that stopped, as the freeze reads it. */
-export interface StoppedRun {
-    /** The run. */
-    readonly runId: string
-    /** Its agent. */
-    readonly agentId: string
-    /** Where it stands. */
-    readonly status: string
-    /** The step it failed on; null when no step failed. */
-    readonly failed: StoppedStep | null
-    /** The run's context: the wake's ids and flags. */
-    readonly context: Readonly<Record<string, unknown>>
-    /** The language the run speaks. */
-    readonly locale: FreezeLocale
-}
-
-/** The run that stopped, or null when there is no such run. */
-export type OptionalStoppedRun = StoppedRun | null
-
-/** Where a run stands, or null when it is gone. */
-export type OptionalRunStatus = string | null
-
 /** A text that may be missing: a lead, a name, a title. */
 export type OptionalText = string | null
 
-/** The language the owner reads the freeze in. */
-export type FreezeLocale = "vi" | "en"
-
-/** A run that stopped for good, as the graph flows tell the freeze: the run, why, and the trigger when the caller holds it. */
-export interface FreezeStop {
-    /** The workspace. */
-    readonly workspaceId: string
-    /** The run. */
-    readonly runId: string
-    /** Why it stopped. */
-    readonly code: string
-    /** The step it stopped on, when the caller knows it. */
-    readonly stepKey: string | null
-    /** The trigger scope of the run, when the caller holds it. */
-    readonly trigger: Readonly<Record<string, unknown>> | null
-}
-
-/** How the resume of a retry went, as the run engine answers it. */
-export interface RetryResume {
-    /** `resumed`, or why the run did not go back on its failed step. */
-    readonly kind: string
-}
-
-/** A retry of the owner: how its resume went and where the run stands after it was driven in place. */
-export interface RetriedRun {
-    /** How the resume went. */
-    readonly resume: RetryResume
-    /** Where the run stands, or null when it is gone. */
-    readonly status: OptionalRunStatus
-}
-
-/** How an owner's answer ended. */
+/** Where a hold stands after the founder's page asked: the stop still holds the customer, it was released, or nothing holds them. */
 export type FreezeOutcome =
-    /** The retry succeeded: the customer is released and the pending events were replayed. */
-    | "released"
-    /** The retry runs on (a wait, or the job took it): the customer is released once it ends well. */
-    | "retrying"
-    /** The retry failed again: the customer stays frozen and the item says so. */
-    | "still_frozen"
-    /** The turn was skipped: the customer is released and the pending events were replayed. */
-    | "skipped"
-    /** The owner holds the conversation; the customer stays frozen. */
-    | "taken_over"
-    /** The failed step cannot run again (its outcome is unknown): only skipping or taking over is left. */
-    | "not_retryable"
-    /** Nothing is frozen for this customer. */
-    | "not_frozen"
-    /**
-     * The customer is held by the stop of a thread run: the founder answers the stop (its card on /chat or the run page), never the
-     * freeze, and the customer is released when the stop closes.
-     */
+    /** A stop of a thread run holds the customer: the founder answers the stop (its card on /chat, the run page), never the hold. */
     | "on_stop"
-
-/** Why a freeze released its customer: the retry ended well, the owner skipped the turn, or the thread run's stop closed. */
-export type FreezeReleaseReason = "retried" | "skipped" | "stop_closed"
+    /** The stop closed: the customer is released and the pending events were replayed. */
+    | "released"
+    /** Nothing holds the customer under that freeze. */
+    | "not_found"
 
 /** An open stop of a thread run, as a freeze reads it: whose it is and where it waits. */
 export interface HeldStop {

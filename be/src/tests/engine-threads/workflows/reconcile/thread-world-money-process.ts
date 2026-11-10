@@ -7,7 +7,6 @@ import { coreDataKinds, coreEffects, coreNodes, coreTools, TOOL } from "@nivo-li
 import {
     AgentGraphAiCoreService,
     AgentGraphFlowRunsService,
-    AgentGraphNodeStepService,
     AgentGraphRunNoticesService,
     AgentGraphStepMemoryService,
     AgentGraphsService,
@@ -16,12 +15,10 @@ import {
     type FlowTriggerMessages,
 } from "@modules/domain/agent-graphs"
 import {
-    AgentRunHandlersService,
     AgentRunsService,
     AgentRunsViewService,
     type RunOpen,
     type RunView,
-    type StepSpec,
 } from "@modules/domain/agent-runs"
 import {
     AgentThreadsModule,
@@ -260,19 +257,13 @@ const workProvidersOf = (db: MoneyDb): Array<Provider> => [
         }),
     },
     { provide: AgentWorkHandlersService, useValue: mock<AgentWorkHandlersService>() },
-    { provide: AgentRunHandlersService, useValue: mock<AgentRunHandlersService>() },
     {
         provide: AgentRunsService,
         useValue: mock<AgentRunsService>({
-            holds: () => Promise.resolve(true),
             open: (_tx: unknown, input: RunOpen) => Promise.resolve(moneyRunOf(db, input)),
             runOf: (_ws: string, id: string) => Promise.resolve(db.runs.get(id) ?? null),
             runIdOfWake: (_ws: string, wakeId: string) =>
                 Promise.resolve([...db.runs.values()].find((run) => run.wakeId === wakeId)?.id ?? null),
-            append: (_ws: string, _tx: unknown, runId: string, specs: ReadonlyArray<StepSpec>) => {
-                db.appended.set(runId, [...(db.appended.get(runId) ?? []), ...specs])
-                return Promise.resolve()
-            },
         }),
     },
     // The REAL run reader (FX1, D-P10-6): what the thread runs read a run's engine through, mapper included.
@@ -302,19 +293,17 @@ class MoneyWorldModule {}
 
 const tokenOf = (provider: Provider): InjectionToken => (typeof provider === "function" ? provider : provider.provide)
 
-/** One process of the app over the money database (the same composition as the 0-9 world's `processOf`), plus the `extra` providers a spec adds. */
-export const moneyProcessOf = async (
-    db: MoneyDb,
-    flag: ReadonlyArray<string>,
-    extra: ReadonlyArray<Provider> = [],
-): Promise<ThreadProcess> => {
+/**
+ * One process of the app over the money database (the same composition as the 0-9 world's `processOf`: every workflow on a thread),
+ * plus the `extra` providers a spec adds.
+ */
+export const moneyProcessOf = async (db: MoneyDb, extra: ReadonlyArray<Provider> = []): Promise<ThreadProcess> => {
     const logger = mock<Logger>()
     const providers: Array<Provider> = [
         GraphNodeRegistryService,
         GraphNodeHostService,
         GraphNodeEffectsService,
         AgentGraphFlowRunsService,
-        AgentGraphNodeStepService,
         AgentGraphRunNoticesService,
         AgentGraphAiCoreService,
         AgentGraphStepMemoryService,
@@ -359,7 +348,7 @@ export const moneyProcessOf = async (
         imports: [
             world,
             LanggraphModule.register({ isGlobal: true, compiledMax: 20, stepLimit: 50 }),
-            AgentThreadsModule.register({ isGlobal: true, workflows: flag }),
+            AgentThreadsModule.register({ isGlobal: true }),
         ],
     }).compile()
     const registry = moduleRef.get(GraphNodeRegistryService)
@@ -372,7 +361,6 @@ export const moneyProcessOf = async (
     return {
         db,
         flows: moduleRef.get(AgentGraphFlowRunsService),
-        oldSteps: moduleRef.get(AgentGraphNodeStepService),
         threadRuns: moduleRef.get(ThreadRunsService),
         threads: moduleRef.get<GraphThreads>(GRAPH_THREADS),
         graphs: moduleRef.get(ThreadGraphsService, { strict: false }),

@@ -44,7 +44,7 @@ const build = async (graphsMax?: number, installed: ReadonlyArray<string> = core
     const moduleRef = await Test.createTestingModule({
         providers: [
             ThreadGraphsService,
-            { provide: AGENT_THREADS_OPTIONS, useValue: { workflows: [], graphsMax } },
+            { provide: AGENT_THREADS_OPTIONS, useValue: { graphsMax } },
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: LOGGER, useValue: mock<Logger>() },
             { provide: AgentGraphsService, useValue: graphs },

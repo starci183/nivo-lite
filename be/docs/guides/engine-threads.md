@@ -8,13 +8,9 @@ for three routes; nothing else on this page is proven live yet.
 
 ## 1. Which engine runs a run
 
-- Flag `AGENT_ENGINE_LANGGRAPH` (api env): a comma list of `<moduleKey>.<workflowKey>`. Unset or empty = every run on the old
-  engine. Parsed by `domain/agent-threads/agent-threads.config.ts`; a name outside `THREAD_READY_WORKFLOWS`
-  (`agent-threads/thread-flag.policy.ts`, today only `chatbot.front-desk`) stops the boot with `AGENT_THREADS_FLAG_INVALID`.
-- A run keeps the engine it started on: the run row's `engine` (`langgraph` | `legacy`). Old-engine code refuses to move a thread
-  run: `domain/agent-runs/policies/run-engine.policy.ts` `isOldEngineRun`, used by the run store, `advance`, the due / park paths.
-- With the flag empty the thread code reads nothing on a customer wake: `ThreadSweepService.sweep()` and the lead-freeze stop
-  holds return before any query.
+- Every workflow runs on threads; no flag (phase 3). A NEW run row is `engine = langgraph` (the blocks-core entity default); `legacy`
+  remains only on history rows, read as such by the run mapper. The old step kernel is being deleted (PHASE3-20261111.md); its
+  indexes and `agent_step` jobs go with contract migration `db/migrations/20261112014100_langgraph-engine_contract_drop-old-kernel.sql`.
 - Tracing guard: any LangSmith / LangChain tracing switch set (`LANGSMITH_TRACING`, `LANGCHAIN_TRACING_V2`, ...) fails the boot
   with `LANGGRAPH_TRACING_FORBIDDEN` (`integrations/langgraph/tracing-guard.policy.ts`). No customer data leaves for a tracer.
 

@@ -1,5 +1,4 @@
-import { Injectable, Optional } from "@nestjs/common"
-import { AgentRunsService } from "@modules/domain/agent-runs"
+import { Injectable } from "@nestjs/common"
 import type {
     Performed,
     PerformedBy,
@@ -16,7 +15,6 @@ import { CustomerDeliveryService } from "./customer-delivery.service"
 import { WorkPerformersError, WorkPerformersErrorCode } from "./errors/work-performers.error"
 import type { GatewayStep, GatewaySteps } from "./gateway-steps.contracts"
 import { gatewayStepsOf } from "./gateway-steps.policy"
-import { gatewayApprovalWaitSchema } from "./gateway-call-performer.schema"
 
 const isObject = (value: unknown): value is GatewayJson =>
     typeof value === "object" && value !== null && !Array.isArray(value)
@@ -40,13 +38,13 @@ const callsOf = (fields: Proposal["fields"]): GatewaySteps =>
  * amount over the limit, a tool in ask mode) or a sequence of steps the business knowledge names. Once approved it runs the exact
  * calls in order as approved by that person (audited under their name, each under its own replay key) and tells the customer the
  * approved outcome in their own conversation; the first call the connector refuses fails the item, so nothing is claimed and no
- * later step runs. A call held on the core road is not run here: it waits as a step of the run of its turn.
+ * later step runs. An item that claims to belong to a run (`in_run`) is refused: a workflow's own approval is the thread's approval stop
+ * (`approve_tool_call`), never this action.
  */
 export class GatewayCallPerformerService implements WorkPerformer {
     constructor(
         private readonly gateway: McpGatewayService,
         private readonly delivery: CustomerDeliveryService,
-        @Optional() private readonly runs?: AgentRunsService,
     ) {}
 
     /** The proposal is preset by the turn that held the call. */
@@ -61,28 +59,6 @@ export class GatewayCallPerformerService implements WorkPerformer {
         const conversationId = textOf(fields.conversation_id)
         if (calls === null || conversationId === "") {
             throw new WorkPerformersError({ code: WorkPerformersErrorCode.ApprovalInvalid, params: { item: item.id } })
-        }
-        // A model can name the field, but only the persisted wait owns these validated calls and their final reply.
-        const links = (await this.runs?.linksFor(ctx.workspaceId, "approval", "workItemId", item.id)) ?? []
-        const [wait] = links
-        if (wait !== undefined) {
-            const linked = gatewayApprovalWaitSchema.safeParse(wait.input)
-            if (
-                links.length !== 1 ||
-                wait.kind !== "approval" ||
-                wait.status !== "running" ||
-                wait.waitItemId !== item.id ||
-                wait.agentId !== textOf(fields.agent_id) ||
-                !linked.success ||
-                linked.data.workItemId !== item.id ||
-                linked.data.scope.conversationId !== conversationId
-            ) {
-                throw new WorkPerformersError({
-                    code: WorkPerformersErrorCode.ApprovalInvalid,
-                    params: { item: item.id },
-                })
-            }
-            return { summary: proposal.summary, evidence: "captured", lead_id: item.lead_id }
         }
         if (fields.in_run === "true")
             throw new WorkPerformersError({ code: WorkPerformersErrorCode.ApprovalInvalid, params: { item: item.id } })

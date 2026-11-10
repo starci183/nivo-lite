@@ -19,7 +19,10 @@ export const RUN_STATUSES: readonly [string, ...Array<string>] = [
     "cancelled",
 ]
 
-/** Which engine drives a run: the step store of today (`legacy`) or a LangGraph thread (`langgraph`). A run ends on the engine it began on. */
+/**
+ * Which engine drove a run: the old step store (`legacy`, history rows only since phase 3) or a LangGraph thread (`langgraph`, every
+ * new run: the default). A run ends on the engine it began on.
+ */
 export const RUN_ENGINES: readonly [string, ...Array<string>] = ["legacy", "langgraph"]
 
 /** A bounded JSON object: the trigger a run keeps, or the error it stopped with. */
@@ -76,7 +79,7 @@ const runFields: RunFields = {
     endedAt: field.timestamptz({ nullable: true }),
     cancelledAt: field.timestamptz({ nullable: true }),
     cancelledBy: field.text({ maxLength: MAX_ID, nullable: true }),
-    engine: field.enum({ of: RUN_ENGINES, default: { literal: "legacy" } }),
+    engine: field.enum({ of: RUN_ENGINES, default: { literal: "langgraph" } }),
 }
 
 /**
@@ -92,7 +95,6 @@ export const agentRunEntity: EntityDefinition<RunFields> = defineEntity({
         { name: "agent_started", on: ["agentId", { desc: "startedAt" }, { desc: "id" }] },
         { name: "agent_status_ended", on: ["agentId", "status", { desc: "endedAt" }, { desc: "id" }] },
         { name: "status_resume", on: ["status", "resumeNotBefore", "id"] },
-        { name: "status_dead_lettered", on: ["status", "deadLetteredAt", "id"] },
     ],
     constraints: [
         { kind: "unique", name: "wake_planning_key", on: ["wakeId", "planning"], refusal: "run-already-open" },

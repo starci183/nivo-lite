@@ -3,9 +3,7 @@ import type { ErrorKind } from "@modules/platform/errors"
 
 /** Codes of the thread runs: every way a drive is refused by name instead of doing nothing. */
 export enum AgentThreadsErrorCode {
-    /** `AGENT_ENGINE_LANGGRAPH` names something that is not `<module>.<workflow>`, or a workflow not yet cleared for threads (`name`). */
-    FlagInvalid = "AGENT_THREADS_FLAG_INVALID",
-    /** The flag names a workflow but the app registered no threads port (the LangGraph integration is not composed). */
+    /** The app composed the thread runs but no threads port (the LangGraph integration is not composed): no run could be driven. */
     PortMissing = "AGENT_THREADS_PORT_MISSING",
     /** The thread is already being driven; this driver ran nothing and its wake is tried again (`runId`). */
     Busy = "AGENT_THREADS_BUSY",
@@ -23,7 +21,6 @@ export enum AgentThreadsErrorCode {
 
 /** How each code travels. */
 export const AGENT_THREADS_ERROR_KINDS: Record<AgentThreadsErrorCode, ErrorKind> = {
-    [AgentThreadsErrorCode.FlagInvalid]: "internal",
     [AgentThreadsErrorCode.PortMissing]: "internal",
     [AgentThreadsErrorCode.Busy]: "conflict",
     [AgentThreadsErrorCode.LeaseLost]: "conflict",

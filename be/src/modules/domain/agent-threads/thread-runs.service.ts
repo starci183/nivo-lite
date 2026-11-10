@@ -7,7 +7,7 @@ import {
     THREAD_SCOPE_MEMBER,
     namespaceOf,
 } from "@modules/domain/agent-graphs"
-import type { FlowThreadRun, FlowThreads, OptionalFlowRunEngine } from "@modules/domain/agent-graphs"
+import type { FlowThreadRun, FlowThreads } from "@modules/domain/agent-graphs"
 import { AgentRunsService, AgentRunsViewService } from "@modules/domain/agent-runs"
 import { AgentTagService, AgentWakeService, AgentWorkReadService, ENGINE_THREAD_SOURCE } from "@modules/domain/agent-work"
 import type { AgentHandlerEnding, AgentTurnView } from "@modules/domain/agent-work"
@@ -26,9 +26,7 @@ import { InjectPrimaryEntityManager } from "@modules/platform/database"
 import { InjectLogger, withRunScope } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { isRecord, parseJsonText } from "@modules/platform/primitives"
-import { InjectAgentThreadsOptions } from "./agent-threads.decorators"
 import { AgentThreadsLogEvent } from "./agent-threads.log-events"
-import type { AgentThreadsOptions } from "./agent-threads.options"
 import { AgentThreadsError, AgentThreadsErrorCode } from "./errors/agent-threads.error"
 import { RunStopsService } from "./stops/run-stops.service"
 import { stopDecisionOf } from "./stops/stop-gate.policy"
@@ -207,7 +205,6 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
 
     constructor(
         @InjectPrimaryEntityManager() private readonly entityManager: EntityManager,
-        @InjectAgentThreadsOptions() private readonly options: AgentThreadsOptions,
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         private readonly flows: AgentGraphFlowRunsService,
@@ -224,13 +221,12 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
     ) {}
 
     /**
-     * Registers with the flow once the app has started. An app whose flag names a workflow but that composed no threads port does not
-     * start: it would open runs no engine drives.
+     * Registers with the flow once the app has started. An app that composed the thread runs but no threads port does not start: every
+     * workflow's runs start on a thread, so it would open runs no engine drives.
      */
     onModuleInit(): void {
-        if (this.options.workflows.length > 0 && this.port === undefined)
-            throw new AgentThreadsError({ code: AgentThreadsErrorCode.PortMissing })
-        if (this.port !== undefined) this.flows.setThreads(this)
+        if (this.port === undefined) throw new AgentThreadsError({ code: AgentThreadsErrorCode.PortMissing })
+        this.flows.setThreads(this)
     }
 
     /** Adds a listener told each time a drive leaves a thread stopped at a step (the deadlines of the stops register here). */
@@ -243,22 +239,11 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
         this.settledListeners.push(listener)
     }
 
-    /** True when a new run of the workflow starts on a thread: the flag names it, or LangGraph is the default engine (every workflow). */
-    engages(namespace: string): boolean {
-        return this.options.everyWorkflow === true || this.options.workflows.includes(namespace)
-    }
-
     /** True for a wake this capability wrote: a decision for a stopped thread, or a re-drive. */
     owns(turn: AgentTurnView): boolean {
         const event = turn.context.eventName
         const source = turn.source === THREAD_WAKE_SOURCE || turn.source === LEGACY_THREAD_WAKE_SOURCE
         return source && (event === THREAD_RESUME_EVENT || event === THREAD_DRIVE_EVENT)
-    }
-
-    /** The engine the run of a wake started on, or null when the wake opened no run yet. */
-    async engineOfWake(turn: AgentTurnView): Promise<OptionalFlowRunEngine> {
-        const runId = await this.runs.runIdOfWake(turn.workspaceId, turn.wakeId)
-        return runId === null ? null : this.engineOf(turn.workspaceId, turn.agentId, runId)
     }
 
     /** Marks the run as a thread's in the transaction that opened it; a run that cannot be marked starts no thread. */
@@ -470,8 +455,8 @@ export class ThreadRunsService implements FlowThreads, OnModuleInit {
                     return port.drive(ref, again, lease)
                 }
             }
-            // Every model call of the drive is booked to the run (`ai_usage_events.run_id`), as the old engine's step runner books the
-            // calls of its steps (`AgentRunInflightService`): the run page's AI calls and the cost per run read it (D-P10-7).
+            // Every model call of the drive is booked to the run (`ai_usage_events.run_id`) through the run scope: the run page's AI calls
+            // and the cost per run read it (D-P10-7).
             const outcome = await withRunScope(ref.runId, () => this.graphs.driving(ref.runId, drive.run, driven))
             return await this.settled(drive, outcome)
         } catch (cause) {

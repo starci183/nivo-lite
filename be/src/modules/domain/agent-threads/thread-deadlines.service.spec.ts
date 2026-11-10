@@ -95,7 +95,7 @@ const build = async (world: World = {}) => {
         providers: [
             ThreadDeadlinesService,
             { provide: PRIMARY_ENTITY_MANAGER, useValue: tx.em },
-            { provide: AGENT_THREADS_OPTIONS, useValue: { workflows: [], ...world.options } },
+            { provide: AGENT_THREADS_OPTIONS, useValue: { ...world.options } },
             { provide: CLOCK, useValue: clock },
             { provide: LOGGER, useValue: logger },
             { provide: RunStopsService, useValue: stops },

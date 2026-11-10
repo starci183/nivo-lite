@@ -3,7 +3,6 @@ import { mock } from "@starci/jest-preset"
 import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { runViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { AgentRunCancelService } from "./agent-run-cancel.service"
-import { AgentRunRecoveryService } from "./agent-run-recovery.service"
 import { AgentRunStoreService } from "./agent-run-store.service"
 import { AgentRunsViewService } from "./agent-runs-view.service"
 import type { RunEngine } from "./agent-runs-view.contracts"
@@ -32,18 +31,15 @@ const build = async (run: RunView | null, result: RunCancelResult = { kind: "can
     view.detail.mockImplementation((_ws, _agent, runId) =>
         Promise.resolve(run === null ? null : { run: { id: runId } as never, engine, steps: [] }),
     )
-    const recovery = mock<AgentRunRecoveryService>()
-    recovery.abandon.mockResolvedValue("abandoned")
     const moduleRef = await Test.createTestingModule({
         providers: [
             AgentRunCancelService,
             { provide: WorkspaceMembersService, useValue: members },
             { provide: AgentRunStoreService, useValue: runs },
             { provide: AgentRunsViewService, useValue: view },
-            { provide: AgentRunRecoveryService, useValue: recovery },
         ],
     }).compile()
-    return { service: moduleRef.get(AgentRunCancelService), members, runs, recovery }
+    return { service: moduleRef.get(AgentRunCancelService), members, runs }
 }
 
 describe("AgentRunCancelService", () => {
@@ -73,27 +69,20 @@ describe("AgentRunCancelService", () => {
         await expect(again.service.cancel(REQUEST)).resolves.toEqual({ kind: "already_cancelled", note: null })
     })
 
-    it("gives a parked run up the way abandon does (dead, by the member, off every resume pass) and answers cancelled", async () => {
-        const { service, runs, recovery } = await build(runViewOf({ status: "parked" }))
+    it("marks a running legacy history row cancelled and answers not cancellable for a parked one (no abandon path any more)", async () => {
+        const running = await build(runViewOf({ status: "running" }))
+        const parked = await build(runViewOf({ status: "parked" }), { kind: "not_cancellable" })
 
-        await expect(service.cancel(REQUEST)).resolves.toEqual({ kind: "cancelled", note: "effects_kept" })
-        expect(recovery.abandon).toHaveBeenCalledWith("ws-1", "run-1", "member-1")
-        expect(runs.cancel).not.toHaveBeenCalled()
-    })
-
-    it("answers not cancellable for a parked run another writer closed first", async () => {
-        const { service, recovery } = await build(runViewOf({ status: "parked" }))
-        recovery.abandon.mockResolvedValue("not_held")
-
-        await expect(service.cancel(REQUEST)).resolves.toEqual({ kind: "not_cancellable", note: null })
+        await expect(running.service.cancel(REQUEST)).resolves.toEqual({ kind: "cancelled", note: "effects_kept" })
+        await expect(parked.service.cancel(REQUEST)).resolves.toEqual({ kind: "not_cancellable", note: null })
+        expect(parked.runs.cancel).toHaveBeenCalledWith("ws-1", "run-1", "member-1")
     })
 
     it("refuses a run on a LangGraph thread with thread_run and touches neither the run nor its steps", async () => {
-        const { service, runs, recovery } = await build(runViewOf({ status: "waiting" }), { kind: "cancelled" }, "langgraph")
+        const { service, runs } = await build(runViewOf({ status: "waiting" }), { kind: "cancelled" }, "langgraph")
 
         await expect(service.cancel(REQUEST)).resolves.toEqual({ kind: "thread_run", note: null })
         expect(runs.cancel).not.toHaveBeenCalled()
-        expect(recovery.abandon).not.toHaveBeenCalled()
     })
 
     it("hands a thread run to its stop's skip once the stops registered, as the same request", async () => {

@@ -1,8 +1,7 @@
 import { TOOL } from "@nivo-lite/blocks-core"
-import { LEAD, actsOf, answer, founderDecides, playOld, redrive, rowsOf, stopsOf } from "../../thread-world"
+import { LEAD, actsOf, answer, founderDecides, redrive, rowsOf, stopsOf } from "../../thread-world"
 import {
     W8P,
-    W8_WORKFLOWS,
     confusedAnswer,
     coreReport,
     diesAtDone,
@@ -15,9 +14,11 @@ import {
 } from "../../thread-world-w8-wakes"
 import { calls, linesOf, moneyDbOf, type MoneyDb } from "../reconcile/thread-world-money"
 import { moneyProcessOf } from "../reconcile/thread-world-money-process"
+import baseline from "./web-order.baseline.json"
 
 // Package W8 (design row 2-3): `sales.web-order` (read → to-owner) on a LangGraph thread, woken by an accepted website form. The form has
-// no chat: nothing ever goes to a customer; the team is asked to call. Twin walk, one stop, one kill after the team was told.
+// no chat: nothing ever goes to a customer; the team is asked to call. Twin walk against the old engine
+// (fixed baseline: the old engine's walk, which this twin held equal to the thread at tree aa40f9655; old half removed in phase 3, package X1), one stop, one kill after the team was told.
 
 const books = () => ({
     "catalogue-item": [
@@ -48,23 +49,21 @@ const reads = (db: MoneyDb) =>
         { done: { leadId: LEAD, summary: SUMMARY } },
     )
 
-const started = async (flag: ReadonlyArray<string>, script: (db: MoneyDb) => void) => {
-    const process = await w8ProcessOf(books(), flag, script)
+const started = async (script: (db: MoneyDb) => void) => {
+    const process = await w8ProcessOf(books(), script)
     const woken = await w8Wake(process, websiteWake(FORM))
     expect(woken.error).toBeNull()
     return { process, db: process.db, runId: woken.runId ?? "" }
 }
 
-describe("web-order on a thread: twin walk with the old engine", () => {
-    it("read → to-owner: same steps, acts, card, ledger and model calls on both engines; no customer line", async () => {
-        const old = await started([], reads)
-        const played = await playOld(old.process, old.runId)
-        const thread = await started([W8_WORKFLOWS.webOrder], reads)
+describe("web-order on a thread against the old engine's baseline", () => {
+    it("read → to-owner: the old engine's steps, acts, card, ledger and model calls; no customer line", async () => {
+        const old = baseline
+        const thread = await started(reads)
 
-        expect(played.path).toEqual(PATH)
         expect(await threadStatusOf(thread.process, thread.runId)).toBe("ended")
-        expect(await threadStepsOf(thread.process, thread.runId)).toEqual(played.path)
-        expect(w8OutcomeOf(thread.db)).toEqual(w8OutcomeOf(old.db))
+        expect(await threadStepsOf(thread.process, thread.runId)).toEqual(PATH)
+        expect(w8OutcomeOf(thread.db)).toEqual(old.outcome)
         expect(thread.db.acts.map((act) => act.effect)).toEqual([TOOL.leadUpdate, TOOL.teamMessagePost])
         expect(thread.db.team.map((message) => message.versions)).toEqual([[NOTICE]])
         expect(linesOf(thread.db)).toEqual([])
@@ -73,7 +72,8 @@ describe("web-order on a thread: twin walk with the old engine", () => {
         expect(asked).toContain("Gio hoa nho")
         expect(asked).not.toContain("Bo hoa cu")
         expect(asked).toContain("0901234567")
-        expect(thread.db.model.asked.length).toBe(old.db.model.asked.length)
+        // A thread adds no model call: 3 on the old engine.
+        expect(thread.db.model.asked.length).toBe(old.asked)
         expect(rowsOf(thread.db, thread.runId).run).toMatchObject({ engine: "langgraph", status: "done" })
     })
 })
@@ -81,7 +81,7 @@ describe("web-order on a thread: twin walk with the old engine", () => {
 describe("web-order on a thread: the stop", () => {
     it("a request the agent cannot read: a stop, one card, no customer line; re-drives move nothing; the founder's words resume it", async () => {
         const Q = "Khach viet 'nhu lan truoc' nhung chua tung mua, dat mon nao?"
-        const { process, db, runId } = await started([W8_WORKFLOWS.webOrder], (one) => {
+        const { process, db, runId } = await started((one) => {
             one.model.script(W8P.webOrder, calls(TOOL.leadUpdate, FACTS), confusedAnswer("Khong ro mon", Q))
             one.model.script(W8P.core, coreReport(Q))
         })
@@ -119,14 +119,14 @@ describe("web-order on a thread: killed and replayed", () => {
         const db = moneyDbOf(books())
         reads(db)
         diesAtDone(db, 1)
-        const first = await moneyProcessOf(db, [W8_WORKFLOWS.webOrder])
+        const first = await moneyProcessOf(db)
         const woken = await w8Wake(first, websiteWake(FORM))
         expect(String(woken.error)).toContain("WORLD_PROCESS_DIED")
         const runId = woken.runId ?? ""
         expect(db.team).toHaveLength(1)
 
         reads(db)
-        const second = await moneyProcessOf(db, [W8_WORKFLOWS.webOrder])
+        const second = await moneyProcessOf(db)
         const ran = await redrive(second, runId, "sweep-1")
 
         expect(ran.map((one) => one.error)).toEqual([null])

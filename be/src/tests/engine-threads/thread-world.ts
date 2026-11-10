@@ -1,19 +1,17 @@
 import { mock } from "@starci/jest-preset"
 import type { RecordRow } from "@nivo-lite/agent-sdk/entity/port"
-import type { StepJson, StepSpec } from "@modules/domain/agent-runs"
 import type { RunStop, StopDecision } from "@modules/domain/agent-threads"
 import type { AgentHandlerEnding, AgentTurnView, AgentWake } from "@modules/domain/agent-work"
 import type { ThreadRef } from "@modules/integrations/langgraph"
 import { eachInOrder } from "@modules/platform/primitives"
 import type { GraphSpec } from "@nivo-lite/agent-sdk/graph"
-import { stepViewOf } from "../fixtures/builders/agent-runs.builder"
 import { agentTurnViewOf } from "../fixtures/builders/agent-work.builder"
 import type { Act } from "./thread-world-outside"
 import { WS, WorldError } from "./thread-world-records"
 import { CONV, FRONT, FRONT_DESK, openedRun, type ThreadDb, type ThreadProcess } from "./thread-world-process"
 
-// The drivers of the phase-0 wave-C world (package 0-9): a customer writes, a founder decides, the sweep re-drives, the old engine plays
-// a run, and what the run page and the stops read. The database and the processes are in `thread-world-process.ts`.
+// The drivers of the phase-0 wave-C world (package 0-9): a customer writes, a founder decides, the sweep re-drives, and what the run
+// page and the stops read. Threads are the only engine (phase 3): every run a wake opens is driven on a thread. The database and the processes are in `thread-world-process.ts`.
 
 export * from "./thread-world-process"
 
@@ -69,7 +67,7 @@ export interface WriteOptions {
     readonly turn?: Partial<AgentTurnView>
 }
 
-/** A customer writes in the Zalo conversation: the wake goes through the REAL flow (the flag decides the engine). */
+/** A customer writes in the Zalo conversation: the wake goes through the REAL flow, onto a thread. */
 export const customerWrites = (process: ThreadProcess, text: string, options: WriteOptions = {}): Promise<Woken> => {
     const { db } = process
     const inbox = db.store.inbox ?? []
@@ -131,37 +129,6 @@ export const button = (db: ThreadDb, kind: "retry" | "take_over" | "skip"): Stop
     by: "owner-1",
     at: db.clock.now().toISOString(),
 })
-
-/** What the old engine did with a run. */
-export interface OldPlay {
-    /** The steps done, in order. */
-    readonly path: ReadonlyArray<string>
-    /** The output of each step. */
-    readonly outputs: Readonly<Record<string, unknown>>
-}
-
-/** The old engine's steps of a run, played one after the other as the step handler would, from the first the flow wrote. */
-export const playOld = async (process: ThreadProcess, runId: string): Promise<OldPlay> => {
-    const path: Array<string> = []
-    const earlier: Record<string, StepJson> = {}
-    const agentId = process.db.runs.get(runId)?.agentId ?? FRONT
-    const play = async (queue: ReadonlyArray<StepSpec>): Promise<void> => {
-        const [spec, ...rest] = queue
-        if (spec === undefined) return
-        const view = stepViewOf({ ...spec, runId, agentId, workspaceId: WS, earlier: { ...earlier }, result: null })
-        const answered = await process.oldSteps.run(view)
-        if (answered.kind !== "done")
-            throw new WorldError({ code: "WORLD_OLD_STEP", params: { step: spec.stepKey, kind: answered.kind } })
-        path.push(spec.stepKey)
-        earlier[spec.stepKey] = answered.result
-        await play([...rest, ...answered.next])
-    }
-    await play(process.db.appended.get(runId) ?? [])
-    return {
-        path,
-        outputs: Object.fromEntries(Object.entries(earlier).map(([key, result]) => [key, result.output ?? null])),
-    }
-}
 
 /** The stops of a run, as the real stops read them, by the step keys the records hold. */
 export const stopsOf = async (process: ThreadProcess, runId: string): Promise<ReadonlyArray<RunStop>> => {

@@ -3,20 +3,20 @@ import {
     ANSWER,
     COMPLAINT,
     CONV,
-    FRONT_DESK,
     UNDERSTAND,
     customerWrites,
-    playOld,
     processOf,
     rowsOf,
     threadDbOf,
     type ThreadDb,
 } from "./thread-world"
+import baseline from "./twin-walk.baseline.json"
 
-// Package 0-9, item 1 and 10: the twin walk. The same scripted front-desk conversation through the OLD engine path (flag off: the flow
-// writes the first step, the old node step plays the rest) and through a LangGraph thread (flag on: the real flow opens a thread run,
-// the real thread runs drive the real LangGraph client over the real saver), for each of the front desk's four routes. The two must
-// give the same steps, outputs, effect acts, customer lines and team messages.
+// Package 0-9, item 1 and 10: the twin walk, threads only since phase 3 (package X1). The scripted front-desk conversation through a
+// LangGraph thread (the real flow opens a thread run, the real thread runs drive the real LangGraph client over the real saver), for
+// each of the front desk's four routes. The old engine's half is gone; what it walked is kept as a fixed baseline
+// (`twin-walk.baseline.json`: the old engine's steps, outputs, effect acts, customer lines, team messages, ledger rows and model calls
+// at tree aa40f9655, recorded from its step handler before it was removed). The thread must still give exactly that.
 
 type Route = "buy" | "paid" | "complaint" | "question"
 
@@ -77,7 +77,7 @@ const scripts: Readonly<Record<Route, { readonly text: string; readonly script: 
     },
 }
 
-/** The steps each route walks, and the effects it acts, in order. */
+/** The steps each route walks, and the effects it acts, in order (the old engine's, the same as the baseline's). */
 const PATHS: Readonly<Record<Route, ReadonlyArray<string>>> = {
     buy: ["understand", "to-consult"],
     paid: ["understand", "to-reconcile"],
@@ -91,7 +91,7 @@ const ACTS: Readonly<Record<Route, ReadonlyArray<string>>> = {
     question: [TOOL.customerMessageSend],
 }
 
-/** What a walk left in the world, in a form both engines can be compared on. */
+/** What a walk left in the world, in the form the baseline holds. */
 const outcomeOf = (db: ThreadDb) => ({
     acts: db.acts.map((act) => ({ effect: act.effect, payload: act.payload, key: act.key, dedupeKey: act.dedupeKey })),
     lines: db.lines.map((line) => ({
@@ -104,21 +104,10 @@ const outcomeOf = (db: ThreadDb) => ({
     modelAsked: db.model.asked.map((one) => one.purpose),
 })
 
-const walkOld = async (route: Route) => {
-    const db = threadDbOf()
-    scripts[route].script(db)
-    const process = await processOf(db, { flag: [] })
-    const woken = await customerWrites(process, scripts[route].text)
-    expect(woken.error).toBeNull()
-    const runId = woken.runId ?? ""
-    const played = await playOld(process, runId)
-    return { db, runId, played, woken }
-}
-
 const walkThread = async (route: Route) => {
     const db = threadDbOf()
     scripts[route].script(db)
-    const process = await processOf(db, { flag: [FRONT_DESK] })
+    const process = await processOf(db)
     const woken = await customerWrites(process, scripts[route].text)
     expect(woken.error).toBeNull()
     const runId = woken.runId ?? ""
@@ -129,32 +118,33 @@ const walkThread = async (route: Route) => {
     return { db, runId, woken, view }
 }
 
-describe("twin walk: chatbot.front-desk on the old engine and on a LangGraph thread", () => {
+describe("twin walk: chatbot.front-desk on a LangGraph thread against the old engine's baseline", () => {
     it.each<Route>(["buy", "paid", "complaint", "question"])(
-        "route %s: same steps, outputs, effect acts, customer lines and team messages",
+        "route %s: the old engine's steps, outputs, effect acts, customer lines and team messages",
         async (route) => {
-            const old = await walkOld(route)
+            const old = baseline[route]
             const thread = await walkThread(route)
 
             expect(thread.woken.ending).toMatchObject({ status: "done" })
             expect(thread.view?.status).toBe("ended")
-            expect(old.played.path).toEqual(PATHS[route])
-            expect(old.db.acts.map((act) => act.effect)).toEqual(ACTS[route])
+            expect(old.path).toEqual(PATHS[route])
+            expect(thread.db.acts.map((act) => act.effect)).toEqual(ACTS[route])
             expect(
                 thread.db.model.left(UNDERSTAND) + thread.db.model.left(ANSWER) + thread.db.model.left(COMPLAINT),
             ).toBe(0)
             const threadPath = Object.keys(thread.view?.state.steps ?? {})
-            expect(threadPath).toEqual(old.played.path)
+            expect(threadPath).toEqual(old.path)
             const threadOutputs = Object.fromEntries(
                 Object.entries(thread.view?.state.steps ?? {}).map(([key, value]) => [
                     key,
                     typeof value === "object" && value !== null ? Reflect.get(value, "output") : null,
                 ]),
             )
-            expect(threadOutputs).toEqual(old.played.outputs)
-            expect(outcomeOf(thread.db)).toEqual(outcomeOf(old.db))
-            // Every scripted model answer was used once on each engine: a thread adds no model call.
-            expect(thread.db.model.asked.length).toBe(old.db.model.asked.length)
+            expect(threadOutputs).toEqual(old.outputs)
+            expect(outcomeOf(thread.db)).toEqual(old.outcome)
+            // Every scripted model answer was used once, as on the old engine (baseline: buy 1, paid 1, complaint 4, question 4): a
+            // thread adds no model call.
+            expect(thread.db.model.asked.length).toBe(old.asked)
         },
     )
 
@@ -171,20 +161,10 @@ describe("twin walk: chatbot.front-desk on the old engine and on a LangGraph thr
     )
 })
 
-describe("the flag (item 10)", () => {
-    it("off: the old path writes the first step, no checkpoint row exists, the run reads engine legacy", async () => {
-        const old = await walkOld("question")
-
-        expect(old.db.appended.get(old.runId)?.map((spec) => spec.stepKey)).toEqual(["understand"])
-        expect(old.db.checkpoints.rowsOf(old.runId)).toEqual([])
-        expect(rowsOf(old.db, old.runId).run).toMatchObject({ engine: "legacy" })
-        expect(rowsOf(old.db, old.runId).steps).toEqual([])
-    })
-
-    it("on: no old step is written, the thread holds checkpoints, the run reads engine langgraph", async () => {
+describe("the thread run (item 10)", () => {
+    it("the thread holds checkpoints, the run reads engine langgraph", async () => {
         const thread = await walkThread("question")
 
-        expect(thread.db.appended.get(thread.runId) ?? []).toEqual([])
         expect(thread.db.checkpoints.rowsOf(thread.runId).length).toBeGreaterThan(0)
         expect(rowsOf(thread.db, thread.runId).run).toMatchObject({ engine: "langgraph" })
     })

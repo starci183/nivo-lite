@@ -21,7 +21,6 @@ export {
     AGENT_BURST_POLICY,
     AGENT_TAG_RIGHTS,
     AGENT_TURN_EXECUTOR,
-    AGENT_WAKE_INTERRUPTIONS,
 } from "./agent-work.decorators"
 export { AgentWorkAccessService } from "./agent-work-access.service"
 export { ENGINE_THREAD_SOURCE, wakeSources } from "./agent-wake-source.policy"

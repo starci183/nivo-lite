@@ -3,7 +3,6 @@ import {
     ANSWER,
     CONV,
     CORE,
-    FRONT_DESK,
     UNDERSTAND,
     WS,
     actsOf,
@@ -69,7 +68,7 @@ const stopsAtAnswer = (
 }
 
 const started = async (db: ThreadDb) => {
-    const process = await processOf(db, { flag: [FRONT_DESK] })
+    const process = await processOf(db)
     const woken = await customerWrites(process, QUESTION)
     expect(woken.error).toBeNull()
     const runId = woken.runId ?? ""
@@ -141,7 +140,7 @@ describe("the real ledger under replay (item 2)", () => {
         db.model.script(ANSWER, send(OUTCOME), { done: { reply: OUTCOME } })
         await founderDecides(process, runId, answer(db, "8h-21h"))
 
-        const again = await processOf(db, { flag: [FRONT_DESK] })
+        const again = await processOf(db)
         await expect(redrive(again, runId, "sweep-1")).rejects.toMatchObject({ params: { why: "thread_ended" } })
         expect(sendsOf(db)).toEqual([CHECKING, OUTCOME])
     })
@@ -175,14 +174,14 @@ describe("kill and replay (item 3)", () => {
         const db = threadDbOf()
         answers(db, 2)
         crashesAfterTheSend(db)
-        const first = await processOf(db, { flag: [FRONT_DESK] })
+        const first = await processOf(db)
         const woken = await customerWrites(first, QUESTION)
         expect(String(woken.error)).toContain("WORLD_PROCESS_DIED")
         const runId = woken.runId ?? ""
         expect(sendsOf(db)).toEqual([OUTCOME])
         expect((await first.threads.stateOf({ workspaceId: WS, runId }))?.status).toBe("open")
 
-        const second = await processOf(db, { flag: [FRONT_DESK] })
+        const second = await processOf(db)
         const ran = await redrive(second, runId, "sweep-1")
 
         expect(ran.map((one) => one.error)).toEqual([null])
@@ -201,11 +200,11 @@ describe("kill and replay (item 3)", () => {
         const db = threadDbOf()
         answers(db, 2)
         crashesAfterTheSend(db)
-        const first = await processOf(db, { flag: [FRONT_DESK] })
+        const first = await processOf(db)
         const runId = (await customerWrites(first, QUESTION)).runId ?? ""
         expect(db.model.askedOf(ANSWER)).toHaveLength(3)
 
-        const second = await processOf(db, { flag: [FRONT_DESK] })
+        const second = await processOf(db)
         await redrive(second, runId, "sweep-1")
 
         // The first turn of the re-run reads the line the step sent before the crash: another request, so the record is left there.
@@ -223,11 +222,11 @@ describe("kill and replay (item 3)", () => {
         const db = threadDbOf()
         answers(db, 2)
         crashesAfterTheSend(db)
-        const first = await processOf(db, { flag: [FRONT_DESK] })
+        const first = await processOf(db)
         const runId = (await customerWrites(first, QUESTION)).runId ?? ""
 
         db.forgetTaskWrites = true
-        const second = await processOf(db, { flag: [FRONT_DESK] })
+        const second = await processOf(db)
         const ran = await redrive(second, runId, "sweep-1")
 
         expect(ran.map((one) => one.error)).toEqual([null])
@@ -241,7 +240,7 @@ describe("kill and replay (item 3)", () => {
 const abortedAfterTheSend = async (db: ThreadDb) => {
     db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
     db.model.script(ANSWER, send(OUTCOME))
-    const first = await processOf(db, { flag: [FRONT_DESK] })
+    const first = await processOf(db)
     const controller = new AbortController()
     const held = db.model.hold(ANSWER, 1)
     const pending = customerWrites(first, QUESTION, { signal: controller.signal })
@@ -259,12 +258,12 @@ describe("kill and replay (item 3): a lost lease, an outcome-unknown code", () =
     it("a drive aborted (lease lost) after the act: the thread stays open and a re-drive from a new process sends nothing twice", async () => {
         const db = threadDbOf()
         const { runId } = await abortedAfterTheSend(db)
-        expect((await (await processOf(db, { flag: [] })).threads.stateOf({ workspaceId: WS, runId }))?.status).toBe(
+        expect((await (await processOf(db)).threads.stateOf({ workspaceId: WS, runId }))?.status).toBe(
             "open",
         )
 
         db.model.script(ANSWER, send(OUTCOME), { done: { reply: OUTCOME } })
-        const second = await processOf(db, { flag: [FRONT_DESK] })
+        const second = await processOf(db)
         const ran = await redrive(second, runId, "sweep-1")
 
         expect(ran.map((one) => one.error)).toEqual([null])
@@ -288,7 +287,7 @@ describe("kill and replay (item 3): a lost lease, an outcome-unknown code", () =
         db.model.script(UNDERSTAND, { answer: { branch: "buy", summary: "Lan: buy" } })
         db.model.script(CORE, report(null))
         db.throwOn.set(TOOL.agentTag, Object.assign(new Error("tag sent, no answer"), { code: "tool_outcome_unknown" }))
-        const process = await processOf(db, { flag: [FRONT_DESK] })
+        const process = await processOf(db)
         const runId = (await customerWrites(process, "Cho minh dat hoa")).runId ?? ""
 
         const ref = { workspaceId: WS, runId }
@@ -315,7 +314,7 @@ describe("the prebuilt agent loop under the engine's rules", () => {
     it("retry with no words: the identical line replays from the ledger; the reworded one is refused already_told_for_this_stop, which satisfies requires", async () => {
         const db = threadDbOf()
         stopsAtAnswer(db)
-        const process = await processOf(db, { flag: [FRONT_DESK], agentLoop: PREBUILT })
+        const process = await processOf(db, { agentLoop: PREBUILT })
         const runId = (await customerWrites(process, QUESTION)).runId ?? ""
         expect((await process.threads.stateOf({ workspaceId: WS, runId }))?.status).toBe("stopped")
         expect(sendsOf(db)).toEqual([CHECKING])
@@ -345,7 +344,7 @@ describe("the prebuilt agent loop under the engine's rules", () => {
             send(OUTCOME),
             { done: { reply: OUTCOME } },
         )
-        const process = await processOf(db, { flag: [FRONT_DESK], agentLoop: PREBUILT })
+        const process = await processOf(db, { agentLoop: PREBUILT })
 
         await customerWrites(process, QUESTION)
 
@@ -369,7 +368,7 @@ describe("the prebuilt agent loop under the engine's rules", () => {
         const db = threadDbOf()
         db.model.script(UNDERSTAND, { answer: { branch: "question", summary: "Lan: gio mo cua" } })
         db.model.script(ANSWER, { call: { tool: TOOL.brainSearch, args: { query: "gio mo cua" } } })
-        const first = await processOf(db, { flag: [FRONT_DESK], agentLoop: PREBUILT })
+        const first = await processOf(db, { agentLoop: PREBUILT })
         // The drive of the first process loses its lease while the second turn waits: the first turn and its search are recorded.
         const controller = new AbortController()
         const held = db.model.hold(ANSWER, 1)
@@ -390,7 +389,7 @@ describe("the prebuilt agent loop under the engine's rules", () => {
         expect(await stopsOf(first, runId)).toEqual([])
 
         db.model.script(ANSWER, send(OUTCOME), { done: { reply: OUTCOME } })
-        const second = await processOf(db, { flag: [FRONT_DESK], agentLoop: PREBUILT })
+        const second = await processOf(db, { agentLoop: PREBUILT })
         const ran = await redrive(second, runId, "sweep-1")
 
         expect(ran.map((one) => one.error)).toEqual([null])

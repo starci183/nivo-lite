@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { mock } from "@starci/jest-preset"
-import { freezeWordsOf, frozenFreezeOf, pendingLineOf } from "@tests/fixtures/builders/lead-freezes.builder"
+import { frozenFreezeOf, pendingLineOf } from "@tests/fixtures/builders/lead-freezes.builder"
 import * as policy from "./lead-freeze.policy"
 import type { HeldWake } from "./lead-freeze.policy"
 
@@ -26,8 +26,6 @@ const WAKE: HeldWake = {
     context: { conversationId: "c-1", messageId: "m-2", lookupName: false, nested: { no: 1 } },
     actorMemberId: null,
 }
-
-const EN = freezeWordsOf("en")
 
 describe("lead-freeze.policy: who a wake is about", () => {
     it("names the lead first, then the conversation, and nothing for a trigger that names neither", async () => {
@@ -143,98 +141,13 @@ describe("lead-freeze.policy: the pending events", () => {
         expect(withPending(unfolded, pendingLineOf({ wakeId: "u-new" }))).toHaveLength(PENDING_MAX + 1)
     })
 
-    it("folds the lines of the run's conversation into a retry, and replays only what the retry did not answer", async () => {
-        const { foldLines, linesToFold, replayKeyOf, replayOf } = await buildPolicy()
-        const pending = [
-            pendingLineOf(),
-            pendingLineOf({ wakeId: "w-pay", kind: "payment", conversationId: null, messageIds: [] }),
-            pendingLineOf({ wakeId: "w-other", conversationId: "c-2", messageIds: ["m-9"] }),
-        ]
-        expect(linesToFold(pending, "c-1")).toEqual(["m-2"])
-        expect(linesToFold(pending, null)).toEqual([])
-        const folded = foldLines(pending, "c-1")
-        expect(folded.map((each) => each.folded)).toEqual([true, false, false])
-        expect(foldLines(pending, null)).toEqual(pending)
-        expect(replayOf(folded, "retried").map((each) => each.wakeId)).toEqual(["w-pay", "w-other"])
-        expect(replayOf(folded, "skipped").map((each) => each.wakeId)).toEqual(["wake-2", "w-pay", "w-other"])
-        expect(replayOf(folded, "stop_closed").map((each) => each.wakeId)).toEqual(["wake-2", "w-pay", "w-other"])
+    it("writes a replayed wake under its own key marked with the hold and its episode", async () => {
+        const { replayKeyOf } = await buildPolicy()
         expect(replayKeyOf(pendingLineOf(), "freeze-1", 2)).toBe("msg-2~after-freeze-freeze-1-2")
     })
 })
 
-describe("lead-freeze.policy: the newest lines of a retry", () => {
-    const INPUT = {
-        versionId: "v-1",
-        trigger: { text: "paid", messages: [{ id: "m-1", text: "paid" }], messageIds: ["m-1"] },
-    }
-    const FILE = { id: "f", name: "n", contentType: "image/png", url: "u" }
-    const LINE = { id: "m-2", text: "please check", at: "t", attachments: [FILE] }
-
-    it("adds the lines the trigger does not hold yet, oldest first, to its text, messages and ids", async () => {
-        const { withLines } = await buildPolicy()
-        expect(withLines(INPUT, [LINE, { ...LINE, id: "m-1" }])).toEqual({
-            versionId: "v-1",
-            trigger: {
-                text: "paid\nplease check",
-                messages: [{ id: "m-1", text: "paid" }, LINE],
-                messageIds: ["m-1", "m-2"],
-            },
-        })
-    })
-
-    it("leaves an input with no trigger, no new line or nothing said as it is", async () => {
-        const { withLines } = await buildPolicy()
-        expect(withLines({ versionId: "v-1" }, [LINE])).toEqual({ versionId: "v-1" })
-        expect(withLines(INPUT, [])).toBe(INPUT)
-        expect(withLines(INPUT, [{ ...LINE, id: "m-1" }])).toBe(INPUT)
-        expect(withLines({ trigger: {} }, [LINE])).toEqual({
-            trigger: { text: "please check", messages: [LINE], messageIds: ["m-2"] },
-        })
-    })
-})
-
 describe("lead-freeze.policy: what the owner reads", () => {
-    it("titles the step in the owner's language, else by its key", async () => {
-        const { localeOf, stepTitleOf } = await buildPolicy()
-        expect(stepTitleOf({ vi: "claim (vi)", en: "Take a payment claim" }, "claim-ack", "en")).toBe(
-            "Take a payment claim",
-        )
-        expect(stepTitleOf({ vi: "claim (vi)", en: "" }, "claim-ack", "en")).toBe("claim (vi)")
-        expect(stepTitleOf({ key: "x" }, "claim-ack", "vi")).toBe("claim-ack")
-        expect(stepTitleOf(undefined, "claim-ack", "vi")).toBe("claim-ack")
-        expect(localeOf({ locale: "en" })).toBe("en")
-        expect(localeOf({})).toBe("vi")
-    })
-
-    it("words the error codes the owner meets, and names any other as it is", async () => {
-        const { errorSummaryOf } = await buildPolicy()
-        expect(errorSummaryOf("GRAPH_NODES_EXECUTOR_MISSING", EN)).toBe("the step has no executor")
-        expect(errorSummaryOf("SOMETHING_ELSE", EN)).toBe("SOMETHING_ELSE")
-        expect(errorSummaryOf(null, EN)).toBe("unknown")
-    })
-
-    it("says who waits, at which step, why, how many events wait and what each answer will do", async () => {
-        const { itemAnswersOf, itemSummaryOf, itemTitleOf } = await buildPolicy()
-        const freeze = frozenFreezeOf()
-        expect(itemTitleOf(freeze, EN)).toBe(
-            "Customer Nguyen Van A is waiting for you: the step Take a payment claim failed",
-        )
-        const pending = [pendingLineOf(), pendingLineOf({ wakeId: "x", folded: true })]
-        const summary = itemSummaryOf({ ...freeze, failures: 2, pending }, EN)
-        expect(summary).toContain("Error: the step has no executor.")
-        expect(summary).toContain("Failed 2 times.")
-        expect(summary).toContain("1 events are waiting")
-        expect(summary).toContain("Retry:")
-        expect(summary).toContain("Take over:")
-        expect(summary).toContain("Skip this turn:")
-        expect(itemTitleOf({ ...freeze, customerName: null, stepTitle: null }, EN)).toBe(
-            "Customer without a name is waiting for you: the step claim-ack failed",
-        )
-        expect(itemTitleOf({ ...freeze, stepKey: null, stepTitle: null }, EN)).toContain("the step ? failed")
-        expect(itemSummaryOf(freeze, EN)).toContain("No event is waiting yet.")
-        expect(Object.keys(itemAnswersOf(EN))).toEqual(["retry", "takeOver", "skip"])
-    })
-
     it("answers the state of a freeze that holds its customer, and nothing for one released", async () => {
         const { holds, stateOf } = await buildPolicy()
         const freeze = frozenFreezeOf({ pending: [pendingLineOf(), pendingLineOf({ wakeId: "f", folded: true })] })

@@ -1,5 +1,4 @@
 import type {
-    FreezeReleaseReason,
     FreezeState,
     FreezeSubject,
     LeadFreeze,
@@ -20,11 +19,8 @@ const TRANSACTION_SUBJECT = "bank-transaction"
 /** The tag source of the bank feed. */
 const BANK_FEED = "bank_feed"
 
-/** The most events one freeze keeps; past it the oldest folded ones go first, then nothing new is lost but the count. */
+/** The most events one hold keeps; past it the oldest folded ones (history) go first, then nothing new is lost but the count. */
 export const PENDING_MAX = 500
-
-/** What joins the lines of a customer into one text, as the flows join a burst. */
-const LINE = "\n"
 
 /** The mark of a wake written again after a freeze, so a replay is never held for the freeze it came from. */
 export const REPLAY_MARK = "~after-freeze-"
@@ -35,16 +31,6 @@ export const REPLAY_MARK = "~after-freeze-"
  * replays them once the stop closes.
  */
 export const THREAD_STOP_REASON = "run_stop"
-
-/** The words of the owner's item: a key of the capability's messages, with its parameters filled, in the owner's language. */
-export type Say = (key: string, params?: Readonly<Record<string, string | number>>) => string
-
-/** The prefix of the words of an error code; a code with no words of its own is named as it is. */
-const ERROR_KEY = "leadFreezes.error."
-
-/** The language of a run's context: Vietnamese unless it speaks English. */
-export const localeOf = (context: Readonly<Record<string, unknown>>): "vi" | "en" =>
-    context.locale === "en" ? "en" : "vi"
 
 const textOf = (value: unknown): string | null => (typeof value === "string" && value !== "" ? value : null)
 
@@ -210,148 +196,9 @@ const dropOldestFolded = (pending: ReadonlyArray<PendingEvent>): ReadonlyArray<P
     return at < 0 ? pending : [...pending.slice(0, at), ...pending.slice(at + 1)]
 }
 
-/** The lines a frozen customer wrote in the conversation of the failed run: what a retry shows the failed turn. */
-export const linesToFold = (
-    pending: ReadonlyArray<PendingEvent>,
-    conversationId: string | null,
-): ReadonlyArray<string> =>
-    conversationId === null
-        ? []
-        : pending
-              .filter((each) => each.kind === "message" && each.conversationId === conversationId)
-              .flatMap((each) => each.messageIds)
-
-/** The events with the lines of the conversation marked as shown to the failed turn. */
-export const foldLines = (
-    pending: ReadonlyArray<PendingEvent>,
-    conversationId: string | null,
-): ReadonlyArray<PendingEvent> =>
-    pending.map((each) =>
-        conversationId !== null && each.kind === "message" && each.conversationId === conversationId
-            ? { ...each, folded: true }
-            : each,
-    )
-
-/**
- * The events to replay on release, in the order they came: after a successful retry the lines it showed the failed turn were answered by
- * it, so they are left out; after a skip nothing answered them, so every event is replayed. A thread run's stop never folds a line into
- * the stopped step, so when it closes every event is replayed.
- */
-export const replayOf = (pending: ReadonlyArray<PendingEvent>, reason: FreezeReleaseReason): ReadonlyArray<PendingEvent> =>
-    reason === "retried" ? pending.filter((each) => !each.folded) : pending
-
 /** The key a replayed wake is written under: the event's own, marked with the freeze and its episode, so one release writes it once. */
 export const replayKeyOf = (event: PendingEvent, freezeId: string, episode: number): string =>
     `${event.eventKey}${REPLAY_MARK}${freezeId}-${episode}`
-
-/** An object of plain data, as a step's input and its trigger are. */
-export type JsonObject = Readonly<Record<string, unknown>>
-
-/** Whether a value is an object (not a list, not null). */
-export const isJsonObject = (value: unknown): value is JsonObject =>
-    typeof value === "object" && value !== null && !Array.isArray(value)
-
-/** One file a customer line carries. */
-export interface SaidFile {
-    /** The file. */
-    readonly id: string
-    /** Its name. */
-    readonly name: string
-    /** Its type. */
-    readonly contentType: string
-    /** A short-lived address. */
-    readonly url: string
-}
-
-/** One customer message as a trigger scope carries it. */
-export interface SaidLine {
-    /** The message. */
-    readonly id: string
-    /** What the customer said. */
-    readonly text: string
-    /** When, ISO text. */
-    readonly at: string
-    /** The files sent with it. */
-    readonly attachments: ReadonlyArray<SaidFile>
-}
-
-const lineJsonOf = (line: SaidLine): JsonObject => ({
-    id: line.id,
-    text: line.text,
-    at: line.at,
-    attachments: line.attachments.map((file) => ({
-        id: file.id,
-        name: file.name,
-        contentType: file.contentType,
-        url: file.url,
-    })),
-})
-
-/**
- * The failed step's input with the lines the customer wrote while frozen: the trigger's text, messages and message ids grow by the lines
- * it does not hold yet, oldest first. A step whose input holds no trigger is left as it is.
- */
-export const withLines = (input: JsonObject, said: ReadonlyArray<SaidLine>): JsonObject => {
-    const trigger = input.trigger
-    if (!isJsonObject(trigger) || said.length === 0) return input
-    const held = new Set(messageIdsOf(trigger))
-    const fresh = said.filter((line) => !held.has(line.id))
-    if (fresh.length === 0) return input
-    const text = textOf(trigger.text)
-    const messages: ReadonlyArray<unknown> = Array.isArray(trigger.messages) ? trigger.messages : []
-    return {
-        ...input,
-        trigger: {
-            ...trigger,
-            text: [...(text === null ? [] : [text]), ...fresh.map((line) => line.text)].join(LINE),
-            messages: [...messages, ...fresh.map(lineJsonOf)],
-            messageIds: [...held, ...fresh.map((line) => line.id)],
-        },
-    }
-}
-
-/** The title of a step in the owner's language: the node's own title, else the key of the node. */
-export const stepTitleOf = (title: unknown, nodeKey: string, locale: "vi" | "en"): string => {
-    if (typeof title !== "object" || title === null) return nodeKey
-    const words = textOf(Reflect.get(title, locale)) ?? textOf(Reflect.get(title, "vi"))
-    return words ?? nodeKey
-}
-
-/** The error of a code in the owner's language; a code with no words of its own is named as it is. */
-export const errorSummaryOf = (code: string | null, say: Say): string => {
-    if (code === null) return say(`${ERROR_KEY}unknown`)
-    const key = `${ERROR_KEY}${code}`
-    const words = say(key)
-    return words === key ? code : words
-}
-
-/** The one-line title of a freeze's item. */
-export const itemTitleOf = (freeze: LeadFreeze, say: Say): string =>
-    say("leadFreezes.item.title", {
-        name: freeze.customerName ?? say("leadFreezes.item.unnamed"),
-        step: freeze.stepTitle ?? freeze.stepKey ?? "?",
-    })
-
-/** The whole text of a freeze's item: the title, the error, the waiting events and what each answer will do. */
-export const itemSummaryOf = (freeze: LeadFreeze, say: Say): string => {
-    const waiting = freeze.pending.filter((each) => !each.folded).length
-    return [
-        `${itemTitleOf(freeze, say)}.`,
-        say("leadFreezes.item.error", { summary: errorSummaryOf(freeze.frozenReason, say) }),
-        ...(freeze.failures > 1 ? [say("leadFreezes.item.failures", { n: freeze.failures })] : []),
-        waiting === 0 ? say("leadFreezes.item.waitingNone") : say("leadFreezes.item.waiting", { n: waiting }),
-        say("leadFreezes.item.retry"),
-        say("leadFreezes.item.takeOver"),
-        say("leadFreezes.item.skip"),
-    ].join(" ")
-}
-
-/** What each answer does, as the item's fields name them for the cards that draw them. */
-export const itemAnswersOf = (say: Say): Readonly<Record<string, string>> => ({
-    retry: say("leadFreezes.item.retry"),
-    takeOver: say("leadFreezes.item.takeOver"),
-    skip: say("leadFreezes.item.skip"),
-})
 
 /** Whether a freeze still holds its customer. */
 export const holds = (freeze: LeadFreeze | null): freeze is LeadFreeze & { readonly status: "frozen" | "retrying" } =>

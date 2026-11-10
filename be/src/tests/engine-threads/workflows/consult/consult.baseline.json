@@ -1,0 +1,269 @@
+{
+    "baseline": "Old engine (step handler, playOld) at tree aa40f9655, recorded 2026-11-11 by package X1 from the twin walk before its old half was removed.",
+    "paths": [
+        [
+            "consult"
+        ],
+        [
+            "consult",
+            "create-order",
+            "send-qr",
+            "notify-order",
+            "won"
+        ]
+    ],
+    "outcome": {
+        "acts": [
+            {
+                "effect": "customer.message.send",
+                "payload": {
+                    "conversationId": "conv-1",
+                    "text": "Chi Lan oi, shop tom tat: 2 gio hoa nho, giao 25 Nguyen Hue, chi Lan 0901 234 567, thu Bay 9-11h. Chi dong y nhe?"
+                },
+                "key": "00000000-0000-4000-8000-000000000001:consult:f45440ffd52bacf4",
+                "dedupeKey": null
+            },
+            {
+                "effect": "order.create",
+                "payload": {
+                    "leadId": "lead-1",
+                    "items": [
+                        {
+                            "catalogueItemId": "c1",
+                            "qty": 2
+                        }
+                    ],
+                    "address": "25 Nguyen Hue",
+                    "recipientName": "Lan",
+                    "recipientPhone": "0901 234 567",
+                    "deliveryAt": "Saturday 9-11"
+                },
+                "key": "00000000-0000-4000-8000-000000000002:create-order:9261214dc2d60e01",
+                "dedupeKey": null
+            },
+            {
+                "effect": "order.confirm",
+                "payload": {
+                    "orderId": "order-1"
+                },
+                "key": "00000000-0000-4000-8000-000000000002:create-order:2d161910ba148c6b",
+                "dedupeKey": null
+            },
+            {
+                "effect": "lead.stage.update",
+                "payload": {
+                    "leadId": "lead-1",
+                    "stage": "won"
+                },
+                "key": "00000000-0000-4000-8000-000000000002:create-order:b5ca64820bbe2616",
+                "dedupeKey": null
+            },
+            {
+                "effect": "payment.qr.create",
+                "payload": {
+                    "orderId": "order-1"
+                },
+                "key": "00000000-0000-4000-8000-000000000002:send-qr:d76f828217d7bc95",
+                "dedupeKey": null
+            },
+            {
+                "effect": "customer.care.schedule",
+                "payload": {
+                    "kind": "payment-reminder",
+                    "ref": "order-1",
+                    "afterHours": 2
+                },
+                "key": "00000000-0000-4000-8000-000000000002:send-qr:8911124496b3d244",
+                "dedupeKey": null
+            },
+            {
+                "effect": "customer.care.schedule",
+                "payload": {
+                    "kind": "payment-stale",
+                    "ref": "order-1",
+                    "afterHours": 24
+                },
+                "key": "00000000-0000-4000-8000-000000000002:send-qr:e72500c4e34a1b3a",
+                "dedupeKey": null
+            },
+            {
+                "effect": "team.message.post",
+                "payload": {
+                    "kind": "order.summary",
+                    "orderId": "order-1"
+                },
+                "key": "00000000-0000-4000-8000-000000000002:notify-order:8f712886d57781e0",
+                "dedupeKey": null
+            }
+        ],
+        "lines": [
+            {
+                "conversationId": "conv-1",
+                "text": "Chi Lan oi, shop tom tat: 2 gio hoa nho, giao 25 Nguyen Hue, chi Lan 0901 234 567, thu Bay 9-11h. Chi dong y nhe?",
+                "channelRef": "line:00000000-0000-4000-8000-000000000001:consult:f45440ffd52bacf4"
+            }
+        ],
+        "team": [
+            {
+                "key": "00000000-0000-4000-8000-000000000002:notify-order:8f712886d57781e0",
+                "versions": [
+                    {
+                        "kind": "order.summary",
+                        "orderId": "order-1"
+                    }
+                ]
+            }
+        ],
+        "orders": [
+            {
+                "id": "order-1",
+                "leadId": "lead-1",
+                "items": [
+                    {
+                        "catalogueItemId": "c1",
+                        "qty": 2
+                    }
+                ],
+                "recipientName": "Lan",
+                "recipientPhone": "0901 234 567",
+                "deliveryAddress": "25 Nguyen Hue",
+                "deliveryAt": "Saturday 9-11",
+                "orderNo": "DH-1",
+                "status": "confirmed",
+                "amountVnd": 4000,
+                "waitsOwner": false,
+                "thresholdVnd": 5000000
+            }
+        ],
+        "ledger": [
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000001:consult:f45440ffd52bacf4",
+                "effectId": "customer.message.send",
+                "runId": "00000000-0000-4000-8000-000000000001",
+                "stepKey": "consult",
+                "args": {
+                    "conversationId": "conv-1",
+                    "text": "Chi Lan oi, shop tom tat: 2 gio hoa nho, giao 25 Nguyen Hue, chi Lan 0901 234 567, thu Bay 9-11h. Chi dong y nhe?"
+                },
+                "subjectEntity": "message",
+                "subjectId": "m-1"
+            },
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:create-order:9261214dc2d60e01",
+                "effectId": "order.create",
+                "runId": "00000000-0000-4000-8000-000000000002",
+                "stepKey": "create-order",
+                "args": {
+                    "leadId": "lead-1",
+                    "items": [
+                        {
+                            "catalogueItemId": "c1",
+                            "qty": 2
+                        }
+                    ],
+                    "address": "25 Nguyen Hue",
+                    "recipientName": "Lan",
+                    "recipientPhone": "0901 234 567",
+                    "deliveryAt": "Saturday 9-11"
+                },
+                "subjectEntity": "order",
+                "subjectId": "order-1",
+                "facts": {
+                    "orderNo": "DH-1",
+                    "status": "draft",
+                    "amountVnd": 4000,
+                    "waitsOwner": false,
+                    "thresholdVnd": 5000000
+                }
+            },
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:create-order:2d161910ba148c6b",
+                "effectId": "order.confirm",
+                "runId": "00000000-0000-4000-8000-000000000002",
+                "stepKey": "create-order",
+                "args": {
+                    "orderId": "order-1"
+                },
+                "subjectEntity": "order.confirm",
+                "subjectId": "order.confirm-3"
+            },
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:create-order:b5ca64820bbe2616",
+                "effectId": "lead.stage.update",
+                "runId": "00000000-0000-4000-8000-000000000002",
+                "stepKey": "create-order",
+                "args": {
+                    "leadId": "lead-1",
+                    "stage": "won"
+                },
+                "subjectEntity": "lead.stage.update",
+                "subjectId": "lead.stage.update-4"
+            },
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:send-qr:d76f828217d7bc95",
+                "effectId": "payment.qr.create",
+                "runId": "00000000-0000-4000-8000-000000000002",
+                "stepKey": "send-qr",
+                "args": {
+                    "orderId": "order-1"
+                },
+                "subjectEntity": "payment.qr.create",
+                "subjectId": "payment.qr.create-5"
+            },
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:send-qr:8911124496b3d244",
+                "effectId": "customer.care.schedule",
+                "runId": "00000000-0000-4000-8000-000000000002",
+                "stepKey": "send-qr",
+                "args": {
+                    "kind": "payment-reminder",
+                    "ref": "order-1",
+                    "afterHours": 2
+                },
+                "subjectEntity": "customer.care.schedule",
+                "subjectId": "customer.care.schedule-6"
+            },
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:send-qr:e72500c4e34a1b3a",
+                "effectId": "customer.care.schedule",
+                "runId": "00000000-0000-4000-8000-000000000002",
+                "stepKey": "send-qr",
+                "args": {
+                    "kind": "payment-stale",
+                    "ref": "order-1",
+                    "afterHours": 24
+                },
+                "subjectEntity": "customer.care.schedule",
+                "subjectId": "customer.care.schedule-7"
+            },
+            {
+                "effectKey": "call:00000000-0000-4000-8000-000000000002:notify-order:8f712886d57781e0",
+                "effectId": "team.message.post",
+                "runId": "00000000-0000-4000-8000-000000000002",
+                "stepKey": "notify-order",
+                "args": {
+                    "kind": "order.summary",
+                    "orderId": "order-1"
+                },
+                "subjectEntity": "chat-message",
+                "subjectId": "chat-1"
+            }
+        ],
+        "modelAsked": [
+            "sales.consult-turn:consult",
+            "sales.consult-turn:consult",
+            "sales.consult-turn:consult",
+            "sales.create-order:create-order",
+            "sales.create-order:create-order",
+            "sales.create-order:create-order",
+            "sales.create-order:create-order",
+            "payment.request:send-qr",
+            "payment.request:send-qr",
+            "payment.request:send-qr",
+            "payment.request:send-qr",
+            "sales.order-notice:order-notice",
+            "sales.order-notice:order-notice"
+        ]
+    },
+    "asked": 13
+}

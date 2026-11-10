@@ -3,7 +3,6 @@ import { LATEST_VERSION, WORKFLOW_CALL_MEMBER, WORKFLOW_PARAMS_MEMBER } from "@n
 import { TEAM_CHAT_LINES_MAX, TEAM_CHAT_MODULES, TEAM_CHAT_WORKFLOW_KEY } from "@nivo-lite/blocks-core"
 import type { TeamChatIntent, TeamChatLine, TeamChatRoom } from "@nivo-lite/blocks-core"
 import { AgentTagService } from "@modules/domain/agent-work"
-import { ThreadRunsService } from "@modules/domain/agent-threads"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import type { AgentCard } from "@modules/domain/agents"
 import { BrainChangeRequestsService } from "@modules/domain/brain-facts"
@@ -25,7 +24,6 @@ import {
     askedTextOf,
     captureKeyOf,
     captureReasonOf,
-    chatTurnNamespaceOf,
     fittedParamsOf,
     mayCapture,
     pauseLineOf,
@@ -66,7 +64,7 @@ interface Seat {
 }
 
 /** What one agent's turn came to, for the team chat (taken or not) and the log. */
-type TurnEnd = "started" | "duplicate" | "paused" | "quiet" | "engine_off" | "no_agent" | "not_tagged"
+type TurnEnd = "started" | "duplicate" | "paused" | "quiet" | "no_chat_turn" | "no_agent" | "not_tagged"
 
 /** The ends after which the old tag path must not run for the agent too: the turn is this router's. */
 const TAKEN: ReadonlyArray<TurnEnd> = ["started", "duplicate", "paused", "quiet"]
@@ -78,8 +76,8 @@ const TAKEN: ReadonlyArray<TurnEnd> = ["started", "duplicate", "paused", "quiet"
  * each agent the message names (once, in order), then the agent whose line it replies to. A message that names nobody, an agent's own
  * line, or a reply to a card a person decides on (stop, approval, truth change: their own doors) starts nothing and costs no read and
  * no model call. A turn is a pinned tag (the workflow `team-chat`, latest) carrying the asked words, who asked with their standing,
- * the room's latest lines and the line replied to, so the agent answers with the asker's rights. It runs on threads only: an agent
- * whose module's chat turn is not engaged keeps the old tag path untouched. A room over its rate limit gets one line, then quiet.
+ * the room's latest lines and the line replied to, so the agent answers with the asker's rights. It runs on threads (the one engine):
+ * an agent whose module ships no chat turn (`TEAM_CHAT_MODULES`) keeps the old tag path untouched. A room over its rate limit gets one line, then quiet.
  * The router never starts a business workflow: the pin names only `team-chat`.
  */
 export class TeamChatTurnsService implements OnModuleInit {
@@ -90,7 +88,6 @@ export class TeamChatTurnsService implements OnModuleInit {
         private readonly store: TeamChatStoreService,
         private readonly limiter: ChatTurnLimiterService,
         @InjectLogger() private readonly logger: Logger,
-        @Optional() private readonly threads?: ThreadRunsService,
         @Optional() private readonly chat?: TeamChatRoomsService,
         @Optional() private readonly cards?: TeamChatCardsService,
         @Optional() private readonly changes?: BrainChangeRequestsService,
@@ -161,7 +158,7 @@ export class TeamChatTurnsService implements OnModuleInit {
             { room: roomKind, intent: "capture", eventKey: captureKeyOf(message.id, agent.id) },
             () => this.contextOf(workspaceId, room.id, message.id, null, seat),
         )
-        if (ended === "engine_off" || ended === "no_agent") return this.captured("engine_off")
+        if (ended === "no_chat_turn" || ended === "no_agent") return this.captured("no_chat_turn")
         return this.captured(ended === "duplicate" ? "duplicate" : "drafting")
     }
 
@@ -208,7 +205,7 @@ export class TeamChatTurnsService implements OnModuleInit {
         return taken
     }
 
-    /** One agent's turn: on threads only, within the room's limit, as one pinned tag of the person. */
+    /** One agent's turn: when its module ships one, within the room's limit, as one pinned tag of the person. */
     private async turnOf(
         workspaceId: string,
         agent: AgentCard,
@@ -216,7 +213,7 @@ export class TeamChatTurnsService implements OnModuleInit {
         how: { readonly room: TeamChatRoom; readonly intent: TeamChatIntent; readonly eventKey: string },
         read: () => Promise<TurnContext | null>,
     ): Promise<TurnEnd> {
-        if (!this.engages(agent.module)) return "engine_off"
+        if (!TEAM_CHAT_MODULES.includes(agent.module)) return "no_chat_turn"
         const admission = this.limiter.admit(`${workspaceId}:${asked.roomId}`)
         if (admission === "quiet") return "quiet"
         if (admission === "pause_notice") {
@@ -251,14 +248,6 @@ export class TeamChatTurnsService implements OnModuleInit {
         })
         if (tagged.tagged) return "started"
         return tagged.reason === "duplicate" ? "duplicate" : "not_tagged"
-    }
-
-    /** True when the agent's module ships a chat turn and the thread engine runs it. */
-    private engages(moduleKey: string): boolean {
-        return (
-            TEAM_CHAT_MODULES.includes(moduleKey) &&
-            this.threads?.engages(chatTurnNamespaceOf(moduleKey, TEAM_CHAT_WORKFLOW_KEY)) === true
-        )
     }
 
     /** The one line an agent says when its room reached the limit; once per window (the limiter says when). */

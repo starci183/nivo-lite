@@ -130,5 +130,5 @@ export type CaptureOutcome =
     | "not_person_line"
     /** A room of several people: name the agent. */
     | "agent_required"
-    /** The chat turn of that agent's module does not run on threads (engine off). */
-    | "engine_off"
+    /** That agent's module ships no chat turn (`TEAM_CHAT_MODULES`): nothing to draft with. */
+    | "no_chat_turn"

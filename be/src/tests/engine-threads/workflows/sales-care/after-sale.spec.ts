@@ -1,8 +1,7 @@
 import { TOOL } from "@nivo-lite/blocks-core"
-import { LEAD, actsOf, answer, button, founderDecides, playOld, redrive, rowsOf, stopsOf } from "../../thread-world"
+import { LEAD, actsOf, answer, button, founderDecides, redrive, rowsOf, stopsOf } from "../../thread-world"
 import {
     W8P,
-    W8_WORKFLOWS,
     afterSaleWake,
     confusedAnswer,
     coreReport,
@@ -15,9 +14,11 @@ import {
 } from "../../thread-world-w8-wakes"
 import { calls, linesOf, moneyDbOf, type MoneyDb } from "../reconcile/thread-world-money"
 import { moneyProcessOf } from "../reconcile/thread-world-money-process"
+import baseline from "./after-sale.baseline.json"
 
 // Package W8 (design row 2-2): `sales.after-sale` (thank → plan → thanked) on a LangGraph thread, woken by the reconcile's end hand-off.
-// Twin walk with the old engine; the stop of the live walk on restart THIRTEEN (the thank step judged confused because the order carried
+// Twin walk against the old engine (fixed baseline: the old engine's walk, which this twin held equal to the thread at tree aa40f9655; old half removed in phase 3, package X1);
+// the stop of the live walk on restart THIRTEEN (the thank step judged confused because the order carried
 // a complaint: on threads a stop with one card and NO customer line); a kill after the thank-you was sent.
 
 const ORDER = "order-1"
@@ -62,23 +63,21 @@ const complaint = (db: MoneyDb) => {
     db.model.script(W8P.core, coreReport(COMPLAINT_Q))
 }
 
-const started = async (flag: ReadonlyArray<string>, script: (db: MoneyDb) => void) => {
-    const process = await w8ProcessOf(books(), flag, script)
+const started = async (script: (db: MoneyDb) => void) => {
+    const process = await w8ProcessOf(books(), script)
     const woken = await w8Wake(process, afterSaleWake(ORDER))
     expect(woken.error).toBeNull()
     return { process, db: process.db, runId: woken.runId ?? "" }
 }
 
-describe("after-sale on a thread: twin walk with the old engine", () => {
-    it("thank → plan → thanked: same steps, acts, customer line, cards, ledger and model calls on both engines", async () => {
-        const old = await started([], thanks)
-        const played = await playOld(old.process, old.runId)
-        const thread = await started([W8_WORKFLOWS.afterSale], thanks)
+describe("after-sale on a thread against the old engine's baseline", () => {
+    it("thank → plan → thanked: the old engine's steps, acts, customer line, cards, ledger and model calls", async () => {
+        const old = baseline
+        const thread = await started(thanks)
 
-        expect(played.path).toEqual(PATH)
         expect(await threadStatusOf(thread.process, thread.runId)).toBe("ended")
-        expect(await threadStepsOf(thread.process, thread.runId)).toEqual(played.path)
-        expect(w8OutcomeOf(thread.db)).toEqual(w8OutcomeOf(old.db))
+        expect(await threadStepsOf(thread.process, thread.runId)).toEqual(PATH)
+        expect(w8OutcomeOf(thread.db)).toEqual(old.outcome)
         expect(thread.db.acts.map((act) => act.effect)).toEqual([
             TOOL.customerMessageSend,
             TOOL.leadUpdate,
@@ -88,7 +87,8 @@ describe("after-sale on a thread: twin walk with the old engine", () => {
         expect(linesOf(thread.db)).toEqual([THANKS])
         expect(thread.db.lines[0]?.conversationId).toBe("conv-1")
         expect(thread.db.team).toEqual([])
-        expect(thread.db.model.asked.length).toBe(old.db.model.asked.length)
+        // A thread adds no model call: 4 on the old engine.
+        expect(thread.db.model.asked.length).toBe(old.asked)
         expect(rowsOf(thread.db, thread.runId).run).toMatchObject({ engine: "langgraph", status: "done" })
         expect(await stopsOf(thread.process, thread.runId)).toEqual([])
     })
@@ -96,7 +96,7 @@ describe("after-sale on a thread: twin walk with the old engine", () => {
 
 describe("after-sale on a thread: the stop (live walk, restart THIRTEEN: an order with a complaint)", () => {
     it("the thank step judged confused: a stop with ONE card and NO customer line; nothing sent, no stage, no care armed", async () => {
-        const { process, db, runId } = await started([W8_WORKFLOWS.afterSale], complaint)
+        const { process, db, runId } = await started(complaint)
 
         expect(await threadStatusOf(process, runId)).toBe("stopped")
         const stops = await stopsOf(process, runId)
@@ -114,7 +114,7 @@ describe("after-sale on a thread: the stop (live walk, restart THIRTEEN: an orde
     })
 
     it("a confused stop is never auto-resumed: three re-drives ask no model, send nothing, keep one card", async () => {
-        const { process, db, runId } = await started([W8_WORKFLOWS.afterSale], complaint)
+        const { process, db, runId } = await started(complaint)
         const asked = db.model.asked.length
 
         await redrive(process, runId, "sweep-1")
@@ -129,7 +129,7 @@ describe("after-sale on a thread: the stop (live walk, restart THIRTEEN: an orde
     })
 
     it("the founder's free-text answer resumes the step: it sees the words, thanks once, plans; one record, one card rewritten", async () => {
-        const { process, db, runId } = await started([W8_WORKFLOWS.afterSale], complaint)
+        const { process, db, runId } = await started(complaint)
         thanks(db)
 
         const ran = await founderDecides(process, runId, answer(db, "Khieu nai da xu ly xong, cu cam on khach binh thuong"))
@@ -151,7 +151,7 @@ describe("after-sale on a thread: the stop (live walk, restart THIRTEEN: an orde
     })
 
     it("one record per run + step: stopped again after an answer, it folds into the same stop and the same card", async () => {
-        const { process, db, runId } = await started([W8_WORKFLOWS.afterSale], complaint)
+        const { process, db, runId } = await started(complaint)
         complaint(db)
 
         await founderDecides(process, runId, answer(db, "Doi toi hoi lai khach da"))
@@ -174,7 +174,7 @@ describe("after-sale on a thread: the stop (live walk, restart THIRTEEN: an orde
             )
             db.model.script(W8P.core, coreReport("Khach muon doi dia chi giao, doi theo khach?"))
         }
-        const { process, db, runId } = await started([W8_WORKFLOWS.afterSale], (one) => told(one, THANKS))
+        const { process, db, runId } = await started((one) => told(one, THANKS))
         expect(linesOf(db)).toEqual([THANKS])
         const [first] = await stopsOf(process, runId)
         expect(first?.customerLines.map((line) => [line.conversationId, line.text])).toEqual([["conv-1", THANKS]])
@@ -215,7 +215,7 @@ describe("after-sale on a thread: killed and replayed", () => {
         const db = moneyDbOf(books())
         thanks(db)
         diesAtDone(db, nth)
-        const first = await moneyProcessOf(db, [W8_WORKFLOWS.afterSale])
+        const first = await moneyProcessOf(db)
         const woken = await w8Wake(first, afterSaleWake(ORDER))
         expect(String(woken.error)).toContain("WORLD_PROCESS_DIED")
         const runId = woken.runId ?? ""
@@ -224,7 +224,7 @@ describe("after-sale on a thread: killed and replayed", () => {
 
         // The unfinished step may ask its model again on the re-drive; script it once more, the ledger answers its effects.
         thanks(db)
-        const second = await moneyProcessOf(db, [W8_WORKFLOWS.afterSale])
+        const second = await moneyProcessOf(db)
         const ran = await redrive(second, runId, "sweep-1")
 
         expect(ran.map((one) => one.error)).toEqual([null])

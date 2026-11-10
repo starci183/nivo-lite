@@ -4,7 +4,6 @@ import { coreNodes } from "@nivo-lite/blocks-core"
 import { WORKFLOW_TEMPLATES, latestTemplateVersion } from "@nivo-lite/blocks-core/modules"
 import { THREAD_END } from "@modules/integrations/langgraph/langgraph.port"
 import { FREEZE_NODE, compileTemplate, stepExitOf } from "./template-compiler.policy"
-import { THREAD_READY_WORKFLOWS } from "./thread-flag.policy"
 import type { CompiledTemplate, CompiledStep, TemplatePin, TemplateProblem } from "./template-compiler.policy"
 
 const SUBJECT = Symbol("template-compiler.policy")
@@ -139,7 +138,7 @@ describe("compileTemplate on every blocks-core template", () => {
         expect(nodeNamed(graph, "to-owner")?.step).toBe("core.outcome")
     })
 
-    it.each(THREAD_READY_WORKFLOWS)("compiles the newest version of %s, a workflow cleared for threads", async (name) => {
+    it.each(WORKFLOW_TEMPLATES.map((template) => template.id))("compiles the newest version of %s on threads", async (name) => {
         const subject = await build()
         const template = WORKFLOW_TEMPLATES.find((candidate) => candidate.id === name)
         const version = template === undefined ? null : latestTemplateVersion(template)

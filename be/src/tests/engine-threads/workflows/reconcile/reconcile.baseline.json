@@ -1,0 +1,279 @@
+{
+    "baseline": "Twin walk at tree aa40f9655 (old engine == thread, green): recorded 2026-11-11 by package X1 from the walk the twin assertion held equal to the old engine; the old half is removed.",
+    "bank feed": {
+        "outcome": {
+            "acts": [
+                {
+                    "effect": "payment.order.settle",
+                    "payload": {
+                        "orderId": "order-1",
+                        "transactionId": "tx-exact"
+                    },
+                    "key": "00000000-0000-4000-8000-000000000001:mark-paid:54936929ac0a92cc",
+                    "dedupeKey": null
+                },
+                {
+                    "effect": "team.message.post",
+                    "payload": {
+                        "kind": "payment.received",
+                        "orderId": "order-1"
+                    },
+                    "key": "00000000-0000-4000-8000-000000000001:notify-paid:fff9b8cb9840239a",
+                    "dedupeKey": null
+                },
+                {
+                    "effect": "agent.tag",
+                    "payload": {
+                        "toModuleKey": "sales",
+                        "text": "Chuyển tiếp sang quy trình tiếp theo",
+                        "leadId": "lead-1",
+                        "context": {
+                            "workflowCall": {
+                                "workflow": "after-sale",
+                                "version": "latest"
+                            },
+                            "params": {
+                                "orderId": "order-1",
+                                "leadId": "lead-1"
+                            },
+                            "caller": {
+                                "runId": "00000000-0000-4000-8000-000000000001"
+                            }
+                        },
+                        "visibility": "chat"
+                    },
+                    "key": "00000000-0000-4000-8000-000000000001:to-after-sale:86753d2dab06d322",
+                    "dedupeKey": "call-workflow:00000000-0000-4000-8000-000000000001:sales.after-sale"
+                }
+            ],
+            "lines": [],
+            "team": [
+                {
+                    "key": "00000000-0000-4000-8000-000000000001:notify-paid:fff9b8cb9840239a",
+                    "versions": [
+                        {
+                            "kind": "payment.received",
+                            "orderId": "order-1"
+                        }
+                    ]
+                }
+            ],
+            "tools": [
+                {
+                    "tool": "ledger.append",
+                    "args": {
+                        "transactionId": "tx-exact"
+                    },
+                    "key": "00000000-0000-4000-8000-000000000001:ledger:tool:5a7ff43b0e285494"
+                }
+            ],
+            "book": [
+                [
+                    "tx-exact",
+                    "sheet-row-1"
+                ]
+            ],
+            "ledger": [
+                {
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:mark-paid:54936929ac0a92cc",
+                    "effectId": "payment.order.settle",
+                    "runId": "00000000-0000-4000-8000-000000000001",
+                    "stepKey": "mark-paid",
+                    "args": {
+                        "orderId": "order-1",
+                        "transactionId": "tx-exact"
+                    },
+                    "subjectEntity": "payment.order.settle",
+                    "subjectId": "payment.order.settle-1"
+                },
+                {
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:notify-paid:fff9b8cb9840239a",
+                    "effectId": "team.message.post",
+                    "runId": "00000000-0000-4000-8000-000000000001",
+                    "stepKey": "notify-paid",
+                    "args": {
+                        "kind": "payment.received",
+                        "orderId": "order-1"
+                    },
+                    "subjectEntity": "chat-message",
+                    "subjectId": "chat-1"
+                },
+                {
+                    "effectKey": "dedupe:call-workflow:00000000-0000-4000-8000-000000000001:sales.after-sale",
+                    "effectId": "agent.tag",
+                    "runId": "00000000-0000-4000-8000-000000000001",
+                    "stepKey": "to-after-sale",
+                    "args": {
+                        "toModuleKey": "sales",
+                        "text": "Chuyển tiếp sang quy trình tiếp theo",
+                        "leadId": "lead-1",
+                        "context": {
+                            "workflowCall": {
+                                "workflow": "after-sale",
+                                "version": "latest"
+                            },
+                            "params": {
+                                "orderId": "order-1",
+                                "leadId": "lead-1"
+                            },
+                            "caller": {
+                                "runId": "00000000-0000-4000-8000-000000000001"
+                            }
+                        },
+                        "visibility": "chat"
+                    },
+                    "subjectEntity": "agent.tag",
+                    "subjectId": "agent.tag-3"
+                }
+            ],
+            "modelAsked": [
+                "accounting.match-payment:agent",
+                "payment.settle:agent",
+                "payment.settle:agent",
+                "accounting.post-payment:agent",
+                "accounting.post-payment:agent",
+                "payment.received-notice:agent",
+                "payment.received-notice:agent"
+            ]
+        },
+        "asked": 7
+    },
+    "rematch job": {
+        "outcome": {
+            "acts": [
+                {
+                    "effect": "payment.order.settle",
+                    "payload": {
+                        "orderId": "order-1",
+                        "transactionId": "tx-exact"
+                    },
+                    "key": "00000000-0000-4000-8000-000000000001:mark-paid:54936929ac0a92cc",
+                    "dedupeKey": null
+                },
+                {
+                    "effect": "team.message.post",
+                    "payload": {
+                        "kind": "payment.received",
+                        "orderId": "order-1"
+                    },
+                    "key": "00000000-0000-4000-8000-000000000001:notify-paid:fff9b8cb9840239a",
+                    "dedupeKey": null
+                },
+                {
+                    "effect": "agent.tag",
+                    "payload": {
+                        "toModuleKey": "sales",
+                        "text": "Chuyển tiếp sang quy trình tiếp theo",
+                        "leadId": "lead-1",
+                        "context": {
+                            "workflowCall": {
+                                "workflow": "after-sale",
+                                "version": "latest"
+                            },
+                            "params": {
+                                "orderId": "order-1",
+                                "leadId": "lead-1"
+                            },
+                            "caller": {
+                                "runId": "00000000-0000-4000-8000-000000000001"
+                            }
+                        },
+                        "visibility": "chat"
+                    },
+                    "key": "00000000-0000-4000-8000-000000000001:to-after-sale:86753d2dab06d322",
+                    "dedupeKey": "call-workflow:00000000-0000-4000-8000-000000000001:sales.after-sale"
+                }
+            ],
+            "lines": [],
+            "team": [
+                {
+                    "key": "00000000-0000-4000-8000-000000000001:notify-paid:fff9b8cb9840239a",
+                    "versions": [
+                        {
+                            "kind": "payment.received",
+                            "orderId": "order-1"
+                        }
+                    ]
+                }
+            ],
+            "tools": [
+                {
+                    "tool": "ledger.append",
+                    "args": {
+                        "transactionId": "tx-exact"
+                    },
+                    "key": "00000000-0000-4000-8000-000000000001:ledger:tool:5a7ff43b0e285494"
+                }
+            ],
+            "book": [
+                [
+                    "tx-exact",
+                    "sheet-row-1"
+                ]
+            ],
+            "ledger": [
+                {
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:mark-paid:54936929ac0a92cc",
+                    "effectId": "payment.order.settle",
+                    "runId": "00000000-0000-4000-8000-000000000001",
+                    "stepKey": "mark-paid",
+                    "args": {
+                        "orderId": "order-1",
+                        "transactionId": "tx-exact"
+                    },
+                    "subjectEntity": "payment.order.settle",
+                    "subjectId": "payment.order.settle-1"
+                },
+                {
+                    "effectKey": "call:00000000-0000-4000-8000-000000000001:notify-paid:fff9b8cb9840239a",
+                    "effectId": "team.message.post",
+                    "runId": "00000000-0000-4000-8000-000000000001",
+                    "stepKey": "notify-paid",
+                    "args": {
+                        "kind": "payment.received",
+                        "orderId": "order-1"
+                    },
+                    "subjectEntity": "chat-message",
+                    "subjectId": "chat-1"
+                },
+                {
+                    "effectKey": "dedupe:call-workflow:00000000-0000-4000-8000-000000000001:sales.after-sale",
+                    "effectId": "agent.tag",
+                    "runId": "00000000-0000-4000-8000-000000000001",
+                    "stepKey": "to-after-sale",
+                    "args": {
+                        "toModuleKey": "sales",
+                        "text": "Chuyển tiếp sang quy trình tiếp theo",
+                        "leadId": "lead-1",
+                        "context": {
+                            "workflowCall": {
+                                "workflow": "after-sale",
+                                "version": "latest"
+                            },
+                            "params": {
+                                "orderId": "order-1",
+                                "leadId": "lead-1"
+                            },
+                            "caller": {
+                                "runId": "00000000-0000-4000-8000-000000000001"
+                            }
+                        },
+                        "visibility": "chat"
+                    },
+                    "subjectEntity": "agent.tag",
+                    "subjectId": "agent.tag-3"
+                }
+            ],
+            "modelAsked": [
+                "accounting.match-payment:agent",
+                "payment.settle:agent",
+                "payment.settle:agent",
+                "accounting.post-payment:agent",
+                "accounting.post-payment:agent",
+                "payment.received-notice:agent",
+                "payment.received-notice:agent"
+            ]
+        },
+        "asked": 7
+    }
+}

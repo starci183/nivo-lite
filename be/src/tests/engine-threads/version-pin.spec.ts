@@ -7,7 +7,6 @@ import {
     CONV,
     CORE,
     FRONT,
-    FRONT_DESK,
     UNDERSTAND,
     WS,
     answer,
@@ -53,7 +52,7 @@ const stoppedOnN = async (db: ThreadDb) => {
         ],
         customerLine: null,
     })
-    const process = await processOf(db, { flag: [FRONT_DESK] })
+    const process = await processOf(db)
     const runId = (await customerWrites(process, "Shop mo cua may gio?")).runId ?? ""
     const versionN = frontDeskVersion(db)
     const number = db.versions.get(versionN)?.number ?? 0
@@ -67,7 +66,7 @@ describe("a thread is pinned to the version it started on", () => {
         const db = threadDbOf()
         const { runId, versionN } = await stoppedOnN(db)
 
-        const restarted = await processOf(db, { flag: [FRONT_DESK] })
+        const restarted = await processOf(db)
         db.model.script(
             ANSWER,
             { call: { tool: TOOL.customerMessageSend, args: { conversationId: CONV, text: OUTCOME } } },
@@ -85,7 +84,7 @@ describe("a thread is pinned to the version it started on", () => {
     it("refuses by name to resume or drive the thread on the graph of another version", async () => {
         const db = threadDbOf()
         const { runId, versionNext } = await stoppedOnN(db)
-        const process = await processOf(db, { flag: [FRONT_DESK] })
+        const process = await processOf(db)
         const ref = { workspaceId: WS, runId }
         const next = await process.graphs.pinned(ref, FRONT, versionNext)
 
@@ -112,7 +111,7 @@ describe("a thread is pinned to the version it started on", () => {
                 ),
             },
         })
-        const restarted = await processOf(db, { flag: [FRONT_DESK] })
+        const restarted = await processOf(db)
 
         await expect(restarted.graphs.pinned({ workspaceId: WS, runId }, FRONT, versionN)).rejects.toMatchObject({
             code: AgentThreadsErrorCode.TemplateRefused,

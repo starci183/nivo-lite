@@ -1,12 +1,9 @@
 import { mock } from "@starci/jest-preset"
 import { AgentRunsService } from "@modules/domain/agent-runs"
-import type { StepSpec } from "@modules/domain/agent-runs"
 import type { FlowThreads } from "@modules/domain/agent-graphs"
-import { parseAgentThreadsConfig } from "@modules/domain/agent-threads"
 import { AgentTagService } from "@modules/domain/agent-work"
 import { AgentDirectoryService } from "@modules/domain/agents"
 import { ModuleJobRunnerService } from "@modules/domain/entity-engine"
-import { EnvSource } from "@modules/platform/config"
 import type { WorkflowStart } from "@nivo-lite/agent-sdk/mutation"
 import { runViewOf } from "@tests/fixtures/builders/agent-runs.builder"
 import { agentTurnViewOf } from "@tests/fixtures/builders/agent-work.builder"
@@ -117,39 +114,31 @@ describe("EngineWorkflowService and the thread runs: the rematch job's start", (
         })
 
     /** The REAL flow over the workflows seeded from the templates, with thread runs that engage what the app's config says. */
-    const flowsOf = async (env: Readonly<Record<string, string>>) => {
-        const appended: Array<StepSpec> = []
+    const flowsOf = async () => {
         const runs = mock<AgentRunsService>({
             open: () => Promise.resolve(runViewOf({ id: "run-1", agentId: agentOf("accounting") })),
-            append: (_workspace: string, _tx: unknown, _run: string, specs: ReadonlyArray<StepSpec>) => {
-                appended.push(...specs)
-                return Promise.resolve()
-            },
         })
         const built = await flowServicesOf(flowWorldOf({}), NO_FLOW, {}, undefined, {
             runs,
             workflows: routedWorkflowsOf(),
             memory: leadMemoryWorldOf({}),
         })
-        const options = parseAgentThreadsConfig(new EnvSource(env))
+        // Threads are the one engine: the flow hands every workflow wake to them.
         const threads = mock<FlowThreads>({
-            engages: jest.fn((namespace: string) => options.workflows.includes(namespace)),
             owns: jest.fn().mockReturnValue(false),
-            engineOfWake: jest.fn().mockResolvedValue(null),
             opened: jest.fn().mockResolvedValue(undefined),
             started: jest.fn().mockResolvedValue({ status: "done", reason: null, outcome: { runId: "run-1" } }),
         })
         built.flows.setThreads(threads)
-        return { flows: built.flows, threads, appended }
+        return { flows: built.flows, threads }
     }
 
-    it("starts the reconcile on a THREAD when the flag names it: the job's tag routes by its pin, the inputs reach trigger.*", async () => {
+    it("starts the reconcile on a THREAD: the job's tag routes by its pin, the inputs reach trigger.*", async () => {
         const wake = wakeOf(await taggedBy(REQUEST))
-        const { flows, threads, appended } = await flowsOf({ AGENT_ENGINE_LANGGRAPH: "accounting.reconcile" })
+        const { flows, threads } = await flowsOf()
 
         await expect(flows.run(wake)).resolves.toEqual({ status: "done", reason: null, outcome: { runId: "run-1" } })
 
-        expect(appended).toEqual([])
         expect(threads.opened).toHaveBeenCalledTimes(1)
         expect(threads.started).toHaveBeenCalledTimes(1)
         expect(threads.started).toHaveBeenCalledWith(
@@ -160,25 +149,6 @@ describe("EngineWorkflowService and the thread runs: the rematch job's start", (
             }),
             expect.anything(),
         )
-    })
-
-    it("starts it on a thread with LangGraph as the default engine and no flag list", async () => {
-        const { flows, threads, appended } = await flowsOf({ AGENT_ENGINE_DEFAULT: "langgraph" })
-
-        await flows.run(wakeOf(await taggedBy(REQUEST)))
-
-        expect(appended).toEqual([])
-        expect(threads.started).toHaveBeenCalledWith(expect.objectContaining({ namespace: "accounting.reconcile" }), expect.anything())
-    })
-
-    it("starts it on the old engine, exactly as before, when neither the flag nor the default names it", async () => {
-        const { flows, threads, appended } = await flowsOf({ AGENT_ENGINE_LANGGRAPH: "chatbot.front-desk" })
-
-        await flows.run(wakeOf(await taggedBy(REQUEST)))
-
-        expect(threads.started).not.toHaveBeenCalled()
-        expect(threads.opened).not.toHaveBeenCalled()
-        expect(appended.map((step) => step.nodeKey)).toEqual(["match"])
     })
 
     it("keys the wake by the dedupe key, so a job delivered twice writes ONE wake and so ONE run and one thread", async () => {

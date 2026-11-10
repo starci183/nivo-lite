@@ -11,9 +11,7 @@ import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectLogger } from "@modules/platform/logging"
 import type { Logger } from "@modules/platform/logging"
 import { eachInOrder, isRecord } from "@modules/platform/primitives"
-import { InjectAgentThreadsOptions } from "./agent-threads.decorators"
 import { AgentThreadsLogEvent } from "./agent-threads.log-events"
-import type { AgentThreadsOptions } from "./agent-threads.options"
 import { AgentThreadsError, AgentThreadsErrorCode } from "./errors/agent-threads.error"
 import { RunStopRecordsService, runStopOf } from "./stops/run-stop-records.service"
 import type { RunStop } from "./stops/run-stop.contracts"
@@ -176,7 +174,6 @@ export class ThreadSweepService {
     private readonly riders: Array<ThreadSweepRider> = []
 
     constructor(
-        @InjectAgentThreadsOptions() private readonly options: AgentThreadsOptions,
         @InjectClock() private readonly clock: Clock,
         @InjectLogger() private readonly logger: Logger,
         private readonly engine: EntityEngineService,
@@ -199,11 +196,9 @@ export class ThreadSweepService {
     }
 
     /**
-     * One pass over the next slice of workspaces. Nothing at all, not one read, while no workflow is on threads (the flag is empty: the
-     * old engine's minute tick pays nothing), and nothing in an app with no threads port.
+     * One pass over the next slice of workspaces; nothing in an app with no threads port.
      */
     async sweep(): Promise<ThreadSweepReport> {
-        if (this.options.workflows.length === 0) return NONE
         if (this.port === undefined || this.workspaces === undefined) return NONE
         const found = await this.workspaces.list(WORKSPACE_SLICE, this.after)
         this.after = found.length < WORKSPACE_SLICE ? undefined : found.at(-1)?.id
