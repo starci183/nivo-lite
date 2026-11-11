@@ -287,3 +287,20 @@ describe("AgentWakeService > absent insert receipts", () => {
         expect(logger.info).not.toHaveBeenCalled()
     })
 })
+
+// FX4 (D-P11-7): a held wake whose event a freeze wrote again as a new wake is closed with it, pointing at the replay.
+describe("AgentWakeService.superseded", () => {
+    it("closes only a wake still held, in the caller's transaction, as skipped with the reason naming its replay", async () => {
+        const { service, tx } = await build(inserted("unused"))
+        tx.update.mockResolvedValueOnce({ affected: 1, raw: [], generatedMaps: [] }).mockResolvedValueOnce({ affected: 0, raw: [], generatedMaps: [] })
+
+        await expect(service.superseded(tx, "ws-1", "wake-held", "wake-replay")).resolves.toBe(true)
+        await expect(service.superseded(tx, "ws-1", "wake-held", "wake-replay")).resolves.toBe(false)
+
+        expect(tx.update).toHaveBeenCalledWith(
+            expect.anything(),
+            { id: "wake-held", workspaceId: "ws-1", status: "held" },
+            { status: "skipped", reason: "replayed:wake-replay" },
+        )
+    })
+})

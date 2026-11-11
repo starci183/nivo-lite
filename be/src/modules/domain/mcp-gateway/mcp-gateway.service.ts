@@ -390,11 +390,15 @@ export class McpGatewayService {
         return judgeDataRight(await gate.rightsOf(caller.workspaceId, caller.agentId), resolved.name, caller)
     }
 
-    /** True for a write of a turn that read tainted text, unless a person approved this exact call: the grant alone does not carry it. */
+    /**
+     * True for a write of a turn that read tainted text, unless a person approved this exact call: the grant alone does not carry it. A
+     * write that only files a request a person decides (`filesRequest`) is never held: that person reads it before anything changes.
+     */
     private mustAsk(caller: GatewayCaller, resolved: Resolved): boolean {
         return (
             resolved.spec.scope !== "read" &&
             resolved.spec.taintExempt !== true &&
+            resolved.spec.filesRequest !== true &&
             caller.approvedBy === undefined &&
             isTainted(this.tainted, caller, this.clock.now().getTime())
         )

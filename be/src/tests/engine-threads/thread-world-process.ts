@@ -166,6 +166,8 @@ const rightsOf = (): Rights => ({
         { agentId: FRONT, connectionId: "sepay-1", provider: "sepay", abilities: { "qr.create": "auto" } },
     ],
     defaults: new Map(),
+    asks: new Set(),
+    toolCalls: [],
 })
 
 /** A fresh database: the front desk's workflows seeded from the templates, one customer, one Zalo conversation. */

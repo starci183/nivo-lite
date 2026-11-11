@@ -71,6 +71,13 @@ export interface GatewayToolSpec {
     readonly stepGranted?: boolean
     /** True for a write the taint rule never holds: its arguments are ids only and its hard guards live in its own executor. */
     readonly taintExempt?: boolean
+    /**
+     * True for a write that only FILES A REQUEST a person then decides on its own card (a change to a truth the founder applies or
+     * rejects): it changes nothing by itself. Its grant is a default every agent holds (as the second brain's reads), inside a graph step
+     * only for a step that declares it, and the taint rule never holds it: the person who decides the request IS the approval, so a
+     * second approval in front of it would ask twice for the same thing. An owner's grant row on it still decides (never, ask).
+     */
+    readonly filesRequest?: boolean
 }
 
 /**

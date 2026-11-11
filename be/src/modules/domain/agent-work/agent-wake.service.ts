@@ -14,6 +14,9 @@ import type { AgentBurstPolicy } from "./agent-work.port"
 import { AgentWakeEntity } from "./persistence/entities"
 import type { AgentWake, OptionalWakeId } from "./agent-work.contracts"
 
+/** The reason a held wake is closed with once its event was written again as a new wake: `replayed:<the new wake's id>`. */
+export const REPLAYED_REASON = "replayed:"
+
 /** No window: the wake's drain runs at once and `begin` waits for no later line (a window of 0 turns the burst off). */
 const NO_BURST = { windowMs: 0, maxWaitMs: 0 } as const
 
@@ -42,6 +45,21 @@ export class AgentWakeService {
     /** Writes the wake and its drain job in `tx`; answers false when the fact was already written, in which case nothing is enqueued. */
     async wake(tx: EntityManager, wake: AgentWake): Promise<boolean> {
         return (await this.write(tx, wake)) !== null
+    }
+
+    /**
+     * Closes a held wake whose event was written again as a new wake (a freeze's replay), in the caller's transaction, so the replay and
+     * the close commit together: the held wake is `skipped` with the reason `replayed:<new wake>`, pointing at the wake that carries its
+     * event now. Only a wake still `held` is closed; true when one was. A held wake left `held` after its replay would answer the same
+     * customer line a second time if held wakes were ever released in bulk (D-P11-7).
+     */
+    async superseded(tx: EntityManager, workspaceId: string, heldWakeId: string, replayWakeId: string): Promise<boolean> {
+        const closed = await tx.update(
+            AgentWakeEntity,
+            { id: heldWakeId, workspaceId, status: "held" },
+            { status: "skipped", reason: `${REPLAYED_REASON}${replayWakeId}` },
+        )
+        return (closed.affected ?? 0) > 0
     }
 
     /** Writes the wake and its drain job in `tx` and answers the wake's id; null when the fact was already written, in which case nothing is enqueued. */

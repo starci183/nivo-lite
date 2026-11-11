@@ -6,6 +6,7 @@ import { WorkspaceMembersService } from "@modules/domain/workspace-members"
 import { InjectClock, type Clock } from "@modules/platform/clock"
 import { ThreadRunsService, type ThreadWakeRefusal } from "../thread-runs.service"
 import { RunStopRecordsService } from "./run-stop-records.service"
+import { RunStopsService } from "./run-stops.service"
 import type { OptionalRunStop, RunStop, StopDecision } from "./run-stop.contracts"
 import { stopDecisionOf } from "./stop-gate.policy"
 
@@ -110,7 +111,8 @@ const refusedOutcomeOf = (code: ThreadWakeRefusal, after: OptionalRunStop): Stop
  * runs here. Only an owner or a manager of the workspace may decide, as for the freezes. A stop is one record per run and step: a
  * decision for a stop already resolved is refused with `stop_closed` and never resumes anything. A take-over also hands the run's
  * conversation to the person by name, so the AI stays quiet in it while they hold it. The door carries; the step decides what the words
- * mean. It registers with the runs' cancel door at start, so the run page's Cancel of a thread run is its stop's `skip`.
+ * mean. It registers with the runs' cancel door at start, so the run page's Cancel of a thread run is its stop's `skip`. A decision on a
+ * stop already resolved still withdraws the approval item that stop left open (a stop closed before items were withdrawn).
  */
 export class StopDoorService implements OnModuleInit {
     constructor(
@@ -123,6 +125,7 @@ export class StopDoorService implements OnModuleInit {
         private readonly threads: ThreadRunsService,
         @Optional() private readonly conversations?: ChatConversationsService,
         @Optional() private readonly cancels?: AgentRunCancelService,
+        @Optional() private readonly stops?: RunStopsService,
     ) {}
 
     /** A person's decision: refused (typed) for anyone but an owner or a manager of the workspace, else applied as theirs. */
@@ -162,7 +165,12 @@ export class StopDoorService implements OnModuleInit {
         const stop = targetStopOf(await this.records.ofRun(ask.workspaceId, ask.runId), ask.stepKey ?? null)
         if (stop === null) return { outcome: "not_stopped", stepKey: null }
         const answer = (outcome: StopDoorOutcome): StopDoorAnswer => ({ outcome, stepKey: stop.stepKey })
-        if (stop.state === "resolved") return answer("stop_closed")
+        if (stop.state === "resolved") {
+            // A stop resolved before its approval item was withdrawn (D-P11-6) still has it open in the owner's inbox: a late decision
+            // on that stop withdraws it. Nothing else moves: the stop stays closed.
+            await this.stops?.leftoverWithdrawn({ workspaceId: ask.workspaceId, runId: ask.runId }, stop.stepKey, { locale: "vi" })
+            return answer("stop_closed")
+        }
         const at = ask.at ?? this.clock.now().toISOString()
         const decision = stopDecisionOfAsk(action, actor.memberId, at, ask.text ?? null)
         if (decision === null) return answer("invalid")

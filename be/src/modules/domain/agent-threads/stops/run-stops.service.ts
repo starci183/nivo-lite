@@ -2,6 +2,7 @@ import { Injectable, Optional } from "@nestjs/common"
 import type { SubjectRef } from "@nivo-lite/agent-sdk/node"
 import { TOOL } from "@nivo-lite/blocks-core"
 import type { RunStopCustomerLine } from "@nivo-lite/blocks-core/entities"
+import { WorkEngineService } from "@modules/domain/decisions"
 import { GraphNodeEffectsService } from "@modules/domain/graph-nodes"
 import { InjectClock, type Clock } from "@modules/platform/clock"
 import { RunStopsError, RunStopsErrorCode } from "./errors/run-stops.error"
@@ -10,11 +11,13 @@ import type {
     OptionalRunStop,
     RunStop,
     StopCardContext,
+    StopDecision,
     StopOpen,
     StopQuestion,
     StopRoute,
     StopSendRefusal,
 } from "./run-stop.contracts"
+import { approvalItemWaitingOf, withdrawnFactsOf } from "./stop-approval.policy"
 import { StopCardsService } from "./stop-cards.service"
 import {
     answerIndexOf,
@@ -85,6 +88,12 @@ ${text}`)
     return [...lines, ...added].toSorted((left, right) => left.at.localeCompare(right.at)).slice(-STOP_LINES_MAX)
 }
 
+/** The name under which the engine closes the owner's item of an approval stop that closed another way. */
+const ENGINE_ACTOR = "NIVO"
+
+/** Why an approval stop's item was withdrawn, as the item's decision note keeps it (a code, never prose). */
+type WithdrawnBy = `stop_${StopDecision["kind"]}` | "step_completed" | "run_closed" | "stop_closed_earlier"
+
 /** The customer a stop is about, as its record names them. */
 export interface StopCustomerRef {
     /** The lead, when known. */
@@ -129,7 +138,10 @@ export const toldCustomerOf = (
  * the stopped step already told is not told again until the founder answers in words (`sendRefusal`, read by the send door). What the
  * customer was told is kept on the stop (`customerLines`): the engine's own line (`lineSent`) and, each time the stop opens, the
  * customer sends of its step that the effect ledger kept (D.1), whatever conversation they went to. A stop of a run about no customer
- * (bank-fed) takes the customer its step told as its own (`toldCustomerOf`), so the hold of that customer finds it.
+ * (bank-fed) takes the customer its step told as its own (`toldCustomerOf`), so the hold of that customer finds it. A stop of kind
+ * `approval` that closes by anything but its own item's verdict (a skip, the founder's words, a retry, a take-over, the step completing,
+ * the run closing) withdraws that item: it is closed rejected by the engine with the reason as its note, so no approval is left open in
+ * the owner's inbox for a run that no longer waits on it.
  */
 export class RunStopsService {
     constructor(
@@ -137,6 +149,7 @@ export class RunStopsService {
         private readonly records: RunStopRecordsService,
         private readonly cards: StopCardsService,
         @Optional() private readonly ledger?: GraphNodeEffectsService,
+        @Optional() private readonly work?: WorkEngineService,
     ) {}
 
     /** Opens the stop of a step (or opens it again), posts or folds its card, and answers the question the gate hands `scope.stop`. */
@@ -195,7 +208,20 @@ export class RunStopsService {
         if (route.resolves && answered !== null) await this.cards.resolved(ref.workspaceId, answered, context.locale, now)
         // An answer, a retry, a take-over or a deadline keeps the stop open: its one card is rewritten in place with the trace so far.
         if (!route.resolves && answered !== null) await this.cards.rewritten(ref.workspaceId, answered, context.locale)
+        // A decision that is not the verdict of the approval item (the item's own verdict is kept on the stop before it resumes the
+        // thread) supersedes that item: it is withdrawn, never left open in the owner's inbox.
+        if (answered !== null) await this.withdraw(ref.workspaceId, answered, `stop_${decision.kind}`, context.locale)
         return route
+    }
+
+    /**
+     * The approval item a stop already resolved still waits on (a stop skipped before items were withdrawn, D-P11-6): withdrawn now. A
+     * late decision on that stop reaches it through the stop door, which still answers `stop_closed`. Nothing for any other stop.
+     */
+    async leftoverWithdrawn(ref: StopRunRef, stepKey: string, context: Pick<StopCardContext, "locale">): Promise<boolean> {
+        const stop = await this.records.byRunStep(ref.workspaceId, ref.runId, stepKey)
+        if (stop?.state !== "resolved") return false
+        return this.withdraw(ref.workspaceId, stop, "stop_closed_earlier", context.locale)
     }
 
     /**
@@ -213,6 +239,7 @@ export class RunStopsService {
             if (resolved === null) continue
             closed += 1
             await this.cards.resolved(ref.workspaceId, resolved, context.locale, now)
+            await this.withdraw(ref.workspaceId, resolved, "run_closed", context.locale)
         }
         return closed
     }
@@ -225,7 +252,9 @@ export class RunStopsService {
         const resolved = await this.records.patch(ref.workspaceId, stop.id, (fresh) =>
             fresh.state === "open" ? { state: "resolved", resolvedAt: now } : null,
         )
-        if (resolved !== null) await this.cards.resolved(ref.workspaceId, resolved, context.locale, now)
+        if (resolved === null) return
+        await this.cards.resolved(ref.workspaceId, resolved, context.locale, now)
+        await this.withdraw(ref.workspaceId, resolved, "step_completed", context.locale)
     }
 
     /** Keeps a line the stopped step sent a customer while its stop is open; nothing for a step with no open stop. */
@@ -263,6 +292,34 @@ export class RunStopsService {
             return { ...(lines === null ? {} : { customerLines: lines }), ...told }
         })
         return filled ?? stop
+    }
+
+    /**
+     * Withdraws the owner's item an approval stop still waits on: the stop keeps the verdict `withdrawn` FIRST (so the item's performer,
+     * told of the rejection, finds the stop no longer waiting on it and moves nothing), then the work engine closes the item rejected by
+     * the engine with the reason as its note. An item already decided (or gone) stays as it is. True when an item was withdrawn.
+     */
+    private async withdraw(workspaceId: string, stop: RunStop, by: WithdrawnBy, locale: StopCardContext["locale"]): Promise<boolean> {
+        const workItemId = approvalItemWaitingOf(stop)
+        if (workItemId === null || this.work === undefined) return false
+        const marked = await this.records.patch(workspaceId, stop.id, (fresh) =>
+            approvalItemWaitingOf(fresh) === workItemId ? { detail: { ...fresh.detail, facts: withdrawnFactsOf(fresh) } } : null,
+        )
+        if (marked === null) return false
+        try {
+            await this.work.resumeWork(
+                { workspaceId, actor: ENGINE_ACTOR, locale },
+                workItemId,
+                "rejected",
+                {},
+                { name: ENGINE_ACTOR, kind: "staff" },
+                `withdrawn:${by}`,
+            )
+            return true
+        } catch {
+            // Decided by a person meanwhile, or no longer waiting: that decision stands; the stop no longer waits on it either way.
+            return false
+        }
     }
 
     private async required(ref: StopRunRef, stepKey: string): Promise<RunStop> {

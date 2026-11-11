@@ -144,6 +144,8 @@ export const BRAIN_MANIFEST: NativeConnectorManifest = {
                 "When a person of the team (the founder, a manager or staff) states in your private chat or the common chat a NEW lasting truth of the business, or corrects one in force (a price, a fee, opening hours, a rule), file it: subject, attribute, the new value (or retire: true), room, the chat message id, the words verbatim, validFrom / validTo when the person said when or for how long, and reason: why the truth changes in your own plain words: who said what, which value in force it replaces (read it with nivo.brain.search or nivo.brain.fact.get first), for how long if said. Not for a one-off instruction ('this order is 10k off'), a question, what a customer says, or a value already in force. It waits for the founder's yes on a card in the chat; nothing changes before.",
             scope: "write",
             defaultMode: "auto",
+            // It files a change request the founder decides on its card: no approval in front of it, no taint hold.
+            filesRequest: true,
             inputSchema: BRAIN_CHANGE_PROPOSE_INPUT_SCHEMA,
             argumentSchema: BRAIN_CHANGE_PROPOSE_SCHEMA,
             secretFields: ["notice", "subject", "attribute", "value", "quote", "reason"],

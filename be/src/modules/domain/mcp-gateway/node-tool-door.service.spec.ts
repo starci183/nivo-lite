@@ -231,6 +231,25 @@ describe("NodeToolDoorService approvals", () => {
         })
     })
 
+    // FX4 (D-P11-5): the engine runs the approved call itself, once, through this door under the same key: the error carries it exactly.
+    it("carries the exact call on the ask (its arguments as the host passed them and its key), so the engine can run that call", async () => {
+        const { door, gateway } = await build(CLAIMS, { ok: false, code: "approval_required", reason: "no_rule" })
+        const asked = await door.call(callOf({ tool: "nivo.ledger.entry.append", key: "run-1:answer:tool:abc" })).catch((cause: unknown) => cause)
+
+        expect(asked).toMatchObject({
+            code: GraphNodesErrorCode.ToolApprovalRequired,
+            params: { call: JSON.stringify(ARGS), key: "run-1:answer:tool:abc" },
+        })
+        const params = (asked as { readonly params: { readonly call: string } }).params
+        const again = { by: "member-owner", fingerprint: toolFingerprintOf("nivo.ledger.entry.append", JSON.parse(params.call) as typeof ARGS) }
+        gateway.call.mockResolvedValue({ ok: true, value: { id: "entry-1" } })
+
+        await expect(
+            door.call(callOf({ tool: "nivo.ledger.entry.append", args: JSON.parse(params.call) as typeof ARGS, key: "run-1:answer:tool:abc", approval: again })),
+        ).resolves.toEqual({ id: "entry-1" })
+        expect(gateway.call.mock.calls.at(-1)?.[0]).toMatchObject({ approvedBy: "member-owner", opKey: "run-1:answer:tool:abc" })
+    })
+
     it("runs a call that replays an approval of its fingerprint as approved by that person", async () => {
         const { door, gateway } = await build()
         const approval = { by: "member-owner", fingerprint: toolFingerprintOf("nivo.bank.transaction.list", ARGS) }

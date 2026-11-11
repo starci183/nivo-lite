@@ -9,6 +9,7 @@ import { CLOCK } from "@modules/platform/clock"
 import { ThreadRunsService } from "../thread-runs.service"
 import type { ThreadWakeAdmission } from "../thread-runs.service"
 import { RunStopRecordsService } from "./run-stop-records.service"
+import { RunStopsService } from "./run-stops.service"
 import type { RunStop } from "./run-stop.contracts"
 import { StopDoorService, cancelOfSkip, stopDecisionOfAsk, targetStopOf } from "./stop-door.service"
 
@@ -75,6 +76,7 @@ const build = async (world: World = {}) => {
     })
     const cancels = mock<AgentRunCancelService>()
     const conversations = mock<ChatConversationsService>({ setHolder: jest.fn().mockResolvedValue(undefined) })
+    const runStops = mock<RunStopsService>({ leftoverWithdrawn: jest.fn().mockResolvedValue(true) })
     const moduleRef = await Test.createTestingModule({
         providers: [
             StopDoorService,
@@ -87,9 +89,10 @@ const build = async (world: World = {}) => {
             { provide: ThreadRunsService, useValue: threads },
             { provide: AgentRunCancelService, useValue: cancels },
             { provide: ChatConversationsService, useValue: conversations },
+            { provide: RunStopsService, useValue: runStops },
         ],
     }).compile()
-    return { door: moduleRef.get(StopDoorService), access, members, threads, records, conversations, cancels }
+    return { door: moduleRef.get(StopDoorService), access, members, threads, records, conversations, cancels, runStops }
 }
 
 describe("StopDoorService: a person's decision on the stop of a thread run", () => {
@@ -151,6 +154,16 @@ describe("StopDoorService: what is refused, and why", () => {
             outcome: "stop_closed",
             stepKey: "match",
         })
+        expect(threads.resume).not.toHaveBeenCalled()
+    })
+
+    // FX4 (D-P11-6): a stop skipped before items were withdrawn left its approval item open; a late decision on it withdraws it.
+    it("a late decision on a resolved stop withdraws the approval item it left open, and still answers stop_closed", async () => {
+        const { door, threads, runStops } = await build({ stops: [stopOf({ kind: "approval", state: "resolved", resolvedAt: NOW })] })
+
+        await expect(door.decide("user-1", { ...ASK, action: "skip" })).resolves.toEqual({ outcome: "stop_closed", stepKey: "match" })
+
+        expect(runStops.leftoverWithdrawn).toHaveBeenCalledWith(ASK, "match", { locale: "vi" })
         expect(threads.resume).not.toHaveBeenCalled()
     })
 

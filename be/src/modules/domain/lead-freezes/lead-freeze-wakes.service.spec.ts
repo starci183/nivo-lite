@@ -55,6 +55,18 @@ describe("LeadFreezeWakesService", () => {
         ])
     })
 
+    // FX4 (D-P11-7): the held original stayed `held` after its replay (dev: 7 -> 8 held wakes); a bulk release would answer it twice.
+    it("closes each held original in the same transaction, pointing at its replay; an event already replayed closes nothing", async () => {
+        const { service, wakes } = await build()
+        const tx = mockEntityManager()
+        const payment = pendingPaymentOf()
+        wakes.write.mockResolvedValueOnce("w-1").mockResolvedValueOnce(null)
+
+        await service.replay(tx, "ws-1", FREEZE, [EVENT, payment])
+
+        expect(wakes.superseded.mock.calls).toEqual([[tx, "ws-1", "wake-2", "w-1"]])
+    })
+
     it("drops a kept member no wake context holds, as a flag where a text belongs or an unknown language", async () => {
         const { service, wakes } = await build()
         const odd = pendingLineOf({ context: { conversationId: "c-1", locale: "fr", text: true, lookupName: true } })

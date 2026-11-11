@@ -150,6 +150,48 @@ describe("grant.policy grantOfCall > the second brain by default", () => {
     })
 })
 
+// FX4 (D-P11-5): a write that only files a request a person decides (`nivo.brain.change.propose`) asked a SECOND person first
+// (`no_rule`: a side-effect tool with no grant row asks), and an approval tied to its exact arguments then looped. It is a default
+// grant now, like the second brain's reads: the founder's card is its one decision.
+describe("grant.policy grantOfCall > a tool that only files a request", () => {
+    const PROPOSE: GatewayToolSpec = { ...BRAIN_WRITE, name: "change.propose", filesRequest: true }
+
+    it("is held by every agent with no row, in a step that declares it and outside any step, and runs alone", async () => {
+        const subject = await build()
+        const run = STEP_CALLER.run
+        const step: GatewayCaller =
+            run === undefined ? STEP_CALLER : { ...STEP_CALLER, run: { ...run, stepTools: [TOOL.brainChangePropose] } }
+
+        expect(subject.grantOfCall(null, PROPOSE, step, TOOL.brainChangePropose)).toEqual(grant(TOOL.brainChangePropose, "auto"))
+        expect(subject.grantOfCall(null, PROPOSE, NO_STEP, TOOL.brainChangePropose)).toEqual(grant(TOOL.brainChangePropose, "auto"))
+        expect(
+            subject.judgeGrant(subject.grantOfCall(null, PROPOSE, NO_STEP, TOOL.brainChangePropose), {}, false, true),
+        ).toEqual({ kind: "allow" })
+    })
+
+    it("is not held in a step that did not declare it, and the owner's row still decides (never, ask)", async () => {
+        const subject = await build()
+        const never = grant(TOOL.brainChangePropose, "never")
+        const ask = grant(TOOL.brainChangePropose, "ask")
+
+        expect(subject.grantOfCall(null, PROPOSE, STEP_CALLER, TOOL.brainChangePropose)).toBeNull()
+        expect(subject.judgeGrant(subject.grantOfCall(never, PROPOSE, NO_STEP, TOOL.brainChangePropose), {}, false, true)).toEqual({
+            kind: "refuse",
+        })
+        expect(subject.judgeGrant(subject.grantOfCall(ask, PROPOSE, NO_STEP, TOOL.brainChangePropose), {}, false, true)).toEqual({
+            kind: "approval",
+            reason: "ask_mode",
+        })
+    })
+
+    it("control: a write that is no request (no flag) still asks a person when no row grants it", async () => {
+        const subject = await build()
+
+        expect(subject.grantOfCall(null, BRAIN_WRITE, NO_STEP, TOOL.brainChangePropose)).toBeNull()
+        expect(subject.judgeGrant(null, {}, false, true)).toEqual({ kind: "approval", reason: "no_rule" })
+    })
+})
+
 describe("grant.policy grantOfCall > the context reads by default", () => {
     const CONTEXT_READ: GatewayToolSpec = { ...BRAIN_READ, name: "lead.order.list" }
 

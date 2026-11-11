@@ -1,5 +1,6 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, mock } from "@starci/jest-preset"
+import { WorkEngineService } from "@modules/domain/decisions"
 import { GraphNodeEffectsService } from "@modules/domain/graph-nodes"
 import { CLOCK } from "@modules/platform/clock"
 import { RunStopsErrorCode } from "./errors/run-stops.error"
@@ -59,7 +60,7 @@ const stopOf = (over: Partial<RunStop> = {}): RunStop => ({
 })
 
 /** The records in memory: one stop, patched as the engine would. */
-const build = async (initial: RunStop | null = stopOf()) => {
+const build = async (initial: RunStop | null = stopOf(), work: WorkEngineService | null = null) => {
     let current = initial
     const records = mock<RunStopRecordsService>({
         open: jest.fn(() => {
@@ -86,6 +87,7 @@ const build = async (initial: RunStop | null = stopOf()) => {
             { provide: CLOCK, useValue: new FakeClock(NOW) },
             { provide: RunStopRecordsService, useValue: records },
             { provide: StopCardsService, useValue: cards },
+            ...(work === null ? [] : [{ provide: WorkEngineService, useValue: work }]),
         ],
     }).compile()
     return { stops: moduleRef.get(RunStopsService), records, cards, current: () => current }
@@ -353,5 +355,97 @@ describe("linesWithSendsOf", () => {
         expect(linesWithSendsOf([held], [send])).toEqual([{ conversationId: "conv-1", text: "B", at: send.at }, held])
         expect(linesWithSendsOf([held], [{ ...send, args: { conversationId: "conv-1", text: "A" } }])).toBeNull()
         expect(linesWithSendsOf([], [])).toBeNull()
+    })
+})
+
+// FX4 (D-P11-6): skipping an approval stop left its `approve_tool_call` item waiting in the owner's inbox (the run-page door then
+// answered `decision_not_found`). Any decision that closes the stop other than its item's own verdict withdraws the item.
+describe("RunStopsService: an approval stop that closes another way withdraws its item", () => {
+    const approvalStop = (facts: ReadonlyArray<readonly [string, string]> = []) =>
+        stopOf({
+            kind: "approval",
+            detail: {
+                suggestions: [],
+                facts: [["tool", "nivo.x"], ["workItemId", "item-1"], ["fingerprint", "f-1"], ...facts].map(([name, value]) => ({
+                    name,
+                    value,
+                })),
+            },
+        })
+    const workOf = (): WorkEngineService & { readonly resumeWork: jest.Mock } =>
+        mock<WorkEngineService>({ resumeWork: jest.fn().mockResolvedValue({}) }) as WorkEngineService & {
+            readonly resumeWork: jest.Mock
+        }
+    const factOf = (stop: RunStop | null, name: string) => stop?.detail.facts.find((fact) => fact.name === name)?.value ?? null
+
+    it.each(["skip", "answer", "retry", "take_over"] as const)(
+        "%s: the stop keeps `withdrawn` first, then the item is closed rejected by the engine with the reason",
+        async (kind) => {
+            const work = workOf()
+            const { stops, current } = await build(approvalStop(), work)
+            const decision =
+                kind === "answer"
+                    ? { kind, text: "Khong can", by: "owner-1", at: NOW }
+                    : { kind, by: "owner-1", at: NOW }
+
+            await stops.decide(REF, "match", decision, "__freeze", { locale: "vi" })
+
+            expect(factOf(current(), "verdict")).toBe("withdrawn")
+            expect(work.resumeWork).toHaveBeenCalledTimes(1)
+            expect(work.resumeWork).toHaveBeenCalledWith(
+                { workspaceId: "ws-1", actor: "NIVO", locale: "vi" },
+                "item-1",
+                "rejected",
+                {},
+                { name: "NIVO", kind: "staff" },
+                `withdrawn:stop_${kind}`,
+            )
+        },
+    )
+
+    it("the item's own verdict (kept on the stop before it resumes the thread) withdraws nothing", async () => {
+        const work = workOf()
+        const { stops } = await build(approvalStop([["verdict", "approved:owner-1"]]), work)
+
+        await stops.decide(REF, "match", { kind: "retry", by: "owner-1", at: NOW }, "__freeze", { locale: "vi" })
+
+        expect(work.resumeWork).not.toHaveBeenCalled()
+    })
+
+    it("the run closing and the step completing withdraw it too; a stop of another kind has no item", async () => {
+        const closing = workOf()
+        const completing = workOf()
+        const other = workOf()
+        const closed = await build(approvalStop(), closing)
+        closed.records.ofRun.mockResolvedValue([approvalStop()])
+        const completed = await build(approvalStop(), completing)
+        const plain = await build(stopOf(), other)
+
+        await closed.stops.runClosed(REF, { locale: "vi" })
+        await completed.stops.completed(REF, "match", { locale: "vi" })
+        await plain.stops.decide(REF, "match", { kind: "skip", by: "owner-1", at: NOW }, "__freeze", { locale: "vi" })
+
+        expect(closing.resumeWork.mock.calls[0]?.[5]).toBe("withdrawn:run_closed")
+        expect(completing.resumeWork.mock.calls[0]?.[5]).toBe("withdrawn:step_completed")
+        expect(other.resumeWork).not.toHaveBeenCalled()
+    })
+
+    it("a stop resolved before items were withdrawn: a late decision withdraws the item it left open, once", async () => {
+        const work = workOf()
+        const { stops } = await build({ ...approvalStop(), state: "resolved" }, work)
+
+        expect(await stops.leftoverWithdrawn(REF, "match", { locale: "vi" })).toBe(true)
+        expect(await stops.leftoverWithdrawn(REF, "match", { locale: "vi" })).toBe(false)
+        expect(work.resumeWork).toHaveBeenCalledTimes(1)
+        expect(work.resumeWork.mock.calls[0]?.[5]).toBe("withdrawn:stop_closed_earlier")
+    })
+
+    it("an item a person decided meanwhile stays as it is (the work engine refuses): the decision still stands", async () => {
+        const work = mock<WorkEngineService>({ resumeWork: jest.fn().mockRejectedValue(new Error("not waiting")) })
+        const { stops } = await build(approvalStop(), work)
+
+        await expect(
+            stops.decide(REF, "match", { kind: "skip", by: "owner-1", at: NOW }, "__freeze", { locale: "vi" }),
+        ).resolves.toMatchObject({ resolves: true })
     })
 })

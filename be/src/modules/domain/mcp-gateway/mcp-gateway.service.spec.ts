@@ -475,6 +475,37 @@ describe("McpGatewayService tainted turns", () => {
         await expect(gwt.taintedTurnOf(gateway, clock, CALLER)).resolves.toEqual(gwt.taintedTurnExpected)
         expect(linesOf(callLog).map((line) => line.errorCode)).toContain("tainted_input")
     })
+
+    // FX4 (D-P11-5): the team-chat turn reads the brain (a tainting read) and then files a truth change. With no grant row the write
+    // asked `no_rule`, and after the brain read it would ask `tainted_input`: a second person in front of the founder's own card.
+    it("runs a write that only files a request (no grant row, after a tainting read in the same turn): no approval asked", async () => {
+        const base = gwt.TAINTING_MANIFEST.tools[0]
+        if (base === undefined) throw new Error("the tainting manifest names no tool")
+        const manifest: NativeConnectorManifest = {
+            ...gwt.TAINTING_MANIFEST,
+            tools: [
+                { ...base, name: "read", internalOnly: false, taints: true },
+                { ...base, name: "propose", internalOnly: false, scope: "write", filesRequest: true },
+                { ...base, name: "act", internalOnly: false, scope: "write" },
+            ],
+        }
+        // Only the read holds a grant row: the two writes have none.
+        const { gateway, native, callLog } = await build({ grants: [grantOf({ tool: "sepay.read", constraints: [] })] }, manifest)
+        native.invoke.mockResolvedValue({ outcome: "filed" })
+        const writer = { ...CALLER, opKey: "run-1:answer:tool:1" }
+
+        await gateway.call(writer, "sepay.read", {})
+        const proposed = await gateway.call(writer, "sepay.propose", {})
+        const acted = await gateway.call(writer, "sepay.act", {})
+
+        expect(proposed).toMatchObject({ ok: true, value: { outcome: "filed" } })
+        expect(acted).toEqual({ ok: false, code: "approval_required", reason: "no_rule" })
+        expect(linesOf(callLog).map((line) => [line.tool, line.outcome, line.errorCode])).toEqual([
+            ["sepay.read", "ok", null],
+            ["sepay.propose", "ok", null],
+            ["sepay.act", "approval", "no_rule"],
+        ])
+    })
 })
 
 describe("McpGatewayService data rights", () => {

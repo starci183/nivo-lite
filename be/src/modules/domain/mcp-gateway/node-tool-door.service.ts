@@ -75,17 +75,37 @@ const lockedArgumentsOf = (tool: string, claims: StepClaims, args: GatewayArgume
     return { kind: "ok", args: { ...args, ...filled } }
 }
 
+/**
+ * The exact call a person is asked to approve, so the engine can run THAT call once the person approved it, through this door under
+ * the same key, instead of asking the model to issue it again (a model asked again rewrites its words, and an approval is bound to the
+ * exact arguments): `call` is the JSON text of the arguments as the node host checked them, `key` the call's replay key. Error params
+ * are texts or numbers; the approval error is never logged by this door (`failed` is not called for it).
+ */
+interface AskedCall {
+    /** The arguments as the host passed them. */
+    readonly args: unknown
+    /** The call's replay key. */
+    readonly key: string
+}
+
 /** The typed error of a gateway answer that is not a value. */
 const failureOf = (
     tool: string,
     fingerprint: string,
     result: Exclude<GatewayCallResult, { ok: true }>,
-    args: unknown,
+    asked: AskedCall,
 ): GraphNodesError => {
     if (result.code === "approval_required") {
         return new GraphNodesError({
             code: GraphNodesErrorCode.ToolApprovalRequired,
-            params: { tool, fingerprint, reason: result.reason, args: askedArgsOf(args) },
+            params: {
+                tool,
+                fingerprint,
+                reason: result.reason,
+                args: askedArgsOf(asked.args),
+                call: JSON.stringify(asked.args) ?? "{}",
+                key: asked.key,
+            },
         })
     }
     if (result.code === "not_granted")
@@ -107,8 +127,9 @@ const failureOf = (
  * intersection, default deny: the agent's grant per tool and its limits (the gateway), the member behind the turn (an owner or manager
  * seat; any other member's turn calls nothing unless a person approved it), the turn's scope (a customer's turn calls as the customer
  * audience, public knowledge only), and the provider's consent on the workspace connection (the provider answers it). A grant that asks
- * a person is the typed `GRAPH_NODES_TOOL_APPROVAL_REQUIRED` with the fingerprint of the exact tool and arguments; a call that replays an
- * approval of that fingerprint runs as approved, and changed arguments ask again. The node passes business data only: the destination,
+ * a person is the typed `GRAPH_NODES_TOOL_APPROVAL_REQUIRED` with the fingerprint of the exact tool and arguments, and the exact call
+ * (its arguments and key), which the engine runs through this door once the person approved it; a call that replays an approval of that
+ * fingerprint runs as approved, and changed arguments ask again. The node passes business data only: the destination,
  * the accounts and the credentials live on the workspace connection. The call key is the replay key of the step. Every refusal and failure
  * other than an approval to ask is logged with its typed code, the gateway code and the reason (`mcp-gateway.node-tool.failed`), so a node
  * that survives the failure (a payment request that tells the owner instead) never hides why.
@@ -262,7 +283,7 @@ export class NodeToolDoorService implements NodeToolDoor {
         const caller = await this.callerOf(claims, call.key, approvedBy)
         const result = await this.gateway.call(caller, call.tool, locked.args)
         if (result.ok) return result.value
-        const error = failureOf(call.tool, fingerprint, result, checked.data)
+        const error = failureOf(call.tool, fingerprint, result, { args: checked.data, key: call.key })
         if (error.code === GraphNodesErrorCode.ToolApprovalRequired) throw error
         throw this.failed(call.tool, claims, error, result.code)
     }

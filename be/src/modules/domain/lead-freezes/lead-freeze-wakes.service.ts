@@ -31,7 +31,11 @@ const wakeContextOf = (context: Readonly<Record<string, PendingContextValue>>): 
 export class LeadFreezeWakesService {
     constructor(private readonly wakes: AgentWakeService) {}
 
-    /** Writes the events again as wakes in `tx`, oldest first; answers how many were written (a replay already written is skipped). */
+    /**
+     * Writes the events again as wakes in `tx`, oldest first; answers how many were written (a replay already written is skipped). The
+     * wake each event was held from is closed in the same `tx`, pointing at its replay (`AgentWakeService.superseded`): the event is
+     * then carried by exactly one live wake, never by the replay and a held original both.
+     */
     async replay(
         tx: EntityManager,
         workspaceId: string,
@@ -49,6 +53,7 @@ export class LeadFreezeWakesService {
                 actorMemberId: event.actorMemberId,
                 ...(event.scopeKey === "" ? {} : { scopeKey: event.scopeKey }),
             })
+            if (id !== null && event.wakeId !== "") await this.wakes.superseded(tx, workspaceId, event.wakeId, id)
             written.push(id !== null)
         })
         return written.filter(Boolean).length

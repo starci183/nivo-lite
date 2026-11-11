@@ -390,15 +390,23 @@ export class ThreadStepService {
         // One replay per run of the node: the thread's wrapper of the host's ports, and in the same record the model turns of the host's
         // own agent loop (a node the AGENT_LOOP flag names), so a step that starts again asks the model nothing it already answered.
         const replayed = replayRunOf(at.replay)
-        // The run after the owner approved carries exactly the approved call's fingerprint (and so does a later run of the step).
-        const approval =
-            (await this.approvals?.approvalOf({ workspaceId: view.workspaceId, runId: view.runId }, view.stepKey)) ?? null
+        // The run after the owner approved carries exactly the approved call's fingerprint (and so does a later run of the step). The
+        // engine runs the approved call itself, once, under its own key, and hands the model its answer: the model is never asked to
+        // issue it again (D-P11-5: asked again, it rewrote its words and the approval no longer matched).
+        const approved = (await this.approvals?.approvedRun(
+            { workspaceId: view.workspaceId, runId: view.runId },
+            view.stepKey,
+            told,
+        )) ?? { approval: null, answer: null }
+        const approval = approved.approval
+        const runTurn =
+            approved.answer === null ? told : { ...told, founderAnswers: [...(told.founderAnswers ?? []), approved.answer] }
         try {
             return await this.host.run({
                 nodeId: node.step,
                 params: bound.params,
                 input: bound.input,
-                turn: told,
+                turn: runTurn,
                 grant: { rights: grant.rights, tools: grant.tools },
                 key: `${view.runId}:${view.stepKey}`,
                 // The model the graph's node names (the shop's choice); absent, the host takes blocks-core's for the step.

@@ -469,7 +469,7 @@ describe("ThreadStepService.run: a call that asks the owner first (an `ask` abil
 
     it("goes to the approvals: one approval stop at the gate, no AI core, and the step row keeps no wait item", async () => {
         const approvals = mock<ThreadApprovalsService>()
-        approvals.approvalOf.mockResolvedValue(null)
+        approvals.approvedRun.mockResolvedValue({ approval: null, answer: null })
         approvals.asked.mockResolvedValue({ kind: "stopped", question: QUESTION, workItemId: "item-1" } as never)
         const { steps, host, core, projection } = await build({ approvals })
         host.run.mockRejectedValue(ASK)
@@ -494,19 +494,37 @@ describe("ThreadStepService.run: a call that asks the owner first (an `ask` abil
 
     it("runs the step again with the approved call's fingerprint once the owner approved it", async () => {
         const approvals = mock<ThreadApprovalsService>()
-        approvals.approvalOf.mockResolvedValue({ by: "owner-1", fingerprint: "fp-1" })
+        approvals.approvedRun.mockResolvedValue({ approval: { by: "owner-1", fingerprint: "fp-1" }, answer: null })
         const { steps, host } = await build({ approvals })
         host.run.mockResolvedValue({ output: { orderId: "o-1" }, effects: [] })
 
         await steps.run(AT, stateOf(), scopeOf())
 
-        expect(approvals.approvalOf).toHaveBeenCalledWith({ workspaceId: "ws-1", runId: "run-1" }, "match")
+        expect(approvals.approvedRun).toHaveBeenCalledWith(
+            { workspaceId: "ws-1", runId: "run-1" },
+            "match",
+            expect.objectContaining({ turnId: "run-1" }),
+        )
         expect(hostInputOf(host)?.approval).toEqual({ by: "owner-1", fingerprint: "fp-1" })
+        expect(hostInputOf(host)?.turn.founderAnswers).toBeUndefined()
+    })
+
+    // FX4 (D-P11-5): the engine ran the approved call; the model reads its answer among the founder's answers (written by the engine).
+    it("hands the model the answer of the approved call the engine ran, as the engine's words among the founder's answers", async () => {
+        const approvals = mock<ThreadApprovalsService>()
+        const answer = { text: "The owner approved the call nivo.x; its answer: {}", at: "2026-11-11T00:00:00.000Z", by: "engine" as const }
+        approvals.approvedRun.mockResolvedValue({ approval: { by: "owner-1", fingerprint: "fp-1" }, answer })
+        const { steps, host } = await build({ approvals })
+        host.run.mockResolvedValue({ output: { orderId: "o-1" }, effects: [] })
+
+        await steps.run(AT, stateOf(), scopeOf())
+
+        expect(hostInputOf(host)?.turn.founderAnswers).toEqual([answer])
     })
 
     it("a call refused before (or approved and still asking) is the step's trouble: the AI core reads it", async () => {
         const approvals = mock<ThreadApprovalsService>()
-        approvals.approvalOf.mockResolvedValue(null)
+        approvals.approvedRun.mockResolvedValue({ approval: null, answer: null })
         approvals.asked.mockResolvedValue({ kind: "trouble", code: "tool_approval_refused", text: "refused" })
         const { steps, host, core } = await build({ approvals })
         host.run.mockRejectedValue(ASK)

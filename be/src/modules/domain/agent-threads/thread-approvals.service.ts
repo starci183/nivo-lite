@@ -1,6 +1,15 @@
-import { Injectable, Optional } from "@nestjs/common"
+import { Inject, Injectable, Optional } from "@nestjs/common"
 import { DecisionLogReadService, WorkEngineService, type WorkSpec } from "@modules/domain/decisions"
-import { GraphNodesError, GraphNodesErrorCode, type NodeToolApproval, type NodeTurn } from "@modules/domain/graph-nodes"
+import {
+    GRAPH_NODE_TOOL_DOOR,
+    GraphNodeRunTokensService,
+    GraphNodesError,
+    GraphNodesErrorCode,
+    type NodeToolApproval,
+    type NodeToolCall,
+    type NodeToolDoor,
+    type NodeTurn,
+} from "@modules/domain/graph-nodes"
 import {
     ProviderAbilitiesService,
     abilityDecisionOf,
@@ -14,6 +23,7 @@ import { InjectClock, type Clock } from "@modules/platform/clock"
 import { InjectMessageCatalog, type MessageCatalog } from "@modules/platform/i18n"
 import { parseJsonText } from "@modules/platform/primitives"
 import { RunStopRecordsService } from "./stops/run-stop-records.service"
+import { APPROVAL_WITHDRAWN } from "./stops/stop-approval.policy"
 import { RunStopsService, type StopRunRef } from "./stops/run-stops.service"
 import type { RunStop, StopCardContext, StopDecision, StopQuestion } from "./stops/run-stop.contracts"
 import type { ThreadRunsService, ThreadWakeAdmission } from "./thread-runs.service"
@@ -36,6 +46,15 @@ const FACT = {
     fingerprint: "fingerprint",
     verdict: "verdict",
 } as const
+
+/** The arguments of one tool call, as the node host hands them to the door. */
+type ToolArgs = NodeToolCall["args"]
+
+/** The fields of the owner's item that keep the exact call asked for: its arguments (JSON text) and its replay key. */
+const CALL_FIELD = { args: "call", key: "callKey" } as const
+
+/** The most characters of an approved call's arguments, and of its answer, the step's model is handed. */
+const ANSWER_MAX = 2000
 
 /** The names an argument of the call may not take on the card: the engine's own facts. */
 const RESERVED: ReadonlySet<string> = new Set(Object.values(FACT))
@@ -62,7 +81,24 @@ export interface ApprovalAsk {
     readonly reason: string
     /** The arguments, when the error carries them; the card then lists them in plain words. */
     readonly args: unknown
+    /**
+     * The exact call (the arguments as the host passed them, as JSON text, and its replay key) when the error carries it (a tool call
+     * through the door): the engine runs that call once the owner approved it. Null for an effect's right, which carries none.
+     */
+    readonly call: AskedCall | null
 }
+
+/** The exact call an approval error carries: the arguments as JSON text and the call's replay key. */
+export interface AskedCall {
+    /** The arguments, JSON text. */
+    readonly args: string
+    /** The replay key. */
+    readonly key: string
+}
+
+/** The exact call an error's params carry, or null when they carry none (or a part is missing). */
+const askedCallOf = (call: unknown, key: unknown): AskedCall | null =>
+    typeof call === "string" && call !== "" && typeof key === "string" && key !== "" ? { args: call, key } : null
 
 /** The arguments an approval error carries: the door's JSON text of plain words, read back; anything else as it is. */
 const argsOf = (args: unknown): unknown => {
@@ -74,14 +110,69 @@ const argsOf = (args: unknown): unknown => {
 /** The ask a host refusal carries, or null when it is no approval to ask or names no fingerprint. */
 export const approvalAskOf = (cause: unknown): ApprovalAsk | null => {
     if (!(cause instanceof GraphNodesError) || cause.code !== GraphNodesErrorCode.ToolApprovalRequired) return null
-    const { tool, fingerprint, reason, args } = cause.params
+    const { tool, fingerprint, reason, args, call, key } = cause.params
     if (typeof fingerprint !== "string" || fingerprint === "") return null
     return {
         tool: typeof tool === "string" ? tool : "",
         fingerprint,
         reason: typeof reason === "string" ? reason : "",
         args: argsOf(args),
+        call: askedCallOf(call, key),
     }
+}
+
+/** The approved call's answer as one of the founder's answers of the turn, written by the engine. */
+export interface EngineAnswer {
+    /** The words the model reads. */
+    readonly text: string
+    /** When the owner approved (ISO). */
+    readonly at: string
+    /** Always the engine: never a person's words (the send guard of a stop counts only a person's words). */
+    readonly by: "engine"
+}
+
+/**
+ * What the founder's approval brings to the next run of the step: the approval of exactly the approved call (a call the model makes
+ * again with the same arguments runs as approved), and, when the engine ran the approved call itself, the words that hand its answer
+ * to the step's model among the founder's answers.
+ */
+export interface ApprovedRun {
+    /** The approval the host carries, or null for a step nobody approved a call of. */
+    readonly approval: NodeToolApproval | null
+    /** The approved call's answer for the model, or null when the engine ran no call (an effect's right, or nothing approved). */
+    readonly answer: EngineAnswer | null
+}
+
+/** An approved item of a step, with the approval it carries. */
+interface Approved {
+    /** The item. */
+    readonly item: WorkItem
+    /** Who approved, and the fingerprint of the approved call. */
+    readonly approval: NodeToolApproval
+}
+
+/** The JSON text of a value, at most `max` characters. */
+const boundedJsonOf = (value: unknown, max: number): string => {
+    const text = JSON.stringify(value) ?? "null"
+    return text.length <= max ? text : `${text.slice(0, max)}...`
+}
+
+/** The words that hand the model the answer of the call the owner approved and the engine ran. */
+const engineAnswerOf = (tool: string, args: ToolArgs, value: unknown, at: string): EngineAnswer => ({
+    text:
+        `The owner approved the call ${tool} with the arguments ${boundedJsonOf(args, ANSWER_MAX)}. ` +
+        `NIVO already ran exactly that call, once, for this step; its answer: ${boundedJsonOf(value, ANSWER_MAX)}. ` +
+        `That call is done: do not call ${tool} again for it; go on from its answer.`,
+    at,
+    by: "engine",
+})
+
+/** The arguments of an approved call, read back from the item's JSON text; null when they are not one JSON object. */
+const callArgsOf = (text: string): ToolArgs | null => {
+    const read = parseJsonText(text)
+    const value: unknown = read.ok ? read.value : null
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return null
+    return Object.fromEntries(Object.entries(value))
 }
 
 /** The step of a thread that asked for an approval: who and where, the turn it ran in, and the card's context. */
@@ -106,11 +197,16 @@ export interface ApprovalStep {
 
 /**
  * Why an ask is the step's trouble instead of a stop (the AI core reads it and may report): `refused` (a person refused this exact call,
- * or the deadline passed), `spent` (approved once and still asks: one approval reaches a run of a step), `unreadable` (no fingerprint),
- * `unavailable` (the owner's item could not be raised).
+ * or the deadline passed), `withdrawn` (its item was closed when the stop was decided another way), `spent` (the step asks the same tool
+ * again after the owner approved one call of it in this step: the engine already ran the approved call, and a second ask ends the step
+ * in one report, never a loop of asks), `unreadable` (no fingerprint), `unavailable` (the owner's item could not be raised).
  */
 export type ApprovalTroubleCode =
-    "tool_approval_refused" | "tool_approval_spent" | "tool_approval_unreadable" | "tool_approval_unavailable"
+    | "tool_approval_refused"
+    | "tool_approval_withdrawn"
+    | "tool_approval_spent"
+    | "tool_approval_unreadable"
+    | "tool_approval_unavailable"
 
 /** What became of an ask: the step stops for the owner's verdict, or it is the step's trouble. */
 export type ApprovalAsked =
@@ -228,6 +324,9 @@ export class ThreadApprovalsService {
         @Optional() private readonly installations?: InstallationRecordsService,
         @Optional() private readonly abilities?: ProviderAbilitiesService,
         @Optional() private readonly deciders?: DecisionLogReadService,
+        // The node host's own door (the NIVO MCP door) and run tokens: an approved call runs through the very door it asked at.
+        @Optional() @Inject(GRAPH_NODE_TOOL_DOOR) private readonly door?: NodeToolDoor,
+        @Optional() private readonly tokens?: GraphNodeRunTokensService,
     ) {}
 
     /**
@@ -246,11 +345,12 @@ export class ThreadApprovalsService {
             }
         const ref = { workspaceId: step.workspaceId, runId: step.runId }
         const dedupeKey = `${approvalKeyOf(step.runId, step.stepKey)}:${ask.fingerprint}`
-        const [existing, stop] = await Promise.all([
+        const [existing, stop, newest] = await Promise.all([
             this.items?.findByDedupe(step.workspaceId, dedupeKey) ?? null,
             this.stops.stopOf(ref, step.stepKey),
+            this.items?.latestOfKey(step.workspaceId, TOOL_APPROVAL_ACTION, approvalKeyOf(step.runId, step.stepKey)) ?? null,
         ])
-        const settled = this.settledOf(existing, stop, ask)
+        const settled = this.settledOf(existing, stop, ask) ?? this.spentOf(newest, stop, ask)
         if (settled !== null) return settled
         const read = await this.accountOf(step, ask.tool)
         const account = read.kind === "read" ? read.words : null
@@ -309,16 +409,56 @@ export class ThreadApprovalsService {
         const fingerprint = factOf(stop, FACT.fingerprint)
         if (stop.kind === "approval" && fingerprint !== null && verdict?.startsWith(APPROVED_PREFIX) === true)
             return { by: verdict.slice(APPROVED_PREFIX.length), fingerprint }
-        const item = await this.items?.latestOfKey(
-            ref.workspaceId,
-            TOOL_APPROVAL_ACTION,
-            approvalKeyOf(ref.runId, stepKey),
-        )
+        return (await this.approvedItemOf(ref, stepKey))?.approval ?? null
+    }
+
+    /**
+     * The founder approved a call of this step: the ENGINE runs exactly that call (the arguments and the key the item kept from the ask)
+     * through the node host's own door, under the approval, and hands the model its answer as words of the engine; the model is never
+     * asked to issue it again (asked again it rewrites its words, and an approval is bound to the exact arguments: D-P11-5). Exactly
+     * once: the call key is the one the step asked under, so the gateway's durable receipt of a write (or a ledgered tool's own ledger)
+     * answers any later run of the same step (after a crash, after another stop) with the first answer. A failure of the call is the
+     * step's (it throws). An effect's right carries no call: its approval alone goes on, as before. Nothing approved: no approval, no answer.
+     */
+    async approvedRun(ref: StopRunRef, stepKey: string, turn: NodeTurn): Promise<ApprovedRun> {
+        const approved = await this.approvedOf(ref, stepKey)
+        if (approved === null) return { approval: null, answer: null }
+        const tool = fieldOf(approved.item, FACT.tool)
+        const text = fieldOf(approved.item, CALL_FIELD.args)
+        const key = fieldOf(approved.item, CALL_FIELD.key)
+        const args = text === null ? null : callArgsOf(text)
+        if (tool === null || key === null || args === null || this.door === undefined || this.tokens === undefined)
+            return { approval: approved.approval, answer: null }
+        const value = await this.door.call({ token: this.tokens.mint(turn), tool, args, key, approval: approved.approval })
+        return { approval: approved.approval, answer: engineAnswerOf(tool, args, value, this.clock.now().toISOString()) }
+    }
+
+    /**
+     * The approved item of the step, with its approval: the item the approval stop names while it keeps the owner's verdict (the run right
+     * after the verdict: the work engine may not have marked the item done yet), else the newest item of the step when it is done (a
+     * later run of the same step). Null when the step has no approved call.
+     */
+    private async approvedOf(ref: StopRunRef, stepKey: string): Promise<Approved | null> {
+        const stop = await this.stops.stopOf(ref, stepKey)
+        const verdict = stop === null ? null : factOf(stop, FACT.verdict)
+        const workItemId = stop === null ? null : factOf(stop, FACT.workItem)
+        if (stop?.kind === "approval" && workItemId !== null && verdict?.startsWith(APPROVED_PREFIX) === true) {
+            const [item] = (await this.items?.findMany([workItemId], 1)) ?? []
+            const fingerprint = item === undefined ? null : fieldOf(item, FACT.fingerprint)
+            if (item !== undefined && item.workspace_id === ref.workspaceId && fingerprint !== null)
+                return { item, approval: { by: verdict.slice(APPROVED_PREFIX.length), fingerprint } }
+        }
+        return this.approvedItemOf(ref, stepKey)
+    }
+
+    /** The newest item of the step when it is done (approved), with who approved it; null otherwise. */
+    private async approvedItemOf(ref: StopRunRef, stepKey: string): Promise<Approved | null> {
+        const item = await this.items?.latestOfKey(ref.workspaceId, TOOL_APPROVAL_ACTION, approvalKeyOf(ref.runId, stepKey))
         if (item?.status !== "done") return null
-        const approved = fieldOf(item, FACT.fingerprint)
-        if (approved === null) return null
+        const fingerprint = fieldOf(item, FACT.fingerprint)
+        if (fingerprint === null) return null
         const by = (await this.deciders?.decidersOf([item.id]))?.get(item.id) ?? null
-        return { by: by ?? APPROVER_UNKNOWN, fingerprint: approved }
+        return { item, approval: { by: by ?? APPROVER_UNKNOWN, fingerprint } }
     }
 
     /**
@@ -332,10 +472,14 @@ export class ThreadApprovalsService {
         const stop = await this.stops.stopOf(ref, verdict.stepKey)
         if (stop?.state !== "open" || stop.kind !== "approval") return { kind: "refused", code: "thread_not_waiting" }
         if (factOf(stop, FACT.workItem) !== verdict.workItemId) return { kind: "refused", code: "approval_stale" }
+        // A verdict already kept for this item (the stop closed another way and withdrew it): this one moves nothing.
+        if (factOf(stop, FACT.verdict) !== null) return { kind: "refused", code: "approval_stale" }
         if (verdict.verdict === "approved" && verdict.by === null) return { kind: "refused", code: "approver_unknown" }
         const kept = verdict.verdict === "approved" ? `${APPROVED_PREFIX}${verdict.by ?? ""}` : REFUSED
-        await this.records.patch(verdict.workspaceId, stop.id, (fresh) =>
-            fresh.kind !== "approval" || factOf(fresh, FACT.workItem) !== verdict.workItemId
+        const written = await this.records.patch(verdict.workspaceId, stop.id, (fresh) =>
+            fresh.kind !== "approval" ||
+            factOf(fresh, FACT.workItem) !== verdict.workItemId ||
+            factOf(fresh, FACT.verdict) !== null
                 ? null
                 : {
                       detail: {
@@ -347,6 +491,8 @@ export class ThreadApprovalsService {
                       },
                   },
         )
+        // Another writer kept a verdict first (the stop was withdrawn meanwhile): nothing is handed to the thread.
+        if (written === null) return { kind: "refused", code: "approval_stale" }
         return runs.resume(ref, this.decisionOf(verdict))
     }
 
@@ -402,6 +548,12 @@ export class ThreadApprovalsService {
             factOf(stop, FACT.workItem) === existing.id
                 ? factOf(stop, FACT.verdict)
                 : null
+        if (kept === APPROVAL_WITHDRAWN)
+            return {
+                kind: "trouble",
+                code: "tool_approval_withdrawn",
+                text: `the approval of ${ask.tool} with these arguments was closed when its stop was decided another way`,
+            }
         if (kept === REFUSED || existing?.status === "rejected" || existing?.status === "failed")
             return {
                 kind: "trouble",
@@ -415,6 +567,26 @@ export class ThreadApprovalsService {
                 text: `${ask.tool} was approved once already and asked again`,
             }
         return null
+    }
+
+    /**
+     * The bound of approvals in one step: the owner approved a call of this tool in this run's step (the approval stop keeps the owner's
+     * verdict for it, or the step's newest item is done) and the step asks the SAME tool again with other arguments. The approved call
+     * already ran (the engine ran it); a second ask is the step's trouble, which ends the step in one report to the founder: never a
+     * second item, never a loop of asks. Another tool asks as usual.
+     */
+    private spentOf(newest: WorkItem | null, stop: RunStop | null, ask: ApprovalAsk): ApprovalAsked | null {
+        const approvedOnStop =
+            stop?.kind === "approval" &&
+            factOf(stop, FACT.tool) === ask.tool &&
+            factOf(stop, FACT.verdict)?.startsWith(APPROVED_PREFIX) === true
+        const approvedItem = newest?.status === "done" && fieldOf(newest, FACT.tool) === ask.tool
+        if (!approvedOnStop && !approvedItem) return null
+        return {
+            kind: "trouble",
+            code: "tool_approval_spent",
+            text: `the owner approved one call of ${ask.tool} in this step and NIVO already ran it; the step asked ${ask.tool} again with other arguments`,
+        }
     }
 
     /** Raises the owner's item for the call, once per run, step and call: the stop's card is its one message. Null when it cannot be raised. */
@@ -449,6 +621,9 @@ export class ThreadApprovalsService {
                         ability: account?.ability ?? null,
                         connectionId: account?.connectionId ?? null,
                         args: words.map((word) => `${word.name}: ${word.value}`).join("\n"),
+                        // The exact call, so the engine runs THAT call once the owner approved it (never the model's rewrite of it).
+                        [CALL_FIELD.args]: ask.call?.args ?? null,
+                        [CALL_FIELD.key]: ask.call?.key ?? null,
                     },
                 },
                 preset: true,

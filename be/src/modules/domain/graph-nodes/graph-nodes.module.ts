@@ -53,6 +53,7 @@ export class GraphNodesModule extends ConfigurableModuleClass {
                 GraphNodeRunTokensService,
                 GraphNodeEffectsService,
                 GRAPH_EFFECT_ONCE,
+                GRAPH_NODE_TOOL_DOOR,
             ],
         }
     }

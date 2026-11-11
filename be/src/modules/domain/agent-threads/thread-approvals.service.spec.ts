@@ -1,8 +1,8 @@
 import { Test } from "@nestjs/testing"
 import { FakeClock, builder, mock } from "@starci/jest-preset"
 import { DecisionLogReadService, WorkEngineService } from "@modules/domain/decisions"
-import { GraphNodesError, GraphNodesErrorCode } from "@modules/domain/graph-nodes"
-import type { NodeTurn } from "@modules/domain/graph-nodes"
+import { GRAPH_NODE_TOOL_DOOR, GraphNodeRunTokensService, GraphNodesError, GraphNodesErrorCode } from "@modules/domain/graph-nodes"
+import type { NodeToolDoor, NodeTurn } from "@modules/domain/graph-nodes"
 import { ProviderAbilitiesService } from "@modules/domain/mcp-gateway"
 import type { ProviderBoard } from "@modules/domain/mcp-gateway"
 import { InstallationRecordsService } from "@modules/domain/module-installations"
@@ -143,6 +143,8 @@ interface Options {
     readonly existing?: WorkItem | null
     readonly latest?: WorkItem | null
     readonly raise?: "ok" | "throws"
+    /** The item found by its id (the item an approval stop names); defaults to `existing`. */
+    readonly byId?: WorkItem | null
 }
 
 const build = async (options: Options = {}) => {
@@ -181,10 +183,14 @@ const build = async (options: Options = {}) => {
     const items = mock<WorkItemsService>({
         findByDedupe: jest.fn().mockResolvedValue(options.existing ?? null),
         latestOfKey: jest.fn().mockResolvedValue(options.latest ?? null),
-        findMany: jest
-            .fn()
-            .mockResolvedValue(options.existing === undefined || options.existing === null ? [] : [options.existing]),
+        findMany: jest.fn().mockResolvedValue(
+            [options.byId === undefined ? options.existing : options.byId].filter(
+                (item): item is WorkItem => item !== undefined && item !== null,
+            ),
+        ),
     })
+    const door = mock<NodeToolDoor>({ call: jest.fn().mockResolvedValue({ outcome: "filed", changeRequest: { id: "cr-1" } }) })
+    const tokens = mock<GraphNodeRunTokensService>({ mint: jest.fn().mockReturnValue("token-1") })
     const installations = mock<InstallationRecordsService>({
         ofAgent: jest.fn().mockResolvedValue({ moduleKey: "sales" }),
     })
@@ -208,12 +214,14 @@ const build = async (options: Options = {}) => {
             { provide: InstallationRecordsService, useValue: installations },
             { provide: ProviderAbilitiesService, useValue: abilities },
             { provide: DecisionLogReadService, useValue: deciders },
+            { provide: GRAPH_NODE_TOOL_DOOR, useValue: door },
+            { provide: GraphNodeRunTokensService, useValue: tokens },
             { provide: CLOCK, useValue: new FakeClock(new Date(NOW)) },
             { provide: MESSAGE_CATALOG, useValue: mock<MessageCatalog>({ get: jest.fn((key: string) => `[${key}]`) }) },
         ],
     }).compile()
     const current = (): RunStop | null => stop
-    return { service: moduleRef.get(ThreadApprovalsService), stops, engine, items, abilities, runs, current }
+    return { service: moduleRef.get(ThreadApprovalsService), stops, engine, items, abilities, runs, door, current }
 }
 
 describe("ThreadApprovalsService.asked", () => {
@@ -493,5 +501,129 @@ describe("ThreadApprovalsService.expired", () => {
 
         expect(await service.expired(REF, "qr", runs)).toMatchObject({ kind: "refused", code: "decided_meanwhile" })
         expect(runs.resume).not.toHaveBeenCalled()
+    })
+})
+
+// FX4 (D-P11-5): the owner approved; the model, asked again, rewrote its words and the approval (bound to the exact arguments) asked
+// again: a loop. Now the item keeps the exact call, the ENGINE runs it once through the host's door under its own key, and a second
+// ask of the same tool in the step is one trouble (one report), never a second item.
+describe("ThreadApprovalsService: the approved call runs once, by the engine", () => {
+    const CALL = JSON.stringify({ subject: "Giao hang", attribute: "Phi ship noi thanh", value: "35.000 d" })
+    const CALL_KEY = "run-1:qr:tool:abc"
+    const PROPOSE = "nivo.brain.change.propose"
+    const approvedItem = (status: WorkItem["status"]) =>
+        itemOf({
+            status,
+            proposal: {
+                summary: "x",
+                fields: { engine: "langgraph", tool: PROPOSE, fingerprint: FINGERPRINT, call: CALL, callKey: CALL_KEY },
+            },
+        })
+    const approvedStop = stopOf({
+        detail: {
+            suggestions: [],
+            facts: factsOf(
+                ["tool", PROPOSE],
+                ["workItemId", "item-1"],
+                ["fingerprint", FINGERPRINT],
+                ["verdict", "approved:member-owner"],
+            ),
+        },
+    })
+
+    it("keeps the exact call of the ask on the owner's item (its arguments as JSON text and its key)", async () => {
+        const { service, engine } = await build()
+
+        await service.asked(STEP, askError({ call: CALL, key: CALL_KEY }))
+
+        expect(engine.runWork.mock.calls[0]?.[1]).toMatchObject({ seed: { fields: { call: CALL, callKey: CALL_KEY } } })
+    })
+
+    it("runs exactly the approved call through the door, under its key and the approval, and words its answer for the model", async () => {
+        const { service, door } = await build({ stop: approvedStop, byId: approvedItem("waiting_decision") })
+
+        const run = await service.approvedRun(REF, "qr", TURN)
+
+        expect(door.call).toHaveBeenCalledTimes(1)
+        expect(door.call).toHaveBeenCalledWith({
+            token: "token-1",
+            tool: PROPOSE,
+            args: JSON.parse(CALL),
+            key: CALL_KEY,
+            approval: { by: "member-owner", fingerprint: FINGERPRINT },
+        })
+        expect(run.approval).toEqual({ by: "member-owner", fingerprint: FINGERPRINT })
+        expect(run.answer).toMatchObject({ by: "engine", at: NOW })
+        expect(run.answer?.text).toContain("35.000 d")
+        expect(run.answer?.text).toContain("filed")
+        expect(run.answer?.text).toContain(`do not call ${PROPOSE} again`)
+    })
+
+    it("a later run of the step runs the same call again under the same key (the door's receipt answers it once), from the done item", async () => {
+        const { service, door } = await build({ stop: stopOf({ kind: "ai_report" }), latest: approvedItem("done") })
+
+        const run = await service.approvedRun(REF, "qr", TURN)
+
+        expect(door.call.mock.calls[0]?.[0]).toMatchObject({ key: CALL_KEY, approval: { by: "member-owner" } })
+        expect(run.answer).not.toBeNull()
+    })
+
+    it("runs nothing for an effect's right (no call kept), nor for a step nobody approved", async () => {
+        const effect = await build({ stop: approvedStop, byId: itemOf() })
+        const never = await build()
+
+        expect(await effect.service.approvedRun(REF, "qr", TURN)).toEqual({
+            approval: { by: "member-owner", fingerprint: FINGERPRINT },
+            answer: null,
+        })
+        expect(await never.service.approvedRun(REF, "qr", TURN)).toEqual({ approval: null, answer: null })
+        expect(effect.door.call).not.toHaveBeenCalled()
+        expect(never.door.call).not.toHaveBeenCalled()
+    })
+
+    it("a second ask of the same tool in the step after the approval (other arguments) is ONE trouble: no second item, no stop", async () => {
+        const { service, engine, stops } = await build({ latest: approvedItem("done") })
+
+        const asked = await service.asked(STEP, askError({ tool: PROPOSE, fingerprint: "e".repeat(64), call: "{}", key: "k-2" }))
+
+        expect(asked).toMatchObject({ kind: "trouble", code: "tool_approval_spent" })
+        expect(engine.runWork).not.toHaveBeenCalled()
+        expect(stops.stopped).not.toHaveBeenCalled()
+    })
+
+    it("control: another tool of the same step still asks as usual", async () => {
+        const { service, engine } = await build({ latest: approvedItem("done") })
+
+        expect(await service.asked(STEP, askError({ fingerprint: "e".repeat(64) }))).toMatchObject({ kind: "stopped" })
+        expect(engine.runWork).toHaveBeenCalledTimes(1)
+    })
+})
+
+// FX4 (D-P11-6): a stop closed another way withdraws its item, keeping the verdict `withdrawn` first: the item's late verdict moves nothing.
+describe("ThreadApprovalsService: a withdrawn approval", () => {
+    const withdrawn = stopOf({
+        detail: {
+            suggestions: [],
+            facts: factsOf(["workItemId", "item-1"], ["fingerprint", FINGERPRINT], ["verdict", "withdrawn"]),
+        },
+    })
+
+    it("hands nothing to the thread when the item is decided after its stop withdrew it", async () => {
+        const { service, runs } = await build({ stop: withdrawn })
+
+        const decided = await service.decided(
+            { ...REF, stepKey: "qr", workItemId: "item-1", verdict: "refused", by: null, text: "" },
+            runs,
+        )
+
+        expect(decided).toEqual({ kind: "refused", code: "approval_stale" })
+        expect(runs.resume).not.toHaveBeenCalled()
+    })
+
+    it("the same call asked again after the withdrawal is the step's trouble, never a second item", async () => {
+        const { service, engine } = await build({ stop: withdrawn, existing: itemOf({ status: "rejected" }) })
+
+        expect(await service.asked(STEP, askError())).toMatchObject({ kind: "trouble", code: "tool_approval_withdrawn" })
+        expect(engine.runWork).not.toHaveBeenCalled()
     })
 })

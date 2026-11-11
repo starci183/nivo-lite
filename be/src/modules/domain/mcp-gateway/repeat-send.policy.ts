@@ -21,7 +21,12 @@ export interface ToldLine {
 interface FounderAnswer {
     /** When the founder answered (ISO text). */
     readonly at: string
+    /** `engine` for words the engine wrote among them (the answer of a call the owner approved and the engine ran): no person's words. */
+    readonly by?: unknown
 }
+
+/** The `by` of the words the engine writes among the founder's answers. */
+const ENGINE_WORDS = "engine"
 
 /** The start of the key every line of a step is kept under in a conversation: `line:<run>:<step>:` (the step key is `<run>:<step>`). */
 const linePrefixOf = (stepKey: string): string => `line:${stepKey}:`
@@ -68,9 +73,15 @@ export const toldBefore = (
 
 /**
  * True when a person answered the step's report after the line was sent: the stop moved on a person's word, so the step may tell the
- * customer how it ended. A retry with no words, a resume by a timer or a re-drive carries no newer answer and lifts nothing.
+ * customer how it ended. A retry with no words, a resume by a timer or a re-drive carries no newer answer and lifts nothing; nor do the
+ * engine's own words among the answers (an approval is no word of a person: the approved call's answer the engine hands the model).
  */
 export const answeredSince = (answers: ReadonlyArray<FounderAnswer> | undefined, line: ToldLine): boolean => {
     const sent = timeOf(line.at)
-    return sent !== null && (answers ?? []).some((answer) => (timeOf(answer.at) ?? Number.NEGATIVE_INFINITY) > sent)
+    return (
+        sent !== null &&
+        (answers ?? []).some(
+            (answer) => answer.by !== ENGINE_WORDS && (timeOf(answer.at) ?? Number.NEGATIVE_INFINITY) > sent,
+        )
+    )
 }

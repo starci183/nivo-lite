@@ -10,10 +10,14 @@ import { ConnectionBindingsReadService, type ConnectionStatusFacts } from "@modu
 import {
     GRAPH_NODE_TOOL_DOOR,
     GraphNodeRunTokensService,
+    GraphNodesError,
+    GraphNodesErrorCode,
+    toolFingerprintOf,
     type GraphNodeRegistryService,
     type NodeModelDoor,
     type NodeRow,
     type NodeRunClaims,
+    type NodeToolCall,
     type NodeToolDoor,
     type NodeTurn,
 } from "@modules/domain/graph-nodes"
@@ -339,6 +343,25 @@ export interface Rights {
     readonly attachments: Array<ProviderAttachmentView>
     /** The owner's named default account of a kind, by kind. */
     readonly defaults: Map<string, string>
+    /**
+     * The door's tools that ask a person first (as an owner's grant row in `ask` mode would): a call of one of them whose exact
+     * fingerprint the host's approval does not carry is the typed approval error with the exact call (FX4). Absent: none asks.
+     */
+    readonly asks?: Set<string>
+    /** Every tool call the door let through, once per call key (the gateway's durable receipt): who approved it, if anyone. */
+    readonly toolCalls?: Array<ToolCallMade>
+}
+
+/** One tool call the world's door let through. */
+export interface ToolCallMade {
+    /** The tool. */
+    readonly tool: string
+    /** Its arguments. */
+    readonly args: unknown
+    /** Its call key. */
+    readonly key: string
+    /** The member who approved it, or null. */
+    readonly approvedBy: string | null
 }
 
 /** What the outside world keeps, shared by every process. */
@@ -395,6 +418,52 @@ const SEARCH = {
     passages: [],
 }
 
+/** What filing a truth change answers. */
+const FILED = {
+    outcome: "filed",
+    changeRequest: {
+        id: "change-1",
+        status: "proposed",
+        subject: "Giao hang",
+        attribute: "Phi ship noi thanh",
+        value: "35.000 d",
+        kind: "set",
+        waitsFor: "founder",
+    },
+}
+
+/**
+ * The world's door for tool calls: a tool the rights ask about stops for a person (the typed approval error carrying the exact call,
+ * as the real door does) unless the host's approval carries exactly that call; every call let through is kept once per call key (the
+ * gateway's durable receipt: the same key answers the first answer and acts nothing again). The shop's knowledge answers a search; a
+ * truth change is filed.
+ */
+const toolCallOf = async (rights: Rights, call: NodeToolCall): Promise<unknown> => {
+    const fingerprint = toolFingerprintOf(call.tool, call.args)
+    if (rights.asks?.has(call.tool) === true && call.approval?.fingerprint !== fingerprint)
+        throw new GraphNodesError({
+            code: GraphNodesErrorCode.ToolApprovalRequired,
+            params: {
+                tool: call.tool,
+                fingerprint,
+                reason: "ask_mode",
+                args: JSON.stringify(call.args),
+                call: JSON.stringify(call.args),
+                key: call.key,
+            },
+        })
+    const made = rights.toolCalls?.find((one) => one.key === call.key && one.tool === call.tool)
+    if (made === undefined)
+        rights.toolCalls?.push({
+            tool: call.tool,
+            args: structuredClone(call.args),
+            key: call.key,
+            approvedBy: call.approval?.by ?? null,
+        })
+    await Promise.resolve()
+    return structuredClone(call.tool === TOOL.brainChangePropose ? FILED : SEARCH)
+}
+
 /**
  * The providers of the rights of a process: the REAL judge (`ProviderAbilitiesService`) over the shop's accounts and attachments, the
  * REAL door (`NodeToolDoorService`) whose right and repeat checks the node host asks, and run tokens that carry the turn's workspace
@@ -424,7 +493,7 @@ export const rightsProvidersOf = (rights: Rights): Array<Provider> => [
     {
         provide: GRAPH_NODE_TOOL_DOOR,
         useFactory: (door: NodeToolDoorService): NodeToolDoor => ({
-            call: () => Promise.resolve(structuredClone(SEARCH)),
+            call: (call) => toolCallOf(rights, call),
             effectRight: (call) => door.effectRight(call),
             repeatGuard: (call) => door.repeatGuard(call),
         }),
