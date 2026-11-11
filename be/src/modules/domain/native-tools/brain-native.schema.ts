@@ -123,6 +123,7 @@ export const BRAIN_CHANGE_PROPOSE_SCHEMA: z.ZodObject<
         reason: z.ZodString
         validFrom: z.ZodOptional<z.ZodISODateTime>
         validTo: z.ZodOptional<z.ZodISODateTime>
+        replaces: z.ZodOptional<z.ZodUUID>
     },
     z.core.$strict
 > = z
@@ -138,6 +139,9 @@ export const BRAIN_CHANGE_PROPOSE_SCHEMA: z.ZodObject<
         reason: z.string().min(1).max(1000),
         validFrom: z.iso.datetime({ offset: true }).max(40).optional(),
         validTo: z.iso.datetime({ offset: true }).max(40).optional(),
+        // The id of the fact in force this changes or retires, as nivo.brain.search / fact.get gave it (FX5): checked, then the
+        // proposal is the next version of THAT fact.
+        replaces: z.uuid().optional(),
     })
     .strict()
     .refine((args) => args.retire === (args.value === undefined), {

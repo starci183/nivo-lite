@@ -17,6 +17,8 @@ export type MeteredGeneration = GenerationUsageRecord & {
     readonly model?: string | undefined
     /** The failure of a FAILED try; the row is booked estimated and never billed. */
     readonly failure?: string | undefined
+    /** A failed try booked with the provider's own figures (a cut try that reported its usage): not estimated, still never billed. */
+    readonly reported?: boolean | undefined
     /** The work the call was made for (a queued generation carries its caller's); absent, the work in scope. */
     readonly work?: UsageWork | undefined
 }
@@ -64,6 +66,7 @@ export class UsageGateService implements UsageGate {
             runId: entry.runId,
             ...(entry.call === undefined ? {} : { call: entry.call }),
             ...(entry.failure === undefined ? {} : { failure: entry.failure }),
+            ...(entry.reported === true ? { reported: true } : {}),
             ...(entry.work === undefined ? {} : { work: entry.work }),
         })
     }

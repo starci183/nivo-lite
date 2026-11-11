@@ -1,7 +1,7 @@
 import * as facts from "@tests/fixtures/builders/brain-facts.builder"
 
 import { FakeClock, mock } from "@starci/jest-preset"
-import { BrainChangeRequestsService, BrainFactsErrorCode, BrainFactsService } from "@modules/domain/brain-facts"
+import { BrainChangeRequestsService, BrainFactsErrorCode, BrainFactsService, factSlugOf } from "@modules/domain/brain-facts"
 import type { FactRecord, ReasonedChangeRequest } from "@modules/domain/brain-facts"
 import { TeamChatAudienceService, TeamChatCardsService, TeamChatStoreService } from "@modules/domain/team-chat"
 import type { TeamCardMessage } from "@modules/domain/team-chat"
@@ -12,6 +12,7 @@ import type { WorkspaceMember } from "@modules/domain/workspace-members"
 import { BrainChangeMessagesService } from "./brain-change-messages.service"
 import type { BrainChangePost } from "./brain-change-messages.service"
 import { BrainService } from "./brain.service"
+import { FactEmbeddingsService } from "./fact-embeddings.service"
 
 const LINE = "55555555-5555-4555-8555-555555555555"
 const ROOM = "room-direct-owner-sales"
@@ -89,13 +90,41 @@ const build = () => {
     const store = mock<BrainFactsService>()
     const byId = new Map<string, FactRecord>([[ACTIVE.id, ACTIVE]])
     store.get.mockImplementation(async (_ws, id) => byId.get(id) ?? null)
-    store.byKey.mockImplementation(async (_ws, _subject, attribute, status) =>
-        [...byId.values()].filter((fact) => fact.status === status && fact.attribute === attribute),
+    // The store's key is subject + attribute + instance scope, exactly (W2).
+    store.byKey.mockImplementation(async (_ws, subject, attribute, status, installationId) =>
+        [...byId.values()].filter(
+            (fact) =>
+                fact.status === status &&
+                fact.subjectKey === subject &&
+                fact.attribute === attribute &&
+                fact.installationId === installationId,
+        ),
     )
     store.propose.mockImplementation(async (_ws, input) => {
-        const fact = proposalOf(`p-${byId.size}`, input.value)
+        const subjectKey = factSlugOf(input.subjectLabel)
+        const attribute = factSlugOf(input.attributeLabel)
+        const scope = input.installationId ?? null
+        const [active] = await store.byKey(facts.WS, subjectKey, attribute, "active", scope)
+        const fact = proposalOf(`p-${byId.size}`, input.value, {
+            subjectKey,
+            attribute,
+            subjectLabel: input.subjectLabel,
+            attributeLabel: input.attributeLabel,
+            installationId: scope,
+            conflictWith: active?.id ?? null,
+        })
         byId.set(fact.id, fact)
-        return { fact, outcome: "conflict" }
+        return { fact, outcome: active === undefined ? "proposed" : "conflict" }
+    })
+    store.flagSameMeaning.mockImplementation(async (_ws, id, sameAs) => {
+        const fact = byId.get(id)!
+        byId.set(id, { ...fact, conflictWith: sameAs, flags: ["same_meaning"] })
+        return true
+    })
+    store.keepApart.mockImplementation(async (_ws, id) => {
+        const fact = byId.get(id)!
+        byId.set(id, { ...fact, conflictWith: null, flags: [] })
+        return true
     })
     const clock = new FakeClock("2026-11-11T10:45:00.000Z")
     const requests = new BrainChangeRequestsService(clock, store)
@@ -116,6 +145,8 @@ const build = () => {
         byId.set(fact.id, decided)
         return decided
     })
+    const vectors = mock<FactEmbeddingsService>()
+    vectors.nearestInForce.mockResolvedValue(null)
     const service = new BrainChangeMessagesService(
         clock,
         requests,
@@ -126,9 +157,10 @@ const build = () => {
         teamStore,
         members,
         people,
+        vectors,
     )
     service.onModuleInit()
-    return { ...chat, service, requests, store, brain, byId }
+    return { ...chat, service, requests, store, brain, byId, vectors }
 }
 
 const requestOf = (changes: Partial<ReasonedChangeRequest> = {}): ReasonedChangeRequest => ({
@@ -160,7 +192,13 @@ describe("BrainChangeMessagesService: filing from a chat posts ONE card in the r
             kind: "change",
             factKey: { subjectLabel: "Giao hàng", attributeLabel: "Phí ship nội thành" },
             oldValue: "20.000 đ",
-            current: { value: "20.000 đ", version: 2, source: "Quy định giao hàng.docx" },
+            current: {
+                value: "20.000 đ",
+                version: 2,
+                source: "Quy định giao hàng.docx",
+                match: "same",
+                factKey: { subjectLabel: "Giao hàng", attributeLabel: "Phí ship nội thành" },
+            },
             newValue: "30.000 đ",
             unit: null,
             validFrom: null,
@@ -352,5 +390,160 @@ describe("BrainChangeMessagesService: the founder decides on the card, rewritten
             state: null,
             revision: null,
         })
+    })
+})
+
+describe("FX5 D-P11-8a: the card finds the value in force it replaces (id, exact key across scopes, near meaning)", () => {
+    const SALES = "inst-sales"
+    /** The live case: the fee in force came from a document, kept for EVERY instance (scope null). */
+    const IN_FORCE = facts.factOf({
+        id: "641d02da",
+        subjectKey: "giao-hang-noi-thanh",
+        attribute: "phi-giao-hang",
+        subjectLabel: "Giao hàng nội thành",
+        attributeLabel: "phí giao hàng",
+        value: "30.000 đ một đơn",
+        status: "active",
+        version: 1,
+        installationId: null,
+        evidence: [{ kind: "document", ref: "doc-rules", label: "Quy định", title: "Quy định bán hàng.docx" }],
+    })
+    const LIVE_REASON = "Anh vừa nhắn từ mai phí ship nội thành tăng lên 35k, thay cho 30.000 đ một đơn đang dùng; giữ một năm."
+    const liveRequest = (changes: Partial<ReasonedChangeRequest> = {}): ReasonedChangeRequest =>
+        requestOf({
+            subjectLabel: "Giao hàng nội thành",
+            attributeLabel: "phí giao hàng",
+            value: "35.000 đ một đơn",
+            quote: "Từ mai phí ship nội thành tăng lên 35k em nhé",
+            reason: LIVE_REASON,
+            installationId: SALES,
+            ...changes,
+        })
+
+    it("the live case: an agent of one instance changes a workspace-wide fee → kind change, Hiện tại 30.000 đ bản 1 with its source", async () => {
+        const world = build()
+        world.byId.set(IN_FORCE.id, IN_FORCE)
+
+        const filed = await world.requests.propose(facts.WS, liveRequest())
+
+        // Filed as the next version of THAT fact: its key and its scope (every instance), never a second value beside it.
+        expect(world.store.propose.mock.calls[0]?.[1]).toMatchObject({
+            subjectLabel: "Giao hàng nội thành",
+            attributeLabel: "phí giao hàng",
+            installationId: null,
+        })
+        expect(filed.fact.conflictWith).toBe(IN_FORCE.id)
+        expect(world.payloadOf(filed.fact.id)).toMatchObject({
+            kind: "change",
+            oldValue: "30.000 đ một đơn",
+            current: { value: "30.000 đ một đơn", version: 1, source: "Quy định bán hàng.docx", match: "same" },
+            newValue: "35.000 đ một đơn",
+        })
+        expect(world.vectors.nearestInForce).not.toHaveBeenCalled()
+    })
+
+    it("the fact the agent names by id wins over the labels it chose: filed under that fact's key and scope", async () => {
+        const world = build()
+        world.byId.set(IN_FORCE.id, IN_FORCE)
+
+        const filed = await world.requests.propose(
+            facts.WS,
+            liveRequest({ subjectLabel: "Phí ship", attributeLabel: "Nội thành", replaces: IN_FORCE.id }),
+        )
+
+        expect(world.store.propose.mock.calls[0]?.[1]).toMatchObject({
+            subjectLabel: "Giao hàng nội thành",
+            attributeLabel: "phí giao hàng",
+            installationId: null,
+        })
+        expect(world.payloadOf(filed.fact.id)).toMatchObject({ kind: "change", current: { value: "30.000 đ một đơn", match: "same" } })
+    })
+
+    it.each([
+        ["a fact that does not exist", "nope", null],
+        ["a fact no longer in force", "641d02da", "superseded"],
+        ["a fact kept for another instance", "641d02da", "other-instance"],
+    ])("refuses replaces naming %s: nothing filed, no card", async (_name, id, twist) => {
+        const world = build()
+        if (twist === "superseded") world.byId.set(IN_FORCE.id, { ...IN_FORCE, status: "superseded" })
+        if (twist === "other-instance") world.byId.set(IN_FORCE.id, { ...IN_FORCE, installationId: "inst-front-desk" })
+
+        await expect(world.requests.propose(facts.WS, liveRequest({ replaces: id }))).rejects.toMatchObject({
+            code: BrainFactsErrorCode.FactNotFound,
+            params: { field: "replaces" },
+        })
+        expect(world.store.propose).not.toHaveBeenCalled()
+        expect(world.lines.size).toBe(0)
+    })
+
+    it("no id, no key: a fact in force near in meaning is shown as 'có thể thay cho', never merged; Đồng ý replaces it", async () => {
+        const world = build()
+        world.byId.set(IN_FORCE.id, IN_FORCE)
+        world.vectors.nearestInForce.mockResolvedValue(IN_FORCE)
+
+        const filed = await world.requests.propose(
+            facts.WS,
+            liveRequest({ subjectLabel: "Phí vận chuyển", attributeLabel: "trong thành phố", installationId: null }),
+        )
+
+        expect(world.store.flagSameMeaning).toHaveBeenCalledWith(facts.WS, filed.fact.id, IN_FORCE.id)
+        expect(world.payloadOf(filed.fact.id)).toMatchObject({
+            kind: "change",
+            factKey: { subjectLabel: "Phí vận chuyển", attributeLabel: "trong thành phố" },
+            current: {
+                value: "30.000 đ một đơn",
+                version: 1,
+                match: "near",
+                factKey: { subjectLabel: "Giao hàng nội thành", attributeLabel: "phí giao hàng" },
+            },
+        })
+        const stored = JSON.stringify(world.lines.get(brainChangeKeyOf(filed.fact.id))?.message)
+        expect(brainChangeCardViewOf(stored, "owner")).toMatchObject({ canApprove: true, canKeepBoth: true })
+        expect(brainChangeCardViewOf(stored, "manager")).toMatchObject({ canApprove: false, canKeepBoth: false })
+        // Nothing applied or merged by filing.
+        expect(world.store.apply).not.toHaveBeenCalled()
+        expect(world.brain.decideFact).not.toHaveBeenCalled()
+
+        await expect(
+            world.service.decide(OWNER, { workspaceId: facts.WS, changeId: filed.fact.id, action: "approve" }),
+        ).resolves.toMatchObject({ outcome: "applied" })
+        // Đồng ý chooses the flagged proposal: W2's apply merges over the named fact (same_meaning kept).
+        expect(world.store.keepApart).not.toHaveBeenCalled()
+        expect(world.brain.decideFact).toHaveBeenCalledWith(OWNER, expect.objectContaining({ action: "choose" }))
+    })
+
+    it("Giữ cả hai lets the candidate go before choosing: the new value is its own truth, the other one stays", async () => {
+        const world = build()
+        world.byId.set(IN_FORCE.id, IN_FORCE)
+        world.vectors.nearestInForce.mockResolvedValue(IN_FORCE)
+        const filed = await world.requests.propose(
+            facts.WS,
+            liveRequest({ subjectLabel: "Giao hàng hỏa tốc", attributeLabel: "phí", installationId: null }),
+        )
+
+        await expect(
+            world.service.decide(MANAGER, { workspaceId: facts.WS, changeId: filed.fact.id, action: "keep_both" }),
+        ).resolves.toMatchObject({ outcome: "founder_only" })
+        await expect(
+            world.service.decide(OWNER, { workspaceId: facts.WS, changeId: filed.fact.id, action: "keep_both" }),
+        ).resolves.toEqual({ outcome: "applied", state: "applied", revision: 2 })
+
+        const apart = world.store.keepApart.mock.invocationCallOrder[0] ?? Infinity
+        const chosen = world.brain.decideFact.mock.invocationCallOrder[0] ?? -Infinity
+        expect(apart).toBeLessThan(chosen)
+        expect(world.store.keepApart).toHaveBeenCalledWith(facts.WS, filed.fact.id)
+        expect(world.byId.get(IN_FORCE.id)?.status).toBe("active")
+    })
+
+    it("Giữ cả hai on a card of the same truth is not offered and changes nothing", async () => {
+        const world = build()
+        world.byId.set(IN_FORCE.id, IN_FORCE)
+        const filed = await world.requests.propose(facts.WS, liveRequest())
+
+        await expect(
+            world.service.decide(OWNER, { workspaceId: facts.WS, changeId: filed.fact.id, action: "keep_both" }),
+        ).resolves.toEqual({ outcome: "not_offered", state: "open", revision: 1 })
+        expect(world.brain.decideFact).not.toHaveBeenCalled()
+        expect(world.store.keepApart).not.toHaveBeenCalled()
     })
 })

@@ -11,11 +11,14 @@ export class DecideBrainChangeInput {
     @MaxLength(100)
     changeId!: string
 
-    /** `approve` (Đồng ý, the workspace owner only) or `reject` (Không, the owner or a manager). */
+    /**
+     * `approve` (Đồng ý, the workspace owner only), `reject` (Không, the owner or a manager) or `keep_both` (Giữ cả hai, the owner
+     * only, offered when `brainChange.canKeepBoth`).
+     */
     @Field(() => String)
-    @IsIn(["approve", "reject"])
+    @IsIn(["approve", "reject", "keep_both"])
     @MaxLength(10)
-    action!: "approve" | "reject"
+    action!: "approve" | "reject" | "keep_both"
 
     /** The reason given with the decision. */
     @Field(() => String, { nullable: true })

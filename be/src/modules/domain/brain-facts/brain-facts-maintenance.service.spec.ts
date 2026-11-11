@@ -129,6 +129,39 @@ const registerMaintenance = () => {
         expect(setOf(expire)).toEqual({ status: "expired" })
     })
 
+    it("FX5: a scheduled replacement ends the fact its approval named when it starts, even of another key (never two in force)", async () => {
+        const em = mockEntityManager({
+            find: [BrainFactEntity, [facts.rowOf({ id: "new", status: "scheduled", supersedesId: "old" })]],
+            update: [BrainFactEntity, { affected: 1 }],
+        })
+        const { service, reads } = await build(em)
+        // Nothing active under the new fact's own key and scope: the replaced value is only reachable by the name its approval kept.
+        reads.keyed.mockResolvedValue([])
+        reads.fetch.mockResolvedValue(facts.factOf({ id: "old", status: "active", version: 1, subjectKey: "giao-hang-noi-thanh" }))
+        const [promoted] = queueQueryBuilders(em, [answered(facts.rowOf({ id: "new", status: "active" })), answered()])
+
+        await service.maintain(facts.WS)
+
+        expect(reads.fetch).toHaveBeenCalledWith(em, facts.WS, "old")
+        expect(em.update.mock.calls.map((call): unknown => call[1])).toEqual([{ workspaceId: facts.WS, id: "old", status: "active" }])
+        expect(setOf(promoted)).toMatchObject({ status: "active", version: 2 })
+    })
+
+    it("FX5: a named fact that is no longer active is not touched again; the key's own value is", async () => {
+        const em = mockEntityManager({
+            find: [BrainFactEntity, [facts.rowOf({ id: "new", status: "scheduled", supersedesId: "gone" })]],
+            update: [BrainFactEntity, { affected: 1 }],
+        })
+        const { service, reads } = await build(em)
+        reads.keyed.mockResolvedValue([facts.factOf({ id: "keyed", status: "active" })])
+        reads.fetch.mockResolvedValue(facts.factOf({ id: "gone", status: "expired" }))
+        queueQueryBuilders(em, [answered(facts.rowOf({ id: "new", status: "active" })), answered()])
+
+        await service.maintain(facts.WS)
+
+        expect(em.update.mock.calls.map((call): unknown => call[1])).toEqual([{ workspaceId: facts.WS, id: "keyed", status: "active" }])
+    })
+
     it("counts no expirations when the statement answers no rows", async () => {
         const em = mockEntityManager({ find: [BrainFactEntity, []] })
         queueQueryBuilders(em, [{ execute: {} }])

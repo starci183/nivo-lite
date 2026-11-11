@@ -87,7 +87,11 @@ export class BrainFactsReadService {
         return this.keyed(this.entityManager, workspaceId, subjectKey, attribute, status, installationId)
     }
 
-    /** The active facts one agent may use right now: in force and inside its view. */
+    /**
+     * The facts one agent may use right now: in force and inside its view. A scheduled value whose start has come is in force although
+     * the upkeep (`maintain`, run when the brain is read on its page or a change is filed) has not promoted it yet: the value it replaces
+     * ended at that same start on approval, so exactly one value of a key is in force at every instant, with no gap (FX5, D-P11-8b).
+     */
     async forView(
         workspaceId: string,
         audience: FactAudience,
@@ -96,7 +100,7 @@ export class BrainFactsReadService {
         limit: number,
     ): Promise<ReadonlyArray<FactRecord>> {
         const at = this.clock.now().getTime()
-        const active = await this.list(workspaceId, { statuses: ["active"], limit })
+        const active = await this.list(workspaceId, { statuses: ["active", "scheduled"], limit })
         return active.filter((fact) => inForce(fact, at) && visibleTo(fact, audience, module, installationId))
     }
 

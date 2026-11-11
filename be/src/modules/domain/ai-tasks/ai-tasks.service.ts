@@ -520,7 +520,7 @@ Current rules: ${currentRules}`,
             (message) => ({ message, read: this.ai.readTurn(message, limits, elapsed()) }),
             (cause: unknown) => ({
                 message: undefined,
-                read: { ok: false as const, failure: this.ai.failureOfThrow(cause) },
+                read: { ok: false as const, failure: this.ai.failureOfThrow(cause), spent: undefined },
             }),
         )
         if (tried.read.ok && tried.message !== undefined) {
@@ -550,9 +550,10 @@ Current rules: ${currentRules}`,
             return tried.message
         }
         const failure = tried.read.ok ? "empty" : tried.read.failure
+        const spent = tried.read.ok ? undefined : tried.read.spent
         tries.failures.push(failure)
         await this.bookFailed(
-            failedTryEntryOf(request, failure, tries.made, choice, { tokens: turns.lastPromptTokens }),
+            failedTryEntryOf(request, failure, tries.made, choice, { tokens: turns.lastPromptTokens }, spent),
         )
         this.logger.warn(AiTasksLogEvent.Retried, {
             workspaceId: request.workspaceId,
@@ -712,7 +713,14 @@ Current rules: ${currentRules}`,
         if (tried.ok) return { answer: tried.answer, choice }
         tries.failures.push(tried.failure)
         await this.bookFailed(
-            failedTryEntryOf(request, tried.failure, tries.made, choice, { chars: promptCharsOf(call.messages) }),
+            failedTryEntryOf(
+                request,
+                tried.failure,
+                tries.made,
+                choice,
+                { chars: promptCharsOf(call.messages) },
+                tried.spent,
+            ),
         )
         this.logger.warn(AiTasksLogEvent.Retried, {
             workspaceId: request.workspaceId,

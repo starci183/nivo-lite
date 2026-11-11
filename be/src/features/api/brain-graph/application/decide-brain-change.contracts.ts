@@ -4,8 +4,8 @@ export interface DecideBrainChangeRequest {
     readonly workspaceId: string
     /** The change request on the card. */
     readonly changeId: string
-    /** `approve` (the workspace owner only) or `reject` (the owner or a manager). */
-    readonly action: "approve" | "reject"
+    /** `approve` (the workspace owner only), `reject` (the owner or a manager) or `keep_both` (the owner only, near-meaning cards). */
+    readonly action: "approve" | "reject" | "keep_both"
     /** The reason given with the decision. */
     readonly note?: string | undefined
 }

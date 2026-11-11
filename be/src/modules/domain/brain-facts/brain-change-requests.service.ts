@@ -58,7 +58,26 @@ export interface ChangeRequestHook {
     vet(workspaceId: string, request: ReasonedChangeRequest): Promise<void>
     /** The request was filed (or found waiting, or already true): post or rewrite its card. */
     filed(workspaceId: string, request: ReasonedChangeRequest, filed: ChangeFiled): Promise<void>
+    /**
+     * The fact in force of ANOTHER key that may say the same thing as a new proposal that replaces nothing by id or key (BG2's
+     * near-meaning candidate read), or null. Only a candidate: the proposal is flagged `same_meaning` naming it, and the founder's
+     * decision on the card confirms (approve = it replaces that fact) or keeps both; nothing is merged here.
+     */
+    nearOf?(workspaceId: string, proposal: FactRecord): Promise<FactRecord | null>
 }
+
+/** The fact of the key a change request is filed under: the subject, attribute and instance scope, as labels. */
+interface FiledKey {
+    readonly subjectLabel: string
+    readonly attributeLabel: string
+    readonly subjectKey: string
+    readonly attribute: string
+    readonly installationId: string | null
+}
+
+/** The refusal of a `replaces` that names no fact in force the caller may read. */
+const replacesRefusal = (): BrainFactsError =>
+    new BrainFactsError({ code: BrainFactsErrorCode.FactNotFound, params: { field: "replaces" } })
 
 /** What a chat change request rests on: the message the words are in, verbatim. */
 export const changeEvidenceOf = (request: ChangeRequest, at: string): Evidence => ({
@@ -117,19 +136,17 @@ export class BrainChangeRequestsService {
         this.checkReason(request.reason, request.value, [request.quote])
         await this.hook?.vet(workspaceId, request)
         const evidence = changeEvidenceOf(request, this.clock.now().toISOString())
-        const [active] = await this.facts.byKey(
-            workspaceId,
-            normal.subjectKey,
-            normal.attribute,
-            "active",
-            request.installationId,
-        )
+        // Values whose start has come take over first, so "the value in force" below is the one in force now.
+        await this.facts.maintain(workspaceId)
+        const active = await this.replacedOf(workspaceId, request, normal)
         if (request.value === null) return this.retire(workspaceId, active, evidence, request)
         if (active !== undefined && sameValue(active.value, normal.value)) return { outcome: "already_true", fact: active }
-        const waiting = await this.waitingValue(workspaceId, normal.subjectKey, normal.attribute, request, normal.value)
+        // A change of a fact in force is filed as the next version of THAT fact: its key and instance scope, not the labels the model chose.
+        const key: FiledKey = active ?? { ...normal, installationId: request.installationId }
+        const waiting = await this.waitingValue(workspaceId, key, normal.value)
         const { fact } = await this.facts.propose(workspaceId, {
-            subjectLabel: request.subjectLabel,
-            attributeLabel: request.attributeLabel,
+            subjectLabel: key.subjectLabel,
+            attributeLabel: key.attributeLabel,
             value: request.value,
             unit: request.unit ?? null,
             sourceKind: RELAYED,
@@ -137,11 +154,48 @@ export class BrainChangeRequestsService {
             validTo: request.validTo ?? null,
             evidence: [evidence],
             proposedBy: request.proposedBy,
-            installationId: request.installationId,
+            installationId: key.installationId,
             // Never the direct path: a chat is an inflow, the founder decides.
             autoApply: false,
         })
-        return { outcome: waiting === undefined ? "filed" : "already_filed", fact }
+        const filed = active === undefined && waiting === undefined ? await this.nearFlagged(workspaceId, fact) : fact
+        return { outcome: waiting === undefined ? "filed" : "already_filed", fact: filed }
+    }
+
+    /**
+     * The fact in force a request replaces: (1) the fact it names by id (`replaces`), which must be in force and readable by the
+     * caller's instance, else the request is refused; (2) else the fact in force of its exact key, in the caller's instance scope and
+     * then the workspace-wide one (a value every instance reads is the one a chat about "the" fee changes). Undefined for a new truth.
+     */
+    private async replacedOf(
+        workspaceId: string,
+        request: ChangeRequest,
+        normal: { readonly subjectKey: string; readonly attribute: string },
+    ): Promise<FactRecord | undefined> {
+        if (request.replaces !== undefined && request.replaces !== null) {
+            const named = await this.facts.get(workspaceId, request.replaces)
+            const readable =
+                named?.status === "active" &&
+                named.proposalKind === "set" &&
+                (named.installationId === null || named.installationId === request.installationId)
+            if (!readable) throw replacesRefusal()
+            return named
+        }
+        const [own] = await this.facts.byKey(workspaceId, normal.subjectKey, normal.attribute, "active", request.installationId)
+        if (own !== undefined || request.installationId === null) return own
+        const [shared] = await this.facts.byKey(workspaceId, normal.subjectKey, normal.attribute, "active", null)
+        return shared
+    }
+
+    /**
+     * A new proposal that replaces nothing by id or key: (3) the hook's near-meaning candidate in force, if any, is named on the
+     * proposal (`same_meaning`, `conflictWith`) for the founder to confirm on the card; never merged here.
+     */
+    private async nearFlagged(workspaceId: string, fact: FactRecord): Promise<FactRecord> {
+        if (fact.status !== "proposed" || fact.proposalKind !== "set" || fact.conflictWith !== null) return fact
+        const near = (await this.hook?.nearOf?.(workspaceId, fact)) ?? null
+        if (near === null || !(await this.facts.flagSameMeaning(workspaceId, fact.id, near.id))) return fact
+        return (await this.facts.get(workspaceId, fact.id)) ?? fact
     }
 
     /** A request to stop using the value in force: one waiting proposal per fact. */
@@ -161,14 +215,8 @@ export class BrainChangeRequestsService {
     }
 
     /** The proposal of the same value already waiting for the key, if any. */
-    private async waitingValue(
-        workspaceId: string,
-        subjectKey: string,
-        attribute: string,
-        request: ChangeRequest,
-        value: string,
-    ): Promise<FactRecord | undefined> {
-        const waiting = await this.facts.byKey(workspaceId, subjectKey, attribute, "proposed", request.installationId)
+    private async waitingValue(workspaceId: string, key: FiledKey, value: string): Promise<FactRecord | undefined> {
+        const waiting = await this.facts.byKey(workspaceId, key.subjectKey, key.attribute, "proposed", key.installationId)
         return waiting.find((proposal) => proposal.proposalKind === "set" && sameValue(proposal.value, value))
     }
 }

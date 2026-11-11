@@ -145,6 +145,22 @@ export class FactEmbeddingsService {
     }
 
     /**
+     * The one fact IN FORCE of another key, same instance scope, nearest in meaning to a new chat proposal that replaces nothing by id
+     * or key (FX5): the candidate a change card shows as "có thể thay cho", for the founder to confirm. Vector only, no model judgement
+     * (the founder is the judge); nothing when the embedding budget is spent or the AI is off; never throws.
+     */
+    async nearestInForce(workspaceId: string, proposal: FactRecord): Promise<FactRecord | null> {
+        try {
+            if (await this.usage.blockedBy(workspaceId, "embedding", false)) return null
+            const [pair] = await this.nearMeaning(workspaceId, [proposal], { statuses: ["active"], limit: 1 })
+            return pair?.near[0]?.fact ?? null
+        } catch (cause) {
+            this.logger.error(FactReadingLogEvent.SameMeaningFailed, cause, { workspaceId })
+            return null
+        }
+    }
+
+    /**
      * "The same thing in other words" for the facts one window of a document just filed (new proposals that disagree with nothing):
      * candidates by vector (`nearMeaning`, the window's own facts excluded: the reading already gives one thing one label inside a
      * window), then ONE cheap model judgement per fact that has a candidate. A fact judged the same as a candidate is flagged

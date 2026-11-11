@@ -63,7 +63,21 @@ export interface BrainChangeCurrent {
     readonly version: number | null
     /** Where it came from, for people (a document title, "chat", a person's name). */
     readonly source: string
+    /**
+     * How the value was found (FX5, additive; absent on cards written before): `same` = the value in force of the same truth (named by
+     * the agent or by its exact key), shown "Hiện tại"; `near` = a value of ANOTHER truth near in meaning, shown "có thể thay cho": the
+     * founder's Đồng ý replaces it, "Giữ cả hai" keeps both.
+     */
+    readonly match?: BrainChangeMatch | undefined
+    /** The truth the value in force belongs to (it differs from the card's `factKey` when `match` is `near`). */
+    readonly factKey?: BrainChangeFactKey | undefined
 }
+
+/** How the value in force a card shows was found: the same truth, or another truth near in meaning. */
+export const BRAIN_CHANGE_MATCHES = ["same", "near"] as const
+
+/** How the value in force a card shows was found. */
+export type BrainChangeMatch = (typeof BRAIN_CHANGE_MATCHES)[number]
 
 /** Who decided the card and when. */
 export interface BrainChangeDecided {
@@ -133,6 +147,11 @@ export interface BrainChangeCardView extends Omit<BrainChangePayload, "version">
     readonly canApprove: boolean
     /** Whether this viewer is offered "Không": the owner or a manager while the card is open. */
     readonly canReject: boolean
+    /**
+     * Whether this viewer is offered "Giữ cả hai" (FX5): the workspace owner while the card is open and its value in force is only a
+     * near-meaning candidate (`current.match` = `near`): the new value goes in force as its own truth and the other one stays.
+     */
+    readonly canKeepBoth: boolean
     /** What producing the proposal cost in AI (U1); null for a viewer who is not an owner or manager, or when no cost is known. */
     readonly cost: BrainChangeCost | null
 }

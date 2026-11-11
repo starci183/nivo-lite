@@ -38,6 +38,17 @@ export class ChatBrainChangeCurrentType {
     /** Where it came from, for people (a document title, "chat", a person's name). */
     @Field(() => String)
     source!: string
+
+    /**
+     * How it was found: `same` = the value in force of the same truth ("Hiện tại"); `near` = a value of another truth near in meaning
+     * ("có thể thay cho": Đồng ý replaces it, Giữ cả hai keeps both). Null on cards written before FX5 (read as `same`).
+     */
+    @Field(() => String, { nullable: true })
+    match?: string | null | undefined
+
+    /** The truth the value in force belongs to (differs from the card's truth when `match` is `near`); null on older cards. */
+    @Field(() => ChatBrainChangeFactKeyType, { nullable: true })
+    factKey?: ChatBrainChangeFactKeyType | null | undefined
 }
 
 @ObjectType()
@@ -166,6 +177,10 @@ export class ChatBrainChangeCardType {
     /** Whether this viewer is offered Refuse: the owner or a manager while open. */
     @Field(() => Boolean)
     canReject!: boolean
+
+    /** Whether this viewer is offered "Giữ cả hai": the workspace owner while open and the value in force is only a near-meaning candidate. */
+    @Field(() => Boolean)
+    canKeepBoth!: boolean
 
     /** What producing this proposal cost in AI (a learning card: the judgements and the draft); null for staff or when not known. */
     @Field(() => ChatBrainChangeCostType, { nullable: true })

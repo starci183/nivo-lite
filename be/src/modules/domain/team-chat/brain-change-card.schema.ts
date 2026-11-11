@@ -2,6 +2,7 @@ import { z } from "zod"
 import {
     BRAIN_CHANGE_EVIDENCE_KINDS,
     BRAIN_CHANGE_KINDS,
+    BRAIN_CHANGE_MATCHES,
     BRAIN_CHANGE_ORIGINS,
     BRAIN_CHANGE_STATES,
     type BrainChangePayload,
@@ -20,16 +21,25 @@ const evidence = z.object({
     at: z.string().max(40).nullable(),
 })
 
+/** A truth as people write it. */
+const factKey = z.object({ subjectLabel: z.string().min(1).max(160), attributeLabel: z.string().min(1).max(120) })
+
 /** The payload of a `brain.change` card as a writer builds it (no revision: the card counts it). */
 export const brainChangePayloadGiven = z.object({
     version: z.literal(1),
     changeId: z.string().min(1).max(100),
     origin: z.enum(BRAIN_CHANGE_ORIGINS),
     kind: z.enum(BRAIN_CHANGE_KINDS),
-    factKey: z.object({ subjectLabel: z.string().min(1).max(160), attributeLabel: z.string().min(1).max(120) }),
+    factKey,
     oldValue: z.string().max(500).nullable(),
     current: z
-        .object({ value: z.string().max(500), version: z.number().int().nullable(), source: z.string().max(300) })
+        .object({
+            value: z.string().max(500),
+            version: z.number().int().nullable(),
+            source: z.string().max(300),
+            match: z.enum(BRAIN_CHANGE_MATCHES).optional(),
+            factKey: factKey.optional(),
+        })
         .nullable(),
     newValue: z.string().max(500),
     unit: z.string().max(20).nullable(),

@@ -191,6 +191,21 @@ export class BrainFactsService {
     }
 
     /**
+     * The founder keeps both values (FX5, "Giữ cả hai" on a change card): a waiting proposal flagged `same_meaning` no longer names the
+     * fact of the other truth, so approving it merges nothing. Answers whether it was a flagged proposal still waiting.
+     */
+    async keepApart(workspaceId: string, id: string): Promise<boolean> {
+        const updated = await this.entityManager
+            .createQueryBuilder(BrainFactEntity, "bf")
+            .update()
+            .set({ conflictWith: null, reviewFlags: () => "array_remove(review_flags, 'same_meaning')" })
+            .where({ workspaceId, id, status: "proposed" })
+            .andWhere("'same_meaning' = ANY(review_flags)")
+            .execute()
+        return (updated.affected ?? 0) > 0
+    }
+
+    /**
      * Approves a proposal. Valid from now (or undated) it becomes the active fact, the next version of its key, holding for one year
      * unless its end was stated; the current one is superseded and its relations are carried to the new value. Valid from a later date
      * it is scheduled and the current value stays in force until then. Approving a proposal to stop using a fact retires that fact.

@@ -119,7 +119,13 @@ export const brainChangeCardViewOf = (
     const open = payload.state === "open"
     // What the proposal cost is shown to the owner and managers only (U1), never to staff.
     const cost = viewer === "member" ? null : (costs.get(payload.changeId) ?? null)
-    return { ...shown, canApprove: open && viewer === "owner", canReject: open && viewer !== "member", cost }
+    return {
+        ...shown,
+        canApprove: open && viewer === "owner",
+        canReject: open && viewer !== "member",
+        canKeepBoth: open && viewer === "owner" && payload.current?.match === "near",
+        cost,
+    }
 }
 
 /** The changes of the learning cards among stored card texts (their cost is the cost of their lessons), each once, at most `limit`. */

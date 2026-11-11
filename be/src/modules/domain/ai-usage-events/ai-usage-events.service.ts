@@ -78,9 +78,11 @@ export class AiUsageEventsService {
      */
     async record(input: UsageInput): Promise<void> {
         try {
-            // A failed try is an estimate whatever usage it carries: the app counted its prompt, the provider answered nothing.
+            // A failed try is an estimate whatever usage it carries (the app counted its prompt, the provider answered nothing), unless
+            // the provider reported it (a try cut at the token limit: the output it produced and bills).
             const priced = figuresOf(input, input.usage)
-            const figures = input.failure === undefined ? priced : { ...priced, cachedTokens: 0, estimated: true }
+            const exact = input.failure === undefined || input.reported === true
+            const figures = exact ? priced : { ...priced, cachedTokens: 0, estimated: true }
             await this.entityManager.insert(AiUsageEventEntity, {
                 workspaceId: input.workspaceId,
                 kind: input.kind,

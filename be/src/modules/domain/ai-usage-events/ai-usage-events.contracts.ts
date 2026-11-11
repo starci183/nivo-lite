@@ -73,6 +73,11 @@ export interface UsageInput {
      * no output) and priced, but never billed. Absent for an answered call.
      */
     readonly failure?: string | undefined
+    /**
+     * A failed try whose `usage` is the provider's own report (a try cut at the token limit, FX5): booked with those figures and NOT
+     * estimated; still never billed. Absent or false: a failed try is booked estimated.
+     */
+    readonly reported?: boolean | undefined
 }
 
 /** What one model call was and how it went, beside what it cost: what the run page shows per call kind. */

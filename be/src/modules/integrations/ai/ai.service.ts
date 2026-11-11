@@ -10,6 +10,7 @@ import type {
     ContextPassage,
     AiChatAttempt,
     AiChatModel,
+    AiCutSpend,
     AiFailure,
     AiServed,
     AiStopwatch,
@@ -69,6 +70,20 @@ const servedOf = (provider: unknown, responseMetadata: unknown, durationMs: numb
     upstream: typeof provider === "string" && provider !== "" ? provider : laneOf(responseMetadata).provider,
     finishReason: finishOf(responseMetadata),
     durationMs,
+})
+
+/** What a try cut at the token limit spent: the usage its reply still carries, who served it and when, and the cap it was sent with. */
+const cutSpendOf = (
+    model: string,
+    usageMetadata: unknown,
+    responseMetadata: unknown,
+    served: AiServed,
+    request: Pick<AiChatRequest, "budget">,
+): AiCutSpend => ({
+    model,
+    usage: usageOf(usageMetadata, responseMetadata),
+    served,
+    cap: request.budget?.maxTokens ?? null,
 })
 
 @Injectable()
@@ -137,7 +152,12 @@ export class AiService implements OnModuleInit {
             const model = modelOf(reply.responseMetadata, this.options.chatModel)
             if (cutOf(reply.responseMetadata)) {
                 this.logger.warn(AiLogEvent.ChatCut, { model, answerChars: text.length })
-                return { ok: false, failure: "length" }
+                const served = servedOf(reply.provider, reply.responseMetadata, durationMs)
+                return {
+                    ok: false,
+                    failure: "length",
+                    spent: cutSpendOf(model, reply.usageMetadata, reply.responseMetadata, served, request),
+                }
             }
             if (text === "") {
                 this.logger.warn(AiLogEvent.ChatEmpty, { model })
@@ -202,7 +222,16 @@ export class AiService implements OnModuleInit {
         const toolCalls = Array.isArray(calls) ? calls.length : 0
         if (cutOf(responseMetadata)) {
             this.logger.warn(AiLogEvent.ChatCut, { model, answerChars: text.length })
-            return { ok: false, failure: "length" }
+            const provider: unknown = fieldOf(
+                fieldOf(fieldOf(message, "additional_kwargs"), "__raw_response"),
+                "provider",
+            )
+            const served = servedOf(provider, responseMetadata, durationMs ?? null)
+            return {
+                ok: false,
+                failure: "length",
+                spent: cutSpendOf(model, fieldOf(message, "usage_metadata"), responseMetadata, served, request),
+            }
         }
         if (text === "" && toolCalls === 0) {
             this.logger.warn(AiLogEvent.ChatEmpty, { model })

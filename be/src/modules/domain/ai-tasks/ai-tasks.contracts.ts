@@ -430,6 +430,11 @@ export interface MeterEntry {
     readonly promptChars?: number | undefined
     /** Set for a FAILED try (`timeout`, `provider`, `length`, `empty`): booked estimated and priced, never billed. */
     readonly failure?: string | undefined
+    /**
+     * A failed try whose usage is the provider's OWN report (FX5: a try cut at the token limit whose reply carried its usage): booked
+     * with those figures, not estimated; still never billed. Absent or false: the failed try is booked estimated.
+     */
+    readonly reported?: boolean | undefined
 }
 
 /** What one metered model call was and how it went, beside what it cost: the run page shows it per call kind. */

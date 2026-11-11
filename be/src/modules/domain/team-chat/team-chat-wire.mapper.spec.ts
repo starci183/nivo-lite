@@ -261,6 +261,7 @@ describe("wire shape of a stop card", () => {
             revision: 1,
             canApprove: true,
             canReject: true,
+            canKeepBoth: false,
             cost: { credits: 0.3, usd: 0.000339 },
         }
         expect(subject.messageWireOf({ ...MESSAGE, brainChange }).brainChange).toEqual(brainChange)

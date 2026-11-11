@@ -117,3 +117,80 @@ describe("failed tries are booked (owner 2026-11-11: model and credits on every 
         expect(booked[3]).toMatchObject({ promptTokens: 12, completionTokens: 5, costUsd: "0.0002" })
     })
 })
+
+describe("FX5: a try cut at the output cap books what the provider produced", () => {
+    const scope = {
+        workspaceId: "ws-1",
+        locale: "vi" as const,
+        model: { model: SONNET, weight: "heavy" as const, source: "node" as const },
+    }
+    const ask = { purpose: "sales.consult:agent", instructions: "Consult.", input: { line: "mua" } }
+    const answered = {
+        ok: true as const,
+        answer: { ...ANSWER, text: JSON.stringify(COMBO_ORDER), model: SONNET, usage: USAGE },
+    }
+    const served = { upstream: "anthropic", finishReason: "length", durationMs: 72_000 }
+
+    it("reported usage: the output tokens, reasoning and time of the cut try, not estimated, never billed", async () => {
+        const { client, ai, rows } = await build()
+        ai.attempt
+            .mockResolvedValueOnce({
+                ok: false,
+                failure: "length",
+                spent: {
+                    model: SONNET,
+                    usage: {
+                        promptTokens: 9000,
+                        completionTokens: 7000,
+                        totalTokens: 16_000,
+                        costUsd: null,
+                        reasoningTokens: 120,
+                        cachedTokens: 8000,
+                    },
+                    served,
+                    cap: 7000,
+                },
+            })
+            .mockResolvedValueOnce(answered)
+
+        await withRunScope(RUN, () => client.nodeJson(scope, ask, ORDER_SCHEMA))
+
+        const [cut] = rows()
+        expect(cut).toMatchObject({
+            failure: "length",
+            estimated: false,
+            promptTokens: 9000,
+            completionTokens: 7000,
+            cachedTokens: 8000,
+            reasoningTokens: 120,
+            durationMs: 72_000,
+            finishReason: "length",
+            tryNumber: 1,
+            model: SONNET,
+        })
+        // Priced at Sonnet's table line: 1000 fresh + 8000 cached prompt tokens and the 7000 output tokens it produced.
+        expect(Number(cut?.costUsd)).toBeCloseTo((1000 * 2 + 8000 * 0.1 + 7000 * 10) / 1_000_000, 6)
+    })
+
+    it("no output reported: the output is estimated as the cap and the row stays estimated, with the try's time", async () => {
+        const { client, ai, rows } = await build()
+        ai.attempt
+            .mockResolvedValueOnce({
+                ok: false,
+                failure: "length",
+                spent: {
+                    model: SONNET,
+                    usage: { promptTokens: null, completionTokens: null, totalTokens: null, costUsd: null },
+                    served,
+                    cap: 7000,
+                },
+            })
+            .mockResolvedValueOnce(answered)
+
+        await withRunScope(RUN, () => client.nodeJson(scope, ask, ORDER_SCHEMA))
+
+        const [cut] = rows()
+        expect(cut).toMatchObject({ failure: "length", estimated: true, completionTokens: 7000, durationMs: 72_000 })
+        expect(Number(cut?.promptTokens)).toBeGreaterThan(0)
+    })
+})

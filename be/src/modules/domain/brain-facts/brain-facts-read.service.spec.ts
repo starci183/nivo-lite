@@ -97,7 +97,29 @@ const registerViews = () => {
         await expect(service.forView(facts.WS, "customer", "sales", null, 7)).resolves.toEqual([
             facts.factOf({ scope: "public", status: "active" }),
         ])
-        expect(em.find.mock.calls[0]?.[1]).toMatchObject({ where: { status: In(["active"]) }, take: 7 })
+        expect(em.find.mock.calls[0]?.[1]).toMatchObject({ where: { status: In(["active", "scheduled"]) }, take: 7 })
+    })
+
+    it("FX5: at the start of a scheduled replacement exactly one value is in force, before any upkeep promotes it", async () => {
+        const EARLIER = "2026-10-11T10:00:00.000Z"
+        const em = mockEntityManager({
+            find: [
+                BrainFactEntity,
+                [
+                    // The old fee: its end was set to the new value's start on approval (now).
+                    facts.rowOf({ id: "old", status: "active", validFrom: new Date(EARLIER), validTo: new Date(facts.AT) }),
+                    // The new fee: approved for later, its start has come, still `scheduled`.
+                    facts.rowOf({ id: "new", status: "scheduled", validFrom: new Date(facts.AT), validTo: new Date(facts.LATER) }),
+                    // A plan whose start has not come is not in force.
+                    facts.rowOf({ id: "plan", status: "scheduled", validFrom: new Date(facts.LATER) }),
+                ],
+            ],
+        })
+        const service = await build(em)
+
+        const inForce = await service.forView(facts.WS, "internal", "sales", null, 50)
+
+        expect(inForce.map((fact) => fact.id)).toEqual(["new"])
     })
 
     it("searches a view of at most 500 active facts", async () => {

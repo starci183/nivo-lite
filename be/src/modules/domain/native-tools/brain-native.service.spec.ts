@@ -511,4 +511,16 @@ describe("BrainNativeService change.propose: the reason (BG4 wiring)", () => {
         await expect(brain.invoke(WS, "change.propose", ARGS, AGENT)).rejects.toMatchObject({ params: { reason: "reason_missing" } })
         await expect(brain.invoke(WS, "change.propose", ARGS, AGENT)).rejects.toMatchObject({ params: { reason: "not_found" } })
     })
+
+    it("FX5: passes the fact it replaces (validated as a uuid) and refuses one that is not", async () => {
+        const { brain, changes } = await build()
+        changes.propose.mockResolvedValue({ outcome: "filed", fact: fact({ status: "proposed" }) })
+        const replaces = "641d02da-704c-4929-a348-584d4b0dde03"
+
+        await brain.invoke(WS, "change.propose", { ...ARGS, replaces }, AGENT)
+        await brain.invoke(WS, "change.propose", ARGS, AGENT)
+        await expect(brain.invoke(WS, "change.propose", { ...ARGS, replaces: "the fee" }, AGENT)).rejects.toBeDefined()
+
+        expect(changes.propose.mock.calls.map((call) => call[1].replaces)).toEqual([replaces, null])
+    })
 })

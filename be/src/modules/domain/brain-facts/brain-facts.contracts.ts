@@ -307,6 +307,13 @@ export interface ChangeRequest {
     readonly agentId: string
     /** The agent instance the change is kept for; null = every instance. */
     readonly installationId: string | null
+    /**
+     * The fact in force this change replaces, by id, as the agent read it (`nivo.brain.search` / `nivo.brain.fact.get`) before filing
+     * (FX5, D-P11-8). It must be a fact in force the caller may read; the proposal is then filed as the next version of THAT fact (its
+     * subject, attribute and instance scope), whatever labels the agent chose. Omitted: the exact key decides, then a near-meaning
+     * candidate the founder confirms on the card.
+     */
+    readonly replaces?: string | null | undefined
 }
 
 /** What filing a change request did: the proposal waiting for the founder, or the value is already the one in force. */

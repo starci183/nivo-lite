@@ -253,9 +253,15 @@ describe("AiService chat", () => {
             routing: { order: ["relace", "wafer"], allow_fallbacks: true },
         })
         // A turn cut at the token limit, and a turn with neither words nor a tool call, are failures of the AI.
-        expect(client.readTurn({ ...turn, response_metadata: { finish_reason: "length" } }, request)).toEqual({
+        // FX5: the cut turn still says what it spent (the provider bills the output it produced up to the cap).
+        expect(client.readTurn({ ...turn, response_metadata: { finish_reason: "length" } }, request, 72_000)).toMatchObject({
             ok: false,
             failure: "length",
+            spent: {
+                usage: { promptTokens: 8000, completionTokens: 60 },
+                served: { finishReason: "length", durationMs: 72_000 },
+                cap: 4000,
+            },
         })
         expect(client.readTurn({ content: "  ", tool_calls: [] }, request)).toEqual({ ok: false, failure: "empty" })
         expect(client.readTurn({ content: "Dạ", tool_calls: [] }, request)).toMatchObject({ ok: true, textChars: 2, toolCalls: 0 })
@@ -319,7 +325,11 @@ describe("AiService chat", () => {
             .mockResolvedValueOnce(reply("ok"))
 
         await expect(client.attempt(ASK)).resolves.toEqual({ ok: false, failure: "timeout" })
-        await expect(client.attempt(ASK)).resolves.toEqual({ ok: false, failure: "length" })
+        await expect(client.attempt(ASK)).resolves.toMatchObject({
+            ok: false,
+            failure: "length",
+            spent: { served: { finishReason: "length" } },
+        })
         await expect(client.attempt(ASK)).resolves.toEqual({ ok: false, failure: "empty" })
         await expect(client.attempt(ASK)).resolves.toEqual({ ok: false, failure: "provider" })
         await expect(client.attempt(ASK)).resolves.toMatchObject({ ok: true, answer: { text: "ok" } })

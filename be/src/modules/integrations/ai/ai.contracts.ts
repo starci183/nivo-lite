@@ -78,7 +78,7 @@ export type AiTurnRead =
           /** Which upstream served it and why the model stopped. */
           readonly served?: AiServed | undefined
       }
-    | { readonly ok: false; readonly failure: AiFailure }
+    | { readonly ok: false; readonly failure: AiFailure; readonly spent?: AiCutSpend | undefined }
 
 /**
  * The model side of one run of an agent loop, as the loop is handed it. The loop asks for one agent turn at a time and gets the
@@ -232,7 +232,7 @@ export interface AiChatAnswer {
 export interface AiServed {
     /** The upstream of the endpoint that served the call (OpenRouter's `provider`, e.g. `Wafer`); its prompt cache is its own. */
     readonly upstream: string | null
-    /** Why the model stopped (`stop`, `tool_calls`); an answer cut at the limit is never an answer, so never `length` here. */
+    /** Why the model stopped (`stop`, `tool_calls`); `length` / `max_tokens` only on the spend of a cut try (`AiCutSpend`). */
     readonly finishReason: string | null
     /** The wall time of the try, milliseconds. */
     readonly durationMs: number | null
@@ -266,10 +266,26 @@ export interface AiEmbedding {
  */
 export type AiFailure = "timeout" | "length" | "empty" | "provider" | "unconfigured"
 
-/** One try of a chat call: its answer, or why there is none. */
+/**
+ * What a try cut at the token limit (`length`) spent (FX5): the provider produced, and bills, the output up to the cap although the
+ * answer is no answer. The reply of a cut try still carries the endpoint's usage (router 0.7.0: `usage_metadata` on a `length`
+ * finish), so the meter books what was reported; when it says no output, the meter estimates the output as the cap.
+ */
+export interface AiCutSpend {
+    /** The model that served the cut try. */
+    readonly model: string
+    /** What the endpoint reported for it, as read (`usageOf`); any figure may be null. */
+    readonly usage: AiUsage
+    /** Which upstream served it, the finish reason (`length` / `max_tokens`) and the wall time of the try. */
+    readonly served: AiServed
+    /** The output cap the try was sent with (`budget.maxTokens`); null when none was set. */
+    readonly cap: number | null
+}
+
+/** One try of a chat call: its answer, or why there is none (with what a cut try spent). */
 export type AiChatAttempt =
     | { readonly ok: true; readonly answer: AiChatAnswer }
-    | { readonly ok: false; readonly failure: AiFailure }
+    | { readonly ok: false; readonly failure: AiFailure; readonly spent?: AiCutSpend | undefined }
 
 /** A chat answer, or null when AI is unavailable (no key), the call failed or the answer was empty. */
 export type AiChatResult = AiChatAnswer | null

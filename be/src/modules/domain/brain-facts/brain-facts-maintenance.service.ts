@@ -90,14 +90,7 @@ export class BrainFactsMaintenanceService {
         ).map(toFactRecord)
         const activated: Array<FactRecord> = []
         await eachInOrder(due, async (fact) => {
-            const current = await this.reads.keyed(
-                this.entityManager,
-                workspaceId,
-                fact.subjectKey,
-                fact.attribute,
-                "active",
-                fact.installationId,
-            )
+            const current = await this.replacedBy(workspaceId, fact)
             await eachInOrder(current, (old) =>
                 this.entityManager.update(BrainFactEntity, { workspaceId, id: old.id, status: "active" }, SUPERSEDE),
             )
@@ -121,6 +114,27 @@ export class BrainFactsMaintenanceService {
             .returning("id")
             .execute()
         return { activated, expired: Array.isArray(expired.raw) ? expired.raw.length : 0 }
+    }
+
+    /**
+     * The values in force a scheduled fact takes over from when its start comes: the fact its approval named as the one it replaces
+     * (`supersedesId`: the value in force of its key, or the fact of another key a confirmed same-meaning proposal merges over), while it
+     * is still active, then every other active value of its own key and scope. So the replaced value ends exactly when the new one
+     * starts (its end was set to that start on approval) and is closed as history with its relations carried, never left in force.
+     */
+    private async replacedBy(workspaceId: string, fact: FactRecord): Promise<ReadonlyArray<FactRecord>> {
+        const keyed = await this.reads.keyed(
+            this.entityManager,
+            workspaceId,
+            fact.subjectKey,
+            fact.attribute,
+            "active",
+            fact.installationId,
+        )
+        const namedId = fact.supersedesId
+        if (namedId === null || keyed.some((one) => one.id === namedId)) return keyed
+        const named = await this.reads.fetch(this.entityManager, workspaceId, namedId)
+        return named?.status === "active" ? [named, ...keyed] : keyed
     }
 
     /** Turns a waiting proposal down in one atomic statement; refuses when it is no longer waiting. */

@@ -204,3 +204,55 @@ describe("BrainChangeRequestsService: the reason is mandatory and real (BG4)", (
         expect(store.propose).not.toHaveBeenCalled()
     })
 })
+
+describe("BrainChangeRequestsService: FX5, the fact a change replaces (D-P11-8)", () => {
+    it("brings scheduled values whose start has come in force first, then reads the instance's key, then the workspace-wide one", async () => {
+        const { requests, facts: store } = await build()
+        const shared = facts.factOf({ id: "f-shared", status: "active", value: "8h", installationId: null })
+        store.byKey.mockResolvedValueOnce([]).mockResolvedValueOnce([shared]).mockResolvedValueOnce([])
+        store.propose.mockResolvedValue({ fact: facts.factOf({ id: "p1", status: "proposed", conflictWith: "f-shared" }), outcome: "conflict" })
+
+        await requests.propose(facts.WS, requestOf({ installationId: "inst-sales" }))
+
+        expect(store.maintain).toHaveBeenCalledWith(facts.WS)
+        expect(store.maintain.mock.invocationCallOrder[0]).toBeLessThan(store.byKey.mock.invocationCallOrder[0] ?? 0)
+        expect(store.byKey.mock.calls.slice(0, 3).map((call) => [call[3], call[4]])).toEqual([
+            ["active", "inst-sales"],
+            ["active", null],
+            ["proposed", null],
+        ])
+        // The next version of the workspace-wide value: its scope, so the old value is replaced instead of joined.
+        expect(store.propose.mock.calls[0]?.[1]).toMatchObject({ installationId: null })
+    })
+
+    it("files under the key and scope of the fact named by id, whatever labels the agent chose", async () => {
+        const { requests, facts: store } = await build()
+        const named = facts.factOf({ id: "f9", status: "active", value: "8h", subjectLabel: "Cửa hàng", attributeLabel: "Giờ mở cửa", subjectKey: "cua-hang", attribute: "gio-mo-cua" })
+        store.get.mockResolvedValue(named)
+        store.propose.mockResolvedValue({ fact: facts.factOf({ id: "p1", status: "proposed", conflictWith: "f9" }), outcome: "conflict" })
+
+        await requests.propose(facts.WS, requestOf({ replaces: "f9", installationId: "inst-sales" }))
+
+        expect(store.byKey).toHaveBeenCalledTimes(1)
+        expect(store.byKey).toHaveBeenCalledWith(facts.WS, "cua-hang", "gio-mo-cua", "proposed", null)
+        expect(store.propose.mock.calls[0]?.[1]).toMatchObject({ subjectLabel: "Cửa hàng", attributeLabel: "Giờ mở cửa", installationId: null })
+    })
+
+    it("asks the hook for a near-meaning candidate only for a new truth, and names it on the proposal (never merged)", async () => {
+        const { requests, facts: store } = await build()
+        const proposal = facts.factOf({ id: "p1", status: "proposed", conflictWith: null })
+        const near = facts.factOf({ id: "f-near", status: "active" })
+        store.propose.mockResolvedValue({ fact: proposal, outcome: "proposed" })
+        store.flagSameMeaning.mockResolvedValue(true)
+        store.get.mockResolvedValue({ ...proposal, conflictWith: "f-near", flags: ["same_meaning"] })
+        const hook: ChangeRequestHook = { vet: jest.fn(), filed: jest.fn(), nearOf: jest.fn().mockResolvedValue(near) }
+        requests.whenFiled(hook)
+
+        const filed = await requests.propose(facts.WS, requestOf())
+
+        expect(store.flagSameMeaning).toHaveBeenCalledWith(facts.WS, "p1", "f-near")
+        expect(filed.fact).toMatchObject({ conflictWith: "f-near", flags: ["same_meaning"] })
+        expect(store.apply).not.toHaveBeenCalled()
+        expect(store.choose).not.toHaveBeenCalled()
+    })
+})
